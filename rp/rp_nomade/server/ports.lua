@@ -242,6 +242,12 @@ P.npcs = {
     remove = function(id) return Open77.npcs.remove(id) end,
 }
 
+-- world.props: the camp's set dressing (presentation only).
+P.props = {
+    create = function(def) return Open77.props.create(def) end,
+    remove = function(id) return Open77.props.remove(id) end,
+}
+
 -- One chat line (always) and a toast (network.events; drawn by open77_notifications).
 P.tell = function(pid, text, kind, ui)
     ui = ui or {}

@@ -105,6 +105,7 @@ local function boot()
     Svc:declare()
     Svc:loadCrates()
     Svc:spawnFences()
+    Svc:dressCamp()
     Svc.ready = true
     for _, pid in ipairs(P.players.all()) do Svc:onPlayerReady(pid) end
     log(("ready: %d route(s), %d checkpoint(s), board, truck bay, stash (job %s)"):format(#cfg.routes,

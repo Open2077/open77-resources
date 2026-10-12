@@ -15,12 +15,14 @@ local LOAD = { { x = 1786.3, y = 2256.0, z = 180.3 }, { x = 1788.3, y = 2258.0, 
                { x = 1792.3, y = 2257.0, z = 180.3 } }
 local AT_BAY = { x = 1800.0, y = 2240.5, z = 180.2 }
 local TRUCK_AT_BAY = { x = 1801.0, y = 2237.0, z = 180.2 }
+-- Behind the bed of the truck parked in the bay (yaw 0): the bay prompts follow the truck there.
+local AT_TAILGATE = { x = 1801.0, y = 2233.0, z = 180.2 }
 local AT_STASH = { x = 1788.2, y = 2254.0, z = 180.3 }
 local CK1 = { x = 905.0, y = 1900.0, z = 120.0 }      -- inside badlands_toll
 local CK2 = { x = -495.0, y = 1700.0, z = 40.0 }      -- inside watson_ramp
 local ROAD = { x = 300.0, y = 1800.0, z = 60.0 }      -- between the two, in no checkpoint
 local TRUCK_AT_DROP = { x = -1426.0, y = 970.0, z = 23.6 }
-local AT_UNLOAD = { x = -1426.0, y = 974.3, z = 23.6 }
+local AT_UNLOAD = { x = -1426.0, y = 966.0, z = 23.6 }   -- behind the bed of the truck at the drop
 local AT_FENCE = { x = -1426.0, y = 976.0, z = 23.6 }
 local TRUCK = 701
 local PLATE = "NC-NMD01"
@@ -54,7 +56,7 @@ local function loadAll(pid, run)
         if crate.state == "ground" then
             SW.move(pid, LOAD[i])
             NW.pickup(pid, crate)
-            SW.move(pid, AT_BAY)
+            SW.move(pid, AT_TAILGATE)
             local op = NW.putdownAt(pid, "rp_nomade:truck_bay")
             results[#results + 1] = op and op.state or "none"
         end
@@ -108,11 +110,18 @@ function scenarios.happy_path()
         if crate.itemId then placed = placed + 1 end
     end
     local navTaken = NW.nav(1)
+    MH.run(1.5)
+    local function bayAt()
+        local p = NW.svc().bayDefs.truck_bay.def.position
+        return ("%.1f,%.1f"):format(p.x, p.y)
+    end
+    local bayWithTruck = bayAt()
     local loads = loadAll(1, run)
     local inBed = 0
     for _, crate in ipairs(crates) do if tokenAt(crate) == "veh:" .. PLATE .. ":cargo" then inBed = inBed + 1 end end
     local navLoaded = NW.nav(1)
     driveTo(ROAD, 1)
+    local bayEmpty = bayAt()
     driveTo(CK1, 1)
     MH.run(2)
     driveTo(ROAD, 1)
@@ -137,6 +146,7 @@ function scenarios.happy_path()
     local passed = NW.fixer("checkpoint_passed")
     local lastRun = run
     return NW.result({
+        bay_with_truck = bayWithTruck, bay_empty = bayEmpty,
         boot_lines = bootLines, stash0 = stash0, take = t and t.state, take_reason = t and t.reason,
         crates = #crates, stash_taken = stash0 - stash1, in_crates = inCrates, tokens_home = tokensHome, placed = placed,
         nav_taken = navTaken and navTaken.phase, nav_taken_route = navTaken and tostring(navTaken.route),
@@ -530,7 +540,7 @@ function scenarios.restart()
     -- Crate 1 in the bed.
     SW.move(1, LOAD[1])
     NW.pickup(1, crates[1])
-    SW.move(1, AT_BAY)
+    SW.move(1, AT_TAILGATE)
     NW.putdownAt(1, "rp_nomade:truck_bay")
     -- Crate 2 carried, then the player disconnects: dropped at their feet, durable.
     SW.move(1, LOAD[2])
@@ -577,11 +587,11 @@ function scenarios.restart()
     -- Everything delivers.
     SW.move(1, { x = c2b.position.x + 0.5, y = c2b.position.y, z = c2b.position.z })
     NW.pickup(1, c2b)
-    SW.move(1, AT_BAY)
+    SW.move(1, AT_TAILGATE)
     local l2 = NW.putdownAt(1, "rp_nomade:truck_bay")
     SW.move(1, LOAD[3])
     NW.pickup(1, c3b)
-    SW.move(1, AT_BAY)
+    SW.move(1, AT_TAILGATE)
     local l3 = NW.putdownAt(1, "rp_nomade:truck_bay")
     driveTo(TRUCK_AT_DROP, 1)
     local cash0 = SW.balance("cash:" .. A)
@@ -682,8 +692,10 @@ function scenarios.refusals()
     SW.move(1, AT_BAY)
     local noTruck = NW.putdownAt(1, "rp_nomade:truck_bay")
     local stillCarrying = SW.carrying(1) ~= nil
-    -- Somebody else's truck: no key.
+    -- Somebody else's truck: no key. The bay prompt follows it behind its bed.
     NW.truck(TRUCK, PLATE, "acct-other", TRUCK_AT_BAY)
+    MH.run(1.5)
+    SW.move(1, AT_TAILGATE)
     local noKey = NW.putdownAt(1, "rp_nomade:truck_bay")
     local stillCarrying2 = SW.carrying(1) ~= nil
     return NW.result({
@@ -845,7 +857,7 @@ function scenarios.library_restart()
     local afterContainers = ("%s/%s/%s"):format(s.crates[crates[1].id].state, s.crates[crates[2].id].state,
         s.crates[crates[3].id].state)
     local items2, items3 = SW.items(crates[2].id), SW.items(crates[3].id)
-    SW.move(1, AT_BAY)
+    SW.move(1, AT_TAILGATE)
     local load1 = NW.putdownAt(1, "rp_nomade:truck_bay")
     SW.move(1, LOAD[2])
     NW.pickup(1, s.crates[crates[2].id])
@@ -858,7 +870,7 @@ function scenarios.library_restart()
     local items = SW.items()
     SW.move(1, LOAD[2])
     local again = NW.pickup(1, back2) ~= nil
-    SW.move(1, AT_BAY)
+    SW.move(1, AT_TAILGATE)
     local load2 = NW.putdownAt(1, "rp_nomade:truck_bay")
     return NW.result({
         after_containers = afterContainers, items2 = items2, items3 = items3, load1 = load1 and load1.state,

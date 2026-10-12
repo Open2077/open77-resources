@@ -244,7 +244,53 @@ function S:declare()
         local key, twhy = A.target(def)
         if not key then self:warn("target %s refused: %s", def.id, tostring(twhy)) end
     end
+    -- The truck bays, whose prompts follow the truck parked in them (S:anchorBays).
+    self.bayDefs = {}
+    for _, def in ipairs(targets) do
+        local bay = def.data and def.data.bay
+        if bay == "load" then
+            self.bayDefs[def.id] = { def = def, bay = camp.truckBay }
+        elseif bay == "unload" then
+            local route = self:routeById(def.data.route)
+            if route then self.bayDefs[def.id] = { def = def, bay = route.destination.unloadBay } end
+        end
+    end
     return true
+end
+
+function S:routeById(id)
+    for _, route in ipairs(self.cfg.routes) do
+        if route.id == id then return route end
+    end
+    return nil
+end
+
+-- The bay prompts follow the truck parked in the bay (cfg.bayPrompt): re-declared behind its bed
+-- when it comes or moves, back at the bay's centre when it leaves. A parked truck covers the
+-- centre, where the prompt could not be reached. Never yields.
+function S:anchorBays()
+    local opt = self.cfg.bayPrompt
+    if not (opt and opt.followTruck) or not self.bayDefs then return end
+    local vehicles = self.P.vehicles.all()
+    for id, b in pairs(self.bayDefs) do
+        local at, best = b.bay.position, nil
+        for _, v in ipairs(vehicles) do
+            local pos = type(v.position) == "table" and v.position or v
+            local car = { x = tonumber(pos.x), y = tonumber(pos.y), z = tonumber(pos.z), yaw = tonumber(v.yaw) or 0.0 }
+            local d = car.x and car.y and car.z and (v.bucket or 0) == self.cfg.bucket and self.M.planar(car, b.bay.position)
+            if d and d <= (b.bay.truckRadius or 8.0) and (best == nil or d < best) then
+                local spot = self.M.tailgate(car, self.P.cargo.layout(v.record), opt.behindBedM)
+                if spot then at, best = spot, d end
+            end
+        end
+        local mark = ("%.1f,%.1f,%.1f"):format(at.x, at.y, at.z)
+        if b.mark ~= mark then
+            b.mark = mark
+            b.def.position = { x = at.x, y = at.y, z = at.z }
+            local key, why = self.P.actions.target(b.def)
+            if not key then self:warn("bay prompt %s not moved: %s", id, tostring(why)) end
+        end
+    end
 end
 
 function S:spawnFences()
@@ -1409,6 +1455,7 @@ end
 -- and their crates (no world scan).
 function S:tick()
     if not self.ready then return end
+    self:anchorBays()   -- every second: a truck that just parked gets its prompt at once
     local now = self.P.now()
     local plates = {}
     for _, run in pairs(self.runs) do
@@ -2078,6 +2125,29 @@ function S:shutdown()
     for key, id in pairs(self.npcs) do
         pcall(self.P.npcs.remove, id)
         self.npcs[key] = nil
+    end
+    for i, id in pairs(self.decor or {}) do
+        pcall(self.P.props.remove, id)
+        self.decor[i] = nil
+    end
+end
+
+-- The camp's set dressing (cfg.camp.decor): the vanilla Aldecaldos camp is quest content the
+-- multiplayer world never streams, so the board, the loading points and the bay stand on bare
+-- desert without it. Presentation only: a refused prop is logged and the camp works without it.
+function S:dressCamp()
+    self.decor = self.decor or {}
+    for i, d in ipairs(self.cfg.camp.decor or {}) do
+        if not self.decor[i] then
+            local ok, id, why = pcall(self.P.props.create, { model = d.model, position = d.position, yaw = d.yaw or 0.0,
+                bucket = self.cfg.bucket })
+            if ok and id then
+                self.decor[i] = id
+            else
+                self:log("camp prop %s not placed (%s): the camp works without it", tostring(d.model),
+                    tostring(ok and why or id))
+            end
+        end
     end
 end
 

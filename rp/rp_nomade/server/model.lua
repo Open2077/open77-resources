@@ -177,6 +177,23 @@ function M.offsetPoint(origin, yaw, ahead)
     return { x = origin.x - math.sin(r) * ahead, y = origin.y + math.cos(r) * ahead, z = origin.z }
 end
 
+-- The spot behind a truck's bed where a player stands to load or unload: centred on the bed,
+-- `behind` metres past its rearmost slot, at the bed's height. `layout` is rp_cargo's (vehicle frame:
+-- x right, y forward, z up); `car` carries x, y, z, yaw. nil without slots.
+function M.tailgate(car, layout, behind)
+    local slots = type(layout) == "table" and layout.slots
+    if type(car) ~= "table" or type(slots) ~= "table" or #slots == 0 then return nil end
+    local rear, height
+    for _, s in ipairs(slots) do
+        local y = tonumber(s.y)
+        if y and (rear == nil or y < rear) then rear, height = y, tonumber(s.z) end
+    end
+    if rear == nil then return nil end
+    local ly = rear - (tonumber(behind) or 1.0)
+    local r = math.rad(tonumber(car.yaw) or 0.0)
+    return { x = car.x - math.sin(r) * ly, y = car.y + math.cos(r) * ly, z = car.z + (height or 0.9) }
+end
+
 function M.compass(from, to)
     local angle = math.deg(math.atan(to.y - from.y, to.x - from.x))   -- 0 = east, 90 = north
     local names = { "east", "north-east", "north", "north-west", "west", "south-west", "south", "south-east" }
@@ -252,6 +269,22 @@ M.TEXT = {
     player_in_vehicle = "Get out of the vehicle first.",
     in_combat = "Not while fighting.",
     player_reserved = "One of you is busy with something else.",
+    destination_too_far = "Get closer to the truck's bed.",
+    destination_invalid = "You cannot put it down there.",
+    vehicle_unavailable = "That truck is not here any more.",
+    wrong_bucket = "That is not here.",
+    position_unavailable = "Not ready yet. Try again in a second.",
+    position_stale = "Not ready yet. Try again in a second.",
+    player_unavailable = "Not ready yet. Try again in a second.",
+    player_not_ready = "Not ready yet. Try again in a second.",
+    player_not_alive = "Not while you are down.",
+    attach_failed = "Your hands slipped. Try again.",
+    animation_refused = "Your hands slipped. Try again.",
+    refused_by_owner = "The camp refused that.",
+    hook_failed = "The camp refused that.",
+    cancelled = "Cancelled.", cancelled_by_player = "Cancelled.",
+    unknown_target = "That is not here any more.", invalid_target = "That is not here any more.",
+    unknown_action = "That is not available any more.", invalid_action = "That is not available any more.",
     -- coordinator and wallet
     insufficient_items = "Those goods are not there any more.",
     insufficient_funds = "Not enough eddies.",
@@ -276,7 +309,7 @@ M.ENDS = {
 
 function M.textFor(reason)
     reason = tostring(reason or "refused")
-    return M.TEXT[reason] or M.ENDS[reason] or ("Refused (" .. reason .. ").")
+    return M.TEXT[reason] or M.ENDS[reason] or "That did not work. Try again in a moment."   -- never the raw code on screen; the server log keeps it
 end
 
 -- Coordinator refusals of the run's stock reservation, mapped to what the player reads.

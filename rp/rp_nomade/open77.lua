@@ -22,10 +22,11 @@ auto_start false
 --                                  a player, a driver consenting to a search)
 --   players.interactions.read      Open77.playerInteractions.get (the sweep tells a lost offer)
 --   ui.vanilla.map                 client: Open77.blips (destination, camp and checkpoint pins, GPS)
--- Carried crates are open77_actions' props, bed crates rp_cargo's: no world.props. No
--- database.access: every durable value lives in open77_transactions or open77_containers.
+--   world.props                    Open77.props.create / remove (the camp's set dressing only)
+-- Carried crates are open77_actions' props, bed crates rp_cargo's. No database.access: every
+-- durable value lives in open77_transactions or open77_containers.
 permissions {
-    "network.events", "world.vehicles", "world.npcs", "players.wanted",
+    "network.events", "world.vehicles", "world.npcs", "world.props", "players.wanted",
     "players.interactions.control", "players.interactions.read", "ui.vanilla.map",
 }
 

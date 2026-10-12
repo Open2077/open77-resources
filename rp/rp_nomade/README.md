@@ -19,8 +19,9 @@ Adds Aldecaldos smuggling runs for the nomad job: take a run at the camp's board
    Chat: `Run signed: 3 crates of smuggled goods for Afterlife street, Watson, 25 minutes...`.
    A pin marks the drop on the map, and every NCPD checkpoint gets a pin too.
 2. **Load.** Lift a crate (**E**), walk it to the convoy truck bay south-east of the board where
-   your truck is parked (a truck you own, hold a key for, or a clan fleet truck), **E** *Load into
-   the truck*. The crate rides in the bed for everyone to see. `/nomad load` loads next to any
+   your truck is parked (a truck you own, hold a key for, or a clan fleet truck), and stand behind
+   its bed: **E** *Load into the truck* is drawn at the tailgate of the truck parked in the bay (at
+   the bay itself while no truck is there). The crate rides in the bed for everyone to see. `/nomad load` loads next to any
    truck you may use. When the last crate is in, the GPS route to the drop starts.
 3. **Drive.** The run has a deadline. Each NCPD checkpoint on the roads into the city may search
    the truck: the answer is decided per run and per checkpoint, so the same run always meets the
@@ -28,7 +29,7 @@ Adds Aldecaldos smuggling runs for the nomad job: take a run at the camp's board
    every crate of the run in the truck is emptied into the NCPD evidence stash, the driver pays
    a fine (cash, then bank), gets an NCPD wanted level and a criminal record; an unpaid fine
    becomes a warrant. The run ends there.
-4. **Deliver.** At the drop, park at the unload bay, **E** *Unload a crate* (or `/nomad unload`):
+4. **Deliver.** At the drop, park at the unload bay, go behind the bed, **E** *Unload a crate* (or `/nomad unload`):
    the crate comes out of the bed into your arms. Walk it to the fence and **E** *Hand over to
    Rook*. The fence pays the crate's price in one operation: the camp keeps its cut, the rest goes
    to the nomad who took the run. The crate is gone.
@@ -143,7 +144,8 @@ Everything is in `server/config.lua`:
 | `items` | `nomad_contraband` (2.5 kg, illegal) and `nomad_crate` (the crate's token, unique) |
 | `accounts` | the camp's stash, the evidence stash, the token and supplier `sys:` accounts |
 | `restock` | the camp's supplier: every 10 min, +24 goods while the stash holds fewer than 24 |
-| `camp` | board, loading points, truck bay, stash drop point |
+| `camp` | board, loading points, truck bay, stash drop point, and `decor`: the props that dress the camp (a table under the board, loaded pallets, a generator; the vanilla camp is quest content the multiplayer world does not stream) |
+| `bayPrompt` | `followTruck` (the load and unload prompts follow the truck parked in their bay) and `behindBedM` (how far past the bed's last slot the prompt is drawn) |
 | `routes` | per route: crates, goods per crate, price per crate, deadline, unload bay, fence |
 | `campCut`, `hotRatio` | the camp's share of a live sale (20 %); what the fence pays for hot goods (50 %, 0 refuses) |
 | `checkpoints` | each zone (an `Open77.zones` definition checked against the truck) and its `searchChance` |

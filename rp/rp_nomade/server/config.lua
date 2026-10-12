@@ -87,6 +87,16 @@ C.camp = {
     -- The stash: carrying a crate of the camp, "Return to the stash" (goods back, no pay).
     returnBay = { position = { x = 1788.2, y = 2253.6, z = 180.3 }, yaw = 58.6, measured = false,
                   label = "Camp stash" },
+    -- Set dressing (open77_props aliases, server props seen by everyone): the vanilla camp is quest
+    -- content the multiplayer world never streams, so without it the board's card floats over bare
+    -- desert. A table under the board, loaded pallets beside the loading points and the stash, a
+    -- generator by the bay. {} for none.
+    decor = {
+        { model = "furniture.table.outdoor", position = { x = 1790.0, y = 2252.4, z = 180.25 }, yaw = 0.0 },
+        { model = "pallet.wood.loaded", position = { x = 1783.9, y = 2257.0, z = 180.25 }, yaw = 30.0 },
+        { model = "pallet.stack", position = { x = 1786.4, y = 2252.8, z = 180.25 }, yaw = 58.6 },
+        { model = "industrial.generator", position = { x = 1796.2, y = 2242.6, z = 180.2 }, yaw = 45.0 },
+    },
 }
 
 -- ---------------------------------------------------------------------------------------------
@@ -200,6 +210,10 @@ C.crate = {
     pickupBy = "anyone",
 }
 C.truckNearM = 6.0              -- /nomad load and /nomad unload look for a truck this close
+-- The "Load into the truck" and "Unload a crate" prompts follow the truck parked in their bay: drawn
+-- behind its bed (rp_cargo's layout, `behindBedM` past the last slot), where a player can stand,
+-- instead of at the bay's centre, which a parked truck covers. Without a truck they stay at the bay.
+C.bayPrompt = { followTruck = true, behindBedM = 1.0 }
 
 -- ---------------------------------------------------------------------------------------------
 -- A crate sold to another player (consented hand-over, the crate on the ground next to the seller)

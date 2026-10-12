@@ -69,6 +69,23 @@ def scenario(name):
 
 
 class NomadSources(unittest.TestCase):
+    def test_every_library_reason_has_words(self):
+        """A refusal or a stop from open77_actions reaches the player in words: every public reason
+        token of the library is in M.TEXT or M.ENDS (the generic fallback never names a code)."""
+        import re
+        model = (sys_dir() / "open77_actions" / "shared" / "model.lua")
+        if not model.is_file():
+            self.skipTest(f"open77_actions not found under {sys_dir()} (set OP77_SYS_DIR)")
+        def table(text, name):
+            return re.search(name + r" = \{(.*?)\n\}", text, re.S).group(1)
+
+        reasons = set(re.findall(r'"([a-z_]+)"', table(model.read_text(encoding="utf-8"), r"M\.REASONS")))
+        internal = {"invalid_player", "invalid_options", "invalid_definition", "owner_unavailable", "not_owner",
+                    "unknown_operation", "already_terminal", "commit_in_flight"}
+        nomad = (ROOT / "rp_nomade" / "server" / "model.lua").read_text(encoding="utf-8")
+        worded = set(re.findall(r"\b([a-z_]+) = \"", table(nomad, r"M\.TEXT") + table(nomad, r"M\.ENDS")))
+        self.assertEqual(sorted(reasons - internal - worded), [])
+
     def test_sources_compile_without_bom(self):
         """Every rp_nomade Lua file: UTF-8 without BOM and loads as Lua 5.4 text."""
         if luahost.unavailable():
@@ -96,9 +113,9 @@ class NomadSources(unittest.TestCase):
             self.assertNotIn(server_only, deps)
         perms = text.split("permissions {", 1)[1].split("}", 1)[0]
         for needed in ("network.events", "world.vehicles", "players.wanted", "players.interactions.control",
-                       "ui.vanilla.map"):
+                       "ui.vanilla.map", "world.props"):   # world.props: the camp's set dressing
             self.assertIn(needed, perms)
-        for unneeded in ("database.access", "world.props", "players.animations.control"):
+        for unneeded in ("database.access", "players.animations.control"):
             self.assertNotIn(unneeded, perms)
 
     def test_prompt_labels_are_ascii_and_points_flagged(self):
@@ -140,7 +157,7 @@ class NomadRun(unittest.TestCase):
         self.assertEqual(r["lines"], "4")
         self.assertEqual(r["line1"], "g:4:world:a.1")
         self.assertEqual(r["line2"], "nmdc.run1.1:sys:nomad")
-        self.assertEqual(r["text_unknown"], "Refused (weird_token).")
+        self.assertEqual(r["text_unknown"], "That did not work. Try again in a moment.")   # never the raw code
         self.assertEqual(r["take_refusal"], "camp_empty/nomad_not_configured")
 
     def test_happy_path_end_to_end(self):
@@ -157,6 +174,8 @@ class NomadRun(unittest.TestCase):
         self.assertEqual(r["placed"], "3")
         self.assertEqual((r["nav_taken"], r["nav_taken_route"]), ("destination", "false"))
         self.assertEqual(r["loads"], "committed,committed,committed")
+        # The load prompt follows the parked truck behind its bed, and goes back to the bay after it.
+        self.assertEqual((r["bay_with_truck"], r["bay_empty"]), ("1801.0,2233.6", "1800.0,2240.0"))
         self.assertEqual(r["in_bed"], "3")
         self.assertEqual(r["nav_loaded_route"], "true")
         self.assertEqual(r["passes"], "2")
