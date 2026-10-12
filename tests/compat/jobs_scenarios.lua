@@ -12,6 +12,10 @@
 --
 -- Each scenario returns a flat table; the runner turns it into "key=value" lines.
 
+-- The final coordinator (the vendored Open77 697e9e2f) for the subject provider rule, on the
+-- coordinator sandbox; the other scenarios never start it.
+dofile(COMPAT_DIR .. "/txsandbox.lua")
+
 -- ---------------------------------------------------------------------------
 -- Scenario-local fakes
 -- ---------------------------------------------------------------------------
@@ -722,6 +726,41 @@ function scenarios.subject_provider()
     r.numeric_key = verdict(ex.eligible(8, nil))
     r.long_key = verdict(ex.eligible(9, nil))
     r.session_setJob = reason(ex.setJob(7, "ncpd", 0))
+    r.rows_for_bad_keys = tostring((rows()["session:7"] or rows()["12"]) ~= nil)
+    return r
+end
+
+-- The same rule against the REAL coordinator (697e9e2f): its default provider answers the account
+-- identifier, one override (a character layer) re-keys employment, the override's refusal is
+-- passed through, and its own key lint refuses session-like and all-digit keys.
+local function startCoordinator()
+    TXS.start({ tunables = { serverTag = "lab" } })
+    for _ = 1, 64 do
+        if TXS.ready() then break end
+        TXS.step()
+    end
+    H.providers = { open77_transactions = TXS.syncTable(function() return "rp_jobs" end) }
+end
+
+function scenarios.subject_provider_real()
+    local r = {}
+    startCoordinator()
+    local ex = boot("sql", players(7))
+    ex.setJob(7, "mecano", 0)
+    r.default_key = tostring(rows()["acct-0007"] and rows()["acct-0007"].job)
+    H.providers.rp_identity_test = { characterOf = function(who)
+        if who == 7 then return "acct-0007~3" end
+        return nil, "no_character"
+    end }
+    r.register = tostring((TXS.callSync("rp_identity_test", "registerSubjectProvider", "characterOf")))
+    ex = boot("sql", players(7, 8))
+    ex.setJob(7, "ncpd", 0)
+    r.override_key = tostring(rows()["acct-0007~3"] and rows()["acct-0007~3"].job)
+    r.override_refusal = verdict(ex.eligible(8, nil))
+    startCoordinator()   -- a fresh coordinator VM: no override provider
+    ex = boot("sql", { [7] = { identifier = "session:7", name = "x" }, [8] = { identifier = "12", name = "y" } })
+    r.session_key = verdict(ex.eligible(7, nil))
+    r.numeric_key = verdict(ex.eligible(8, nil))
     r.rows_for_bad_keys = tostring((rows()["session:7"] or rows()["12"]) ~= nil)
     return r
 end

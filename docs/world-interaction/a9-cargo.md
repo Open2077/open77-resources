@@ -8,7 +8,9 @@ attachments, Persistent identity), §4 rows A9/B2/C1/C2, §5.3; A13 contract
 (`docs/world-interaction/a13-transaction-contract.md` on `feat/world-interaction`) §3.1, §7.3,
 §12; the B8 audit (`docs/world-interaction/b8-compat-audit.md`) §1.2, §1.3, §5.5.
 
-**Status: offline only.** Nothing was built into a deployed artifact, launched, or seen in game.
+**Reconcile (2026-10-12, branch `wi/reconcile-a13`):** the cargo suite now runs the **final**
+`open77_transactions` of Open77 `697e9e2f` (vendored, `server/main.lua` included), not a fake; §5 lists
+what it resolved. **Status: offline only.** Nothing was built into a deployed artifact, launched, or seen in game.
 No server, database or `open77_*` tool was used. Every cargo offset is a starting guess
 (`measured: false`). **Fact** = checked in the cited source; **inference** = follows from source,
 not measured; **open** = a decision for the integrator.
@@ -39,7 +41,13 @@ not measured; **open** = a decision for the integrator.
 6. **Tests:** 23 new offline tests on the B8 fake host (10 access, 13 cargo), all passing; the B8
    suite still passes (9 tests, 1 expected failure).
 7. **Needs from the coordinator** (§5): `metaPatch` on instance moves (N1), `read` that loads on
-   demand without creating (N2), a `subjectOf` export (N3), part-scoped namespace ACL (N4).
+   demand without creating (N2), a `subjectOf` export (N3), part-scoped namespace ACL (N4): all resolved
+   by Open77 `697e9e2f`. One semantic differs from the wave-0 assumption: `metaPatch` merges and never
+   deletes, so an unloaded crate keeps `cargo = false` (read as "no slot").
+8. **Reconcile additions:** `rp_cargo` declares `dependency "open77_transactions >=0.1.0"`, asks
+   `rp_inventory:grantPockets` when the server's writers keep it to `veh/cargo`, passes `subjectOf`
+   refusals through; `rp_garage:labIssue` issues a plated, owned vehicle for lab runs (convar
+   `rp_garage_lab 1`).
 
 ---
 
@@ -90,6 +98,7 @@ exports.rp_garage:canAccessVehicle(playerId, vehicleId, part, action)
 exports.rp_garage:accountOf(plate, part)                          -- "veh:<plate>:<part>"
 exports.rp_garage:describe(plate)                                 -- { plate, record, label, state, owner, society, vehicleId, wanted }
 exports.rp_garage:authorize(plate, "mechanic" | "police", holder, { minutes, reason, by })
+exports.rp_garage:labIssue(playerId, record, { label?, spawn? })   -- LAB ONLY: convar rp_garage_lab 1
 exports.rp_garage:revokeAuthorization(plate, role, holder?, { by })
 exports.rp_garage:authorizations(plate)
 ```
@@ -100,6 +109,12 @@ number is refused so a runtime id is never read as a plate), `invalid_part`, `in
 `off_duty`, `no_job_order`, `warrant_required`; for grants `invalid_role`, `invalid_holder`
 (session-like or all-digit holders are refused), `invalid_duration` (1 min..24 h), `not_owner`,
 `not_police`, `grade_too_low` (`warrantMinGrade = 2`), `not_found`.
+
+`labIssue` (reconcile, for the C1 two-client run) registers a new plate owned by the player, with no
+payment, and takes it out 4 m from them (`spawn = false`: stored at the public garage). It answers
+`{ plate, owner, state, vehicleId? }`, or `lab_disabled` unless the server sets the convar
+`rp_garage_lab 1`, `registry_loading`, `invalid_player_id`, `player_not_found`, `invalid_record`,
+`no_plate`. Offline: `test_lab_issue_is_gated_and_owned`.
 
 Player and console paths: `/cles ordre <mechanicId> [plate] [minutes]`, `/cles ordre annuler
 [plate]` (owner); console `vehwarrant <plate> <minutes> [reason]` / `vehwarrant <plate> off`
@@ -157,14 +172,21 @@ variants could still differ (bed covers, racks). Verify one alias per layout.
 - Account: `veh:<plate>:<layout.part>` (default `veh:<plate>:cargo`). An untracked vehicle (no
   plate) is refused `vehicle_not_tracked`; a tracked vehicle without a layout `no_cargo_layout`.
 - Occupant: an item **instance** in that account. Its slot: `meta.cargo = { slot, layer, model }`,
-  written by the load commit through `metaPatch` (N1) and cleared (`cargo = false`) by the unload
-  commit; other metadata keys (wear, origin, a contents reference) are kept.
+  written by the load commit through `metaPatch` (N1) and cleared by the unload commit's
+  `metaPatch = { cargo = false }`: the final coordinator merges one level and deletes nothing, so the
+  unit leaves with `cargo = false`, which every reader treats as "no slot"; other metadata keys (wear,
+  origin, a contents reference) are kept.
 - `load(playerId, vehicleId, instanceId, opts)` moves from `char:<subject>` (or `opts.from =
   "world:<id>"`) to the cargo account in **one** `transfer` with `expect = { [cargo] = version }`.
   `unload` moves out to `char:<subject>` or `world:<id>`. `contents` lists for `view`.
 - Checks before any operation: player id, vehicle exists, plate, layout, subject, same bucket,
   within `Config.reach` (5 m of the vehicle origin), vehicle not moving (> 1 m/s), then
   `rp_garage:canAccess(..., "cargo", "put" | "take" | "view")`.
+- Writers (reconcile): before a load or unload, `allowed(rp_cargo, <the pockets or world: side>)`; when
+  the server's `writers` gives `rp_cargo` only `veh/cargo`, the pockets come from
+  `rp_inventory:grantPockets(opId, playerId)` for that one operation, else the move is refused
+  `namespace_denied` and nothing is attempted (`test_per_part_writers_and_pocket_grant`). A `world:`
+  side needs `rp_cargo` in `writers` for `world`.
 
 ### 4.2 Slots and stacking
 
@@ -216,16 +238,23 @@ come back as stored (`rp_garage` `adoptRow`), so the next take-out redraws; a re
 
 ---
 
-## 5. Coordinator API needs (for the A13 build; the prototype was not edited)
+## 5. Coordinator API needs: resolved by Open77 `697e9e2f`
 
-| # | Need | Why | Fallback today |
+Reconciled 2026-10-12 against the final coordinator (contract §7.2, §13.7: A9 N1–N4 done).
+
+| # | Need | Outcome | rp_cargo now |
 |---|---|---|---|
-| N1 | An instance move line accepts `metaPatch` (shallow merge; `false` deletes a key), applied in the same commit; included in `requestHash`. | Slot assignment must commit with the custody change (S10). | None in code. Without N1 a two-operation path (move, then a `meta` line) leaves a slotless crate after a crash between them; the projection would still draw it in a free slot. |
-| N2 | `read(account)` loads on demand and answers `unknown_account` for a never-opened account **without creating it**; `open` on an existing container keeps or explicitly updates its stored capacity (state which). | rp_cargo reads the cargo of every tracked vehicle it sees (S11). | rp_cargo calls `open` on `not_loaded`, which creates an empty cargo account for every tracked vehicle with a layout. |
-| N3 | Export `subjectOf(playerId)` (A13 decision 5's provider). | Adapters must not build owner keys themselves (A13 §3.1.1). | `Open77.players.identifier` (the documented default), logged once. |
-| N4 | Namespace ACL by part: `veh:*:cargo` → `rp_cargo`, `veh:*:trunk|glovebox` → the B2 vehicle inventory adapter. | Two writers of one plate's parts. | Namespace-level ACL: both resources may write all `veh:` accounts. |
-| N5 | `open77_transactions:committed` carries the invoking resource (or a caller tag). | Consumers skip their own commits without tracking opIds. | rp_cargo tracks its opIds. |
-| N6 | Crates are B1 definitions `unique = true` with `weightG`, minted by the job from `sys:<job>` under the mint allowlist (decision 6). rp_cargo never mints. | Custody starts outside rp_cargo. | — |
+| N1 | `metaPatch` on an instance move, same commit, in the request hash | resolved (moves and in-place lines, one version CAS). **Differs:** a shallow merge that deletes nothing (`false` is stored) | load patches `cargo = { slot, layer, model }`, unload patches `cargo = false`; readers already required a table |
+| N2 | lazy `read`, `unknown_account`, never creates; `open` keeps or updates capacity | resolved (`open` re-capacities and keeps `meta` unless given) | `read` without the `not_loaded` branch; nothing is created by looking |
+| N3 | `subjectOf` | resolved (non-yielding) | asked inline with `callSync`; a refusal is passed through (no identifier fallback) |
+| N4 | part-scoped writers | resolved (`writers = "rp_cargo:veh/cargo"`, `allowed(resource, "veh:<plate>:cargo")`) | `mayWrite` checks, and asks `rp_inventory:grantPockets` for the pockets |
+| N5 | `committed` names the invoking resource | **not in 697e9e2f** | still tracks its own opIds |
+| N6 | crates are B1 `unique` definitions minted by the job under the mint rules | policy (C1: `rp_salvage sys:salvage * <cap>`) | rp_cargo never mints |
+
+Test seam: `tests/compat/fake_tx.lua` is now `FakeTx` over the real coordinator (seeding through
+`open` and journaled `seed` transfers; faults at the export boundary: a refused commit, a stale snapshot,
+an answer lost after or before the commit, `export_timeout` on status). Every cargo assertion held
+except one, `a_cargo_meta` (`nil` → `false`, the merge semantics above).
 
 **Open (A6/B2/C1):** a crate with contents. A13 does not nest containers: either the crate is an
 instance whose metadata references its `world:<uuid>` contents, or contents are flattened into
@@ -269,7 +298,7 @@ They need neither the coordinator nor a plate: any vehicle of a record with a la
 
 ```text
 python -m unittest discover -s tests -p "test_compat*.py"   # B8: 9 tests, 1 expected failure
-python -m unittest discover -s tests -p "test_a9*.py"       # A9: 23 tests
+python -m unittest discover -s tests -p "test_a9*.py"       # A9: 23 tests (wave 0); 25 at the reconcile
 ```
 
 Results on 2026-10-12, Lua 5.4 through the KeraLua NuGet `lua54.dll` (`tests/compat/luahost.py`):

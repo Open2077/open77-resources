@@ -2,7 +2,7 @@
 -- open77_transactions), offline.
 --
 -- Loaded after fakehost.lua. The runner sets REPO (pack root), HARNESS (tests/compat) and
--- TX_ROOT (the open77_transactions prototype, read-only). Each scenario runs the REAL
+-- TX_DIR (the vendored final open77_transactions). Each scenario runs the REAL
 -- rp_inventory server scripts against the REAL A13 coordinator and its memory store, and
 -- returns a flat table the Python side asserts on. Nothing here is in-game evidence.
 
@@ -92,10 +92,16 @@ local function seed(account, item, count, capacityG)
     return box.r ~= nil, box.reason
 end
 
--- A transfer by ANOTHER resource straight on the coordinator (a foreign writer).
+-- A transfer by ANOTHER resource straight on the coordinator (a foreign writer). The coordinator
+-- runs store answers on its work queue: its own scheduler is pumped (no clock time passes) until
+-- the operation holds its goods or has answered, so it is "first" in the scenario's sense.
 local function foreign(spec)
     local box = {}
     TX.co:transfer(spec, "rp_other", function(r, reason) box.done, box.r, box.reason = true, r, reason end)
+    for _ = 1, 32 do
+        if box.done or TX.co:operation(spec.opId) then break end
+        TXS.step()
+    end
     return box
 end
 
@@ -668,6 +674,10 @@ function scenarios.b2_meta_and_wear()
     local w1 = await(function() return ex.wearAsync(A, "tool", 1) end)
     out.wear1 = type(w1) == "table" and ("dur=" .. w1.durability .. " broken=" .. tostring(w1.broken)) or res(w1)
     out.store_wear = tostring(TX.store.instances[iid].meta.durability)
+    out.wear_keeps_serial = tostring(TX.store.instances[iid].meta.serial == iid)
+    local seen = await(function() return ex.read(CHAR_A) end)
+    local unit = type(seen) == "table" and seen.instances[iid]
+    out.wear_view = unit and (tostring(unit.meta.durability) .. " serial=" .. tostring(unit.meta.serial == iid)) or "none"
     -- Wear persists across an rp_inventory restart (it lives on the instance row). The definer
     -- re-defines on rp_inventory's start, as every definer of the pack does.
     ex = bootTx()
@@ -790,13 +800,225 @@ function scenarios.b2_drop_pickup()
     H.expireDrop(waterDrop)
     H.run(3)
     out.expired = tostring(TX.total("water")) .. " ops=" .. tostring(TX.ops("inv.expire"))
-    -- An rp_inventory restart loses the projection, never the goods.
+    -- Emptied world: containers are closed (the crate after its pickup, the water after expiry).
+    out.closed_after_pickup = tostring(TX.store.containers[world] == nil)
+    -- An rp_inventory restart loses the projection (the platform removes a stopped resource's
+    -- loot), never the goods: the coordinator keeps the drop's metadata and expiry, and the next
+    -- start lists it (listWorld) and projects it again where it lay.
     ex.add(A, "scrap", 2)
     H.run(2)
     await(function() H.commands.drop(A, { "scrap", "2" }) end)
+    local scrapWorld
+    for id, c in pairs(TX.store.containers) do
+        if id:match("^world:") and (c.stacks.scrap or 0) > 0 then scrapWorld = id end
+    end
+    local m = scrapWorld and TX.store.containers[scrapWorld].meta or {}
+    out.drop_meta = ("%s:%s:%s:%s"):format(tostring(m.owner), tostring(m.kind), tostring(m.item), tostring(m.count))
+    out.drop_id_minted = tostring(scrapWorld ~= nil and scrapWorld:match("^world:lab%.") ~= nil)
+    out.drop_expires = tostring(scrapWorld ~= nil and TX.store.containers[scrapWorld].expiresAt ~= nil)
+    for id, d in pairs(H.loot.drops) do if d.owner == "rp_inventory" then H.loot.drops[id] = nil end end
     ex = bootTx()
     out.after_restart_scrap_total = tostring(TX.total("scrap"))
+    local again2
+    for id, d in pairs(H.loot.drops) do if d.owner == "rp_inventory" and d.quantity == 2 then again2 = id end end
+    out.reprojected_after_restart = tostring(again2 ~= nil)
+    out.reprojected_where = again2 and (H.loot.drops[again2].position.x .. "," .. H.loot.drops[again2].position.y) or "none"
+    if again2 then H.nativePickup(A, again2) end
+    H.run(3)
+    out.picked_after_restart = TX.count(CHAR_A, "scrap") .. " closed=" .. tostring(TX.store.containers[scrapWorld] == nil)
+    local left = 0
+    for id in pairs(TX.store.containers) do if id:match("^world:") then left = left + 1 end end
+    out.world_rows_left = tostring(left)
     out.journal_balanced = tostring(journalBalanced())
+    return out
+end
+
+-- ===========================================================================
+-- B2: a drop or a pickup answered in_doubt decides its projection when it settles
+-- ===========================================================================
+local function ownLoot(quantity)
+    local list = {}
+    for id, d in pairs(H.loot.drops) do
+        if d.owner == "rp_inventory" and (not quantity or d.quantity == quantity) then list[#list + 1] = id end
+    end
+    table.sort(list)
+    return list
+end
+
+local function settledEvents()
+    local out = {}
+    for _, e in ipairs(H.events) do
+        if e.name == "rp_inventory:settled" then out[#out + 1] = tostring(e.args[2]) end
+    end
+    return table.concat(out, ",")
+end
+
+-- The commit is queued, lands (or not), and its acknowledgement is lost while the store stays
+-- unreachable for the fence: the facade stops waiting (its 20 s deadline, checked between status
+-- polls) and answers in_doubt; then the store comes back and the fence settles the outcome.
+local function inDoubt(fault, start)
+    TX.store.deferred = true
+    TX.store.faults = { fault }
+    local box = H.task(start)
+    for _ = 1, 40 do
+        if TX.store:pending() > 0 then break end
+        H.run(0.25)
+    end
+    TX.store:step()          -- the commit (applied for lost_ack, not for unreachable_before)
+    for _ = 1, 8 do TXS.step() end   -- the coordinator reads the ambiguous answer, sends its fence
+    TX.store.down = true
+    TX.store:flush()         -- the fence cannot reach the database
+    H.run(35)
+    local during = box.done and "answered" or "waiting"
+    TX.store.down = false
+    TX.store.deferred = false
+    TX.store:flush()
+    H.run(40)
+    return box, during
+end
+
+function scenarios.b2_drop_in_doubt()
+    TX.start()
+    H.stores.sql.inv = nil
+    local ex = bootTx()
+    local out = {}
+    H.events = {}
+    ex.add(A, "scrap", 4)
+    H.run(2)
+    -- 1. The drop committed, its answer was lost: projected once it settles, where it was dropped.
+    local _, during = inDoubt("lost_ack", function() H.commands.drop(A, { "scrap", "2" }) end)
+    out.drop_committed = during .. " " .. TX.count(CHAR_A, "scrap") .. " loot=" .. #ownLoot(2)
+    local first = ownLoot(2)[1]
+    out.drop_projected_at = first and (H.loot.drops[first].position.x .. "," .. H.loot.drops[first].position.y) or "none"
+    -- 2. A pickup committed with its answer lost: not re-projected (the goods are in the pockets).
+    local loot = ownLoot(2)[1]
+    inDoubt("lost_ack", function() H.nativePickup(B, loot) end)
+    out.pickup_committed = TX.count(CHAR_B, "scrap") .. " loot=" .. #ownLoot(2)
+    -- 3. A drop that never reached the database: fenced, nothing moved, no projection, closed.
+    inDoubt("unreachable_before", function() H.commands.drop(A, { "scrap", "1" }) end)
+    local open = 0
+    for id in pairs(TX.store.containers) do if id:match("^world:") then open = open + 1 end end
+    out.drop_fenced = TX.count(CHAR_A, "scrap") .. " loot=" .. #ownLoot(1) .. " world_rows=" .. open
+    out.settled_events = settledEvents()
+    out.total = tostring(TX.total("scrap"))
+    out.journal_balanced = tostring(journalBalanced())
+    return out
+end
+
+-- ===========================================================================
+-- B2: the final coordinator API (697e9e2f): subject provider, mint rules, per-part writers,
+-- lazy reads, minted world ids, failed vs fenced operation ids, the ready handshake
+-- ===========================================================================
+function scenarios.b2_final_api()
+    local out = {}
+    -- Subject provider: one override (a character layer) decides the pockets' key; a refusal is
+    -- passed through, never replaced by the account identifier.
+    TX.start()
+    H.stores.sql.inv = nil
+    H.resources.rp_identity_test = { characterOf = function(who)
+        if who == A then return "acct-a~2" end
+        return nil, "no_character"
+    end }
+    out.provider = res(TXS.callSync("rp_identity_test", "registerSubjectProvider", "characterOf"))
+    out.provider_second = res(TXS.callSync("rp_other", "registerSubjectProvider", "mine"))
+    local ex = bootTx()
+    out.subject_a = res(ex.accountOf(A))
+    out.subject_b = res(ex.accountOf(B))
+    out.add_a = res(ex.add(A, "water", 1))
+    out.add_b = res(ex.add(B, "water", 1))
+    H.run(2)
+    out.subject_store = TX.count("char:acct-a~2", "water") .. "/" .. TX.count(CHAR_A, "water")
+    H.resources.rp_identity_test = nil
+
+    -- Mint rules (nothing mints by default): an unlisted sys: source is refused at once, a burn
+    -- never is; a cap the hour has used up refuses the next credit at the coordinator.
+    TX.start({ tunables = { mint1 = "rp_inventory sys:rp_bar * 3; rp_inventory sys:admin * 100", mint2 = "" } })
+    ex = bootTx()
+    out.mint_listed = res(H.as("rp_bar", ex.add, A, "water", 3))
+    out.mint_unlisted = res(H.as("rp_crime", ex.add, A, "water", 1))
+    out.burn_unlisted = res(H.as("rp_crime", ex.remove, A, "water", 1))
+    H.run(2)
+    H.events = {}
+    out.mint_over_cap = res(H.as("rp_bar", ex.add, A, "water", 1))
+    H.run(3)
+    out.mint_over_cap_store = tostring(TX.count(CHAR_A, "water"))
+    out.mint_over_cap_events = changedEvents(A)
+    out.allowed_money = tostring((TXS.callSync("compat_test", "allowed", "rp_inventory", "sys:rp_bar", "money")))
+
+    -- Per-part writers: rp_inventory may write vehicle trunks, not cargo beds (rp_cargo's).
+    TX.start({ tunables = { writers = "rp_inventory:char+stash+world+veh/trunk, compat_seed, rp_other" } })
+    ex = bootTx()
+    out.part_trunk = res(await(function() return ex.openVehicle("NC-7777", "trunk", 50) end))
+    out.part_cargo = res(await(function() return ex.openVehicle("NC-7777", "cargo", 50) end))
+    out.allowed_cargo = res(TXS.callSync("compat_test", "allowed", "rp_inventory", "veh:NC-7777:cargo"))
+
+    -- A job without the char right credits the pockets in ONE granted operation (C1 salvage).
+    TX.start({ tunables = { writers = "rp_inventory:char+stash+world+veh/trunk, rp_salvage_test:world",
+        mint2 = "rp_salvage_test sys:salvage * 100" } })
+    ex = bootTx({ config = { pocketGrantees = { rp_salvage_test = true } } })
+    local function jobCredit(opId)
+        local box
+        TXS.call("rp_salvage_test", "transfer", function(_, r, why) box = { r = r, why = why } end,
+            { opId = opId, kind = "salvage.credit", lines = { { item = "scrap", count = 2, from = "sys:salvage", to = CHAR_A } } })
+        for _ = 1, 40 do
+            if box then break end
+            H.run(0.25)
+        end
+        return box and res(box.r, box.why) or "timeout"
+    end
+    out.job_without_grant = jobCredit("salvage:credit:0001")
+    out.grant_pockets = res(H.as("rp_salvage_test", ex.grantPockets, "salvage:credit:0002", A))
+    out.grant_not_allowed = res(H.as("rp_crime", ex.grantPockets, "salvage:credit:0003", A))
+    out.job_with_grant = jobCredit("salvage:credit:0002")
+    H.run(2)
+    out.job_view = tostring(ex.count(A, "scrap"))
+
+    -- Lazy read: a container never opened reads as absent and is not created by the read.
+    TX.start()
+    ex = bootTx()
+    local snap = await(function() return ex.read("stash:never-opened") end)
+    out.lazy_read = type(snap) == "table" and tostring(snap.exists) or res(snap)
+    out.lazy_read_created = tostring(TX.store.containers["stash:never-opened"] ~= nil)
+
+    -- World ids are minted by the coordinator, with the caller's metadata.
+    out.world_chosen_id = res(await(function() return ex.createWorld(10, { worldId = "mycrate01" }) end))
+    local w = await(function() return ex.createWorld(10, { meta = { model = "crate", x = 1 } }) end)
+    out.world_minted = tostring(type(w) == "table" and w.account:match("^world:lab%.") ~= nil)
+    out.world_meta = type(w) == "table" and tostring(TX.store.containers[w.account].meta.model) or "none"
+
+    -- A failed operation id is a fresh attempt; a fenced one is aborted for ever.
+    ex.add(A, "water", 4)
+    H.run(2)
+    TX.store.faults = { "refused" }
+    out.failed_first = res(await(function() return ex.giveAsync(A, B, "water", 1, { opId = "bar:serve:77:n1" }) end))
+    out.failed_same_id = res(await(function() return ex.giveAsync(A, B, "water", 1, { opId = "bar:serve:77:n1" }) end))
+    TX.store.faults = { "unreachable_before" }
+    local f1, f2, f3 = await(function() return ex.giveAsync(A, B, "water", 1, { opId = "bar:serve:77:n2" }) end)
+    out.fenced_first = res(f1, f2) .. ":" .. tostring(type(f3) == "table" and f3.state)
+    out.fenced_same_id = res(await(function() return ex.giveAsync(A, B, "water", 1, { opId = "bar:serve:77:n2" }) end))
+    H.run(3)
+    out.fenced_new_id = res(await(function() return ex.giveAsync(A, B, "water", 1, { opId = "bar:serve:77:n3" }) end))
+    out.water = TX.count(CHAR_A, "water") .. "+" .. TX.count(CHAR_B, "water")
+
+    -- The handshake waits for info().ready: a coordinator whose database has not answered yet
+    -- refuses every mutation (store_unavailable), then serves once it is ready.
+    TX.start({ dbMode = "late" })
+    local logsFrom = 0
+    ex = bootTx({ settle = 5 })
+    local function readyLines()
+        local n = 0
+        for i = logsFrom + 1, #H.logs do if H.logs[i]:find("transactions backend ready", 1, true) then n = n + 1 end end
+        return n
+    end
+    out.late_info = tostring(TXS.callSync("compat_test", "info").phase)
+    out.late_ready_lines = tostring(readyLines())
+    out.late_create = res(ex.createWorld(10))
+    TXS.dbMode = "sql"
+    H.run(40)
+    out.late_ready_after = tostring(readyLines())
+    out.late_create_after = res(await(function() return ex.createWorld(10) end))
+    out.journal_balanced = tostring(journalBalanced())
+    out.kvp_keys = tostring(#Open77.kvp.keys(""))
     return out
 end
 
@@ -963,10 +1185,12 @@ function scenarios.b2_migration()
     db.markers["char:acct-a"].version = 1
     -- A disposable coordinator store is refused: the marker would outlive the data.
     db.items["acct-g"] = { water = 1 }
-    TX.storeMode = "lab_kvp"
+    TX.start({ keepStore = true, storeMode = "lab_kvp" })
+    out.lab_store_reported = tostring(TXS.callSync("compat_test", "info").store)
     ex = bootTx({ players = {} })
     out.not_durable = invmigrate("char", "acct-g")
-    TX.storeMode = "sql"
+    TX.start({ keepStore = true })
+    ex = bootTx({ players = {} })
     -- A legacy layout that is not the 5dcdad2 one is refused before any read.
     db.columns = { rp_inventory_items = { { name = "identifier", type = "varchar(64)" }, { name = "item", type = "varchar(64)" } } }
     ex = bootTx({ players = {} })
@@ -977,6 +1201,13 @@ function scenarios.b2_migration()
     defineFixtureItems(ex)
     out.acct_c_import_unknown = invmigrate("char", "acct-c")
     out.ghost_store = tostring(TX.count("char:acct-c", "ghost_item"))
+    -- No mint rule for sys:migration: refused before any chunk, nothing imported, no marker.
+    db.items["acct-m"] = { water = 1 }
+    TX.start({ keepStore = true, tunables = { mint1 = "rp_inventory sys:rp_bar * 5", mint2 = "" } })
+    ex = bootTx({ players = {} })
+    out.no_mint_rule = invmigrate("char", "acct-m")
+    out.no_mint_rule_store = TX.count("char:acct-m", "water") .. " marker=" .. tostring(db.markers["char:acct-m"] ~= nil)
+    TX.start({ keepStore = true })
     out.kvp_keys = tostring(#Open77.kvp.keys(""))
     return out
 end

@@ -4,6 +4,8 @@
 --   call(name, ...)  -> res, reason, info   one open77_transactions export, awaited (yields);
 --                                           a dispatch failure answers nil, "coordinator_unavailable",
 --                                           { ambiguous = true } when the request may have run
+--   callSync(name, ...) -> res, reason      one NON-yielding export (allowed, subjectOf, info), inline;
+--                                           nil, "coordinator_unavailable" when it cannot run
 --   spawn(fn), wait(ms), now() -> ms, log(fmt, ...), registry (RpItemSchema registry),
 --   onView(view, changes)                   effective contents changed by a reload, a lost
 --                                           write-behind or a committed async operation
@@ -20,7 +22,11 @@
 -- acknowledged) - held (in-flight async debits). Reloads never run under an in-flight
 -- operation of this view (the coordinator's own rule): they are deferred instead.
 --
--- Status: offline-tested only (tests/test_inventory_b1b2.py), against the A13 prototype.
+-- API: the final coordinator, Open77 697e9e2f (contract section 7.2): info().ready before any
+-- mutation, lazy read (unknown_account, never creates), openWorld/close for world: containers,
+-- metaPatch on instance lines, allowed() for the sys: mint rules, a failed opId is a fresh
+-- attempt and a fenced one (`aborted`) is not.
+-- Status: offline-tested only (tests/test_compat_inventory.py), against that coordinator.
 
 RpInvFacade = {}
 local F = {}
@@ -36,6 +42,9 @@ local DEFINITIVE = {
     instance_unavailable = true, balance_limit = true, exceeds_reservation = true,
     operation_too_large = true, op_id_conflict = true, store_failed = true, not_owner = true,
     stale_version = true, unknown_account = true, invalid_key = true,
+    -- The operator's mint rules (contract 12.6). mint_cap_exceeded is retryable for an async
+    -- caller, but a write-behind change waiting an hour would hold its account's queue: lost.
+    mint_denied = true, mint_cap_exceeded = true,
 }
 -- Coordinator states in which nothing was committed and nothing can commit any more.
 local NOT_COMMITTED = { aborted = true, failed = true, expired = true, cancelled = true, unknown = true }
@@ -68,10 +77,16 @@ function RpInvFacade.new(deps)
     assert(type(deps) == "table" and deps.call and deps.spawn and deps.wait and deps.registry, "facade deps")
     local self = setmetatable({
         call = deps.call, spawn = deps.spawn, wait = deps.wait,
+        callSync = deps.callSync or function() return nil, "coordinator_unavailable" end,
+        store = nil,                     -- info().store of the coordinator (sql | lab_kvp)
         now = deps.now or function() return 0 end,
         log = deps.log or function() end,
         registry = deps.registry,
         onView = deps.onView or function() end,
+        onReady = deps.onReady,          -- function(generation): the handshake succeeded
+        -- function(opId, state, receipt): an async operation answered in_doubt has settled in the
+        -- background: "committed" (receipt) or a not-committed state (aborted, failed...).
+        onSettled = deps.onSettled or function() end,
         resource = deps.resource or "rp_inventory",
         views = {},
         healthy = false, starting = false, generation = 0,
@@ -93,8 +108,10 @@ function F:_backoff(attempt)
 end
 
 -- ---------------------------------------------------------------------------
--- Readiness: an opId prefix from the coordinator and the definitions pushed. Until both
--- succeed every mutation refuses with store_unavailable (A13 4.1: never a KVP fallback).
+-- Readiness: the coordinator reports ready (info), an opId prefix from it and the definitions
+-- pushed. Until all succeed every mutation refuses with store_unavailable (A13 4.1: never a KVP
+-- fallback). A coordinator that refused its store at boot (info.phase = "refused") is logged
+-- once with its reason; it needs an operator, and the handshake keeps polling.
 -- ---------------------------------------------------------------------------
 function F:start()
     if self.starting then return end
@@ -103,15 +120,25 @@ function F:start()
     local generation = self.generation
     self.spawn(function()
         local attempt = 0
+        local refusedLogged = false
         while generation == self.generation do
-            local prefix = self.call("newOpId")
+            local info = self.call("info")
+            local prefix
+            if type(info) == "table" and info.ready == true then
+                self.store = info.store
+                prefix = self.call("newOpId")
+            elseif type(info) == "table" and info.phase == "refused" and not refusedLogged then
+                refusedLogged = true
+                self.log("open77_transactions refused its store (%s): mutations refuse store_unavailable", tostring(info.reason))
+            end
             if type(prefix) == "string" and prefix ~= "" and #prefix <= 72 then
                 self.prefix = prefix
                 self.defsPushed = -1
                 if self:_pushDefinitions() then
                     self.healthy = true
                     self.starting = false
-                    self.log("transactions backend ready (opId prefix %s)", prefix)
+                    self.log("transactions backend ready (store %s, opId prefix %s)", tostring(self.store), prefix)
+                    if self.onReady then self.onReady(generation) end
                     return
                 end
             end
@@ -183,9 +210,15 @@ function F:mintInstanceId()
     return ("i" .. (self.prefix or "x") .. "." .. base36(self.counter)):sub(1, 64)
 end
 
-function F:mintWorldId()
-    self.counter = self.counter + 1
-    return ("w" .. (self.prefix or "x") .. "." .. base36(self.counter)):gsub("[^%w_.%-]", "-"):sub(1, 64)
+-- Whether this resource may create value out of `sysAccount` (`asset`: an item id or "money";
+-- nil = any item) under the coordinator's mint rules (contract 12.6). Never yields. true, or
+-- false plus mint_denied / mint_cap_exceeded. An unreachable coordinator answers true: the
+-- operation itself is refused then.
+function F:mayMint(sysAccount, asset)
+    local ok, allowed, why = pcall(self.callSync, "allowed", self.resource, sysAccount, asset)
+    if not ok or allowed == nil then return true end
+    if allowed == true then return true end
+    return false, why or "mint_denied"
 end
 
 -- ---------------------------------------------------------------------------
@@ -218,12 +251,14 @@ local function snapshotInto(view, snap)
     if snap.capacityG then view.capacityG = math.tointeger(snap.capacityG) or view.capacityG end
 end
 
--- Loads (open + read) one account. Yields. capacityG nil = read only (the container must exist,
--- or the view says exists = false). Returns view | nil, reason.
+-- Loads (open + read) one account. Yields. capacityG nil = read only: the coordinator loads on
+-- demand and never creates, so a container that was never opened answers unknown_account.
+-- world: containers are minted by openWorld, never opened here. Returns view | nil, reason.
 function F:load(account, capacityG)
     local id, why = Accounts.parse(account)
     if not id then return nil, why end
     if not self.healthy then return nil, "store_unavailable" end
+    if capacityG and Accounts.kindOf(account) == "world" then capacityG = nil end
     local view = self.views[account]
     if view and view.loaded then
         view.releaseWhenIdle = nil   -- used again (a quick reconnect) before its queue drained
@@ -267,6 +302,36 @@ function F:load(account, capacityG)
     if capacityG then view.capacityG = capacityG end
     view.loaded = true
     return view
+end
+
+-- Mints a world: container (a ground pile, a crate) and loads its view. Yields.
+-- props = { capacityG, meta?, expiresAt? }. Returns view | nil, reason.
+function F:openWorld(props)
+    if not self.healthy then return nil, "store_unavailable" end
+    local snap, reason = self.call("openWorld", props)
+    if type(snap) ~= "table" or type(snap.id) ~= "string" then
+        if reason == "coordinator_unavailable" then self:lost(reason); return nil, "store_unavailable" end
+        return nil, reason or "store_unavailable"
+    end
+    local view = newView(snap.id, math.tointeger(snap.capacityG) or 0)
+    snapshotInto(view, snap)
+    view.loaded = true
+    view.meta = snap.meta
+    self.views[snap.id] = view
+    return view
+end
+
+-- Deletes an EMPTY world: container (after its last unit was picked up or expired). Yields.
+-- true | nil, reason (container_not_empty, busy, unknown_account...).
+function F:closeWorld(account)
+    local view = self.views[account]
+    if view and (#view.queue > 0 or view.inflight > 0) then return nil, "busy" end
+    local ok, reason = self.call("close", account)
+    if ok == true or reason == "unknown_account" then
+        self.views[account] = nil
+        return true
+    end
+    return nil, reason or "store_unavailable"
 end
 
 -- Forget a view nobody uses any more, once its write-behind queue has drained.
@@ -408,6 +473,15 @@ function F:createLines(itemId, n, meta, from, to)
     return lines
 end
 
+-- The metadata an instance line leaves (the coordinator's rule, model.lua resolveMeta): `meta`
+-- replaces, `metaPatch` merges one level into the current metadata.
+local function mergedMeta(current, meta, patch)
+    if meta ~= nil then return RpItemSchema.copy(meta) end
+    local merged = RpItemSchema.copy(current or {})
+    for k, v in pairs(patch or {}) do merged[k] = RpItemSchema.copy(v) end
+    return merged
+end
+
 -- The deltas each loaded view sees once `lines` commit.
 function F:deltasOf(lines)
     local deltas = {}
@@ -434,10 +508,16 @@ function F:deltasOf(lines)
             if t then add(t.stacks, l.item, l.count); t.weightG = t.weightG + grams end
         elseif l.instance and l.at then
             local x = d(l.at)
-            if x then x.upd[l.instance] = RpItemSchema.copy(l.meta) end
+            if x then
+                local rec = instanceRecord(l.instance, l.at)
+                x.upd[l.instance] = mergedMeta(rec and rec.meta, l.meta, l.metaPatch)
+            end
         elseif l.instance then
             local rec = l.item and { item = l.item, meta = RpItemSchema.copy(l.meta or {}), version = 1 }
                 or instanceRecord(l.instance, l.from)
+            if rec and not l.item and (l.meta ~= nil or l.metaPatch ~= nil) then
+                rec = { item = rec.item, meta = mergedMeta(rec.meta, l.meta, l.metaPatch), version = rec.version }
+            end
             local grams = rec and (self.registry:weightG(rec.item) or 0) or 0
             local f, t = d(l.from), d(l.to)
             if f then f.del[l.instance] = true; f.weightG = f.weightG - grams end
@@ -483,6 +563,12 @@ function F:credit(view, itemId, n, meta, source)
     local lines, why = self:createLines(itemId, n, meta, source, view.account)
     if not lines then return nil, why end
     if self:usedG(view) + def.weightG * n > view.capacityG then return nil, "too_heavy" end
+    -- A credit out of sys: is a mint: refused at once when the operator's rules do not allow it,
+    -- instead of being accepted and lost later.
+    if Accounts.kindOf(source) == "sys" then
+        local mint, mintWhy = self:mayMint(source, itemId)
+        if not mint then return nil, mintWhy end
+    end
     if def.maxStack and not def.unique then
         local stacks = self:effective(view)
         if (stacks[lines[1].item] or 0) + n > def.maxStack then return nil, "stack_limit" end
@@ -680,7 +766,9 @@ function F:transact(op)
     end
     local accounts, seen = {}, {}
     for _, l in ipairs(op.lines) do
-        for _, a in ipairs({ l.from, l.to, l.at }) do
+        -- pairs, not ipairs: a metadata update line has no `from`, and ipairs stops at that nil,
+        -- which left wearAsync's account out of the holds and its view stale (B7 finding).
+        for _, a in pairs({ l.from, l.to, l.at }) do
             if a and not seen[a] then
                 seen[a] = true
                 local id, why = Accounts.parse(a)
@@ -804,9 +892,10 @@ function F:transact(op)
             return nil, "store_unavailable", { opId = opId, retryable = true, state = state }
         end
         self.spawn(function()
-            local late = self:settle(opId)
+            local late, lateState = self:settle(opId)
             finish(late)
             if late then self.stats.committed = self.stats.committed + 1 end
+            self.onSettled(opId, late and "committed" or (lateState or "aborted"), late)
         end)
         return nil, "in_doubt", { opId = opId, retryable = true }
     end
@@ -861,9 +950,9 @@ function F:planWear(view, itemId, amount, instanceId)
     if left == 0 and def.durability.breaks then
         return { { instance = iid, from = view.account, to = "sys:broken" } }, iid, 0, true
     end
-    local meta = RpItemSchema.copy(rec.meta or {})
-    meta.durability = left
-    return { { instance = iid, at = view.account, meta = meta } }, iid, left, false
+    -- A compare-and-set patch of the one field: other metadata (a serial, an origin) is kept
+    -- as the coordinator holds it at commit time.
+    return { { instance = iid, at = view.account, metaPatch = { durability = left } } }, iid, left, false
 end
 
 return RpInvFacade

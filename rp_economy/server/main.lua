@@ -193,7 +193,7 @@ local function resolveRef(ref, onBehalfOf, role)
         return a.id
     end
     if ref.identifier ~= nil then
-        local subject = Tx.subjectOf({ identifier = ref.identifier })
+        local subject = Tx.subjectOf({ identifier = ref.identifier })   -- the provider, identifier form
         if not Wallets.validSubject(subject) then return nil, "unknown_recipient" end
         local a = Wallets.accounts[wallet .. ":" .. subject]
         -- A synchronous caller cannot ask whether an offline account exists: only wallets this
@@ -406,7 +406,7 @@ local function fundsOf(payerAccount, instrument, amount)
     local function balanceOf(id)
         local a = Wallets.accounts[id]
         if a and a.loaded then return Wallets.display(a) end
-        local snap = Tx.call("open", id)
+        local snap = Tx.read(id)
         return type(snap) == "table" and (math.tointeger(snap.balance) or 0) or 0
     end
     local cash = math.max(0, balanceOf(cashId))
@@ -479,10 +479,35 @@ end
 function Api.charge(spec, caller) return chargeLike(spec, caller, "charge", false) end
 function Api.invoice(spec, caller) return chargeLike(spec, caller, "invoice", true) end
 
--- sale { opId, seller = party, items = { { item, count, from? } }, buyer = { sys = label } |
---   party, total, payees? = { ... } (default: all to the seller), reason }
+-- Strict writers (the coordinator's `writers` keeps `char` to rp_inventory): a sale's goods that
+-- leave a connected seller's pockets need rp_inventory's grant for this one operation
+-- (grantPockets; open77_transactions authorize). Asked only when the coordinator says this
+-- resource may not write them (allowed, non-yielding). true | nil, reason, info.
+local function pocketsGranted(lines, opId, seller)
+    for _, l in ipairs(lines) do
+        local account = l.from
+        if type(account) == "string" and account:match("^char:") then
+            local ok, allowed = pcall(Open77.exports.callSync, cfg.coordinator, "allowed", RESOURCE, account)
+            if ok and allowed == false then
+                local pid = type(seller) == "table" and toPositiveInteger(asNumber(seller.player), 2147483647)
+                if not pid then return nil, "namespace_denied", { account = account, detail = "seller_not_connected" } end
+                local gok, granted, why = pcall(Open77.exports.callSync, "rp_inventory", "grantPockets", opId, pid)
+                if not gok or granted ~= true then
+                    return nil, "namespace_denied", { account = account, detail = gok and tostring(why) or "rp_inventory_unavailable" }
+                end
+                return true
+            end
+        end
+    end
+    return true
+end
+
+-- sale { opId, seller = party, items = { { item, count, from? } | { instance, from? } },
+--   buyer = { sys = label } | party, total, payees? = { ... } (default: all to the seller), reason }
 -- Goods leave their container to the buyer (an NPC buyer's sys account, or the buyer's pockets
 -- char:<subject>); the price leaves the buyer and is split among the payees. One operation.
+-- An `instance` entry moves one unique unit (a salvage crate out of veh:<plate>:cargo, C1) with
+-- its metadata; `from` defaults to the seller's pockets like a stack.
 function Api.sale(spec, caller)
     local ok, why = commonChecks(spec)
     if not ok then return nil, why end
@@ -502,14 +527,24 @@ function Api.sale(spec, caller)
     if type(spec.items) ~= "table" or #spec.items < 1 or #spec.items > 16 then return nil, "invalid_items" end
     local lines = {}
     for i, it in ipairs(spec.items) do
-        if type(it) ~= "table" or type(it.item) ~= "string" or not it.item:match("^[a-z0-9_]+$") or #it.item > 64 then
-            return nil, "unknown_item", { item = i }
-        end
-        local n = toPositiveInteger(it.count, 1000000)
-        if not n then return nil, "invalid_count", { item = i } end
+        if type(it) ~= "table" then return nil, "unknown_item", { item = i } end
         local from, fromWhy = containerOf(it.from, sellerSubject)
         if not from then return nil, fromWhy, { item = i } end
-        lines[#lines + 1] = { item = it.item, count = n, from = from, to = goodsTo }
+        if it.instance ~= nil then
+            -- The coordinator's instance id rule (model.lua validInstanceId).
+            if type(it.instance) ~= "string" or #it.instance < 4 or #it.instance > 64
+                or not it.instance:match("^[A-Za-z0-9_.:%-]+$") then
+                return nil, "invalid_instance", { item = i }
+            end
+            lines[#lines + 1] = { instance = it.instance, from = from, to = goodsTo }
+        else
+            if type(it.item) ~= "string" or not it.item:match("^[a-z0-9_]+$") or #it.item > 64 then
+                return nil, "unknown_item", { item = i }
+            end
+            local n = toPositiveInteger(it.count, 1000000)
+            if not n then return nil, "invalid_count", { item = i } end
+            lines[#lines + 1] = { item = it.item, count = n, from = from, to = goodsTo }
+        end
     end
     local payees, sum
     if spec.payees ~= nil then
@@ -521,6 +556,8 @@ function Api.sale(spec, caller)
     end
     local money = allocate({ { account = buyer, amount = total } }, payees)
     for _, l in ipairs(money or {}) do lines[#lines + 1] = l end
+    local granted, grantWhy, grantInfo = pocketsGranted(lines, spec.opId, spec.seller)
+    if not granted then return nil, grantWhy, grantInfo end
     return run(spec, "sale", lines, seller, caller)
 end
 
@@ -566,7 +603,7 @@ exports("balanceOf", function(party)
     local a = Wallets.accounts[id]
     if a and a.loaded then return { account = id, balance = Wallets.display(a), exists = a.exists } end
     if not Tx.healthy then return nil, "store_unavailable" end
-    local snap, snapWhy = Tx.call("open", id)
+    local snap, snapWhy = Tx.read(id)
     if type(snap) ~= "table" then return nil, snapWhy or "store_unavailable" end
     return { account = id, balance = math.tointeger(snap.balance) or 0, exists = snap.exists == true }
 end)

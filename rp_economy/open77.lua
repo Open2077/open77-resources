@@ -16,8 +16,9 @@ permissions { "network.events", "database.access" }
 -- open77_transactions (Open77 repository, resources/system, auto_start false) must be loaded
 -- through resources.load. It is reached at runtime, not through a dependency line, so that a
 -- missing coordinator is reported (`store_unavailable`, log line) instead of rp_economy not
--- starting at all. Once the coordinator ships a manifest, a server may add:
---   dependency "open77_transactions >=<its version>"
+-- starting at all. The coordinator ships its manifest (0.1.0 at Open77 697e9e2f); a server that
+-- wants the hard start order may add:
+--   dependency "open77_transactions >=0.1.0"
 
 server_script "server/config.lua"
 server_script "server/tx.lua"

@@ -67,11 +67,13 @@ local function fnv32(s)
 end
 W.fnv32 = fnv32
 
--- An operation id `<prefix><key>` that fits the coordinator's 96 bytes.
+-- An operation id `<prefix><key>` within the coordinator's rule: 96 bytes of [A-Za-z0-9_.:@-].
+-- A longer key, or one with another character (the `~` of a later character's subject), is
+-- cut and named by its hash.
 function W.opIdFor(prefix, key)
     local id = prefix .. key
-    if #id <= 96 then return id end
-    return prefix .. key:sub(1, 40) .. "." .. fnv32(key)
+    if #id <= 96 and id:match("^[A-Za-z0-9_.:@%-]+$") then return id end
+    return prefix .. key:gsub("[^A-Za-z0-9_.:@%-]", "_"):sub(1, 40) .. "." .. fnv32(key)
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -92,10 +94,11 @@ function W.isContainer(id)
 end
 
 -- A durable subject usable as an account key: the coordinator's lint (A13 §3.1.1) refuses
--- session-like and all-digit keys, and an account id is at most 96 bytes.
+-- session-like and all-digit keys, and an account id is at most 96 bytes. `~` is the separator
+-- of a later character's subject (`<accountId>~<n>`, contract 12.8).
 function W.validSubject(s)
     if type(s) ~= "string" or #s < 1 or #s > 90 then return false end
-    if not s:match("^[A-Za-z0-9_.@%-]+$") then return false end
+    if not s:match("^[A-Za-z0-9_.@~%-]+$") then return false end
     if s:match("^%d+$") or s:match("^session") then return false end
     return true
 end
@@ -201,13 +204,7 @@ end
 function W.fetch(a)
     a.readSeq = a.readSeq + 1
     local seq = a.readSeq
-    local snap, why
-    if a.loaded then
-        snap, why = Tx.call("read", a.id)
-        if snap == nil and why == "not_loaded" then snap, why = Tx.call("open", a.id) end
-    else
-        snap, why = Tx.call("open", a.id)
-    end
+    local snap, why = Tx.read(a.id)
     if type(snap) ~= "table" then
         Tx.noteFailure(why)
         return nil, why or "store_unavailable"
@@ -286,6 +283,8 @@ local function linesHash(kind, lines)
     for _, l in ipairs(lines) do
         if l.money then
             parts[#parts + 1] = ("m|%d|%s|%s"):format(l.money, l.from, l.to)
+        elseif l.instance then
+            parts[#parts + 1] = ("u|%s|%s|%s"):format(l.instance, l.from, l.to)
         else
             parts[#parts + 1] = ("i|%s|%d|%s|%s"):format(l.item, l.count, l.from, l.to)
         end
@@ -312,24 +311,50 @@ local DEFINITIVE = {
     unknown_operation = true, expired = true, cancelled = true, op_id_conflict = true,
     store_failed = true, not_owner = true, stale_version = true, unknown_account = true, invalid_key = true,
 }
--- Refusals that a replay of an already committed operation can also produce: the business ones,
--- and op_id_conflict when a cash-then-bank split computed again from today's balances differs
--- from the committed one. The operation id names the business operation (A13 §3.4).
-local REPLAY_PROBE = {
-    insufficient_funds = true, insufficient_items = true, capacity_exceeded = true,
-    instance_unavailable = true, balance_limit = true, unknown_account = true, op_id_conflict = true,
-}
--- Proven NOT committed: a fresh attempt is safe (write-behind only, under a new attempt id).
+-- Refusals that a replay of an already committed operation can still produce. The coordinator
+-- reads the operation row itself before reporting a business refusal (697e9e2f, contract 13.5:
+-- insufficient_*, capacity_exceeded, instance_unavailable, balance_limit, stale_version), so
+-- those replay there. Left: op_id_conflict when a cash-then-bank split computed again from
+-- today's balances differs from the committed one (the operation id names the business
+-- operation, A13 §3.4), and unknown_account (a container gone since).
+local REPLAY_PROBE = { unknown_account = true, op_id_conflict = true }
+-- Proven NOT committed: a fresh attempt is safe (write-behind only, under a new attempt id
+-- `<opId>-r<n>`: always safe; the coordinator would also take the same id again after a failure,
+-- but never after a fence, `aborted`).
 local NOT_COMMITTED = { conflict = true, store_unavailable = true, coordinator_unavailable = true, aborted = true }
 
+-- The business reason travels with the operation (contract 7.2: 1..64 bytes, no control
+-- character; stored on the receipt and every journal row, read back by history). Not part of
+-- the request hash, so it never turns a replay into a conflict.
+local function coordinatorReason(reason)
+    if type(reason) ~= "string" or reason == "" or reason:find("%c") then return nil end
+    return reason:sub(1, 64)
+end
+
 local function specOf(e)
-    return { opId = e.attemptOpId, kind = e.kind, actor = e.actor, lines = e.lines }
+    return { opId = e.attemptOpId, kind = e.kind, actor = e.actor, lines = e.lines, reason = coordinatorReason(e.reason) }
+end
+
+-- A hint for a HUD (B7): the unsettled operations on a connected player's wallet changed -- one
+-- entered in_doubt, or an atomic or in-doubt one settled. Listeners coalesce and re-read
+-- (walletStatus); write-behind changes already raise rp_economy:changed / walletChanged.
+local function pendingChanged(e)
+    local seen = {}
+    for id in pairs(e.effects) do
+        local a = W.accounts[id]
+        if a and a.playerId and not seen[a.playerId] then
+            seen[a.playerId] = true
+            TriggerEvent("rp_economy:pendingChanged", a.playerId)
+        end
+    end
 end
 
 local function settleCommitted(e, receipt)
     e.state = "committed"
     e.receipt = receipt
-    e.versions = type(receipt.versions) == "table" and receipt.versions or {}
+    -- A replayed receipt's versions are not this commit's (the stored receipt has none, the
+    -- duplicate-key path reports the mirror before its reload): re-read instead.
+    e.versions = (type(receipt.versions) == "table" and receipt.replay ~= true) and receipt.versions or {}
     e.coverSeq = {}
     e.settledAt = now()
     for id, delta in pairs(e.effects) do
@@ -343,6 +368,7 @@ local function settleCommitted(e, receipt)
             W.publish(a, e.reason)
         end
     end
+    if not e.legacy or e.doubted then pendingChanged(e) end
 end
 
 local function settleFailed(e, reason, info)
@@ -359,6 +385,7 @@ local function settleFailed(e, reason, info)
             W.publish(a, "reverted:" .. tostring(reason))
         end
     end
+    if not e.legacy or e.doubted then pendingChanged(e) end
     if e.legacy then
         Open77.log.error(("[rp_economy] write-behind %s (%s) refused by the coordinator: %s; the cached change is reverted")
             :format(e.opId, tostring(e.kind), tostring(reason)))
@@ -386,6 +413,7 @@ local function process(e)
         end
         if reason == "in_doubt" or reason == "busy" then
             e.state = "in_doubt"
+            if not e.doubted then e.doubted = true pendingChanged(e) end
             local outcome, detail = Tx.resolve(e.attemptOpId, math.huge)
             if outcome == "committed" then return settleCommitted(e, detail or { opId = e.attemptOpId }) end
             if outcome == "failed" then
@@ -398,9 +426,8 @@ local function process(e)
         log("operation %s attempt %d (%s): %s", e.attemptOpId, e.attempt, tostring(e.kind), tostring(reason))
         Tx.noteFailure(reason)
         if DEFINITIVE[reason] and REPLAY_PROBE[reason] then
-            -- A coordinator that restarted re-validates the holds of a known operation id before
-            -- it looks at the operation row, so the replay of a committed sale whose goods are
-            -- gone answers insufficient_items. The row says whether it is ours (b3-wallet.md §8).
+            -- The row says whether the id already committed (a replay whose recomputed lines
+            -- differ, or whose container is gone).
             local status = Tx.call("status", e.attemptOpId)
             if type(status) == "table" and status.state == "committed" then
                 e.replayed = true
@@ -497,6 +524,15 @@ function W.legacy(spec)
             local key = W.mintKeyOf(l.from)
             local token, why = nil, "mint_denied"
             if key then token, why = Mint.take(key, l.money) end
+            if token then
+                -- The coordinator's own rule for this resource (contract 12.6), asked inline: a
+                -- missing rule refuses now instead of reverting the change later.
+                local coordinatorOk, coordinatorWhy = Tx.mayMint(l.from)
+                if not coordinatorOk then
+                    Mint.release(token)
+                    token, why = nil, coordinatorWhy
+                end
+            end
             if not token then
                 for _, t in ipairs(tokens) do Mint.release(t) end
                 return nil, why or "mint_denied", { line = i, account = l.from }
@@ -660,7 +696,8 @@ function W.attach(playerId)
     W.byPlayer[playerId] = { subject = subject, identifier = identifier, cash = cash.id, bank = bank.id }
     cash.published, bank.published = W.display(cash), W.display(bank)
     if not cash.exists and not bank.exists and next(cash.tracked) == nil then
-        local legacy, err = Migrate.isLegacySubject(subject)
+        -- The 1.x tables are keyed by the account identifier, whatever the provider's subject.
+        local legacy, err = Migrate.isLegacySubject(identifier)
         if legacy == nil then
             log("player %d %s: start grant postponed, archive unreadable (%s)", playerId, subject, tostring(err))
         elseif legacy == false then

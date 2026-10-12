@@ -169,6 +169,21 @@ class GarageAccess(unittest.TestCase):
             "no_grant_left": "true",
         })
 
+    def test_lab_issue_is_gated_and_owned(self):
+        """labIssue (C1 two-client runs): convar-gated, a plated vehicle owned by the player."""
+        self.check(scenario("lab_issue"), {
+            "disabled": "nil:lab_disabled",
+            "issued": "out:true:true",
+            "owner": "acct-key",
+            "owner_cargo": "true:owner",
+            "stranger_cargo": "false:no_access",
+            "account": "ok",
+            "persisted": "true",
+            "stored_only": "stored",
+            "bad_record": "nil:invalid_record",
+            "bad_player": "nil:player_not_found",
+        })
+
 
 MACKINAW = "Vehicle.v_standard3_thorton_mackinaw_player"
 

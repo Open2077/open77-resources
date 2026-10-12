@@ -9,6 +9,11 @@ was not launched and no `open77_*` tool was called. Every behaviour below was ex
 offline fake host (`tests/compat/fakehost.lua`) with Lua 5.4 through KeraLua's `lua54.dll`. Nothing here
 claims in-game behaviour; the two-client proof is the integrator's (§8).
 
+**Reconcile (2026-10-12, branch `wi/reconcile-a13`):** the final `open77_transactions` (Open77 `697e9e2f`)
+ships the `subjectOf` export and the one-override provider this row assumed; `rp_jobs` needed no code change.
+Its subject rule is now also tested against that coordinator (vendored, `server/main.lua` included):
+`test_subject_provider_rule_against_the_final_coordinator` (§4.1, §6).
+
 **Conventions.** **Fact** = seen in source or in an offline run cited here. **Inference** = follows from
 source, not measured. **Open** = a decision for the integrator or the owner.
 
@@ -147,6 +152,13 @@ was open.
   (`RpJobsConfig.Subject`), else `Open77.players.identifier(playerId)`. Today both are the account id
   (A13 §12.5 and §12.8: the account id is the default character id), so **no existing row moves**.
 - A provider refusal (`nil, reason`) is passed through, never replaced by the account id.
+- **Resolved by 697e9e2f.** `open77_transactions:subjectOf(playerId)` exists, never yields and answers the
+  account id by default; one resource may register an override (`registerSubjectProvider`); a second is
+  refused. Its refusals reach `rp_jobs` as is: `invalid_player`, `subject_unavailable`,
+  `subject_provider_unavailable`, `invalid_key` (its own key lint: session-like or all-digit keys, at most
+  80 bytes of `[A-Za-z0-9_.@~-]`), or the override's own reason. `rp_jobs` keeps its stricter 64-byte limit
+  (the column). **Fact (offline, real coordinator):** default key `acct-0007`, override key `acct-0007~3`, an
+  override refusal `no_character` passed through, `session:7` and `12` refused `invalid_key` with no row.
 - `Subject.required = true` refuses files while the provider is not running. **Open:** set it the day a
   character override provider is registered; otherwise a boot without the coordinator would key rows by the
   bare account id (a fork between characters).
@@ -230,12 +242,14 @@ player bags, a subject provider, distances, chat capture) is local to the scenar
 | `test_existing_exports_and_events_are_compatible` | the 8 exports and tokens, event order, commands, `jobcheck` |
 | `test_public_summary_is_small_and_audience_appropriate` | bag on/off duty, no private keys, refusal, disabled key |
 | `test_durable_keys_follow_the_subject_provider_rule` | provider key, provider refusal, default rule, required provider, session/numeric/long keys |
+| `test_subject_provider_rule_against_the_final_coordinator` (reconcile) | the same rule against Open77 `697e9e2f`'s `subjectOf`: default, one override, its refusal, key lint |
 
 Also: every changed Lua file compiles under Lua 5.4 (`loadfile`), no BOM, LF in the index.
 
 **What the fake host does not establish:** the real bridge's callback shape for a failed `update`
 (assumed `nil, reason` from the API description), real tick ordering of bus events, state-bag replication and
-its permission, `Open77.exports.callSync` to a coordinator that is running, and anything in game.
+its permission, and anything in game. (`Open77.exports.callSync` to a running coordinator is now exercised
+offline, on the coordinator sandbox `tests/compat/txsandbox.lua`.)
 
 ---
 

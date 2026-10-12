@@ -1,11 +1,13 @@
 """A9 cargo layouts and cargo service: rp_cargo's real server scripts on the B8 fake host, offline.
 
 Run with `python -m unittest discover -s tests -p "test_*.py"` (or `-p "test_a9*.py"`). Needs a
-Lua 5.4 engine (tests/compat/luahost.py). The coordinator is tests/compat/fake_tx.lua, which
-assumes API need N1 (an instance move line carries `metaPatch`); rp_garage is a stub of its A9
+Lua 5.4 engine (tests/compat/luahost.py). The coordinator is the REAL final open77_transactions
+(the vendored copy of Open77 697e9e2f, or OP77_TX_DIR), on tests/compat/txsandbox.lua, seeded and
+fault-injected at the export boundary by tests/compat/fake_tx.lua; rp_garage is a stub of its A9
 exports (its real access matrix is tests/test_a9_garage_access.py). Nothing here ran in game:
 the offsets in rp_cargo/data/layouts.json are starting guesses (measured: false).
 """
+import os
 import sys
 import unittest
 from pathlib import Path
@@ -19,8 +21,16 @@ CARGO = (ROOT / "rp_cargo").as_posix()
 MACKINAW = "Vehicle.v_standard3_thorton_mackinaw_player"
 
 
+def _tx_dir():
+    explicit = os.environ.get("OP77_TX_DIR")
+    if explicit and Path(explicit).is_dir():
+        return Path(explicit).as_posix()
+    return (ROOT / "tests" / "compat" / "vendor" / "open77_transactions").as_posix()
+
+
 def scenario(name):
-    return luahost.run_scenario("cargo_scenarios.lua", name, {"COMPAT_DIR": COMPAT, "CARGO_DIR": CARGO})
+    return luahost.run_scenario("cargo_scenarios.lua", name, {"COMPAT_DIR": COMPAT, "CARGO_DIR": CARGO,
+                                                              "TX_DIR": _tx_dir()})
 
 
 @unittest.skipIf(luahost.unavailable(), luahost.unavailable())
@@ -85,7 +95,7 @@ class Cargo(unittest.TestCase):
             "c_z": "1.45",
             "d": "ok:2:1",
             "unload_top": "c1-04",             # top of the last occupied slot
-            "a_cargo_meta": "nil",
+            "a_cargo_meta": "false",           # metaPatch { cargo = false }: merged, not deleted (697e9e2f); reads as no slot
             "a_origin": "salvage",
             "a_where": "char:acct-1",
             "empty": "nil:cargo_empty",
@@ -220,6 +230,22 @@ class Cargo(unittest.TestCase):
             "view_call": "true",
         })
 
+
+    def test_per_part_writers_and_pocket_grant(self):
+        """A9 N4 with the final coordinator: writers `rp_cargo:veh/cargo`; the pockets need
+        rp_inventory's one-operation grant (grantPockets), else nothing is attempted."""
+        self.check(scenario("per_part_writers"), {
+            "allowed_cargo": "true:nil",
+            "allowed_trunk": "false:namespace_denied",
+            "allowed_char": "false:namespace_denied",
+            "no_grant": "nil:namespace_denied",
+            "no_grant_ops": "0",
+            "with_grant": "ok:1:1",
+            "where": "veh:NC-TRKD:cargo",
+            "unload": "ok:1:1",
+            "where_after": "char:acct-1",
+            "grants": "2",
+        })
 
 if __name__ == "__main__":
     unittest.main()

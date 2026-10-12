@@ -4,11 +4,14 @@
 (`wt-world-interaction/docs/world-interaction-plan.md` §4 B). **Date:** 2026-10-12.
 **Branch:** `Open2077/open77-rp-examples` `wi/b1b2-inventory`, from `wi/b8-compat` (d401b40).
 **Contract:** `wt-world-interaction/docs/world-interaction/a13-transaction-contract.md` (A13), §3, §7.2-§7.4, §12.
-**Coordinator:** the A13 offline prototype, `wt-world-interaction/resources/system/open77_transactions/`, loaded
-read-only by the tests; not edited.
+**Coordinator:** since the reconcile of 2026-10-12 (branch `wi/reconcile-a13`), the **final** wave-1
+`open77_transactions` of Open77 `697e9e2f` (`wi/a13-coordinator`, merged into `feat/world-interaction`), vendored
+unmodified in `tests/compat/vendor/open77_transactions` (blob ids in its `SOURCE.txt`) and run whole, `server/main.lua`
+included. The wave-0 build ran against the offline prototype; §7 says what the final coordinator resolved.
 
 **Evidence level.** Everything below was run **offline only**: the real `rp_inventory` server scripts on the B8
-fake host, against the real A13 coordinator and its fault-injecting memory store, in Lua 5.4 (KeraLua 1.4.9
+fake host, against the real final A13 coordinator (its exports, gate, work queue, policy and events, on
+`tests/compat/txsandbox.lua`) and its fault-injecting memory store, in Lua 5.4 (KeraLua 1.4.9
 `lua54.dll` through ctypes). Nothing was deployed, launched, run against a database or run in game. No sentence
 here claims in-game behaviour; §8 lists what the integrator must run.
 
@@ -32,9 +35,12 @@ here claims in-game behaviour; §8 lists what the integrator must run.
    source layout, non-durable store).
 4. **Tests:** 20 new offline tests (10 Lua scenarios), plus the 9 B8 tests: **29 run, all pass, 1 expected
    failure** (B8's gap R1, unchanged), in about 3.5 s.
-5. **Coordinator API needs** (§7): an `info` export, lazy `read`, a fresh attempt for a reused failed `opId`,
-   a replay check before holds, persisted container `meta`, weight-drift handling, the mint allowlist, the
-   committed event.
+5. **Coordinator API needs** (§7): all resolved by Open77 `697e9e2f`; the facade now uses `info().ready`,
+   `subjectOf`, `allowed`, lazy `read`, `openWorld`/`close`/`listWorld`, `metaPatch` and the mint rules, and
+   follows its rule for reused `opId`s. What remains is listed in §7.
+6. **Reconcile (2026-10-12):** `grantPockets` (a one-operation pocket grant for a job or `rp_economy:sale`
+   under strict `writers`), drops re-projected after a restart, `in_doubt` drops and pickups settled before
+   they are projected (B7 F2), `rp_inventory:settled(opId, state)`, and B7's `pairs` fix (F1).
 
 ## 1. B1: definition schema v1
 
@@ -108,10 +114,10 @@ No state bag is used. The panel does not depend on the catalogue.
 
 | Account | Key | Refused |
 |---|---|---|
-| `char:<subject>` | `Open77.players.identifier` (the account id, also the default character id, A13 §3.1.1/§12.8) | missing identifier, characters outside `[A-Za-z0-9_.@-]` |
+| `char:<subject>` | `open77_transactions:subjectOf(playerId)`: the account id by default (also the default character id, A13 §3.1.1/§12.8), an override provider's key otherwise (`<accountId>~<n>`); a refusal is passed through, never replaced by the account id | missing subject, characters outside `[A-Za-z0-9_.@~-]` |
 | `stash:<stashId>` | the caller's stash id, legacy rule `^[%w_%-:%.]+$` ≤ 64 (`home:<homeId>`) | `session…` (`session_key`), all digits and `trunk:/vehicle:/prop:/entity:/player:/drop:/loot:<digits>` (`runtime_id_key`) |
 | `veh:<PLATE>:<part>` | the plate, upper-cased; part `^[a-z][a-z0-9_]*$` ≤ 16 | an all-digit plate (`runtime_id_key`), bad part (`invalid_part`) |
-| `world:<id>` | minted (`w<coordinator opId prefix>.<n>`) or supplied by the projection owner; starts with a letter, 8..64 | anything else (`invalid_world_id`) |
+| `world:<id>` | minted by the coordinator (`openWorld`: `world:<serverTag>.<boot36>.<n36>`), never chosen by a caller | anything else (`invalid_world_id`; `createWorld` with `opts.worldId` too) |
 | `sys:<name>` | journal-only sources and sinks: `sys:<caller resource>` (legacy add/remove), `sys:admin`, `sys:used`, `sys:expired`, `sys:broken`, `sys:migration`, buyers | — |
 
 The coordinator applies the same lint again (`invalid_key`). Session ids and runtime entity ids never reach a key.
@@ -134,7 +140,13 @@ backends (`test_existing_exports_answer_the_same_on_both_backends`).
 ### 3.2 New exports
 
 - **Synchronous:** `backend`, `catalogueVersion`, `itemDefinition`, `accountOf`, `stashAccount`,
-  `vehicleAccount`, `worldAccount`, `registerAuthorizer`.
+  `vehicleAccount`, `worldAccount`, `registerAuthorizer`, and since the reconcile `grantPockets(opId, playerId,
+  ttlMs?)`: the calling resource (one of `Config.pocketGrantees`, default `rp_salvage`, `rp_economy`, `rp_cargo`)
+  may touch that loaded player's pockets in the one operation `opId` (the coordinator's `authorize`, spent when it
+  commits or is fenced, 30 s by default). It is what lets a server keep `char` to `rp_inventory` in the
+  coordinator's `writers`.
+- **Event (reconcile):** `rp_inventory:settled(opId, state)` when an async operation answered `in_doubt` settles
+  in the background (`committed`, or the not-committed state: `aborted`, `failed`...).
 - **Async** (transactions backend only; the legacy backend answers `backend_legacy`): `giveAsync`, `storeAsync`,
   `takeAsync`, `sellAsync`, `openVehicle`, `vehicleStoreAsync`, `vehicleTakeAsync`, `createWorld`,
   `worldPutAsync`, `worldTakeAsync`, `wearAsync`, `addAsync`, `removeAsync`, `moveAsync`, `read`, `status`.
@@ -151,7 +163,9 @@ idempotent: the same `opId` twice moves once and the second answer has `replay =
 | `not_authorized` | an authorizer said no, did not answer, or is required and missing (`info.detail`) |
 | `vehicle_not_tracked`, `unknown_container` | the `veh:` or `world:` container was never opened |
 | `store_unavailable` | the coordinator is not running or not ready, or a fence proved nothing committed: retry |
-| `in_doubt` | unknown after 20 s; holds are kept and settlement continues in the background; poll `status(opId)` |
+| `in_doubt` | unknown after 20 s; holds are kept and settlement continues in the background; poll `status(opId)` or listen to `rp_inventory:settled` |
+| `mint_denied`, `mint_cap_exceeded` | the coordinator's mint rules (contract §12.6) refuse a credit out of `sys:<caller>`; a write-behind `add` is refused at once when `allowed()` already says so |
+| `aborted` | the caller's `opId` was fenced by an earlier `in_doubt`: it can never commit, use a new one. A merely **failed** `opId` (refused, `store_unavailable` without a fence, `conflict`) is a fresh attempt when reused |
 | `busy` | earlier write-behind changes of the same accounts did not land within 10 s |
 | `wallet_not_coordinated` | `sellAsync` while the wallets are not on the coordinator (B3) |
 | coordinator tokens | passed through (`op_id_conflict`, `invalid_key`, `operation_too_large`, …) |
@@ -176,10 +190,11 @@ idempotent: the same `opId` twice moves once and the second answer has `replay =
   backend.
 - **Foreign commits.** `open77_transactions:committed(opId, kind, accounts)` reloads any shown container,
   except for this resource's own operations (a bounded set of 4,096 ids).
-- **Readiness.** Two steps form a handshake:
-  1. The first step obtains an `opId` prefix through `newOpId`. The prefix is unique per coordinator boot, so
-     rp_inventory-minted operation, instance and world ids cannot collide.
-  2. The second step pushes the definitions.
+- **Readiness.** Three steps form a handshake:
+  1. `info()` must answer `ready = true` (the coordinator booted its store; a `refused` phase is logged once).
+  2. An `opId` prefix through `newOpId`. The prefix is unique per coordinator boot, so rp_inventory-minted
+     operation and instance ids cannot collide (world ids are the coordinator's).
+  3. The definitions are pushed.
 
   Until both succeed, mutations answer `store_unavailable`. Stopping or restarting `open77_transactions` resets
   the handshake. Nothing is ever written to KVP: the tests count zero KVP keys in every scenario.
@@ -205,17 +220,23 @@ resource stops. Before each move, the facade calls `exports.<resource>:<exportNa
 
 ### 3.5 World containers and `/drop`
 
-- **A drop is a container.** `/drop` creates a `world:<id>` container with the native loot as its projection
-  (A13 §6.1, option (b)). The loot is created first, then one operation moves the goods from `char` to `world`.
-  A refusal removes the loot, so a refused drop still costs nothing.
-- **Pickup.** A pickup is one `world` → `char` operation under the coordinator's capacity check. A refused
-  pickup leaves the goods in the container and re-creates the loot **where it lay**, not at the picker's feet
-  (B8 §3.5).
-- **Expiry and restart.** Expiry evaporates the goods through a journaled `inv.expire` operation, keeping
-  today's semantics. An rp_inventory restart loses the loot projection (A13 F4) but no longer the goods.
+- **A drop is a container.** `/drop` mints a `world:<id>` container through `openWorld`, with the metadata
+  `{ owner = "rp_inventory", kind = "drop", item, count, x, y, z, bucket }` and `expiresAt` = now + `dropTtlMs`;
+  the native loot is its projection (A13 §6.1, option (b)). The loot is created, then one operation moves the
+  goods from `char` to `world`. A refusal removes the loot and closes the empty container, so a refused drop
+  still costs nothing.
+- **Pickup.** A pickup is one `world` → `char` operation under the coordinator's capacity check; the emptied
+  container is closed (`close`). A refused pickup leaves the goods in the container and re-creates the loot
+  **where it lay**, not at the picker's feet (B8 §3.5).
+- **In doubt (B7 F2, reconcile).** A drop answered `in_doubt` projects nothing until it settles: a commit is
+  projected where it was dropped, a fence closes the empty container. A pickup answered `in_doubt` is not
+  re-projected unless it settles not committed. Offline: `test_in_doubt_drop_and_pickup_settle_their_projection`.
+- **Expiry and restart.** Expiry evaporates the goods through a journaled `inv.expire` operation, then closes
+  the container. An rp_inventory restart loses the loot projection (A13 F4) but not the goods: at the next
+  handshake `reprojectDrops` pages `listWorld`, projects every `rp_inventory` drop again where it lay for the rest
+  of its time, evaporates an expired one and closes an empty one (`Config.reprojectLimit`, 500).
 - **Not fixed here:** the native pickup still grants the loot record (`Items.money` by default, A13 P3) to the
-  picker's game inventory, and nothing re-projects drops after a restart until the coordinator persists
-  container `meta` (§7, item 5) and a projection owner exists.
+  picker's game inventory.
 
 ## 4. Migration (one-shot, per subject)
 
@@ -229,13 +250,19 @@ or from the console with `invmigrate all | char <identifier> | stash <id>`. The 
      `source_schema_mismatch`).
    - Unknown item ids are refused (`unknown_items`) unless `importUnknownItems` is set. Loads wait up to 15 s for
      definers to re-register first.
-   - The coordinator must report `store = "sql"`, or the import is refused with `store_not_durable`.
+   - The coordinator must report `store = "sql"` and `ready` (`info()`, asked at every import), or the import is
+     refused with `store_not_durable`.
 2. **Commit.** The legacy rows become lines from `sys:migration` in chunks of at most 40 lines. Plain rows
    become stack lines. Rows of a unique item become instances whose ids derive from the subject, the item and
    the unit index (`mig1.<fnv(account)>.<item>.<k>`), so the lines of a rerun are byte-identical.
    - **Attempt sequence.** Each chunk walks a **deterministic** attempt sequence: `mig1:<account>:c<k>`, then
-     `….a2`, `….a3` … (at most 8). A fenced `aborted` opId can never commit (A13 §4.4), so the next attempt is
-     made only once every earlier one is proven not committed: at most one attempt of a chunk can ever commit.
+     `….a2`, `….a3` … (at most 8). Under the final coordinator's rule (contract §13.5) a **failed** id (a store
+     that said no, a conflict, an expired or cancelled reservation) is retried as itself (a fresh attempt, at
+     most 3 times per run); only a **fenced** id (`aborted`, A13 §4.4) moves the chunk to the next id. At most one
+     id of a chunk can ever commit. An account whose subject carries `~` is named by its hash in the id.
+   - **Mint rule.** The import creates value out of `sys:migration`: without a coordinator rule allowing it
+     (`rp_inventory sys:migration * <cap>`, or `rp_inventory sys:* * <cap>`) the subject is refused `mint_denied`
+     before any chunk, with no marker (`allowed()`).
    - **Reruns.** A rerun on any VM, including a restarted coordinator, finds that commit through `status` and
      replays it instead of re-applying.
    - **Legacy changes.** A legacy change under an `opId` already used is an `op_id_conflict`, reported as
@@ -266,8 +293,15 @@ an unknown id, a zero row, an over-capacity pocket, a 45-kind pocket (2 chunks) 
 
 Run `python -m unittest discover -s tests -p "test_compat*.py"` from the pack root.
 
-- **Engine and sources.** It needs a Lua 5.4 engine and the A13 prototype: `OP77_TX_ROOT`, else the
-  `wt-world-interaction` path. Tests skip with the reason if either is missing.
+- **Engine and sources.** It needs a Lua 5.4 engine. The coordinator is the vendored final copy
+  (`tests/compat/vendor/open77_transactions`, Open77 `697e9e2f`); `OP77_TX_DIR` (or the older `OP77_TX_ROOT`)
+  points the suite at another copy. Tests skip with the reason if the engine is missing.
+- **Reconcile result (2026-10-12):** `test_compat_inventory.py` 22 tests, OK (about 3.5 s); the whole
+  `python -m unittest discover -s tests -p "test_*.py"`: 85 tests, all pass except the pre-existing
+  `test_held_actions` (needs `lupa`). Harness: `tests/compat/txsandbox.lua` (the coordinator's own environment,
+  threads, exports and events on the fake host) and `tests/compat/txshim.lua` (the only seam: the memory store in
+  place of the MySQL bridge). The test server's tunables are in `txhost.lua` (`TX.TUNABLES`: `writers = *`, mint
+  rules for `rp_inventory` and the scenario writers).
 - **2026-10-12 result.** 29 tests in 3.0-3.5 s: OK, 1 expected failure (B8 R1). Engine: KeraLua 1.4.9
   `lua54.dll` through ctypes, Python 3.12.
 - **New files.** `tests/test_compat_inventory.py`, `tests/compat/inventory_scenarios.lua`,
@@ -289,7 +323,9 @@ Run `python -m unittest discover -s tests -p "test_compat*.py"` from the pack ro
 | metadata, instances, wear | variants stored apart, legacy remove order, serial = instance id, wear persisted across restart, break at 0 |
 | keys and authorization | session/runtime keys refused, vehicles fail closed, per-player authorizer, `authorizer_taken`, scope released on stop, stash re-authorization per move |
 | drop | world container, refused pickup re-projected at origin, expiry journaled, restart keeps goods |
-| migration | golden, idempotent, crash between commit and marker (also across a coordinator restart), a fenced first attempt (same run moves to `.a2`), a store failure (rerun walks past it), lost markers (no double import), unique items as derived instances, version mismatch, divergence + accept, non-durable store, layout mismatch, unknown import |
+| migration | golden, idempotent, crash between commit and marker (also across a coordinator restart), a fenced first attempt (same run moves to `.a2`), a store failure (the rerun retries the same id), lost markers (no double import), unique items as derived instances, version mismatch, divergence + accept, non-durable store (the real `lab_kvp` boot), layout mismatch, unknown import, no mint rule for `sys:migration` |
+| final API (reconcile) | override subject provider keys the pockets, its refusal passes through; mint rules (unlisted source refused at once, burn allowed, over-cap credit compensated); per-part writers (`veh/trunk` yes, cargo no); lazy read creates nothing; minted world ids; failed `opId` fresh, fenced `opId` aborted; `info().ready` gates the handshake; `grantPockets` |
+| in doubt (reconcile, B7 F2) | committed drop projected after it settles, committed pickup not re-projected, fenced drop closed; `rp_inventory:settled` |
 
 What the tests **cannot** establish is listed in §8.
 
@@ -300,47 +336,51 @@ What the tests **cannot** establish is listed in §8.
   at stop). Flows that move value (C1 sale, salvage credit, cargo) must use the async exports.
 - **Coordinator holds are not in the synchronous views.** A reservation by another resource is visible only
   after its commit event, so a synchronous `remove` can be accepted and then LOST.
-- **Weight drift across restarts.** A definer changing an item's weight between boots changes the per-unit
-  weight, while the coordinator's `weight_g` keeps the old total (§7, item 6).
+- **Weight drift across restarts:** handled by the coordinator (`reweigh` operations, contract §13.5).
 - **Stash, vehicle and world views stay loaded** for the generation. They are bounded by usage; world views are
   released after pickup.
-- **`sellAsync` stays disabled** until B3 moves wallets onto the coordinator.
+- **`sellAsync` stays opt-in** (`Config.coordinatorWallets`): B3 owns the wallets now, and `rp_economy:sale` is
+  the usual path (it applies the money allowlist per original caller); `sellAsync` mints as `rp_inventory` and
+  needs a coordinator rule `rp_inventory sys:<buyer> money <cap>`.
 
-## 7. API changes needed from the coordinator (A13 / `wt-wi-a13b`)
+## 7. Coordinator API needs (A13): resolved by Open77 `697e9e2f`
 
-1. **`info()` export** → `{ store = "sql"|"lab_kvp"|"memory", schemaVersion }`. The migration refuses without it
-   (`coordinator_info_unavailable`, or `requireDurableStore = false`): stamping markers over a disposable store
-   loses subjects.
-2. **`read(account)` must load lazily** and answer `exists = false` for a missing container. The prototype's
-   `C:read` answers `not_loaded`; the test harness loads first.
-3. **A failed operation keeps its `opId` in memory.** `reserve` on an `opId` whose operation `failed` (conflict,
-   store_unavailable, expired, cancelled) replays the failure. Contract §3.4 says a definitive failure leaves no
-   row and a retry is "a fresh attempt". The facade works around it with `.rN` suffixes and the migration with
-   its `.aN` attempt sequence. Either forget non-committed operations, or document that a new `opId` is
-   required. A fenced `opId` is unusable forever by design, so any business `opId` scheme needs an attempt
-   suffix: worth stating in §3.4.
-4. **A committed `opId` the VM does not know** (after a coordinator restart) computes holds before reaching the
-   duplicate-key path, so it can answer `capacity_exceeded` or `insufficient_items` instead of a replay. Check
-   `readOp` first for unknown `opId`s. The migration calls `status` first as a workaround.
-5. **Persist container `meta` and `expiresAt`** on `open` (the §4.2 columns exist) and offer a lookup or listing
-   of `world:` containers, so a projection owner can re-create drops after a restart.
-6. **Weight drift.** Recompute `weight_g` from stacks × current weights on load, or refuse a weight change for an
-   item present in containers.
-7. **Mint allowlist (§12.6).** rp_inventory mints and burns on behalf of legacy callers, as `sys:<resource>`,
-   `sys:admin`, `sys:used`, `sys:expired`, `sys:broken`, `sys:migration` and buyers. Caps should apply per `sys:`
-   account, or every pack resource's minting aggregates under `rp_inventory`.
-8. **Emit `open77_transactions:committed(opId, kind, accounts)`** on the host bus, as in §7.2. The facade's
-   foreign-commit reload depends on it.
-9. **`subjectOf(playerId)`** (non-yielding, §12.5). rp_inventory uses `Open77.players.identifier` until it
-   exists.
-10. **Item definitions policy.** rp_inventory is the single item definer toward the coordinator. A resource that
-    calls the coordinator directly with item lines must define its items through `rp_inventory:define`, never
-    through `open77_transactions:define`; otherwise the coordinator refuses it as a collision.
+Reconciled 2026-10-12 (branch `wi/reconcile-a13`) against the final coordinator, contract §7.2 and §13.7.
+
+| # | Need (wave 0) | Outcome | How the facade uses it now |
+|---|---|---|---|
+| 1 | `info()` export | resolved | the handshake waits for `info().ready`; the migration requires `store = "sql"` (`lab_kvp` refused, tested on the real lab boot) |
+| 2 | lazy `read`, `exists = false` for a missing container | resolved (answers `unknown_account`, never creates) | `Facade:load` passes `unknown_account` through; `vehicle*Async` map it to `vehicle_not_tracked`, `world*Async` to `unknown_container`; the `read` export keeps its shape (`exists = false`) |
+| 3 | a failed `opId` should not replay its failure | changed (§13.5): failed = fresh attempt, fenced = `aborted` for ever | write-behind keeps its `.rN` suffixes (always safe); a caller's `opts.opId` may be reused after a failure, not after `aborted`; the migration retries a failed id and moves on only past a fenced one |
+| 4 | replay check before holds | resolved | nothing to do: a committed `opId` this VM never saw replays |
+| 5 | container `meta`, a `world:` listing | resolved (`openWorld`, `setMeta`, `close`, `list`, `listWorld`) | drops are minted with their metadata and expiry, closed when empty, re-projected after a restart |
+| 6 | weight drift | resolved (`reweigh`) | none |
+| 7 | caps per `sys:` account | resolved (`mint1..6`: `<resource> <sys:name or sys:*> <item, * or money> <cap>`) | `allowed()` refuses a write-behind credit at once when no rule allows it (`mint_denied`); `mint_cap_exceeded` reported by the coordinator is a LOST write-behind (an hour's wait would hold the account's queue) and passed through on async calls |
+| 8 | `open77_transactions:committed` | resolved | unchanged: foreign commits reload the shown views |
+| 9 | `subjectOf` | resolved | `char:<subject>` everywhere (the legacy rows stay keyed by the identifier) |
+| 10 | single item definer | policy | unchanged: define through `rp_inventory:define` |
+
+**Per-part writers** (A9 N4, `writers = "rp_inventory:char+stash+world+veh/trunk+veh/glovebox, rp_cargo:veh/cargo"`)
+work as is; a resource that must touch the pockets without `char` asks `grantPockets` (rp_cargo and rp_economy do).
+
+**Operator configuration** (the coordinator's tunables): nothing mints by default, so a server running the
+transactions backend needs at least `rp_inventory sys:* * <cap>` (legacy `add` callers, `/use`, admin, migration)
+or one rule per `sys:<caller>` it wants to cap separately.
+
+**What remains (not in the final coordinator):**
+- the mint-rule grammar names one `sys:` segment (`sys:<name>` or `sys:*`): fine for `rp_inventory`'s
+  `sys:<caller>` accounts, not for multi-segment names (B3's `sys:<resource>:<label>`);
+- `allowed()` takes no amount, so it cannot see that the next credit would pass a cap; only an exhausted cap;
+- `status` always yields (through the work queue), even for an operation this VM holds in memory; B7 asked for a
+  cheap one, and `rp_inventory:settled` covers the panel meanwhile;
+- `open77_transactions:committed` does not name the invoking resource (A9 N5), so the facade still tracks its own
+  operation ids (bounded at 4,096);
+- a `metaPatch` cannot delete a key (`false` is stored as `false`).
 
 ## 8. What the integrator must run in game
 
-None of this was run. The backend is opt-in, and `open77_transactions` needs its wave-1 manifest and export
-wiring first; the prototype has neither.
+None of this was run. The backend is opt-in; `open77_transactions` (Open77 `697e9e2f`) has its manifest and
+exports now, and needs the mint rules above in its tunables.
 
 1. **Boot.** In the lab, with a disposable MariaDB: `resources.load` + `open77_transactions`, and the convar
    `rp_inventory_backend transactions`. Expected log lines: `backend: transactions`,
@@ -353,7 +393,8 @@ wiring first; the prototype has neither.
 4. **Durability.**
    - Stop or kill `open77_transactions` during `/give`, during a panel store, and between `/drop` and the
      pickup. Restart, then reconcile the counts on both clients and in SQL.
-   - Restart the server: drops are gone, and their goods sit in `world:` containers (`op77_tx_containers`).
+   - Restart the server (or only `rp_inventory`): the drops come back where they lay (`re-projected N drop(s)`),
+     their goods in `world:` containers (`op77_tx_containers`, with their `meta`).
 5. **Contention.** Both clients pick up one drop at once, and both take the last unit of one stash from their
    panels. The item must exist exactly once.
 6. **Catalogue.** The client log must not show `catalogue … rejected`. `catalogueVersion()` (client export) must

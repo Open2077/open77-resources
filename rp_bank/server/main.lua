@@ -447,7 +447,8 @@ local KIND_LABEL = {
 
 -- Last N statement lines, newest first: this boot's operations, then the 1.x ledger archive
 -- (rp_bank_transactions, read only, never written since version 2). Lines after the cutover
--- that predate this boot are in the coordinator journal, which has no read export yet.
+-- that predate this boot are in the coordinator journal: open77_transactions:history(bank:<subject>)
+-- reads it since Open77 697e9e2f, but the statement does not merge it yet (b3-wallet.md section 8).
 local function history(identifier)
     local limit = math.tointeger(Config.HistoryLimit) or 10
     local out = {}

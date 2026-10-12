@@ -18,9 +18,10 @@ permissions { "world.props", "world.vehicles", "filesystem.read" }
 -- open77_props: the client projection that draws attached props.
 dependency "rp_garage"
 dependency "open77_props >=0.1.0"
--- open77_transactions is reached through Open77.exports.call and NOT declared yet: the wave-0
--- prototype has no manifest. Without it every operation answers `coordinator_unavailable`.
--- Add `dependency "open77_transactions >=<version>"` when the coordinator publishes one.
+-- open77_transactions (Open77 resources/system, auto_start false, version 0.1.0 at 697e9e2f):
+-- custody lives there, and this resource ships no client half, so the dependency is declared.
+-- The server lists it in resources.load; its writers may keep this resource to `veh/cargo`.
+dependency "open77_transactions >=0.1.0"
 
 -- Loaded server-side only: nothing of this resource is delivered to players.
 server_scripts {

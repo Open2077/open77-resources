@@ -3,7 +3,8 @@
 -- Loaded after fakehost.lua; COMPAT_DIR and CARGO_DIR are set by the runner. Boots the real
 -- rp_cargo server scripts on the fake host with:
 --   * the fake world (vehicles, props with vehicle attachments) of fakeworld.lua,
---   * FakeTx as open77_transactions (fake_tx.lua: the A13 export subset, plus metaPatch = N1),
+--   * the REAL final open77_transactions (Open77 697e9e2f, vendored; fake_tx.lua seeds it and
+--     injects faults at the export boundary),
 --   * a stub of rp_garage's A9 exports (plateOf, describe, canAccess) driven by GARAGE / ACCESS.
 -- The garage's own access matrix is tested against the real rp_garage in
 -- garage_access_scenarios.lua; here only the contract between the two is exercised.
@@ -363,9 +364,7 @@ function scenarios.store_retrieve()
     local r = {}
     r.props_after_store = tostring(#H.propsOf("rp_cargo"))
     r.projection_after_store = tostring(ex.projection("NC-TRK5"))
-    local held = 0
-    for _ in pairs(H.stores.tx.accounts["veh:NC-TRK5:cargo"].instances) do held = held + 1 end
-    r.cargo_after_store = tostring(held)
+    r.cargo_after_store = tostring(FakeTx.instancesIn("veh:NC-TRK5:cargo"))
     local vid2 = garageSpawn("NC-TRK5", MACKINAW)
     r.new_vehicle = tostring(vid2 ~= vid)
     r.children_new = tostring(#H.childrenOf(vid2))
@@ -433,7 +432,7 @@ function scenarios.in_doubt()
     local vid = garageSpawn("NC-TRK8", MACKINAW)
     local r = {}
     FakeTx.fault = "in_doubt_aborted"
-    FakeTx.statusOverride["op-a-000001"] = "in_doubt"
+    FakeTx.statusOverride["op-a-000001"] = true
     r.first = word(run(ex.load, 1, vid, "c1-01", { opId = "op-a-000001" }))
     r.first_where = tostring(FakeTx.where("c1-01"))
     r.second = word(run(ex.load, 1, vid, "c1-02", { opId = "op-b-000001" }))
@@ -560,6 +559,34 @@ function scenarios.contents()
     r.account = tostring(c and c.account)
     r.stranger = word(run(ex.contents, 3, vid))
     r.view_call = tostring(has(CALLS, "7|NC-TRKC|cargo|view"))
+    return r
+end
+
+-- Per-part writers (A9 N4): the cargo bed is rp_cargo's, the pockets rp_inventory's. A load out
+-- of the pockets needs rp_inventory's one-operation grant (grantPockets); without it nothing is
+-- attempted.
+function scenarios.per_part_writers()
+    FakeTx.TUNABLES = { serverTag = "lab", writers = "rp_cargo:veh/cargo, rp_inventory:char, compat_seed",
+        mint1 = "compat_seed sys:* * 100000000" }
+    local ex = setup()
+    local vid = garageSpawn("NC-TRKD", MACKINAW)
+    local r = {}
+    r.allowed_cargo = word(TXS.callSync("compat_test", "allowed", "rp_cargo", "veh:NC-TRKD:cargo"))
+    r.allowed_trunk = word(TXS.callSync("compat_test", "allowed", "rp_cargo", "veh:NC-TRKD:trunk"))
+    r.allowed_char = word(TXS.callSync("compat_test", "allowed", "rp_cargo", "char:acct-1"))
+    local opsBefore = FakeTx.opCount()
+    r.no_grant = word(run(ex.load, 1, vid, "c1-01"))
+    r.no_grant_ops = tostring(FakeTx.opCount() - opsBefore)
+    local grants = 0
+    H.remote.rp_inventory = { grantPockets = function(opId, playerId)
+        grants = grants + 1
+        return TXS.callSync("rp_inventory", "authorize", opId, "rp_cargo", { "char:acct-" .. playerId }, 30000)
+    end }
+    r.with_grant = word(run(ex.load, 1, vid, "c1-01"))
+    r.where = tostring(FakeTx.where("c1-01"))
+    r.unload = word(run(ex.unload, 1, vid, "c1-01"))
+    r.where_after = tostring(FakeTx.where("c1-01"))
+    r.grants = tostring(grants)
     return r
 end
 

@@ -1371,6 +1371,47 @@ exports("spawnOwned", function(playerId, plate)
     return id
 end)
 
+-- labIssue(playerId, record, opts?) -> { plate, owner, state, vehicleId? } | nil, reason
+-- LAB ONLY (world-interaction two-client runs, C1): registers a new plated vehicle owned by the
+-- player, with no payment, and takes it out next to them unless opts.spawn == false (a blocked
+-- spot leaves it stored at the public garage). Refused with lab_disabled unless the server sets
+-- the convar rp_garage_lab 1. opts: { label?, spawn? }. The plate is the durable key of its
+-- cargo and trunk accounts (veh:<plate>:<part>), exactly like a bought vehicle.
+exports("labIssue", function(playerId, record, opts)
+    if tostring(GetConvar("rp_garage_lab", "0")) ~= "1" then return nil, "lab_disabled" end
+    if store.mode == "pending" then return nil, "registry_loading" end
+    local pid = toPlayerId(playerId)
+    if not pid then return nil, "invalid_player_id" end
+    local identifier = identifierOf(pid)
+    if not identifier then return nil, "player_not_found" end
+    if type(record) ~= "string" or not record:match("^Vehicle%.[%w_%.]+$") or #record > 96 then
+        return nil, "invalid_record"
+    end
+    opts = type(opts) == "table" and opts or {}
+    local plate = generatePlate()
+    if not plate then return nil, "no_plate" end
+    local label = type(opts.label) == "string" and opts.label:sub(1, 48) or record:gsub("^Vehicle%.", "")
+    local row = newRow(plate, identifier, displayName(pid), record, label)
+    row.garage = "lab"
+    vehicles[plate] = row
+    local vehicleId, detail
+    if opts.spawn ~= false then
+        local pos = Open77.players.position(pid)
+        if pos then
+            vehicleId, detail = spawnRow(row, { x = pos.x + 4.0, y = pos.y, z = pos.z, yaw = 0.0 }, pos.bucket or 0, pid)
+        else
+            detail = "position_unknown"
+        end
+        if not vehicleId then row.state, row.garage = "stored", "public" end
+    end
+    persistVehicle(row)
+    log("labIssue: player %d plate=%s record=%s %s (by %s)", pid, plate, record,
+        vehicleId and ("vehicle=" .. tostring(vehicleId)) or ("stored" .. (detail and (": " .. tostring(detail)) or "")),
+        tostring(GetInvokingResource() or "console"))
+    TriggerEvent("rp_garage:changed", identifier, plate, "issued")
+    return { plate = plate, owner = identifier, state = row.state, vehicleId = vehicleId }
+end)
+
 -- ---------------------------------------------------------------------------------------------
 -- A9: access adapter, grants (mechanic job orders, police warrants) and vehicle identity.
 -- Synchronous and cache-only, never yield: safe through the exports.rp_garage:x() sugar. Every

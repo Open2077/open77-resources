@@ -27,6 +27,8 @@ RpInventoryConfig = {
     --                   never a kvp fallback; legacy rows are imported once per subject
     backend = "legacy",
     migrateOnLoad = true,           -- transactions: import a subject's legacy rows on first load
+    reprojectLimit = 500,           -- transactions: world: drops re-projected per start (open77_transactions:listWorld)
+    pocketGrantees = { rp_salvage = true, rp_economy = true, rp_cargo = true }, -- transactions: grantPockets callers
     importUnknownItems = false,     -- transactions: import rows of undefined item ids (weight 0, reported)
     requireDurableStore = true,     -- transactions: import only when open77_transactions reports store = "sql"
     coordinatorWallets = false,     -- transactions: sellAsync may pay cash:/bank:/soc: (only once B3 owns them)

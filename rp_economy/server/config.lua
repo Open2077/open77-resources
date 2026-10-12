@@ -39,6 +39,13 @@ EconomyConfig.writeBehind = {
 -- `in_doubt` (the caller then polls rp_economy:status). Must stay below the 30 s export timeout.
 EconomyConfig.asyncWaitSeconds = 20
 
+-- The coordinator has its own mint rules (its tunables mint1..6, contract 12.6; nothing mints by
+-- default). This resource creates money as itself out of sys:<caller>:<label> accounts; the rule
+-- grammar names one sys: segment, so the coordinator needs one ceiling for it, for example
+--   mint1 = "rp_economy sys:* money 2000000"
+-- and the per-caller budgets below do the rest. Items are the job's own rule (C1:
+-- "rp_salvage sys:salvage * 400").
+--
 -- Money printing allowlist (A13 decision 6). A credit that comes from no wallet (legacy `add`,
 -- `societyAdd`, an NPC buyer, a bounty) is a MINT from `sys:<resource>:<label>`; a debit into
 -- `sys:` is a BURN. The cap is on the NET amount minted per resource in a fixed one-hour window
@@ -65,6 +72,7 @@ EconomyConfig.mint = {
         rp_netrunner = 30000,      -- breach bounties
         rp_nomade = 100000,        -- crate delivery pay, convoy bonus, society share
         rp_ripperdoc = 20000,      -- refunds
+        rp_salvage = 30000,        -- C1 salvage: scrap and crate sales to the NPC buyer (sale), society share
         rp_selftest = 1000,        -- the boot probe (+100 / -100 on society selftest)
         rp_shop = 100000,          -- v1 vehicle sell-back (duplicate economy, see README)
         rp_shops = 30000,          -- robbery loot, refunds

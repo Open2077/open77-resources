@@ -48,6 +48,7 @@ function MH.reset()
     MH.chat = {}
     MH.commands = {}
     MH.convars = {}
+    MH.tunables = {}       -- [resource] = { key = value }: the operator's tunable values
     MH.pending = {}
     MH.threadOf = setmetatable({}, { __mode = "k" })
     MH.invoker = setmetatable({}, { __mode = "k" })
@@ -370,6 +371,19 @@ local function makeOpen77(R)
         play = function() return nil, "animations_unavailable" end,
         stop = function() return false, "stale_playback" end,
     }
+    -- Open77.tunables.declare: the declared defaults, overridden by MH.tunables[resource] (what an
+    -- operator set); MH.setTunable changes one live and raises onTunableChanged in that resource.
+    O.tunables = {
+        declare = function(declaration)
+            R.tunables = declaration
+            return setmetatable({}, { __index = function(_, key)
+                local set = MH.tunables[R.name]
+                if set and set[key] ~= nil then return set[key] end
+                local d = declaration[key]
+                return d and d.value
+            end })
+        end,
+    }
     O.resource = {
         generation = function(name)
             local T = MH.resources[name or R.name]
@@ -417,6 +431,10 @@ local function makeEnv(R, options)
         return tostring(v)
     end
     env.GetConvarInt = function(name, default) return tonumber(MH.convars[name]) or default end
+    env.GetResourceMetadata = function(name, key)
+        local T = MH.resources[name]
+        return T and T.metadata and T.metadata[key] or nil
+    end
     env.exports = makeExports(R)
     env.Open77 = makeOpen77(R)
     env.MySQL = env.Open77.database
@@ -449,7 +467,7 @@ function MH.start(name, scripts, options)
     if old and old.running then error("multihost: " .. name .. " is already running", 2) end
     MH.generation = MH.generation + 1
     local R = { name = name, handlers = {}, exports = {}, threads = {}, db = {},
-        generation = MH.generation, running = true }
+        generation = MH.generation, running = true, metadata = options.metadata }
     R.env = makeEnv(R, options)
     for k, v in pairs(options.globals or {}) do R.env[k] = v end
     MH.resources[name] = R
@@ -483,6 +501,16 @@ function MH.stop(name)
             if p.target == name then settle(p, "rejected", "export_resource_stopped") end
             if p.caller == name then settle(p, "cancelled", "promise_cancelled") end
         end
+    end
+end
+
+-- An operator changes a tunable of a running resource (live): onTunableChanged(key) in it.
+function MH.setTunable(name, key, value)
+    MH.tunables[name] = MH.tunables[name] or {}
+    MH.tunables[name][key] = value
+    local R = MH.resources[name]
+    if R and R.running then
+        for _, fn in ipairs(R.handlers.onTunableChanged or {}) do spawn(R, fn, nil, true, key, value) end
     end
 end
 

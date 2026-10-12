@@ -3,8 +3,10 @@
 -- Pure Lua, no native. Global table: RpInvAccounts. Every container rp_inventory hands to
 -- open77_transactions is named here, and only from a DURABLE key:
 --
---   char:<subject>        pockets; subject = the account identifier (the default character id,
---                         A13 3.1.1), never the session player id
+--   char:<subject>        pockets; subject = open77_transactions:subjectOf(playerId): the account
+--                         identifier by default (the default character id, A13 3.1.1 / 12.8),
+--                         `<accountId>~<n>` for a later character of an override provider;
+--                         never the session player id
 --   stash:<stashId>       stashes (housing `home:<homeId>`, any caller string of the legacy shape)
 --   veh:<PLATE>:<part>    vehicle parts (trunk, cargo, glovebox...); the plate is the durable key,
 --                         the runtime vehicle id never is
@@ -16,7 +18,7 @@
 RpInvAccounts = {}
 local A = RpInvAccounts
 
-local ACCOUNT = "^[A-Za-z0-9_.:@%-]+$"
+local ACCOUNT = "^[A-Za-z0-9_.:@~%-]+$"   -- the coordinator's account charset (model.lua)
 local RUNTIME_PREFIXES = {
     trunk = true, vehicle = true, veh = true, glovebox = true, prop = true, entity = true,
     player = true, ped = true, npc = true, drop = true, loot = true,
@@ -47,10 +49,11 @@ function A.kindOf(id)
     return nil
 end
 
--- char:<subject>. The subject comes from the subject provider (the account identifier today).
+-- char:<subject>. The subject comes from the coordinator's subject provider (subjectOf), whose
+-- keys are [A-Za-z0-9_.@~-], at most 80 bytes.
 function A.char(subject)
     if type(subject) ~= "string" or subject == "" then return nil, "no_identifier" end
-    if not subject:match("^[A-Za-z0-9_.@%-]+$") or #subject > 90 then return nil, "invalid_identifier" end
+    if not subject:match("^[A-Za-z0-9_.@~%-]+$") or #subject > 90 then return nil, "invalid_identifier" end
     local id, why = check("char:" .. subject)
     if not id then return nil, why end
     local p = A.problem(id)
@@ -89,8 +92,8 @@ function A.vehicle(plate, part)
     return check("veh:" .. p .. ":" .. part)
 end
 
--- world:<id>. The id starts with a letter, so it is never all digits; minted by mintWorldId or
--- by the projection owner (A6), never a runtime prop or loot id.
+-- world:<id>. Minted by the coordinator (openWorld: `<serverTag>.<boot>.<n>`, the tag starts with
+-- a letter, so the id is never all digits); never a runtime prop or loot id.
 function A.world(id)
     if type(id) ~= "string" or not id:match("^[%a][%w_.%-]+$") or #id < 8 or #id > 64 then
         return nil, "invalid_world_id"

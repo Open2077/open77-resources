@@ -1,15 +1,15 @@
 """B1/B2 inventory suite (world-interaction rows B1 and B2), offline.
 
 Run with `python -m unittest discover -s tests -p "test_compat*.py"`. Needs a Lua 5.4 engine
-(tests/compat/luahost.py: lupa, or a lua54.dll such as the KeraLua NuGet cache's) and the
-open77_transactions prototype (A13) from the Open77 world-interaction worktree, read-only:
-`OP77_TX_ROOT`, else C:/Games/cyberm/wt-world-interaction/resources/system/open77_transactions.
-Each test skips with the reason when either is missing.
+(tests/compat/luahost.py: lupa, or a lua54.dll such as the KeraLua NuGet cache's). Each test skips
+with the reason when there is none.
 
 What runs: the REAL rp_inventory server scripts (both backends) on the B8 fake host
-(tests/compat/fakehost.lua + txhost.lua), against the REAL A13 coordinator and its
-fault-injecting memory store. Nothing here was run against a database or in game: these are
-offline contract tests, not proof of in-game behaviour.
+(tests/compat/fakehost.lua + txhost.lua), against the REAL, final A13 coordinator: the vendored
+copy of Open77 697e9e2f (tests/compat/vendor/open77_transactions, or the folder named by
+OP77_TX_DIR), server/main.lua included, on tests/compat/txsandbox.lua, with its memory store and
+fault injection playing the database. Nothing here was run against a database or in game: these
+are offline contract tests, not proof of in-game behaviour.
 """
 import os
 import sys
@@ -21,16 +21,25 @@ import luahost  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 HARNESS = ROOT / "tests" / "compat"
-TX_ROOT = Path(os.environ.get(
-    "OP77_TX_ROOT", r"C:/Games/cyberm/wt-world-interaction/resources/system/open77_transactions"))
+
+
+def _tx_dir():
+    for name in ("OP77_TX_DIR", "OP77_TX_ROOT"):
+        explicit = os.environ.get(name)
+        if explicit and Path(explicit).is_dir():
+            return Path(explicit)
+    return HARNESS / "vendor" / "open77_transactions"
+
+
+TX_DIR = _tx_dir()
 
 
 def _skip_reason():
     reason = luahost.unavailable()
     if reason:
         return reason
-    if not (TX_ROOT / "server" / "coordinator.lua").is_file():
-        return f"open77_transactions prototype not found at {TX_ROOT} (set OP77_TX_ROOT)"
+    if not (TX_DIR / "server" / "main.lua").is_file():
+        return f"open77_transactions not found at {TX_DIR} (set OP77_TX_DIR)"
     return None
 
 
@@ -39,7 +48,7 @@ SKIP = _skip_reason()
 
 def scenario(name):
     return luahost.run_scenario("inventory_scenarios.lua", name, {
-        "REPO": ROOT.as_posix(), "HARNESS": HARNESS.as_posix(), "TX_ROOT": TX_ROOT.as_posix()})
+        "REPO": ROOT.as_posix(), "HARNESS": HARNESS.as_posix(), "TX_DIR": TX_DIR.as_posix()})
 
 
 @unittest.skipIf(SKIP, SKIP)
@@ -230,6 +239,8 @@ class B2Facade(unittest.TestCase):
         self.assertEqual(r["after_remove"], "0+2")
         self.assertEqual(r["tool_meta"], "dur=3 serial=true")
         self.assertEqual((r["wear1"], r["store_wear"]), ("dur=2 broken=false", "2"))
+        self.assertEqual(r["wear_keeps_serial"], "true")     # a metaPatch: the serial is kept
+        self.assertEqual(r["wear_view"], "2 serial=true")      # and the view follows (B7 F1)
         self.assertEqual(r["after_restart"], "1 dur=2")
         self.assertEqual(r["wear2"], "dur=0 broken=true")
         self.assertEqual(r["tool_after_break"], "0 in=sys:broken")
@@ -278,8 +289,68 @@ class B2Facade(unittest.TestCase):
         self.assertEqual(r["picked"], "1/0")
         self.assertEqual(r["crates_total"], "2")
         self.assertEqual(r["expired"], "0 ops=1")
+        self.assertEqual(r["closed_after_pickup"], "true")       # an emptied world: container is closed
+        # The coordinator mints the id and keeps the drop's metadata and expiry...
+        self.assertEqual(r["drop_id_minted"], "true")
+        self.assertEqual(r["drop_meta"], "rp_inventory:drop:scrap:2")
+        self.assertEqual(r["drop_expires"], "true")
+        # ...so a restart that lost the loot projects it again where it lay, and it can be picked up.
         self.assertEqual(r["after_restart_scrap_total"], "16")
+        self.assertEqual(r["reprojected_after_restart"], "true")
+        self.assertEqual(r["reprojected_where"], "0,0")
+        self.assertEqual(r["picked_after_restart"], "2 closed=true")
+        self.assertEqual(r["world_rows_left"], "0")
         self.assertEqual(r["journal_balanced"], "true")
+
+    def test_in_doubt_drop_and_pickup_settle_their_projection(self):
+        """B7 finding F2: an in_doubt drop no longer loses its projection."""
+        r = scenario("b2_drop_in_doubt")
+        # committed, answer lost: in_doubt to the player, projected once settled, where it lay
+        self.assertEqual(r["drop_committed"], "answered 2 loot=1")
+        self.assertEqual(r["drop_projected_at"], "0,0")
+        # a pickup committed with its answer lost is not re-projected
+        self.assertEqual(r["pickup_committed"], "2 loot=0")
+        # a fenced drop moved nothing, projects nothing, and its empty container is closed
+        self.assertEqual(r["drop_fenced"], "2 loot=0 world_rows=0")
+        self.assertEqual(r["settled_events"], "committed,committed,aborted")   # rp_inventory:settled
+        self.assertEqual((r["total"], r["journal_balanced"]), ("4", "true"))
+
+    def test_final_coordinator_api(self):
+        """Open77 697e9e2f: the semantics the facade now relies on (contract 7.2 and 13.5)."""
+        r = scenario("b2_final_api")
+        # subjectOf: one override provider keys the pockets; its refusal is passed through.
+        self.assertEqual((r["provider"], r["provider_second"]), ("true", "nil:provider_already_registered"))
+        self.assertEqual((r["subject_a"], r["subject_b"]), ("char:acct-a~2", "nil:no_character"))
+        self.assertEqual((r["add_a"], r["add_b"]), ("true", "nil:not_loaded"))
+        self.assertEqual(r["subject_store"], "1/0")
+        # Mint rules: an unlisted sys: source is refused at once (allowed), a burn never is; over
+        # the hourly cap the coordinator refuses and the write-behind change is compensated.
+        self.assertEqual((r["mint_listed"], r["mint_unlisted"], r["burn_unlisted"]), ("true", "nil:mint_denied", "true"))
+        self.assertEqual(r["mint_over_cap"], "true")
+        self.assertEqual(r["mint_over_cap_store"], "2")
+        self.assertEqual(r["mint_over_cap_events"], "7:water:1,7:water:-1")
+        self.assertEqual(r["allowed_money"], "false")
+        # Per-part writers: trunk yes, cargo bed no.
+        self.assertEqual((r["part_trunk"], r["part_cargo"]), ("table", "nil:namespace_denied"))
+        self.assertEqual(r["allowed_cargo"], "false:namespace_denied")
+        # grantPockets: a job without the char right credits the pockets in one granted operation.
+        self.assertEqual(r["job_without_grant"], "nil:namespace_denied")
+        self.assertEqual((r["grant_pockets"], r["grant_not_allowed"]), ("true", "nil:caller_not_allowed"))
+        self.assertEqual((r["job_with_grant"], r["job_view"]), ("table", "2"))
+        # Lazy read: absent, and not created by the read.
+        self.assertEqual((r["lazy_read"], r["lazy_read_created"]), ("false", "false"))
+        # World ids are minted, never chosen; the caller's metadata is kept.
+        self.assertEqual(r["world_chosen_id"], "nil:invalid_world_id")
+        self.assertEqual((r["world_minted"], r["world_meta"]), ("true", "crate"))
+        # A failed opId is a fresh attempt; a fenced one stays aborted, a new id works.
+        self.assertEqual((r["failed_first"], r["failed_same_id"]), ("nil:store_unavailable", "table"))
+        self.assertEqual(r["fenced_first"], "nil:store_unavailable:aborted")
+        self.assertEqual((r["fenced_same_id"], r["fenced_new_id"]), ("nil:aborted", "table"))
+        self.assertEqual(r["water"], "2+2")
+        # info().ready gates the handshake.
+        self.assertEqual((r["late_info"], r["late_ready_lines"], r["late_create"]), ("starting", "0", "nil:store_unavailable"))
+        self.assertEqual((r["late_ready_after"], r["late_create_after"]), ("1", "table"))
+        self.assertEqual((r["journal_balanced"], r["kvp_keys"]), ("true", "0"))
 
 
 @unittest.skipIf(SKIP, SKIP)
@@ -322,8 +393,11 @@ class B2Migration(unittest.TestCase):
         r = scenario("b2_migration")
         self.assertTrue(r["acct_c_default"].startswith("refused: unknown_items"), r["acct_c_default"])
         self.assertTrue(r["version_mismatch"].startswith("refused: migration_version_mismatch"), r["version_mismatch"])
+        self.assertEqual(r["lab_store_reported"], "lab_kvp")    # info().store of the real coordinator
         self.assertTrue(r["not_durable"].startswith("refused: store_not_durable"), r["not_durable"])
         self.assertTrue(r["schema_mismatch"].startswith("refused: source_schema_mismatch"), r["schema_mismatch"])
+        self.assertTrue(r["no_mint_rule"].startswith("refused: mint_denied"), r["no_mint_rule"])
+        self.assertEqual(r["no_mint_rule_store"], "0 marker=false")
         self.assertEqual(r["diverged"], "0 nil:not_loaded")
         self.assertEqual(r["diverged_reason"], "legacy_diverged")
         self.assertEqual(r["accept"], "char:acct-a: the imported state is kept")

@@ -1,10 +1,11 @@
 -- tests/compat/wallet_world.lua: fixtures for the B3 wallet scenarios, on multihost.lua.
 --
 -- String globals from the runner: ROOT_DIR (the pack), COMPAT_DIR (this folder), TX_DIR (the
--- open77_transactions prototype: vendor/open77_transactions, or OP77_TX_DIR).
+-- final open77_transactions, Open77 697e9e2f: vendor/open77_transactions, or OP77_TX_DIR).
 --
--- The coordinator is the A13 prototype behind txhost_wallet.lua; its memory store stands for the
--- database and survives a "server restart" (WW.keep / WW.boot{ keep = ... }). The 1.x wallet
+-- The coordinator is that resource, server/main.lua included, hosted by txhost_wallet.lua (the
+-- test seam is txshim.lua); its memory store stands for the database and survives a "server
+-- restart" (WW.keep / WW.boot{ keep = ... }). The 1.x wallet
 -- tables are an in-memory SQL fixture (MH.shared.db) interpreted statement by statement, with the
 -- bridge's silent maxRows truncation (D8) applied to every multi-row read.
 
@@ -30,11 +31,49 @@ function WW.scripts(resource)
     return shared
 end
 
+-- The coordinator's server scripts in its manifest's order, with the test host and the seam
+-- loaded just before server/main.lua.
 function WW.txScripts()
-    return {
-        TX_DIR .. "/shared/model.lua", TX_DIR .. "/server/memory_store.lua",
-        TX_DIR .. "/server/coordinator.lua", COMPAT_DIR .. "/txhost_wallet.lua",
+    local file = assert(io.open(TX_DIR .. "/open77.lua", "rb"))
+    local text = file:read("a")
+    file:close()
+    local out = {}
+    for line in text:gmatch("[^\n]+") do
+        local s = not line:match("^%s*%-%-") and line:match('^%s*server_script%s+"([^"]+)"')
+        if s then
+            if s == "server/main.lua" then
+                out[#out + 1] = COMPAT_DIR .. "/txhost_wallet.lua"
+                out[#out + 1] = COMPAT_DIR .. "/txshim.lua"
+            end
+            out[#out + 1] = TX_DIR .. "/" .. s
+        end
+    end
+    return out
+end
+
+function WW.txVersion()
+    local file = assert(io.open(TX_DIR .. "/open77.lua", "rb"))
+    local text = file:read("a")
+    file:close()
+    return text:match('version%s+"([^"]+)"')
+end
+
+-- The test server's coordinator settings (its tunables). Nothing mints by default (contract
+-- 12.6): rp_economy creates money out of sys:<caller>:<label> accounts and keeps its own
+-- allowlist per original caller (server/mint.lua), so the coordinator's rule for it is one
+-- ceiling. `writers` stays `*` unless a scenario narrows it.
+function WW.txTunables(opts)
+    local t = {
+        serverTag = "lab", writers = "*",
+        mint1 = "rp_economy sys:* money 1000000000000",
     }
+    for k, v in pairs(opts and opts.tunables or {}) do t[k] = v end
+    return t
+end
+
+function WW.startCoordinator(opts)
+    MH.tunables.open77_transactions = WW.txTunables(opts)
+    MH.start("open77_transactions", WW.txScripts(), { host = true, metadata = { version = WW.txVersion() } })
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -126,7 +165,8 @@ end
 -- Worlds
 
 -- opts: keep (from WW.keep), db, dbMode, bank (start rp_bank), shims ({ name, source }),
--- noCoordinator, acl (HOST.shared.txAcl), settle (seconds), auto (migration auto).
+-- noCoordinator, tunables (the coordinator's, merged over WW.txTunables), storeDown, settle
+-- (seconds), auto (migration auto).
 function WW.boot(opts)
     opts = opts or {}
     MH.reset()
@@ -139,10 +179,10 @@ function WW.boot(opts)
     else
         MH.shared.db = opts.db or WW.freshDb()
     end
-    MH.shared.txAcl = opts.acl
     MH.dbMode = opts.dbMode or "sql"
     if not opts.noCoordinator then
-        MH.start("open77_transactions", WW.txScripts(), { host = true })
+        if opts.storeDown and MH.shared.txStore then MH.shared.txStore.down = true end
+        WW.startCoordinator(opts)
         if opts.storeDown then MH.shared.txStore.down = true end
     end
     for _, shim in ipairs(opts.shims or {}) do
@@ -183,12 +223,19 @@ function WW.join(id, identifier, name)
     WW.settle()
 end
 
--- Runs until every wallet operation of rp_economy has settled (or `seconds`).
+-- Runs until every wallet operation of rp_economy has settled (or `seconds`): no operation
+-- pending in the facade, none queued in the store, none active in the coordinator, for two
+-- simulated seconds in a row (a join's start grant is submitted only after an archive read, and
+-- the coordinator settles a commit over several passes of its work queue).
 function WW.settle(seconds)
     local env = MH.resources.rp_economy and MH.resources.rp_economy.env
+    local since
     MH.until_(function()
-        if not env then return true end
-        return env.Wallets.pendingCount() == 0 and MH.shared.txStore:pending() == 0
+        local idle = not env or (env.Wallets.pendingCount() == 0 and MH.shared.txStore:pending() == 0
+            and (not MH.shared.tx or MH.shared.tx:health().active == 0))
+        if not idle then since = nil return false end
+        since = since or MH.now
+        return MH.now - since >= 2
     end, seconds or 30)
     MH.run(1)
 end

@@ -82,7 +82,7 @@ charge  { opId, from = party, amount, instrument = "cash"|"bank"|"cash_then_bank
 invoice { opId, from = party, amount, instrument, payees = { ... } }      -- payees must sum to amount
 -- Goods out + price in + split, one operation. Goods leave char:<seller> (or `from`) to the
 -- buyer: an NPC buyer { sys = "dealer" } (money minted, goods destroyed) or a player (their pockets).
-sale    { opId, seller = party, items = { { item, count, from? } }, buyer = party, total, payees? }
+sale    { opId, seller = party, items = { { item, count, from? } | { instance, from? } }, buyer = party, total, payees? }
 -- The money lines of a committed operation, reversed: each payer gets back what it paid, on the
 -- instrument it paid with. Goods are not returned. Default opId "refund:<of>": once per original.
 refund  { of = opId, opId?, reason }
@@ -98,7 +98,16 @@ the id was fenced and can never commit: use a new id), `in_doubt` (no answer wit
 `status(opId)`, never assume failure), and the coordinator's own tokens (a13 contract §7.2).
 
 `sale` needs the goods to be coordinator containers: `char:<subject>` pockets come with the B2
-inventory adapter (`rp_inventory` as a facade), vehicles `veh:<plate>:<part>` with A9.
+inventory adapter (`rp_inventory` as a facade), vehicles `veh:<plate>:<part>` with A9. An
+`{ instance }` entry sells one unique unit (a salvage crate) with its metadata. When the
+coordinator's `writers` keeps `char` to `rp_inventory`, `sale` asks `rp_inventory:grantPockets` for
+a connected seller's pockets (one operation) before committing.
+
+The coordinator (`open77_transactions`, Open77 697e9e2f) needs a money rule for this resource in its
+tunables, e.g. `mint1 = "rp_economy sys:* money 2000000"`: nothing mints by default there, and its
+rules name one `sys:` segment, so the per-caller caps below are this resource's.
+`rp_economy:pendingChanged(playerId)` hints a HUD that the unsettled operations of a connected
+player's wallet changed (one went `in_doubt`, or an atomic or in-doubt one settled).
 
 ## Mint allowlist
 

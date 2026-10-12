@@ -31,6 +31,10 @@ FROZEN_SURFACE = {
     "rp_config": {"get"},
     "rp_nomade": {"activeContract"},
 }
+# Reconcile with the final coordinator (697e9e2f): rp_cargo and rp_economy (sale) ask rp_inventory
+# for a one-operation pocket grant when the server's writers keep `char` to rp_inventory
+# (docs/world-interaction/b1b2-inventory.md section 7, a9-cargo.md section 5).
+FROZEN_SURFACE["rp_inventory"] = FROZEN_SURFACE["rp_inventory"] | {"grantPockets"}
 
 SNAPSHOT = Path(__file__).resolve().parent / "compat" / "schema-snapshot.json"
 

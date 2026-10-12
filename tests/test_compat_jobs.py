@@ -17,6 +17,7 @@ What is frozen here (docs/world-interaction/b4-jobs.md):
 - the eight existing exports, their refusal tokens and the legacy events are unchanged;
 - the public state-bag summary is small and carries no private field.
 """
+import os
 import sys
 import unittest
 from pathlib import Path
@@ -25,9 +26,18 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / "compat"))
 import luahost  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
+def _tx_dir():
+    explicit = os.environ.get("OP77_TX_DIR")
+    if explicit and Path(explicit).is_dir():
+        return Path(explicit).as_posix()
+    return (ROOT / "tests" / "compat" / "vendor" / "open77_transactions").as_posix()
+
+
 GLOBALS = {
     "JOBS_SCRIPT": (ROOT / "rp_jobs" / "server" / "main.lua").as_posix(),
     "JOBS_CONFIG": (ROOT / "rp_jobs" / "shared" / "config.lua").as_posix(),
+    "COMPAT_DIR": (ROOT / "tests" / "compat").as_posix(),
+    "TX_DIR": _tx_dir(),
 }
 
 
@@ -251,6 +261,16 @@ class JobsAdapterCompat(unittest.TestCase):
         self.assertEqual(r["numeric_key"], "invalid_key")
         self.assertEqual(r["long_key"], "invalid_key")
         self.assertEqual(r["session_setJob"], "invalid_key")
+        self.assertEqual(r["rows_for_bad_keys"], "false")
+
+    def test_subject_provider_rule_against_the_final_coordinator(self):
+        """open77_transactions:subjectOf of Open77 697e9e2f (vendored), not a stub."""
+        r = scenario("subject_provider_real")
+        self.assertEqual(r["default_key"], "mecano")             # default provider: the account id
+        self.assertEqual(r["register"], "true")
+        self.assertEqual(r["override_key"], "ncpd")              # acct-0007~3, a character's row
+        self.assertEqual(r["override_refusal"], "no_character")  # passed through, never the account id
+        self.assertEqual((r["session_key"], r["numeric_key"]), ("invalid_key", "invalid_key"))
         self.assertEqual(r["rows_for_bad_keys"], "false")
 
 
