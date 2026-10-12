@@ -44,7 +44,7 @@ resource behaviour was changed.
 
 | # | Risk | Evidence | Rows hit |
 |---|---|---|---|
-| R1 | **Per-boot SQL→KVP failover with no reconciliation** in 15 audited resources. A string scan finds the same pattern in at least 11 of the 13 other resources that combine SQL and KVP. A database that is late or unavailable at boot silently gives every player a fresh or stale wallet, empty pockets, no job and no citizen record for that boot. What happens in that boot is never merged back. Measured offline for `rp_economy`: 1 500 €$ in SQL, 500 on the KVP boot, +700 earned, 1 500 again on the next SQL boot. | §3.4; `tests/test_compat_economy.py` | B2 B3 B4 B8, plan §3 "Database failure", decision 2 |
+| R1 | **Per-boot SQL→KVP failover with no reconciliation** in 15 audited resources. A string scan finds the same pattern in at least 11 of the 13 other resources that combine SQL and KVP. A database that is late or unavailable at boot silently gives every player a fresh or stale wallet, empty pockets, no job and no citizen record for that boot. What happens in that boot is never merged back. Measured offline for `rp_economy`: 1 500 €$ in SQL, 500 on the KVP boot, +700 earned, 1 500 again on the next SQL boot. **B3 update (2026-10-12): closed for `rp_economy` and `rp_bank`** (facades over `open77_transactions`, no KVP; `b3-wallet.md`); the other resources are unchanged. | §3.4; `tests/test_compat_economy.py` | B2 B3 B4 B8, plan §3 "Database failure", decision 2 |
 | R2 | **No multi-store atomicity and no receipts.** `Open77.database.transaction` is never used. Every write is an asynchronous absolute snapshot, and failures are logged or ignored. Item↔money flows are 2–6 separate export calls whose compensations are unchecked. Wallets and pockets are **online-only**, so a refund to a disconnected player always fails. | §3.5 | A13 B2 B3 C1 |
 | R3 | **Account = character, plus non-durable ids in durable places.** There are `"session:<id>"` fallbacks in SQL, session ids inside bank ledger notes, runtime vehicle ids in `rp_mecano_impound` and `rp_shop` KVP, and `"vehicle#<id>"`/`"prop#<id>"` log targets. | §1.3 | B2 A9 B8 |
 | R4 | **Unversioned schemas and implicit cross-resource SQL contracts.** 47 tables use `CREATE TABLE IF NOT EXISTS` only: no version table and no `ALTER`. `rp_mdt` reads 8 tables owned by 5 other resources, and `rp_phone` reads `rp_identity_citizens`. | §3.1, §3.6 | B8 migration gate |
@@ -379,7 +379,15 @@ scenario `kvp_boot_between_sql_boots`):
    KVP to 1200.
 3. **SQL again:** **1500.** The +700 is lost, and the 1500 was invisible during step 2.
 
-The test `test_gap_r1_measured_behaviour` freezes these numbers. The invariant "a database outage never changes a
+**B3 update (2026-10-12).** `rp_economy` 2.0.0 and `rp_bank` 2.0.0 are facades over the `open77_transactions`
+coordinator and never touch KVP for economic state. The same scenario name now runs them on the multi-resource fake
+host (`tests/compat/multihost.lua`): the outage boot refuses (`player_not_found`, then `store_unavailable`), writes no
+KVP key, and the balance is 1 500 again as soon as the database answers, without a restart; a change accepted in the
+middle of a session just before the outage is detected lands exactly once. The invariant below is now a plain passing
+test. The 5dcdad2 numbers above stay as the record of the 1.x behaviour (reproducible at d401b40). The remaining 13
+resources of the table still fork.
+
+The test `test_gap_r1_measured_behaviour` froze these numbers at 5dcdad2. The invariant "a database outage never changes a
 balance" is an expected failure (`test_gap_r1_invariant_a_database_outage_never_changes_a_balance`).
 
 **Inferences from the same code paths (not executed).**
@@ -760,6 +768,22 @@ on 2026-10-12.
 | `tests/compat/luahost.py` | Lua 5.4 engine: `lupa` if installed, else `lua54.dll` through `ctypes` (`OP77_LUA54_DLL` or the KeraLua NuGet cache). No network |
 | `tests/compat/economy_scenarios.lua`, `tests/test_compat_economy.py` | L1 seed: `rp_economy` as shipped. SQL restart round trip; refusal tokens; R1 characterised and its invariant as an expected failure |
 
+**B3 additions (2026-10-12, `docs/world-interaction/b3-wallet.md`):** `tests/compat/multihost.lua` (several resources,
+one environment each, the export/event/database rules of the platform), `tests/compat/txhost.lua` and
+`tests/compat/vendor/open77_transactions/` (the A13 coordinator prototype behind a test stand-in for its exports),
+`tests/compat/wallet_world.lua` and `wallet_scenarios.lua`, and `tests/test_compat_wallet.py`. `economy_scenarios.lua`
+now forwards to the wallet scenarios; R1 passes. Two frozen values changed together with this note:
+`FROZEN_SURFACE["rp_economy"]` gained the five exports `rp_bank` 2.0.0 calls (`walletRead`, `walletMove`,
+`societyRead`, `pay`, `balanceOf`), and `schema-snapshot.json` gained `rp_wallet_migration` (the 1.x table bodies are
+unchanged: they are kept, created when missing, as the import source and archive). The whole suite: 24 tests, OK.
+
+**B7 additions (2026-10-12, `docs/world-interaction/b7-ui.md`):** `tests/compat/b7_ui_scenarios.lua`,
+`tests/compat/b7_wallet_scenarios.lua` and `tests/test_b7_ui.py`. Three frozen values changed together with this
+note, all additive consumers: `FROZEN_SURFACE["rp_economy"]` gained `walletStatus` and `pendingPlayers` (new
+read-only HUD exports, consumed by `rp_hud`), `FROZEN_SURFACE["rp_jobs"]` gained `summary` (B4's, now consumed by
+`rp_hud`), and `FROZEN_SURFACE["rp_garage"]` gained `canAccessVehicle` (A9's, consumed by the `rp_inventory`
+panel's read-only cargo view). No schema change.
+
 ### 6.3 Wave-1 suite shape
 
 **Layers.**
@@ -879,3 +903,34 @@ The plan's review scanned `C:\Games\cyberm\rp-scripts`, an older snapshot (2026-
 > a lab-only guard.
 >
 > **Open:** whether `.await` raises on a failed statement; database write ordering; runtime vehicle-id reuse.
+
+---
+
+## 10. Contract changes after this audit
+
+Appended, never rewritten: each later row records here what it changed in the frozen contract.
+
+- **2026-10-12, rows B1/B2** (`wi/b1b2-inventory`, `docs/world-interaction/b1b2-inventory.md`).
+  - **Schema.** One new table, `rp_inventory_migrations` (per-subject import markers, transactions
+    backend only), added to `tests/compat/schema-snapshot.json`. The two legacy tables are unchanged and
+    are never written by the transactions backend.
+  - **Exports.** The seven frozen `rp_inventory` exports keep their signatures and tokens on both
+    backends (`tests/test_compat_inventory.py`, `test_existing_exports_answer_the_same_on_both_backends`).
+    `add`/`remove` gain an optional fourth argument (`meta`); `define` gains a third return value
+    (`details`). New exports are additive; no consumer calls them yet, so `FROZEN_SURFACE` is unchanged.
+  - **Behaviour deliberately fixed (5.1).** `define` refuses colliding ids (`details.collisions`), ids
+    over 32 bytes and ids containing `__`. No collision exists in the pack (all nine definers register
+    every item unchanged, offline).
+- **2026-10-12, reconcile with the final coordinator** (`wi/reconcile-a13`; Open77 `697e9e2f`).
+  - **Migration rule changed (5.6, B2/B3 imports).** A failed operation id is a fresh attempt when reused;
+    only a fenced one (`aborted`) is final (contract §13.5). `rp_inventory`'s import retries a failed chunk
+    id and moves to the next id of its sequence only past a fence. Both imports need a coordinator mint
+    rule (`rp_inventory sys:migration *`, `rp_economy sys:* money`): nothing mints by default, and a
+    missing rule refuses the subject before any chunk. The 1.x wallet import keys wallets by
+    `subjectOf(identifier)` (the identifier by default), and the opIds stay named after the 1.x row.
+  - **Exports.** Additive only: `rp_inventory:grantPockets` (consumed by `rp_cargo` and `rp_economy`'s
+    `sale`, so `FROZEN_SURFACE["rp_inventory"]` gained it), `rp_garage:labIssue` (lab, convar-gated),
+    events `rp_inventory:settled` and `rp_economy:pendingChanged`; `rp_economy:sale` accepts
+    `{ instance, from? }` entries. No signature or token of a frozen export changed. No schema change.
+  - **Suite.** The coordinator in every suite is the vendored final resource
+    (`tests/compat/vendor/open77_transactions`, `server/main.lua` included); the B8 suite runs unchanged.

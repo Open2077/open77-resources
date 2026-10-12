@@ -15,7 +15,7 @@ RpJobsConfig.Grades = {
 }
 RpJobsConfig.BossGrade = 3
 
--- The twelve jobs. Order matters for /jobs and the agency menu.
+-- The jobs. Order matters for /jobs and the agency menu.
 --   name        : the key every export, event, society and SQL row uses
 --   label       : display name
 --   color       : nameplate / tag colour while on duty (#RRGGBB)
@@ -31,6 +31,7 @@ RpJobsConfig.Jobs = {
     { name = "nomade",      label = "Nomad",          color = "#C9A24D", civil = true,  description = "Badlands convoys and long hauls.",                 salary = { [0] = 180, [1] = 260, [2] = 360, [3] = 500 } },
     { name = "ferrailleur", label = "Scrapper",       color = "#9AA0A6", civil = true,  description = "Scrap, components and the odd wreck.",             salary = { [0] = 150, [1] = 220, [2] = 300, [3] = 420 } },
     { name = "barman",      label = "Bartender",      color = "#FF4FA3", civil = true,  description = "Pours the drinks, hears the gossip.",              salary = { [0] = 150, [1] = 220, [2] = 300, [3] = 420 } },
+    { name = "cook",        label = "Street cook",    color = "#FFAA3C", civil = true,  description = "Grills, serves and keeps the stall stocked.",      salary = { [0] = 150, [1] = 220, [2] = 300, [3] = 420 } },
     { name = "fixer",       label = "Fixer",          color = "#00E5FF", civil = false, description = "Gigs, contacts and a cut of everything.",         salary = { [0] = 250, [1] = 400, [2] = 550, [3] = 750 } },
     { name = "netrunner",   label = "Netrunner",      color = "#3CFF8F", civil = false, description = "ICE, daemons and other people's data.",           salary = { [0] = 250, [1] = 400, [2] = 550, [3] = 750 } },
     { name = "vigile",      label = "Security guard", color = "#B0C4DE", civil = true,  description = "Doors, corridors and a stun baton.",              salary = { [0] = 180, [1] = 260, [2] = 360, [3] = 500 } },
@@ -80,6 +81,27 @@ RpJobsConfig.Agency = {
 
 -- How far away an on-duty nameplate tag stays readable (metres).
 RpJobsConfig.NameplateMaxDistance = 40
+
+-- Durable keys (world-interaction B4). Employment rows are keyed by the player's durable
+-- subject, never by the session id. The subject comes from the transaction coordinator's
+-- provider when it runs (`open77_transactions:subjectOf`, A13 contract section 12.5: the
+-- account id, unless a character layer registered an override), else from
+-- Open77.players.identifier -- the same account id the default provider answers.
+--   required = true : refuse to load a job file while the provider is not running
+--                     (set it once a character override provider exists, so a boot
+--                     without the coordinator cannot key rows by the bare account id).
+RpJobsConfig.Subject = { resource = "open77_transactions", export = "subjectOf", required = false }
+
+-- Store. A server WITH a database never falls back to KVP: while the database is not
+-- answering, job files stay unloaded and every change is refused (store_unavailable).
+-- A server with NO database configured at all may keep employment in the resource's own
+-- KVP file -- a disposable lab store, logged as such at every boot. false refuses instead.
+RpJobsConfig.LabKvpWithoutDatabase = true
+
+-- Public summary in the player's replicated state bag (audience: their routing bucket).
+-- On duty: { job, label, grade (label), duty = true }; otherwise { duty = false } -- an
+-- off-duty job stays private, as the on-duty nameplate does. false = no bag key.
+RpJobsConfig.PublicStateKey = "rp_jobs"
 
 -- Colour of the resource's chat lines.
 RpJobsConfig.ChatAuthor = "NC Jobs"

@@ -12,6 +12,10 @@
 H = {
     stores = { sql = {}, kvp = {} },
     now = 1000.0,
+    -- Other resources' server exports, installed by a scenario: H.remote[resource][name] = fn.
+    -- `exports.res:name(...)`, Open77.exports.call and callSync reach them; a missing resource or
+    -- export raises (sugar, callSync) or rejects (call), as on the platform. Kept across H.boot.
+    remote = {},
 }
 
 local realPrint = print
@@ -54,7 +58,24 @@ function H.emit(name, ...)
         CreateThread(function() fn(table.unpack(args, 1, args.n)) end)
     end
 end
-function exports(name, fn) H.exports[name] = fn return true end
+-- `exports(name, fn)` publishes an export of the resource under test; `exports.other:name(...)`
+-- is the synchronous proxy to H.remote (raises when the resource or the export is missing).
+local function remoteExport(resource, name)
+    local provider = H.remote[resource]
+    local fn = provider and provider[name]
+    if not fn then error(("fakehost: no export %s:%s"):format(tostring(resource), tostring(name)), 3) end
+    return fn
+end
+exports = setmetatable({}, {
+    __call = function(_, name, fn) H.exports[name] = fn return true end,
+    __index = function(_, resource)
+        return setmetatable({}, {
+            __index = function(_, name)
+                return function(_, ...) return remoteExport(resource, name)(...) end
+            end,
+        })
+    end,
+})
 
 -- Cooperative scheduler on a simulated clock: Wait parks the running thread until H.now
 -- reaches its wake time; H.run(seconds) advances the clock and resumes what is due.
@@ -162,6 +183,24 @@ Open77 = {
         send = function() return true end,
         addSuggestions = function() return true end,
     },
+    -- Promise form: await() runs the stub (it may Wait, like a remote VM's latency) and returns
+    -- its values, or nil plus a rejection reason when the export does not exist.
+    exports = {
+        call = function(resource, name, ...)
+            local args = table.pack(...)
+            return {
+                await = function()
+                    local provider = H.remote[resource]
+                    if not provider then return nil, "export_resource_not_found" end
+                    local fn = provider[name]
+                    if not fn then return nil, "export_not_found" end
+                    return fn(table.unpack(args, 1, args.n))
+                end,
+                status = function() return "resolved" end,
+            }
+        end,
+        callSync = function(resource, name, ...) return remoteExport(resource, name)(...) end,
+    },
 }
 
 -- Starts one generation of `resource` from its server script, with these players connected
@@ -169,9 +208,12 @@ Open77 = {
 function H.boot(resource, script, dbMode, players, settle)
     reset(resource, dbMode)
     for id, p in pairs(players or {}) do H.players[id] = p end
-    local chunk, err = loadfile(script, "t")
-    if not chunk then error(err, 0) end
-    chunk()
+    -- `script` is one path or a list of paths loaded in order (shared config, modules, main).
+    for _, path in ipairs(type(script) == "table" and script or { script }) do
+        local chunk, err = loadfile(path, "t")
+        if not chunk then error(err, 0) end
+        chunk()
+    end
     H.emit("onResourceStart", resource)
     for id in pairs(H.players) do H.emit("onPlayerReady", id) end
     H.run(settle or 60)

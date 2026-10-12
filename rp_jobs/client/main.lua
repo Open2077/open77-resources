@@ -8,6 +8,8 @@
 --     duty and in which colour, this script applies Open77.nameplates overrides
 --     to the remote players it is told about. A player never sees their own
 --     tag: the nameplate API only overrides remote players.
+--   * exports.rp_jobs:summary() for other client resources: the local player's
+--     own job file, for presentation (prompts) only.
 
 local RESOURCE = GetCurrentResourceName()
 local C = RpJobsConfig
@@ -130,6 +132,21 @@ end
 RegisterNetEvent("rp_jobs:self", function(state)
     selfState = type(state) == "table" and state or { job = false, boss = false, label = false }
     CreateThread(syncHireAction)
+end)
+
+-- The local player's own job file as the server last sent it (private to this client:
+-- it never travels in a state bag). For prompt presentation only -- a canInteract that
+-- reads it decides what is SHOWN; the server's rp_jobs:eligible decides what happens.
+--   { job = "ncpd" | false, label, grade, gradeLabel, boss, onDuty }
+exports("summary", function()
+    return {
+        job = selfState.job or false,
+        label = selfState.label or false,
+        grade = selfState.grade or 0,
+        gradeLabel = selfState.gradeLabel or false,
+        boss = selfState.boss == true,
+        onDuty = selfState.onDuty == true,
+    }
 end)
 
 ---------------------------------------------------------------------------

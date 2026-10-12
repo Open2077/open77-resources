@@ -1,0 +1,72 @@
+{
+  "schema": 1,
+  "about": "Cargo layouts per vehicle record (rp_cargo, row A9). Offsets are metres in the VEHICLE frame of Open77.props.attach with a root binding: +x right, +y forward (towards the cab), +z up; yaw in degrees around z. Every number below is a STARTING GUESS (measured: false) until the integrator has measured it in game with the lab commands (cargospawn / cargotune / cargolayout) on both clients. Paste the JSON that `cargolayout <vehicleId>` prints over the matching entry, then set measured to true for the slots you checked by eye.",
+  "defaults": {
+    "part": "cargo",
+    "model": "crate.small",
+    "stackHeight": 0.55,
+    "maxStack": 2
+  },
+  "layouts": {
+    "Vehicle.v_standard3_thorton_mackinaw_player": {
+      "label": "Thorton Mackinaw bed",
+      "part": "cargo",
+      "capacityKg": 300,
+      "measured": true,
+      "entityTemplate": "0x8F1579854FD1989D",
+      "basis": "Verified 2026-10-12 by the integrator on two clients (side and rear views, crate.small, two layers): the rp_nomade starting slots sit in the bed and stack cleanly; a drive was not tested. Origin: rp_nomade/shared/config.lua Truck.bed (2026-09-18): bed behind the cab, x in [-0.6, 0.6], y in [-2.6, -1.0], z ~0.9, labelled 'starting guesses, not measurements'",
+      "aliases": [],
+      "slots": [
+        { "id": 1, "x": -0.55, "y": -1.5, "z": 0.9, "yaw": 0.0, "stackHeight": 0.55, "maxStack": 2, "measured": true },
+        { "id": 2, "x": 0.55, "y": -1.5, "z": 0.9, "yaw": 0.0, "stackHeight": 0.55, "maxStack": 2, "measured": true },
+        { "id": 3, "x": -0.55, "y": -2.4, "z": 0.9, "yaw": 0.0, "stackHeight": 0.55, "maxStack": 2, "measured": true },
+        { "id": 4, "x": 0.55, "y": -2.4, "z": 0.9, "yaw": 0.0, "stackHeight": 0.55, "maxStack": 2, "measured": true }
+      ]
+    },
+    "Vehicle.v_standard3_thorton_mackinaw_02_player": {
+      "label": "Thorton Mackinaw 02 bed",
+      "part": "cargo",
+      "capacityKg": 300,
+      "measured": false,
+      "entityTemplate": "0xBCDF5C937DFAF511",
+      "basis": "Copied from the Mackinaw guesses (rp_nomade uses one bed for all three trucks). This record has a DIFFERENT entity template from Vehicle.v_standard3_thorton_mackinaw_player (docs/vehicle-models.md), so the bed may not match: measure it separately.",
+      "aliases": ["Vehicle.v_standard3_thorton_mackinaw_ncu_player"],
+      "slots": [
+        { "id": 1, "x": -0.55, "y": -1.5, "z": 0.9, "yaw": 0.0, "stackHeight": 0.55, "maxStack": 2, "measured": false },
+        { "id": 2, "x": 0.55, "y": -1.5, "z": 0.9, "yaw": 0.0, "stackHeight": 0.55, "maxStack": 2, "measured": false },
+        { "id": 3, "x": -0.55, "y": -2.4, "z": 0.9, "yaw": 0.0, "stackHeight": 0.55, "maxStack": 2, "measured": false },
+        { "id": 4, "x": 0.55, "y": -2.4, "z": 0.9, "yaw": 0.0, "stackHeight": 0.55, "maxStack": 2, "measured": false }
+      ]
+    },
+    "Vehicle.v_utility4_chevalier_legatus_player": {
+      "label": "Chevalier Legatus cargo bed",
+      "part": "cargo",
+      "capacityKg": 400,
+      "measured": false,
+      "entityTemplate": "0xAB138E439A3FB7DC",
+      "basis": "Copied from the Mackinaw guesses: rp_nomade applies the same four bed slots to the Legatus (class utility4, 'Truck'), whose body is larger. Expect every offset to move once measured; a wider layout may need more slots.",
+      "aliases": [],
+      "slots": [
+        { "id": 1, "x": -0.55, "y": -1.5, "z": 0.9, "yaw": 0.0, "stackHeight": 0.55, "maxStack": 2, "measured": false },
+        { "id": 2, "x": 0.55, "y": -1.5, "z": 0.9, "yaw": 0.0, "stackHeight": 0.55, "maxStack": 2, "measured": false },
+        { "id": 3, "x": -0.55, "y": -2.4, "z": 0.9, "yaw": 0.0, "stackHeight": 0.55, "maxStack": 2, "measured": false },
+        { "id": 4, "x": 0.55, "y": -2.4, "z": 0.9, "yaw": 0.0, "stackHeight": 0.55, "maxStack": 2, "measured": false }
+      ]
+    },
+    "Vehicle.v_standard25_thorton_colby_pickup_player": {
+      "label": "Thorton Colby pickup bed",
+      "part": "cargo",
+      "capacityKg": 250,
+      "measured": false,
+      "entityTemplate": "0xD996E5E338A298F4",
+      "basis": "Starting guess by analogy with the Mackinaw bed for a smaller pickup (class standard25 'Pickup', docs/vehicle-models.md); no source measured it. Vehicle.v_standard25_thorton_colby_pickup_02_player shares the entity template, hence the alias.",
+      "aliases": ["Vehicle.v_standard25_thorton_colby_pickup_02_player"],
+      "slots": [
+        { "id": 1, "x": -0.45, "y": -1.3, "z": 0.75, "yaw": 0.0, "stackHeight": 0.55, "maxStack": 2, "measured": false },
+        { "id": 2, "x": 0.45, "y": -1.3, "z": 0.75, "yaw": 0.0, "stackHeight": 0.55, "maxStack": 2, "measured": false },
+        { "id": 3, "x": -0.45, "y": -2.1, "z": 0.75, "yaw": 0.0, "stackHeight": 0.55, "maxStack": 2, "measured": false },
+        { "id": 4, "x": 0.45, "y": -2.1, "z": 0.75, "yaw": 0.0, "stackHeight": 0.55, "maxStack": 2, "measured": false }
+      ]
+    }
+  }
+}

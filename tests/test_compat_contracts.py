@@ -18,15 +18,29 @@ import contracts  # noqa: E402
 # Cross-resource server exports in use at origin/main 5dcdad2, by provider.
 FROZEN_SURFACE = {
     "rp_inventory": {"add", "count", "define", "has", "list", "openStash", "remove"},
-    "rp_economy": {"add", "getBalance", "remove"},
+    # B3 (rp_economy 2.0.0): add/getBalance/remove are the 1.x surface every caller keeps; the
+    # other five are rp_bank 2.0.0 calling the wallet facade (docs/world-interaction/b3-wallet.md).
+    # B7 (rp_hud): walletStatus / pendingPlayers are rp_economy's read-only HUD exports
+    # (docs/world-interaction/b7-ui.md).
+    "rp_economy": {"add", "getBalance", "remove",
+                   "balanceOf", "pay", "societyRead", "walletMove", "walletRead",
+                   "pendingPlayers", "walletStatus"},
     "rp_bank": {"charge", "deposit", "getAccount", "society", "societyAdd", "societyRemove", "withdraw"},
-    "rp_jobs": {"getGrade", "getJob", "hasJob", "isBoss", "listOnDuty", "onDuty", "setJob"},
+    # B7: rp_hud reads B4's summary (getJob/getGrade/onDuty stay as its fallback).
+    "rp_jobs": {"getGrade", "getJob", "hasJob", "isBoss", "listOnDuty", "onDuty", "setJob", "summary"},
     "rp_identity": {"fullName", "get", "isRegistered"},
-    "rp_garage": {"hasKey", "ownerOf", "plateOf", "setWanted", "vehiclesOf"},
+    # A9 (wave 1): rp_cargo consumes canAccess and describe (docs/world-interaction/a9-cargo.md).
+    # B7: the rp_inventory panel's read-only cargo view asks canAccessVehicle(..., "cargo", "view").
+    "rp_garage": {"canAccess", "canAccessVehicle", "describe", "hasKey", "ownerOf", "plateOf", "setWanted",
+                  "vehiclesOf"},
     "rp_housing": {"homeOf"},
     "rp_config": {"get"},
     "rp_nomade": {"activeContract"},
 }
+# Reconcile with the final coordinator (697e9e2f): rp_cargo and rp_economy (sale) ask rp_inventory
+# for a one-operation pocket grant when the server's writers keep `char` to rp_inventory
+# (docs/world-interaction/b1b2-inventory.md section 7, a9-cargo.md section 5).
+FROZEN_SURFACE["rp_inventory"] = FROZEN_SURFACE["rp_inventory"] | {"grantPockets"}
 
 SNAPSHOT = Path(__file__).resolve().parent / "compat" / "schema-snapshot.json"
 

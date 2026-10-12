@@ -2,19 +2,21 @@
 <meta charset="utf-8">
 <title>rp_inventory</title>
 <style>
-    /* the stash column is toggled with the hidden attribute; keep it above every display rule */
+    /* the side columns are toggled with the hidden attribute; keep it above every display rule */
     [hidden] { display: none !important; }
   /* rp_inventory: the POCKETS panel. Transparent page, no external asset, no
      library. Everything drawn here comes from the client script (state / close);
      every button is an "intent" the server answers with a fresh state. Tokens
-     follow the in-game OPEN//77 design system (open77-ui.css). */
+     follow the in-game OPEN//77 design system (open77-ui.css).
+     B7 (docs/world-interaction/b7-ui.md): the surface stays visible with an empty
+     document; nothing is drawn (no scrim, no blur) unless a state is open. */
   :root {
     --bg: rgba(10, 18, 32, 0.94); --bg-raised: rgba(16, 27, 43, 0.96); --surface: #101b2b; --surface-2: #132032;
     --line: rgba(174, 211, 224, 0.10); --line-strong: rgba(174, 211, 224, 0.19); --line-hud: rgba(174, 211, 224, 0.30);
     --text: #f2f6f8; --dim: #8d99a8; --faint: rgba(141, 153, 168, 0.72); --ink: #071013;
     --accent: #22d8e2; --accent-soft: rgba(34, 216, 226, 0.12); --accent-line: rgba(34, 216, 226, 0.45);
     --danger: #ff5c5c; --danger-soft: rgba(255, 92, 92, 0.12); --danger-line: rgba(255, 92, 92, 0.45);
-    --ok: #4fe3a9; --warn: #f5c95c;
+    --ok: #4fe3a9; --warn: #f5c95c; --warn-soft: rgba(245, 201, 92, 0.12); --warn-line: rgba(245, 201, 92, 0.45);
     --mono: "IBM Plex Mono", "Cascadia Mono", "Consolas", ui-monospace, monospace;
     --display: "Rajdhani", "Bahnschrift Condensed", "Bahnschrift SemiCondensed", "Arial Narrow", "Segoe UI", sans-serif;
     --notch: 12px;
@@ -25,12 +27,13 @@
   #inv.hidden { display: none; }
   .scrim { position: absolute; inset: 0; background: rgba(3, 7, 13, 0.55); }
   .panel {
-    position: relative; width: 960px; height: 620px; display: flex; flex-direction: column;
+    position: relative; width: 960px; height: 620px; max-width: calc(100vw - 32px); display: flex; flex-direction: column;
     background: var(--bg); border: 1px solid var(--line-hud); border-top: 2px solid var(--accent);
     clip-path: polygon(0 0, calc(100% - var(--notch)) 0, 100% var(--notch), 100% 100%, var(--notch) 100%, 0 calc(100% - var(--notch)));
     box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
   }
-  .panel.with-stash { width: 1200px; }
+  .panel.cols-2 { width: 1200px; }
+  .panel.cols-3 { width: 1460px; }
   .panel::after { content: ""; position: absolute; inset: 0; pointer-events: none;
     background: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.022) 0 1px, transparent 1px 3px); }
 
@@ -49,30 +52,47 @@
     clip-path: polygon(0 0, 100% 0, 100% 100%, 3px 100%, 0 calc(100% - 3px)); }
   .bar .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: var(--accent); transition: width 160ms ease-out, background 160ms; }
   .bar .fill.warn { background: var(--warn); } .bar .fill.full { background: var(--danger); }
+  header .hbtn { height: 30px; padding: 0 10px; border: 1px solid var(--line-hud); background: transparent; color: var(--text); cursor: pointer; font: 600 10px var(--mono); letter-spacing: 0.12em; text-transform: uppercase; }
+  header .hbtn:hover { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent); }
+  header .hbtn:disabled { color: var(--faint); border-color: var(--line-strong); background: transparent; cursor: default; }
   header .close { width: 30px; height: 30px; border: 1px solid var(--line-hud); background: transparent; color: var(--text); cursor: pointer; font: 16px/1 var(--mono); }
   header .close:hover { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent); }
+
+  /* pending strip: actions the store has not settled (never shown as a loss) */
+  .pending { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 6px 18px; border-bottom: 1px solid var(--warn-line); background: var(--warn-soft); font-size: 10px; letter-spacing: 0.06em; color: var(--warn); }
+  .pending b { font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; }
 
   /* body: columns */
   main { flex: 1; display: flex; min-height: 0; }
   .col { flex: 1; display: flex; flex-direction: column; min-width: 0; border-right: 1px solid var(--line-strong); }
-  .col .head { display: flex; align-items: baseline; gap: 12px; padding: 10px 16px 6px; }
+  .col.cargo { flex: none; width: 260px; }
+  .col .head { display: flex; align-items: baseline; gap: 10px; padding: 10px 16px 6px; flex-wrap: wrap; }
   .col .head h2 { margin: 0; font: 700 16px/1 var(--display); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text); }
   .col .head .id { font-size: 10px; letter-spacing: 0.1em; color: var(--accent); }
   .col .head .cap { margin-left: auto; font-size: 11px; color: var(--dim); }
   .col .head .cap b { color: var(--text); font-weight: 600; }
+  .chip { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; padding: 1px 6px; border: 1px solid var(--line-hud); color: var(--dim); }
+  .chip.warn { color: var(--warn); border-color: var(--warn-line); }
+  .chip.ro { color: var(--accent); border-color: var(--accent-line); }
+  .col .head .x { margin-left: 6px; border: 0; background: transparent; color: var(--dim); cursor: pointer; font: 14px/1 var(--mono); }
+  .col .head .x:hover { color: var(--accent); }
   .grid { flex: 1; overflow-y: auto; padding: 6px 16px 14px; display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); grid-auto-rows: 104px; gap: 8px; align-content: start; }
-  .grid::-webkit-scrollbar { width: 6px; } .grid::-webkit-scrollbar-thumb { background: var(--line-hud); }
+  .grid::-webkit-scrollbar, .list::-webkit-scrollbar, .detail::-webkit-scrollbar { width: 6px; }
+  .grid::-webkit-scrollbar-thumb, .list::-webkit-scrollbar-thumb, .detail::-webkit-scrollbar-thumb { background: var(--line-hud); }
   .empty { grid-column: 1 / -1; color: var(--faint); font-size: 11px; letter-spacing: 0.06em; padding: 18px 4px; text-transform: uppercase; }
 
   /* tiles */
   .tile { position: relative; display: flex; flex-direction: column; padding: 8px 9px 7px; background: var(--surface); border: 1px solid var(--line-strong); cursor: pointer; text-align: left; color: var(--text); font: inherit; overflow: hidden; }
   .tile:hover { background: var(--surface-2); border-color: var(--accent-line); }
   .tile.selected { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent-line); }
-  .tile .top { display: flex; align-items: flex-start; justify-content: space-between; }
-  .tile svg { width: 22px; height: 22px; stroke: var(--accent); fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-  .tile .count { font-size: 12px; font-weight: 600; color: var(--text); letter-spacing: 0.04em; }
+  .tile .top { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
+  .tile svg { width: 22px; height: 22px; flex: none; stroke: var(--accent); fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .tile .count { font-size: 12px; font-weight: 600; color: var(--text); letter-spacing: 0.04em; text-align: right; }
+  .tile .count small { display: block; font-size: 9px; font-weight: 400; color: var(--warn); letter-spacing: 0.06em; }
   .tile .label { margin-top: auto; font: 600 12px/1.2 var(--mono); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .tile .kg { font-size: 10px; color: var(--dim); letter-spacing: 0.06em; margin-top: 2px; }
+  .tile .kg { font-size: 10px; color: var(--dim); letter-spacing: 0.06em; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tile .meta { color: var(--accent); }
+  .tile .meta.low { color: var(--danger); }
   .tile .flag { position: absolute; right: -1px; bottom: -1px; font-size: 8px; letter-spacing: 0.16em; padding: 1px 5px; text-transform: uppercase; }
   .tile.illegal { border-color: var(--danger-line); background: var(--danger-soft); }
   .tile.illegal svg { stroke: var(--danger); }
@@ -80,6 +100,15 @@
   .tile.illegal:hover { border-color: var(--danger); }
   .tile.illegal.selected { box-shadow: inset 0 0 0 1px var(--danger-line); border-color: var(--danger); }
   .tile.usable .flag { color: var(--accent); border-top: 1px solid var(--accent-line); border-left: 1px solid var(--accent-line); }
+  .tile.transit { border-style: dashed; border-color: var(--warn-line); }
+
+  /* read-only cargo list */
+  .list { flex: 1; overflow-y: auto; padding: 4px 16px 14px; }
+  .slot { border: 1px solid var(--line-strong); background: var(--surface); padding: 6px 8px; margin-bottom: 6px; }
+  .slot .sh { display: flex; justify-content: space-between; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
+  .slot .obj { font-size: 11px; color: var(--text); padding-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .slot .obj small { color: var(--faint); }
+  .slot .none { font-size: 10px; color: var(--faint); padding-top: 3px; }
 
   /* detail column */
   .detail { width: 280px; flex: none; display: flex; flex-direction: column; padding: 12px 16px; background: rgba(0, 0, 0, 0.18); overflow-y: auto; }
@@ -94,14 +123,19 @@
   .kv span:nth-child(even) { color: var(--text); }
   .kv .bad { color: var(--danger); }
   .kv .good { color: var(--ok); }
+  .kv .warn { color: var(--warn); }
+  .units { margin: 0 0 10px; font-size: 10px; }
+  .units .u { display: grid; grid-template-columns: 1fr 70px; gap: 6px; align-items: center; padding: 2px 0; border-bottom: 1px solid var(--line); }
+  .units .u span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dim); }
+  .units .u .bar { margin-top: 0; }
+  .units .more { color: var(--faint); padding-top: 3px; }
   .sep { border: 0; border-top: 1px solid var(--line-strong); margin: 6px 0 10px; }
-  .qty { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .qty { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
   .qty label { font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
-  .qty input { width: 64px; background: var(--surface); border: 1px solid var(--line-hud); color: var(--text); padding: 5px 7px; font: 13px var(--mono); }
+  .qty input { width: 58px; background: var(--surface); border: 1px solid var(--line-hud); color: var(--text); padding: 5px 7px; font: 13px var(--mono); }
   .qty input:focus { outline: none; border-color: var(--accent); }
-  .qty .stp { width: 26px; height: 26px; border: 1px solid var(--line-hud); background: transparent; color: var(--text); cursor: pointer; font: 13px var(--mono); }
+  .qty .stp { min-width: 26px; height: 26px; border: 1px solid var(--line-hud); background: transparent; color: var(--text); cursor: pointer; font: 11px var(--mono); }
   .qty .stp:hover { border-color: var(--accent-line); color: var(--accent); }
-  .qty .max { font-size: 10px; color: var(--dim); }
   .actions { display: flex; flex-direction: column; gap: 6px; }
   .btn { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 10px; background: var(--accent-soft); border: 1px solid var(--accent-line); color: var(--text); cursor: pointer; font: 600 11px var(--mono); letter-spacing: 0.12em; text-transform: uppercase; text-align: left; }
   .btn small { font-size: 9px; letter-spacing: 0.06em; color: var(--dim); text-transform: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -114,8 +148,11 @@
 
   footer { display: flex; justify-content: space-between; padding: 5px 18px; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); border-top: 1px solid var(--line-strong); }
   .toasts { position: absolute; right: 16px; bottom: 34px; display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
-  .toast { background: rgba(3, 7, 13, 0.92); border-left: 3px solid var(--ok); padding: 7px 12px; max-width: 360px; font-size: 11px; letter-spacing: 0.04em; }
-  .toast.bad { border-left-color: var(--danger); }
+  .toast { background: rgba(3, 7, 13, 0.92); border-left: 3px solid var(--ok); padding: 7px 12px; max-width: 380px; font-size: 11px; letter-spacing: 0.04em; }
+  .toast.refused { border-left-color: var(--danger); }
+  .toast.retry { border-left-color: var(--dim); }
+  .toast.pending { border-left-color: var(--warn); }
+  .toast code { display: inline-block; margin-left: 6px; font: 9px var(--mono); letter-spacing: 0.08em; color: var(--dim); border: 1px solid var(--line-hud); padding: 0 4px; }
 </style>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -145,20 +182,26 @@
         <div class="num"><b id="wNum">0.0 / 40 kg</b><span id="wPct">0%</span></div>
         <div class="bar"><div class="fill" id="wFill"></div></div>
       </div>
+      <button class="hbtn" id="btnCargo" title="Read-only view of the cargo of the vehicle you sit in or stand next to">Vehicle cargo</button>
       <div class="who">
         <div class="name" id="who">-</div>
         <div class="pid" id="pid"></div>
       </div>
       <button class="close" id="btnClose" title="Close (Esc)">&times;</button>
     </header>
+    <div class="pending" id="pending" hidden></div>
     <main>
       <section class="col" id="colPockets">
-        <div class="head"><h2>Pockets</h2><span class="cap" id="capPockets"></span></div>
+        <div class="head"><h2>Pockets</h2><span class="chip warn" id="syncPockets" hidden></span><span class="cap" id="capPockets"></span></div>
         <div class="grid" id="gridPockets"></div>
       </section>
       <section class="col" id="colStash" hidden>
-        <div class="head"><h2>Stash</h2><span class="id" id="stashId"></span><span class="cap" id="capStash"></span></div>
+        <div class="head"><h2>Stash</h2><span class="id" id="stashId"></span><span class="chip warn" id="syncStash" hidden></span><span class="cap" id="capStash"></span></div>
         <div class="grid" id="gridStash"></div>
+      </section>
+      <section class="col cargo" id="colCargo" hidden>
+        <div class="head"><h2>Cargo</h2><span class="id" id="cargoPlate"></span><span class="chip ro">read-only</span><button class="x" id="btnCargoClose" title="Close the cargo view">&times;</button></div>
+        <div class="list" id="listCargo"></div>
       </section>
       <aside class="detail" id="detail"></aside>
     </main>
@@ -172,22 +215,39 @@
   // client script sends with page:send(event, payload); Open77.emit(event, payload)
   // raises an event the client script handles with page:on(). Nothing here talks to
   // the network or decides anything: every action is an "intent" the server answers
-  // with a fresh "state".
+  // with a fresh "state". The page holds the cursor only; it asks for the keyboard
+  // ("typing") only while the count field has the caret.
   const bridge = window.Open77;
   const GLYPHS = ["heal", "food", "drink", "fuel", "smoke", "drug", "stamina", "tech", "tool", "material", "cargo", "misc"];
-  const S = { open: false, state: null, sel: null, busy: null };   // sel = { side: "pockets"|"stash", id }
+  const BUSY_TIMEOUT_MS = 25000;   // longer than the server's 20 s in-doubt answer
+  const S = { open: false, state: null, sel: null, busy: null, busyTimer: null };   // sel = { side: "pockets"|"stash", id }
 
   const $ = (id) => document.getElementById(id);
+  // An empty Lua table crosses the event bridge as a JSON object ({}), never [] (live 2026-10-12:
+  // the cargo view of a truck with three empty slots threw on {}.map and drew nothing).
+  const arr = (v) => Array.isArray(v) ? v : (v && typeof v === "object" ? Object.values(v) : []);
   const esc = (v) => String(v == null ? "" : v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const kg = (n) => (Math.round(Number(n || 0) * 10) / 10).toFixed(1);
   const cap = (n) => String(Math.round(Number(n || 0)));
   function emit(name, payload) { if (bridge && typeof bridge.emit === "function") bridge.emit(name, payload || {}); }
-  function intent(action, extra) { emit("intent", Object.assign({ action: action }, extra || {})); }
+  // Every intent carries the seq of the state it was made on: the server says "that changed
+  // meanwhile" instead of a bare refusal when the picture was stale.
+  function intent(action, extra) {
+    emit("intent", Object.assign({ action: action, seq: S.state ? S.state.seq : undefined }, extra || {}));
+  }
 
-  function toast(text, ok) {
-    if (!text) return;
-    const el = document.createElement("div"); el.className = "toast" + (ok ? "" : " bad"); el.textContent = text;
-    $("toasts").appendChild(el); setTimeout(() => el.remove(), 4000);
+  function toast(notice) {
+    if (!notice || !notice.text) return;
+    const kind = notice.kind || (notice.ok === false ? "refused" : "ok");
+    const el = document.createElement("div");
+    el.className = "toast" + (kind === "ok" ? "" : " " + kind);
+    el.textContent = notice.text;
+    // The refusal token (and the coordinator's own, e.g. capacity_exceeded) stays visible: a
+    // player can quote it, an admin can grep it.
+    const code = [notice.reason, notice.code].filter((x, i, a) => x && a.indexOf(x) === i).join(" / ");
+    if (code && kind !== "ok") { const c = document.createElement("code"); c.textContent = code; el.appendChild(c); }
+    $("toasts").appendChild(el);
+    setTimeout(() => el.remove(), kind === "pending" ? 8000 : 4500);
   }
 
   function glyph(cat, cls) {
@@ -195,17 +255,33 @@
     return `<svg class="${cls || ""}"><use href="#g-${id}"></use></svg>`;
   }
 
+  function setBusy(action) {
+    S.busy = action;
+    if (S.busyTimer) { clearTimeout(S.busyTimer); S.busyTimer = null; }
+    if (action) {
+      // No answer at all (a lost event): unlock and ask for the current state.
+      S.busyTimer = setTimeout(() => { S.busy = null; S.busyTimer = null; renderDetail(); intent("refresh"); }, BUSY_TIMEOUT_MS);
+    }
+  }
+
   // ---- open / close --------------------------------------------------------
   function onState(st) {
     if (!st || st.open === false) { onClose(); return; }
     const first = !S.open;
-    S.open = true; S.state = st; S.busy = null;
+    S.open = true; S.state = st; setBusy(null);
     if (first) S.sel = null;
     $("inv").classList.remove("hidden");
     render();
-    if (st.notice && st.notice.text) toast(st.notice.text, st.notice.ok !== false);
+    if (st.notice) toast(st.notice);
   }
-  function onClose() { S.open = false; S.state = null; S.sel = null; S.busy = null; $("inv").classList.add("hidden"); }
+  // Idempotent: the client sends "close" on every exit path and on every page load.
+  function onClose() {
+    S.open = false; S.state = null; S.sel = null; setBusy(null);
+    const inp = $("qty"); if (inp) inp.blur();
+    $("inv").classList.add("hidden");
+    $("detail").innerHTML = "";
+    $("toasts").innerHTML = "";
+  }
 
   // ---- rendering ---------------------------------------------------------------
   function container(side) {
@@ -215,6 +291,15 @@
   function findEntry(side, id) {
     const c = container(side); if (!c) return null;
     return (c.entries || []).find((e) => e.id === id) || null;
+  }
+
+  function syncChip(el, c) {
+    const s = c && c.sync;
+    const parts = [];
+    if (s && s.saving) parts.push("saving");
+    if (s && s.incomingKg > 0) parts.push(`+${kg(s.incomingKg)} kg incoming`);
+    el.hidden = parts.length === 0;
+    el.textContent = parts.join(" / ");
   }
 
   function render() {
@@ -229,20 +314,60 @@
     $("who").textContent = st.name || "-";
     $("pid").textContent = st.playerId != null ? "ID " + st.playerId : "";
     $("capPockets").innerHTML = `<b>${kg(w)}</b> / ${cap(c)} kg`;
+    syncChip($("syncPockets"), p);
     renderGrid("pockets", p);
 
     const stash = st.stash;
-    $("panel").classList.toggle("with-stash", !!stash);
     $("colStash").hidden = !stash;
     if (stash) {
       $("stashId").textContent = stash.id || "";
       $("capStash").innerHTML = `<b>${kg(stash.weight)}</b> / ${cap(stash.capacity)} kg`;
+      syncChip($("syncStash"), stash);
       renderGrid("stash", stash);
     }
+    renderCargo(st.cargo);
+    const cols = 1 + (stash ? 1 : 0) + (st.cargo ? 1 : 0);
+    $("panel").classList.toggle("cols-2", cols === 2);
+    $("panel").classList.toggle("cols-3", cols === 3);
+    $("btnCargo").disabled = st.backend !== "transactions";
+    $("btnCargo").title = st.backend === "transactions"
+      ? "Read-only view of the cargo of the vehicle you sit in or stand next to"
+      : "Vehicle cargo needs the transactions backend";
+    renderPending(st.pending);
     // A selection that no longer exists (used up, given away) is dropped.
     if (S.sel && !findEntry(S.sel.side, S.sel.id)) S.sel = null;
     if (S.sel && S.sel.side === "stash" && !stash) S.sel = null;
     renderDetail();
+  }
+
+  const ACTION_WORDS = { store: "store", take: "take", give: "give", drop: "drop", use: "use" };
+  function renderPending(list) {
+    const el = $("pending");
+    if (!list || !list.length) { el.hidden = true; el.innerHTML = ""; return; }
+    el.hidden = false;
+    el.innerHTML = `<b>Pending</b>` + list.map((op) =>
+      `<span>${esc(ACTION_WORDS[op.action] || op.action)} ${esc(op.label)} x${esc(op.count)} &middot; ${esc(op.ageSeconds)} s &middot; not lost, confirming</span>`
+    ).join("");
+  }
+
+  // The unit the tile names: the most worn one (it moves first), as "dur 12/20".
+  function tileMeta(e) {
+    const def = e.def || {};
+    if (e.units && e.units.length) {
+      const d = e.units[0].meta && e.units[0].meta.durability;
+      if (typeof d === "number") {
+        const max = def.durabilityMax;
+        const low = max ? d / max < 0.25 : false;
+        return `<span class="meta${low ? " low" : ""}">dur ${esc(d)}${max ? "/" + esc(max) : ""}</span>`;
+      }
+      return `<span class="meta">${e.units.length + (e.moreUnits || 0)} unit(s)</span>`;
+    }
+    if (e.variants && e.variants.length > 1) return `<span class="meta">${e.variants.length} grades</span>`;
+    if (e.variants && e.variants.length === 1 && e.variants[0].meta) {
+      const q = e.variants[0].meta.quality;
+      if (q !== undefined) return `<span class="meta">Q${esc(q)}</span>`;
+    }
+    return "";
   }
 
   function renderGrid(side, c) {
@@ -254,29 +379,66 @@
     }
     grid.innerHTML = entries.map((e) => {
       const sel = S.sel && S.sel.side === side && S.sel.id === e.id;
-      const cls = "tile" + (e.illegal ? " illegal" : "") + (e.usable ? " usable" : "") + (sel ? " selected" : "");
+      const cls = "tile" + (e.illegal ? " illegal" : "") + (e.usable ? " usable" : "") + (sel ? " selected" : "") + (e.held ? " transit" : "");
       const flag = e.illegal ? `<span class="flag">Illegal</span>` : (e.usable ? `<span class="flag">Use</span>` : "");
+      const held = e.held ? `<small>+${esc(e.held)} in transit</small>` : "";
+      const meta = tileMeta(e);
       return `<button class="${cls}" data-side="${side}" data-id="${esc(e.id)}" title="${esc(e.label)}">
-        <div class="top">${glyph(e.category)}<span class="count">x${esc(e.count)}</span></div>
+        <div class="top">${glyph(e.category)}<span class="count">x${esc(e.count)}${held}</span></div>
         <div class="label">${esc(e.label)}</div>
-        <div class="kg">${kg(e.total)} kg</div>${flag}</button>`;
+        <div class="kg">${kg(e.total)} kg${meta ? " &middot; " + meta : ""}</div>${flag}</button>`;
     }).join("");
     grid.querySelectorAll(".tile").forEach((b) => b.onclick = () => select(b.dataset.side, b.dataset.id));
   }
 
+  function renderCargo(cargo) {
+    $("colCargo").hidden = !cargo;
+    if (!cargo) { $("listCargo").innerHTML = ""; return; }
+    $("cargoPlate").textContent = cargo.plate || "";
+    const slots = arr(cargo.slots);
+    const head = `<div class="hint" style="padding:0 0 6px;color:var(--dim);font-size:10px">${esc(cargo.objects)} object(s), ${esc(cargo.free)} free place(s)${cargo.capacityKg ? " &middot; " + esc(cargo.capacityKg) + " kg max" : ""}</div>`;
+    $("listCargo").innerHTML = head + (slots.length ? slots.map((s) => {
+      const objs = arr(s.objects).map((o) => `<div class="obj">${esc(o.label)} <small>${esc(o.instance)}</small></div>`).join("");
+      return `<div class="slot"><div class="sh"><span>Slot ${esc(s.slot)}</span><span>${arr(s.objects).length}/${esc(s.maxStack)}</span></div>${objs || `<div class="none">empty</div>`}</div>`;
+    }).join("") : `<div class="empty">No cargo bed.</div>`);
+  }
+
   function select(side, id) {
     S.sel = { side: side, id: id };
-    S.busy = null;
     render();
-    const inp = $("qty"); if (inp) { inp.focus(); inp.select(); }
+  }
+
+  function unitsBlock(e) {
+    const def = e.def || {};
+    let h = "";
+    if (e.units && e.units.length) {
+      h += `<div class="units">` + e.units.map((u) => {
+        const m = u.meta || {};
+        const d = m.durability, max = def.durabilityMax;
+        const name = m.serial ? `#${m.serial}` : (m.quality !== undefined ? `Q${m.quality}` : u.id);
+        const bar = typeof d === "number" && max
+          ? `<div class="bar"><div class="fill${d / max < 0.25 ? " full" : d / max < 0.5 ? " warn" : ""}" style="width:${Math.max(0, Math.min(100, Math.round(d / max * 100)))}%"></div></div>`
+          : (typeof d === "number" ? `<span>dur ${esc(d)}</span>` : `<span></span>`);
+        return `<div class="u" title="${esc(u.id)}"><span>${esc(name)}${typeof d === "number" ? " &middot; " + esc(d) + (max ? "/" + esc(max) : "") : ""}</span>${bar}</div>`;
+      }).join("") + (e.moreUnits ? `<div class="more">and ${esc(e.moreUnits)} more</div>` : "") + `</div>`;
+    }
+    if (e.variants && (e.variants.length > 1 || (e.variants[0] && e.variants[0].meta))) {
+      h += `<div class="units">` + e.variants.map((v) => {
+        const m = v.meta || {};
+        const name = Object.keys(m).sort().map((k) => k === "quality" ? `Q${m[k]}` : `${k} ${m[k]}`).join(" ") || "standard";
+        return `<div class="u"><span>${esc(name)}</span><span style="text-align:right">x${esc(v.count)}</span></div>`;
+      }).join("") + `</div>`;
+    }
+    return h;
   }
 
   function renderDetail() {
     const d = $("detail");
     const st = S.state;
+    if (!st) { d.innerHTML = ""; return; }
     if (!S.sel) {
       d.innerHTML = `<div class="kicker">Nothing selected</div>
-        <div class="hint">Pick a tile to see what it is and what you can do with it.${st && st.stash ? "<br><br>Store moves it from your pockets into the stash; Take brings it back." : ""}</div>`;
+        <div class="hint">Pick a tile to see what it is and what you can do with it.${st.stash ? "<br><br>Store moves it from your pockets into the stash; Take brings it back." : ""}${st.cargo ? "<br><br>The cargo column is read-only: loading and unloading belong to the job." : ""}</div>`;
       return;
     }
     const e = findEntry(S.sel.side, S.sel.id);
@@ -284,23 +446,26 @@
     const fromStash = S.sel.side === "stash";
     const near = st.nearest;
     const busy = S.busy;
+    const none = e.count < 1;
     const btn = (action, label, sub, cls, disabled) =>
-      `<button class="btn ${cls || ""}${busy === action ? " busy" : ""}" data-action="${action}" ${disabled || busy ? "disabled" : ""}>` +
+      `<button class="btn ${cls || ""}${busy === action ? " busy" : ""}" data-action="${action}" ${disabled || busy || none ? "disabled" : ""}>` +
       `<span>${busy === action ? "Working..." : label}</span>${sub ? `<small>${sub}</small>` : ""}</button>`;
     let h = `${glyph(e.category, "glyph" + (e.illegal ? " illegal" : ""))}
       <div class="kicker">${esc(e.category || "item")}${fromStash ? " &middot; in the stash" : ""}</div>
       <div class="title${e.illegal ? " illegal" : ""}">${esc(e.label)}</div>
       <div class="kv">
         <span>Count</span><span>x${esc(e.count)}</span>
+        ${e.held ? `<span>Transit</span><span class="warn">${esc(e.held)} pending, not lost</span>` : ""}
         <span>Unit</span><span>${kg(e.weight)} kg</span>
         <span>Total</span><span>${kg(e.total)} kg</span>
         <span>Status</span><span class="${e.illegal ? "bad" : ""}">${e.illegal ? "Illegal. NCPD would love to find this." : (e.usable ? "Usable." : "Legal.")}</span>
       </div>
+      ${unitsBlock(e)}
       <hr class="sep">`;
     const showQty = e.count > 1;
     if (showQty) h += `<div class="qty"><label for="qty">How many</label>
-        <button class="stp" data-step="-1">-</button><input id="qty" type="number" min="1" max="${e.count}" value="1"><button class="stp" data-step="1">+</button>
-        <span class="max">of ${esc(e.count)}</span></div>`;
+        <button class="stp" data-step="-1">-</button><input id="qty" type="number" min="1" max="${e.count}" value="1"><button class="stp" data-step="1">+</button><button class="stp" data-all="1">all</button></div>`;
+    if (e.units && e.units.length > 1) h += `<div class="hint" style="margin:0 0 8px">The most worn unit moves first.</div>`;
     h += `<div class="actions">`;
     if (fromStash) {
       h += btn("take", "Take", "into your pockets");
@@ -314,7 +479,7 @@
     }
     h += `</div>`;
     d.innerHTML = h;
-    bindDetail(d, e, fromStash);
+    bindDetail(d, e);
   }
 
   function qty(max) {
@@ -326,19 +491,29 @@
     return n;
   }
 
-  function bindDetail(root, e, fromStash) {
+  function bindDetail(root, e) {
     root.querySelectorAll(".stp").forEach((b) => b.onclick = () => {
       const inp = $("qty"); if (!inp) return;
-      inp.value = String((Math.floor(Number(inp.value) || 1)) + Number(b.dataset.step));
+      if (b.dataset.all) inp.value = String(e.count);
+      else inp.value = String((Math.floor(Number(inp.value) || 1)) + Number(b.dataset.step));
       qty(e.count);
     });
     const inp = $("qty");
-    if (inp) inp.onkeydown = (ev) => { if (ev.key === "Enter") { ev.preventDefault(); const first = root.querySelector(".btn:not(:disabled)"); if (first) first.click(); } };
+    if (inp) {
+      // The caret takes the keyboard (the client switches focus); leaving gives it back.
+      inp.onfocus = () => emit("typing", { on: true });
+      inp.onblur = () => emit("typing", { on: false });
+      inp.onkeydown = (ev) => {
+        if (ev.key === "Enter") { ev.preventDefault(); inp.blur(); const first = root.querySelector(".btn:not(:disabled)"); if (first) first.click(); }
+        if (ev.key === "Escape") { ev.preventDefault(); ev.stopPropagation(); inp.blur(); }
+      };
+    }
     root.querySelectorAll(".btn[data-action]").forEach((b) => b.onclick = () => {
       const action = b.dataset.action;
       const payload = { item: e.id };
       if (action !== "use") payload.count = qty(e.count);
-      S.busy = action;           // one intent at a time; the next state clears it
+      const field = $("qty"); if (field) field.blur();
+      setBusy(action);           // one intent at a time; the next state clears it
       renderDetail();
       intent(action, payload);
     });
@@ -346,7 +521,13 @@
 
   // ---- wiring ----------------------------------------------------------------------
   $("btnClose").onclick = () => emit("close");
-  document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && S.open) { ev.preventDefault(); emit("close"); } });
+  $("btnCargo").onclick = () => { if (!S.busy) { setBusy("cargo"); intent("cargo"); } };
+  $("btnCargoClose").onclick = () => intent("cargo", { close: true });
+  // Escape reaches the page only while it holds the keyboard (typing); while browsing it reaches
+  // the game and the client closes on the pause key. Both paths are idempotent.
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape" && S.open && document.activeElement !== $("qty")) { ev.preventDefault(); emit("close"); }
+  });
   if (bridge && typeof bridge.on === "function") {
     bridge.on("state", onState);
     bridge.on("close", onClose);

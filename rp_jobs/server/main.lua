@@ -1,15 +1,19 @@
--- rp_jobs v2 -- server-authoritative jobs, grades, bosses, duty and payroll.
+-- rp_jobs v2.1 -- server-authoritative jobs, grades, bosses, duty and payroll.
 --
 -- One job per player, a grade 0..3 (recruit, employee, senior, boss), a duty
 -- switch and a society per job (rp_bank). Everything is decided here: the
 -- client only renders the agency ring, the ALT+click hire action and the
 -- on-duty nameplate tags.
 --
--- Persistence: SQL table rp_jobs_employees keyed by the durable identifier,
--- mirrored in an in-memory cache so every export answers synchronously and
--- never yields. Without a database the resource's Open77.kvp store is used
--- instead (and the log says so). Duty is never restored: it is cleared on
--- disconnect and on resource stop.
+-- Persistence: SQL table rp_jobs_employees keyed by the durable subject (the
+-- account id through the subject provider rule), mirrored in an in-memory
+-- cache so every export answers synchronously and never yields. Writes are
+-- serialized per subject and coalesced, so SQL always converges on the last
+-- state. A server WITH a database never falls back to KVP: while it does not
+-- answer, job files stay unloaded and changes are refused (store_unavailable).
+-- A server with NO database configured may use the resource's KVP file as an
+-- explicit, disposable lab store (RpJobsConfig.LabKvpWithoutDatabase). Duty is
+-- never restored: it is cleared on disconnect, on resource stop and at boot.
 --
 -- Exports (synchronous, never yield):
 --   getJob(playerId) -> name | nil
@@ -20,9 +24,14 @@
 --   setJob(playerId, name | nil, grade) -> true | nil, reason
 --   listOnDuty(name) -> { playerId, ... }
 --   salary(name, level) -> integer
+--   eligible(playerId, requirement) -> true, epoch | nil, reason      (B4: authoritative eligibility)
+--   workEpoch(playerId) -> epoch | nil, reason                       (B4: pending-work invalidation)
+--   summary(playerId) -> { job, label, grade, gradeLabel, onDuty } | nil, reason
+--   setDuty(playerId, onDuty, requirement?) -> true, epoch | nil, reason
 -- Host-wide events:
---   rp_jobs:changed (playerId, name | nil)
---   rp_jobs:duty    (playerId, name, onDuty)
+--   rp_jobs:changed   (playerId, name | nil)
+--   rp_jobs:duty      (playerId, name, onDuty)
+--   rp_jobs:workEpoch (playerId, epoch | false, reason)
 
 local RESOURCE = GetCurrentResourceName()
 local C = RpJobsConfig
@@ -76,14 +85,28 @@ local function isValidGrade(level)
     return type(level) == "number" and level % 1 == 0 and C.Grades[level] ~= nil
 end
 
+-- The rp_bank society a job pays from and is paid into: the job name, unless the
+-- job row names another one (`society = "..."` in RpJobsConfig.Jobs).
+local function societyOf(jobName)
+    local job = JOB_BY_NAME[jobName]
+    if not job then
+        return nil
+    end
+    return string.lower(job.society or job.name)
+end
+
 ---------------------------------------------------------------------------
 -- State (keyed by session player id; the identifier inside is durable)
 ---------------------------------------------------------------------------
 
--- [playerId] = { identifier, loaded, job, grade, hiredAt, hiredBy, onDuty }
+-- [playerId] = { identifier, loaded, job, grade, hiredAt, hiredBy, onDuty, epoch,
+--                unavailable (why the file is not loaded), waiting (for the store) }
 local records = {}
-local store = nil        -- "sql" | "kvp" once decided, nil while undecided
-local storeReason = nil  -- why kvp was chosen, for the log
+
+-- "pending" (a database is configured but has not answered), "sql", "lab_kvp"
+-- (no database configured, explicit lab store) or "refused" (no store at all).
+local storeState = "pending"
+local storeReason = nil
 
 ---------------------------------------------------------------------------
 -- Small helpers
@@ -149,6 +172,29 @@ local function loadedRecord(playerId)
     return nil
 end
 
+-- Why a record is not usable, as an export reason token.
+local function unavailableReason(rec)
+    if not rec then
+        return "player_not_found"
+    end
+    return rec.unavailable or "not_loaded"
+end
+
+-- The chat line for a player whose file is not loaded.
+local function notReadyText(rec)
+    local why = rec and rec.unavailable
+    if why == "store_unavailable" then
+        if storeState == "pending" then
+            return "Job records are offline (the database is not answering). Nothing was changed: try again in a moment."
+        end
+        return "Job records are unavailable on this server. Nothing was changed."
+    end
+    if why then
+        return ("Your job file cannot be opened (%s). Reconnect in a moment."):format(why)
+    end
+    return "Your file is still loading, try again in a moment."
+end
+
 -- Every on-duty employee of one job, ascending player id.
 local function onDutyIds(jobName)
     local ids = {}
@@ -170,7 +216,88 @@ local function tellColleagues(playerId, jobName, text)
 end
 
 ---------------------------------------------------------------------------
--- Persistence: SQL first, Open77.kvp when there is no database
+-- Subjects: the durable key a job file is stored under
+---------------------------------------------------------------------------
+
+-- A key that is a session id, a bare number or too long for the column is refused:
+-- seats are reused, runtime ids die with the boot (A13 contract section 3.1.1).
+local function subjectProblem(key)
+    if type(key) ~= "string" or key == "" then
+        return "subject_unavailable"
+    end
+    if #key > 64 or key:find("%c") or key:lower():sub(1, 7) == "session" or key:match("^%d+$") then
+        return "invalid_key"
+    end
+    return nil
+end
+
+-- The subject provider rule: ask the coordinator's provider when it runs, else the
+-- account id it would answer by default. Never builds a key from the session id.
+local function subjectOf(playerId)
+    local provider = C.Subject or {}
+    if type(provider.resource) == "string" and provider.resource ~= "" then
+        local api = Open77.exports
+        local ok, key, why = false, nil, nil
+        if type(api) == "table" and type(api.callSync) == "function" then
+            ok, key, why = pcall(api.callSync, provider.resource, provider.export or "subjectOf", playerId)
+        end
+        if ok then
+            if key == nil then
+                return nil, (type(why) == "string" and why ~= "") and why or "subject_unavailable"
+            end
+            local bad = subjectProblem(key)
+            if bad then
+                return nil, bad
+            end
+            return key
+        end
+        if provider.required then
+            return nil, "subject_unavailable"
+        end
+    end
+    local key = Open77.players.identifier(playerId)
+    local bad = subjectProblem(key)
+    if bad then
+        return nil, bad
+    end
+    return key
+end
+
+---------------------------------------------------------------------------
+-- Work epochs: one counter per loaded file, moved by every job/grade/duty change
+---------------------------------------------------------------------------
+
+-- Epochs are integers drawn from one sequence for the whole resource generation,
+-- starting at the boot's wall clock in milliseconds. So an epoch never repeats for
+-- another player who later takes the same seat, nor after a restart of rp_jobs:
+-- compare epochs with == only, never by order.
+local epochFloor = nil
+local epochSeq = 0
+
+local function nextEpoch()
+    if epochFloor == nil then
+        epochFloor = math.floor((tonumber(Open77.time.unix()) or 0) * 1000)
+    end
+    epochSeq = epochSeq + 1
+    return epochFloor + epochSeq
+end
+
+-- epoch is false when the player has no loaded file any more.
+local function publishEpoch(playerId, epoch, reason)
+    local ok, why = TriggerEvent("rp_jobs:workEpoch", playerId, epoch, reason)
+    if ok == false then
+        log("rp_jobs:workEpoch for player %d not published: %s", playerId, tostring(why))
+    end
+end
+
+local function bump(playerId, rec, reason)
+    rec.epoch = nextEpoch()
+    log("player %d work epoch=%d (%s)", playerId, rec.epoch, reason)
+    publishEpoch(playerId, rec.epoch, reason)
+end
+
+---------------------------------------------------------------------------
+-- Persistence: SQL, or the explicit no-database lab store; never a fallback
 ---------------------------------------------------------------------------
 
 local SCHEMA = [[
@@ -185,68 +312,100 @@ CREATE TABLE IF NOT EXISTS rp_jobs_employees (
 )
 ]]
 
+local UPSERT = "INSERT INTO rp_jobs_employees (identifier, job, grade, on_duty, hired_at, hired_by) VALUES (?, ?, ?, ?, ?, ?) "
+    .. "ON DUPLICATE KEY UPDATE job = ?, grade = ?, on_duty = ?, hired_at = ?, hired_by = ?"
+
+-- Duty is never restored, so a flag left at 1 by a crash is cleared before anyone loads.
+local CLEAR_STALE_DUTY = "UPDATE rp_jobs_employees SET on_duty = 0 WHERE on_duty <> 0"
+
+-- A failed write is retried with backoff; a database that is merely unreachable is
+-- retried for as long as it takes, any other failure this many times.
+local MAX_WRITE_ATTEMPTS = 4
+
 local function kvpKey(identifier)
     return "emp:" .. identifier
 end
 
--- Decide the store once per boot. `ready` answers false, database_unavailable
--- when the server has no database at all; otherwise the handler runs when the
--- connection answers, even if that is later.
-local function initStore()
-    local ok, reason = Open77.database.ready(function()
-        Open77.database.update(SCHEMA, {}, function()
-            if store == nil then
-                store = "sql"
-                log("store=sql table=rp_jobs_employees")
-            else
-                log("database answered late: this boot keeps store=%s", store)
-            end
-        end)
-    end)
-    if not ok then
-        store = "kvp"
-        storeReason = tostring(reason)
-        log("store=kvp reason=%s", storeReason)
-    end
+local function storeReady()
+    return storeState == "sql" or storeState == "lab_kvp"
 end
 
--- Wait up to 15 s for the store decision (a database that is still connecting).
-local function awaitStore()
-    for _ = 1, 30 do
-        if store then
-            return store
-        end
-        Wait(500)
+-- A completion failed when it carries a reason and no result.
+local function failed(result, why)
+    return why ~= nil and (result == nil or result == false)
+end
+
+local function transient(why)
+    return tostring(why):find("database_unreachable", 1, true) ~= nil
+end
+
+-- [identifier] = { rec, dirty, writing, failures }: at most one statement in flight per
+-- subject, built from the newest record when it leaves, so two changes can never land
+-- in SQL out of order (the bridge does not serialize one resource's requests).
+local writers = {}
+
+local function rowStatement(rec)
+    if rec.job then
+        local duty = rec.onDuty and 1 or 0
+        return UPSERT, { rec.identifier, rec.job, rec.grade, duty, rec.hiredAt or 0, rec.hiredBy or "",
+                         rec.job, rec.grade, duty, rec.hiredAt or 0, rec.hiredBy or "" }
     end
-    if store == nil then
-        local ready, reason = Open77.database.isReady()
-        if ready then
-            -- The connection is up but the schema statement never answered: use SQL anyway,
-            -- a failed read is reported to the player rather than hidden.
-            store = "sql"
-            log("schema statement did not answer in 15 s: store=sql anyway")
-        else
-            store = "kvp"
-            storeReason = tostring(reason or "database_not_ready")
-            log("database not ready after 15 s (%s): falling back to Open77.kvp for employee records", storeReason)
-        end
+    return "DELETE FROM rp_jobs_employees WHERE identifier = ?", { rec.identifier }
+end
+
+local flush
+flush = function(identifier)
+    local w = writers[identifier]
+    if not w or w.writing then
+        return
     end
-    return store
+    if not w.dirty then
+        writers[identifier] = nil
+        return
+    end
+    w.dirty = false
+    w.writing = true
+    local sql, params = rowStatement(w.rec)
+    Open77.database.update(sql, params, function(result, why)
+        w.writing = false
+        if failed(result, why) then
+            w.failures = w.failures + 1
+            w.dirty = true
+            if transient(why) or w.failures < MAX_WRITE_ATTEMPTS then
+                local delay = math.floor(math.min(30000, 1000 * 2 ^ math.min(w.failures - 1, 5)))
+                log("SQL write for %s failed (%s): attempt %d, retry in %d s", identifier, tostring(why),
+                    w.failures, delay // 1000)
+                SetTimeout(delay, function()
+                    flush(identifier)
+                end)
+            else
+                log("SQL write for %s failed %d times (%s): memory and SQL disagree until the next change",
+                    identifier, w.failures, tostring(why))
+            end
+            return
+        end
+        w.failures = 0
+        flush(identifier)
+    end)
 end
 
 -- Write the whole record through (job present) or delete it (no job).
 local function persist(rec)
-    if store == "sql" then
-        if rec.job then
-            Open77.database.update(
-                "INSERT INTO rp_jobs_employees (identifier, job, grade, on_duty, hired_at, hired_by) VALUES (?, ?, ?, ?, ?, ?) "
-                .. "ON DUPLICATE KEY UPDATE job = ?, grade = ?, on_duty = ?, hired_at = ?, hired_by = ?",
-                { rec.identifier, rec.job, rec.grade, rec.onDuty and 1 or 0, rec.hiredAt or 0, rec.hiredBy or "",
-                  rec.job, rec.grade, rec.onDuty and 1 or 0, rec.hiredAt or 0, rec.hiredBy or "" },
-                function() end)
-        else
-            Open77.database.update("DELETE FROM rp_jobs_employees WHERE identifier = ?", { rec.identifier }, function() end)
+    if storeState == "sql" then
+        local w = writers[rec.identifier]
+        if not w then
+            w = { rec = rec, dirty = false, writing = false, failures = 0 }
+            writers[rec.identifier] = w
         end
+        w.rec = rec
+        w.dirty = true
+        w.failures = 0
+        flush(rec.identifier)
+        return
+    end
+    if storeState ~= "lab_kvp" then
+        -- Unreachable: a record is only loaded once the store is ready.
+        log("write for %s dropped: store=%s", rec.identifier, storeState)
         return
     end
     local ok, reason
@@ -265,17 +424,24 @@ local function persist(rec)
 end
 
 local function persistDuty(rec)
-    if store == "sql" and rec.job then
-        Open77.database.update("UPDATE rp_jobs_employees SET on_duty = ? WHERE identifier = ?",
-            { rec.onDuty and 1 or 0, rec.identifier }, function() end)
+    if storeState == "sql" and rec.job then
+        persist(rec)
     end
-    -- The kvp store does not keep duty: it is cleared on every disconnect anyway.
+    -- The lab KVP store does not keep duty: it is cleared on every disconnect anyway.
 end
 
 -- Read one record into `rec` (yields; call from a handler, never from an export).
 -- Returns true when the store answered (even with no row), false on a failed read.
 local function loadRecord(rec)
-    if store == "sql" then
+    if storeState == "sql" then
+        -- A write for this subject still in flight (a quick reconnect) is newer than SQL.
+        local w = writers[rec.identifier]
+        if w and w.rec ~= rec and (w.dirty or w.writing) then
+            local newer = w.rec
+            rec.job, rec.grade, rec.hiredAt, rec.hiredBy = newer.job, newer.grade, newer.hiredAt, newer.hiredBy
+            w.rec = rec
+            return true
+        end
         local ok, row, reason = pcall(function()
             return DB.single.await("SELECT job, grade, hired_at, hired_by FROM rp_jobs_employees WHERE identifier = ?",
                 { rec.identifier })
@@ -298,6 +464,9 @@ local function loadRecord(rec)
         end
         return true
     end
+    if storeState ~= "lab_kvp" then
+        return false
+    end
     local stored = Open77.kvp.get(kvpKey(rec.identifier))
     if type(stored) == "string" then
         local job, grade, hiredAt, hiredBy = stored:match("^([%a_]+)|(%d+)|(%d+)|(.*)$")
@@ -314,7 +483,7 @@ local function loadRecord(rec)
 end
 
 ---------------------------------------------------------------------------
--- Client presentation: on-duty nameplates and the player's own state
+-- Client presentation: on-duty nameplates, the public bag and the player's own state
 ---------------------------------------------------------------------------
 
 local function plateFor(playerId, rec)
@@ -357,8 +526,40 @@ local function sendSelf(playerId)
     })
 end
 
+-- What everyone in the player's routing bucket may read: the same facts the on-duty
+-- nameplate already shows, plus the grade label. Off duty, the job stays private.
+-- Never the identifier, the hire record, the salary or the society balance.
+local function publicSummary(rec)
+    if rec and rec.loaded and rec.job and rec.onDuty then
+        local job = JOB_BY_NAME[rec.job]
+        return { job = rec.job, label = job.label, grade = gradeLabel(rec.grade), duty = true }
+    end
+    return { duty = false }
+end
+
+local bagWarned = false
+
+local function publish(playerId, rec)
+    local key = C.PublicStateKey
+    local state = Open77.state
+    if type(key) ~= "string" or key == "" or type(state) ~= "table" or type(state.player) ~= "function" then
+        return
+    end
+    local ok, bag = pcall(state.player, playerId)
+    if not ok or bag == nil then
+        return
+    end
+    local called, set, why = pcall(function()
+        return bag:set(key, publicSummary(rec))
+    end)
+    if (not called or set == false) and not bagWarned then
+        bagWarned = true
+        log("public state key %s not written: %s (logged once)", key, tostring(called and why or set))
+    end
+end
+
 ---------------------------------------------------------------------------
--- Mutations (the only places the cache changes)
+-- Mutations (the only places the cache changes; each one moves the work epoch)
 ---------------------------------------------------------------------------
 
 local function setDuty(playerId, rec, on, why)
@@ -368,12 +569,14 @@ local function setDuty(playerId, rec, on, why)
     rec.onDuty = on
     persistDuty(rec)
     log("player %d duty=%s job=%s (%s)", playerId, on and "on" or "off", tostring(rec.job), why)
+    bump(playerId, rec, on and "duty_on" or "duty_off")
     local ok, reason = TriggerEvent("rp_jobs:duty", playerId, rec.job, on)
     if not ok then
         log("rp_jobs:duty for player %d not published: %s", playerId, tostring(reason))
     end
     broadcastPlate(playerId)
     if why ~= "disconnected" then
+        publish(playerId, rec)
         sendSelf(playerId)
     end
     return true
@@ -400,24 +603,51 @@ local function applyJob(playerId, rec, jobName, grade, hiredBy, why)
     end
     persist(rec)
     log("player %d job=%s grade=%d (%s)", playerId, jobName or "none", rec.grade, why)
+    bump(playerId, rec, "job_changed")
     local ok, reason = TriggerEvent("rp_jobs:changed", playerId, jobName)
     if not ok then
         log("rp_jobs:changed for player %d not published: %s", playerId, tostring(reason))
     end
+    publish(playerId, rec)
     sendSelf(playerId)
 end
 
 local function setGrade(playerId, rec, grade, why)
-    rec.grade = math.floor(grade)
+    local level = math.floor(grade)
+    local changed = rec.grade ~= level
+    rec.grade = level
     persist(rec)
-    log("player %d job=%s grade=%d (%s)", playerId, rec.job, grade, why)
+    log("player %d job=%s grade=%d (%s)", playerId, rec.job, level, why)
+    if changed then
+        bump(playerId, rec, "grade_changed")
+    end
     sendSelf(playerId)
     if rec.onDuty then
         broadcastPlate(playerId)
+        publish(playerId, rec)
     end
 end
 
+-- Clock in or out, with the chat lines /service has always sent.
+local function clock(playerId, rec, on, why)
+    local job = JOB_BY_NAME[rec.job]
+    local name = displayName(playerId)
+    if not on then
+        setDuty(playerId, rec, false, why)
+        tell(playerId, ("Clocked out of %s. Your tag is gone."):format(job.label))
+        tellColleagues(playerId, rec.job, ("%s clocked out (%s)."):format(name, job.label))
+        return
+    end
+    setDuty(playerId, rec, true, why)
+    local colleagues = #onDutyIds(rec.job) - 1
+    tell(playerId, ("Clocked in at %s as %s. %d colleague%s on duty. Payroll every %d min."):format(
+        job.label, gradeLabel(rec.grade), colleagues, colleagues == 1 and "" or "s", math.floor(C.PayrollIntervalMs / 60000)))
+    tellColleagues(playerId, rec.job, ("%s clocked in (%s, %s)."):format(name, job.label, gradeLabel(rec.grade)))
+end
+
 -- The society starts empty: the first boss of a job seeds it (once per job, ever).
+-- The seed flag still lives in the resource's KVP file: it is economic state that moves
+-- with the societies in the B3 wallet migration (B8 audit section 5.3).
 local function seedSociety(jobName)
     local flag = "seeded:" .. jobName
     if Open77.kvp.get(flag, false) then
@@ -496,7 +726,11 @@ end
 
 -- Returns the boss's record, or nil after telling the player why.
 local function bossOf(source)
-    local rec = loadedRecord(source)
+    local rec = records[source]
+    if rec and not rec.loaded then
+        tell(source, notReadyText(rec))
+        return nil
+    end
     if not rec or not rec.job then
         tell(source, "You have no job, choom. Nobody to hire, fire or promote.")
         return nil
@@ -622,12 +856,14 @@ local function agencyDefinition(rec)
 end
 
 -- Yields (the dialog waits for a human): call from a command or event handler.
+-- The menu is pending work: a choice made under an older work epoch is refused.
 local function openAgency(playerId)
     local rec = loadedRecord(playerId)
     if not rec then
-        tell(playerId, "Your file is still loading, try again in a moment.")
+        tell(playerId, notReadyText(records[playerId]))
         return
     end
+    local epochAtOpen = rec.epoch
     local promise, dispatchError = Open77.exports.call("open77_uikit", "context", playerId, agencyDefinition(rec))
     if not promise then
         tell(playerId, ("The agency terminal is down (%s)."):format(tostring(dispatchError)))
@@ -643,8 +879,18 @@ local function openAgency(playerId)
         return -- cancelled or timed out: ordinary
     end
     local choice = tostring(result.value.id or "")
+    local jobName = choice:match("^join:([%a_]+)$")
+    local job = jobName and JOB_BY_NAME[jobName] or nil
+    if choice ~= "resign" and (not job or not job.civil or job.reserved) then
+        return -- "leave", or something the menu never offered
+    end
     rec = loadedRecord(playerId)
     if not rec then
+        return
+    end
+    if rec.epoch ~= epochAtOpen then
+        log("agency choice %s for player %d refused: stale_job_epoch", choice, playerId)
+        tell(playerId, "Your job file changed while the agency menu was open. Nothing was signed: open it again.")
         return
     end
     if choice == "resign" then
@@ -656,11 +902,6 @@ local function openAgency(playerId)
         applyJob(playerId, rec, nil, 0, nil, "resigned")
         tell(playerId, ("You resigned from %s. The agency wishes you luck."):format(label))
         return
-    end
-    local jobName = choice:match("^join:([%a_]+)$")
-    local job = jobName and JOB_BY_NAME[jobName] or nil
-    if not job or not job.civil or job.reserved then
-        return -- "leave", or something the menu never offered
     end
     if rec.job == jobName then
         tell(playerId, ("You already work for %s."):format(job.label))
@@ -704,6 +945,9 @@ local SUGGESTIONS = {
       parameters = { { name = "playerId", help = "the employee" }, { name = "grade", help = "0 recruit, 1 employee, 2 senior, 3 boss (transfer)" } } },
     { command = "/setjob", help = "Admin: give or remove a job",
       parameters = { { name = "playerId", help = "the player" }, { name = "job", help = "ncpd, trauma, ... or none" }, { name = "grade", help = "0..3 (default 0)" } } },
+    { command = "/jobcheck", help = "Admin: the server's eligibility verdict and work epoch for a player",
+      parameters = { { name = "playerId", help = "the player" }, { name = "job", help = "a job name, or any" },
+                     { name = "minGrade", help = "0..3" }, { name = "duty", help = "duty = must be on duty" } } },
 }
 
 RegisterCommand("jobs", function(source)
@@ -736,7 +980,7 @@ RegisterCommand("job", function(source)
     end
     local rec = loadedRecord(source)
     if not rec then
-        tell(source, "Your file is still loading, try again in a moment.")
+        tell(source, notReadyText(records[source]))
         return
     end
     if not rec.job then
@@ -769,26 +1013,14 @@ RegisterCommand("service", function(source)
     end
     local rec = loadedRecord(source)
     if not rec then
-        tell(source, "Your file is still loading, try again in a moment.")
+        tell(source, notReadyText(records[source]))
         return
     end
     if not rec.job then
         tell(source, "No job, no shift. /agence to find one.")
         return
     end
-    local job = JOB_BY_NAME[rec.job]
-    local name = displayName(source)
-    if rec.onDuty then
-        setDuty(source, rec, false, "player_request")
-        tell(source, ("Clocked out of %s. Your tag is gone."):format(job.label))
-        tellColleagues(source, rec.job, ("%s clocked out (%s)."):format(name, job.label))
-    else
-        setDuty(source, rec, true, "player_request")
-        local colleagues = #onDutyIds(rec.job) - 1
-        tell(source, ("Clocked in at %s as %s. %d colleague%s on duty. Payroll every %d min."):format(
-            job.label, gradeLabel(rec.grade), colleagues, colleagues == 1 and "" or "s", math.floor(C.PayrollIntervalMs / 60000)))
-        tellColleagues(source, rec.job, ("%s clocked in (%s, %s)."):format(name, job.label, gradeLabel(rec.grade)))
-    end
+    clock(source, rec, not rec.onDuty, "player_request")
 end, false)
 
 RegisterCommand("agence", function(source)
@@ -899,7 +1131,12 @@ RegisterCommand("setjob", function(source, args)
     end
     local trec = loadedRecord(target)
     if not trec then
-        answer(source, ("Player %d is not here, or still loading."):format(target))
+        local pending = records[target]
+        if pending and pending.unavailable then
+            answer(source, ("Player %d's job file is not loaded (%s): nothing changed."):format(target, pending.unavailable))
+        else
+            answer(source, ("Player %d is not here, or still loading."):format(target))
+        end
         return
     end
     local by = (source == 0) and "console" or ("admin:" .. tostring(records[source] and records[source].identifier or source))
@@ -982,6 +1219,115 @@ RegisterNetEvent("rp_jobs:hire", function(targetPlayerId)
 end)
 
 ---------------------------------------------------------------------------
+-- Eligibility (B4): the server's answer, whatever a prompt showed the client
+---------------------------------------------------------------------------
+
+-- The loaded record of a player, or nil and the export reason token.
+local function lookup(playerId)
+    local id = toPlayerId(playerId)
+    if not id then
+        return nil, "invalid_player_id"
+    end
+    local rec = records[id]
+    if not rec or not rec.loaded then
+        return nil, unavailableReason(rec)
+    end
+    return rec, id
+end
+
+local REQUIREMENT_KEYS = { job = true, minGrade = true, duty = true, society = true, epoch = true }
+
+-- requirement = { job = name | { name, ... }, minGrade = 0..3, duty = true, society = name, epoch = n }
+-- Every field is optional; nil means "any loaded file". Unknown keys are refused, so a
+-- typo (`grade` for `minGrade`) can never silently widen the requirement.
+local function parseRequirement(requirement)
+    if requirement == nil then
+        return {}
+    end
+    if type(requirement) ~= "table" then
+        return nil, "invalid_requirement"
+    end
+    for key in pairs(requirement) do
+        if not REQUIREMENT_KEYS[key] then
+            return nil, "invalid_requirement"
+        end
+    end
+    local req = {}
+    local jobs = requirement.job
+    if jobs ~= nil then
+        if type(jobs) == "string" then
+            jobs = { jobs }
+        elseif type(jobs) ~= "table" then
+            return nil, "invalid_requirement"
+        end
+        local listed, count = 0, 0
+        req.jobs = {}
+        for _ in pairs(jobs) do
+            count = count + 1
+        end
+        for _, name in ipairs(jobs) do
+            local canonical = normalizeJob(name)
+            if not canonical then
+                return nil, "unknown_job"
+            end
+            req.jobs[canonical] = true
+            listed = listed + 1
+        end
+        if listed == 0 or listed ~= count then
+            return nil, "invalid_requirement"
+        end
+    end
+    if requirement.minGrade ~= nil then
+        if not isValidGrade(requirement.minGrade) then
+            return nil, "invalid_requirement"
+        end
+        req.minGrade = math.floor(requirement.minGrade)
+    end
+    if requirement.duty ~= nil then
+        if type(requirement.duty) ~= "boolean" then
+            return nil, "invalid_requirement"
+        end
+        req.duty = requirement.duty -- false means "no duty constraint"
+    end
+    if requirement.society ~= nil then
+        if type(requirement.society) ~= "string" or requirement.society == "" then
+            return nil, "invalid_requirement"
+        end
+        req.society = string.lower(requirement.society)
+    end
+    if requirement.epoch ~= nil then
+        if type(requirement.epoch) ~= "number" and requirement.epoch ~= false then
+            return nil, "invalid_requirement"
+        end
+        req.checkEpoch, req.epoch = true, requirement.epoch
+    end
+    return req
+end
+
+-- nil when `rec` meets `req`, else the refusal token.
+local function unmet(rec, req)
+    if req.checkEpoch and req.epoch ~= rec.epoch then
+        return "stale_job_epoch"
+    end
+    if (req.jobs or req.society or req.minGrade ~= nil or req.duty == true) and not rec.job then
+        return "no_job"
+    end
+    if req.jobs and not req.jobs[rec.job] then
+        return "wrong_job"
+    end
+    if req.society and societyOf(rec.job) ~= req.society then
+        return "wrong_society"
+    end
+    if req.minGrade ~= nil and rec.grade < req.minGrade then
+        return "grade_too_low"
+    end
+    if req.duty == true and not rec.onDuty then
+        return "off_duty"
+    end
+    return nil
+end
+
+---------------------------------------------------------------------------
 -- Exports (synchronous: they never yield, they read the cache only)
 ---------------------------------------------------------------------------
 
@@ -1027,7 +1373,7 @@ exports("setJob", function(playerId, jobName, grade)
         return nil, "player_not_found"
     end
     if not rec.loaded then
-        return nil, "not_loaded"
+        return nil, unavailableReason(rec)
     end
     if jobName == nil or jobName == false then
         if rec.job then
@@ -1073,40 +1419,249 @@ exports("salary", function(jobName, level)
     return salaryOf(name, level)
 end)
 
+-- Authoritative eligibility: true, epoch | nil, reason. Call it when the work begins
+-- (keep the epoch) and again at commit with `epoch = <kept>`: any job, grade or duty
+-- change in between answers stale_job_epoch.
+local function eligible(playerId, requirement)
+    local req, bad = parseRequirement(requirement)
+    if not req then
+        return nil, bad
+    end
+    local rec, why = lookup(playerId)
+    if not rec then
+        return nil, why
+    end
+    local refusal = unmet(rec, req)
+    if refusal then
+        return nil, refusal
+    end
+    return true, rec.epoch
+end
+
+exports("eligible", eligible)
+
+-- The current work epoch of a loaded file: an integer, or nil and the reason.
+exports("workEpoch", function(playerId)
+    local rec, why = lookup(playerId)
+    if not rec then
+        return nil, why
+    end
+    return rec.epoch
+end)
+
+-- The small HUD summary of one player (server side; the caller decides who sees it).
+exports("summary", function(playerId)
+    local rec, why = lookup(playerId)
+    if not rec then
+        return nil, why
+    end
+    local job = rec.job and JOB_BY_NAME[rec.job] or nil
+    return {
+        job = rec.job or false,
+        label = job and job.label or false,
+        grade = job and rec.grade or false,
+        gradeLabel = job and gradeLabel(rec.grade) or false,
+        onDuty = job ~= nil and rec.onDuty == true,
+    }
+end)
+
+-- Clock a player in or out on behalf of a server flow (a foreman target, a shift start).
+-- `requirement` (optional, as for `eligible`) is checked first. Answers true, epoch.
+exports("setDuty", function(playerId, onDuty, requirement)
+    if type(onDuty) ~= "boolean" then
+        return nil, "invalid_duty"
+    end
+    local req, bad = parseRequirement(requirement)
+    if not req then
+        return nil, bad
+    end
+    local rec, id = lookup(playerId)
+    if not rec then
+        return nil, id
+    end
+    local refusal = unmet(rec, req)
+    if refusal then
+        return nil, refusal
+    end
+    if not rec.job then
+        return nil, "no_job"
+    end
+    if rec.onDuty ~= onDuty then
+        clock(id, rec, onDuty, ("export by %s"):format(tostring(GetInvokingResource() or "unknown")))
+    end
+    return true, rec.epoch
+end)
+
+-- Admin/console diagnostic (ACL command.jobcheck): the server's own verdict and epoch,
+-- so a lab proof can watch eligibility and invalidation without a probe resource.
+RegisterCommand("jobcheck", function(source, args)
+    local target = toPlayerId(args[1])
+    if not target then
+        answer(source, "Usage: jobcheck <playerId> [job|any] [minGrade 0-3] [duty]")
+        return
+    end
+    local requirement = {}
+    if args[2] and string.lower(args[2]) ~= "any" then
+        requirement.job = args[2]
+    end
+    if args[3] then
+        requirement.minGrade = tonumber(args[3])
+    end
+    if args[4] then
+        requirement.duty = string.lower(args[4]) == "duty"
+    end
+    local ok, value = eligible(target, requirement)
+    local rec = records[target]
+    local file = "no file"
+    if rec and rec.loaded then
+        file = ("job=%s grade=%d duty=%s epoch=%s"):format(tostring(rec.job or "none"), rec.grade or 0,
+            rec.onDuty and "on" or "off", tostring(rec.epoch))
+    end
+    if ok then
+        answer(source, ("jobcheck player %d: eligible epoch=%s (%s, store=%s)"):format(target, tostring(value), file, storeState))
+    else
+        answer(source, ("jobcheck player %d: refused %s (%s, store=%s)"):format(target, tostring(value), file, storeState))
+    end
+end, true)
+
 ---------------------------------------------------------------------------
 -- Lifecycle
 ---------------------------------------------------------------------------
 
--- Load one player's file; yields, so it runs from a handler.
-local function loadPlayer(playerId, greet)
-    local identifier = Open77.players.identifier(playerId)
-    if identifier == nil or identifier == "" then
-        log("player %d has no durable identifier: no job file", playerId)
-        return
-    end
-    local rec = { identifier = identifier, loaded = false, job = nil, grade = 0, onDuty = false }
-    records[playerId] = rec
-    awaitStore()
+-- Read one file now that the store is ready; yields, so it runs from a handler.
+local function readInto(playerId, rec, greet)
+    rec.unavailable = nil
+    rec.waiting = false
+    rec.reading = true
     local read = loadRecord(rec)
+    rec.reading = false
     if records[playerId] ~= rec then
         return -- left while loading
     end
     if not read then
         -- Never mark a failed read as loaded: a later write could erase a real row.
+        rec.unavailable = "store_unavailable"
         tell(playerId, "Your job file could not be read. Reconnect in a moment.")
         return
     end
     rec.loaded = true
+    local storeName = storeState == "lab_kvp" and "kvp" or storeState
     if rec.job then
-        log("player %d loaded job=%s grade=%d (%s)", playerId, rec.job, rec.grade, store)
+        log("player %d loaded job=%s grade=%d (%s)", playerId, rec.job, rec.grade, storeName)
         if greet then
             tell(playerId, ("Welcome back: you still work for %s as %s. /service to clock in."):format(
                 JOB_BY_NAME[rec.job].label, gradeLabel(rec.grade)))
         end
     else
-        log("player %d loaded job=none (%s)", playerId, store)
+        log("player %d loaded job=none (%s)", playerId, storeName)
     end
+    bump(playerId, rec, "loaded")
+    publish(playerId, rec)
     sendSelf(playerId)
+end
+
+-- Open one player's file: resolve the durable subject, then read it, or wait for the store.
+local function loadPlayer(playerId, greet)
+    local rec = { identifier = nil, loaded = false, job = nil, grade = 0, onDuty = false, greet = greet }
+    records[playerId] = rec
+    local subject, why = subjectOf(playerId)
+    if not subject then
+        rec.unavailable = why or "subject_unavailable"
+        log("player %d has no durable subject (%s): no job file", playerId, rec.unavailable)
+        return
+    end
+    rec.identifier = subject
+    if storeReady() then
+        readInto(playerId, rec, greet)
+        return
+    end
+    rec.unavailable = "store_unavailable"
+    rec.waiting = storeState == "pending"
+    log("player %d job file waits: store=%s", playerId, storeState)
+    if storeState ~= "pending" then
+        tell(playerId, "Job records are unavailable on this server: no job file this session.")
+    end
+end
+
+-- The store became ready: open every file that was waiting for it.
+local function loadWaiting()
+    for playerId, rec in pairs(records) do
+        if rec.waiting and not rec.loaded then
+            rec.waiting = false
+            CreateThread(function()
+                if records[playerId] == rec then
+                    readInto(playerId, rec, rec.greet)
+                end
+            end)
+        end
+    end
+end
+
+local function refuseWaiting()
+    for playerId, rec in pairs(records) do
+        if rec.waiting then
+            rec.waiting = false
+            tell(playerId, "Job records are unavailable on this server: no job file this session.")
+        end
+    end
+end
+
+local function refuseStore(reason)
+    storeState, storeReason = "refused", tostring(reason)
+    log("store=refused reason=%s: job files stay unloaded and every change is refused (no KVP fallback)", storeReason)
+    refuseWaiting()
+end
+
+-- Schema, then the stale duty flags, then the store is SQL. A transiently unreachable
+-- database is retried for as long as it takes (files keep waiting, nothing is decided
+-- for the boot); any other schema failure refuses the store.
+local function prepareSchema(attempt)
+    Open77.database.update(SCHEMA, {}, function(result, why)
+        if failed(result, why) then
+            if transient(why) then
+                local delay = math.min(60, 5 * attempt)
+                log("schema statement failed (%s): retry %d in %d s", tostring(why), attempt, delay)
+                SetTimeout(delay * 1000, function()
+                    prepareSchema(attempt + 1)
+                end)
+                return
+            end
+            refuseStore("schema_failed: " .. tostring(why))
+            return
+        end
+        Open77.database.update(CLEAR_STALE_DUTY, {}, function(cleared, clearWhy)
+            if failed(cleared, clearWhy) then
+                log("stale duty flags not cleared: %s", tostring(clearWhy))
+            end
+            if storeState ~= "pending" then
+                log("database answered late: this boot keeps store=%s", storeState)
+                return
+            end
+            storeState = "sql"
+            log("store=sql table=rp_jobs_employees")
+            loadWaiting()
+        end)
+    end)
+end
+
+-- `ready` answers false, database_unavailable only when the server has no database at all;
+-- a configured database that is late keeps the handler queued, so it fires when it answers.
+local function initStore()
+    storeState, storeReason = "pending", nil
+    local ok, reason = Open77.database.ready(function()
+        prepareSchema(1)
+    end)
+    if ok then
+        return
+    end
+    if reason == "database_unavailable" and C.LabKvpWithoutDatabase ~= false then
+        storeState, storeReason = "lab_kvp", tostring(reason)
+        log("store=kvp reason=%s: no database is configured, employment lives in this resource's KVP file "
+            .. "(a disposable lab store, never a fallback)", storeReason)
+        loadWaiting()
+        return
+    end
+    refuseStore(reason)
 end
 
 -- The job board: one terminal prop behind the agency ring, owned here, removed on stop.
@@ -1162,6 +1717,20 @@ AddEventHandler("onResourceStart", function(name)
             end
         end
     end
+    -- A configured database that has not answered: say so once, keep waiting (no fallback).
+    CreateThread(function()
+        Wait(15000)
+        if storeState == "pending" then
+            local _, reason = Open77.database.isReady()
+            log("store=pending after 15 s (%s): job files stay unloaded until the database answers; no KVP fallback",
+                tostring(reason or "schema_not_answered"))
+            for playerId, rec in pairs(records) do
+                if rec.waiting then
+                    tell(playerId, "Job records are offline (the database is not answering): your job file loads as soon as it answers.")
+                end
+            end
+        end
+    end)
     CreateThread(function()
         while true do
             Wait(C.PayrollIntervalMs)
@@ -1183,6 +1752,9 @@ AddEventHandler("onResourceStop", function(name)
             persistDuty(rec)
             log("player %d duty=off job=%s (resource_stop)", playerId, tostring(rec.job))
         end
+        if rec.loaded then
+            publish(playerId, rec)
+        end
     end
 end)
 
@@ -1197,6 +1769,10 @@ AddEventHandler("onPlayerReady", function(playerId)
     local id = toPlayerId(playerId)
     if not id then
         return
+    end
+    local existing = records[id]
+    if existing and (existing.loaded or existing.reading or existing.waiting) then
+        return -- already open (or opening) since the resource started: never re-read over live duty
     end
     loadPlayer(id, true)
 end)
@@ -1215,4 +1791,7 @@ AddEventHandler("onPlayerDisconnected", function(playerId)
         end
     end
     records[id] = nil
+    if rec and rec.loaded then
+        publishEpoch(id, false, "unloaded")
+    end
 end)
