@@ -784,6 +784,12 @@ read-only HUD exports, consumed by `rp_hud`), `FROZEN_SURFACE["rp_jobs"]` gained
 `rp_hud`), and `FROZEN_SURFACE["rp_garage"]` gained `canAccessVehicle` (A9's, consumed by the `rp_inventory`
 panel's read-only cargo view). No schema change.
 
+**W3-4 netrunner contracts (`rp_netrunner` 2.0.0):** the netrunner keeps its durable state in
+`open77_transactions` (the contract board stash `stash:nr.board:contracts`, data shards in the pockets) and
+no longer creates or writes `rp_netrunner_log`. Existing rows stay in the database as a read-only archive;
+nothing reads them (the 1.x `trace` export is gone, traces are rp_ncpd record entries). One frozen value
+changed together with this note: `schema-snapshot.json` lost `rp_netrunner_log`. No table is dropped.
+
 ### 6.3 Wave-1 suite shape
 
 **Layers.**
