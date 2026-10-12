@@ -12,15 +12,15 @@
       "label": "Thorton Mackinaw bed",
       "part": "cargo",
       "capacityKg": 300,
-      "measured": false,
+      "measured": true,
       "entityTemplate": "0x8F1579854FD1989D",
-      "basis": "rp_nomade/shared/config.lua Truck.bed (2026-09-18): bed behind the cab, x in [-0.6, 0.6], y in [-2.6, -1.0], z ~0.9, labelled 'starting guesses, not measurements'",
+      "basis": "Verified 2026-10-12 by the integrator on two clients (side and rear views, crate.small, two layers): the rp_nomade starting slots sit in the bed and stack cleanly; a drive was not tested. Origin: rp_nomade/shared/config.lua Truck.bed (2026-09-18): bed behind the cab, x in [-0.6, 0.6], y in [-2.6, -1.0], z ~0.9, labelled 'starting guesses, not measurements'",
       "aliases": [],
       "slots": [
-        { "id": 1, "x": -0.55, "y": -1.5, "z": 0.9, "yaw": 0.0, "stackHeight": 0.55, "maxStack": 2, "measured": false },
-        { "id": 2, "x": 0.55, "y": -1.5, "z": 0.9, "yaw": 0.0, "stackHeight": 0.55, "maxStack": 2, "measured": false },
-        { "id": 3, "x": -0.55, "y": -2.4, "z": 0.9, "yaw": 0.0, "stackHeight": 0.55, "maxStack": 2, "measured": false },
-        { "id": 4, "x": 0.55, "y": -2.4, "z": 0.9, "yaw": 0.0, "stackHeight": 0.55, "maxStack": 2, "measured": false }
+        { "id": 1, "x": -0.55, "y": -1.5, "z": 0.9, "yaw": 0.0, "stackHeight": 0.55, "maxStack": 2, "measured": true },
+        { "id": 2, "x": 0.55, "y": -1.5, "z": 0.9, "yaw": 0.0, "stackHeight": 0.55, "maxStack": 2, "measured": true },
+        { "id": 3, "x": -0.55, "y": -2.4, "z": 0.9, "yaw": 0.0, "stackHeight": 0.55, "maxStack": 2, "measured": true },
+        { "id": 4, "x": 0.55, "y": -2.4, "z": 0.9, "yaw": 0.0, "stackHeight": 0.55, "maxStack": 2, "measured": true }
       ]
     },
     "Vehicle.v_standard3_thorton_mackinaw_02_player": {
