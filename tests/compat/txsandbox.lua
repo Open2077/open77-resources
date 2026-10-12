@@ -13,8 +13,8 @@
 -- OP77_TX_DIR), in its manifest's order, server/main.lua included; tests/compat/txshim.lua is the
 -- only seam (the memory store stands for the database). See vendor/.../SOURCE.txt.
 --
--- Globals expected: H (fakehost.lua), TX_DIR (the coordinator folder), and COMPAT_DIR or HARNESS
--- (this folder). Public table: TXS.
+-- Globals expected: H (fakehost.lua), TX_DIR (the coordinator folder; TX_ROOT is accepted too),
+-- and COMPAT_DIR or HARNESS (this folder). Public table: TXS.
 --
 --   TXS.start({ keepStore, tunables, convars, dbMode })  (re)start the resource
 --   TXS.stop()                                            stop it (threads die, exports vanish)
@@ -105,10 +105,25 @@ local function deliver(e)
 end
 
 -- One scheduler pass of the coordinator: queued events, then every thread that is due.
-function TXS.step()
+-- holdHostEvents: events for other resources stay queued for the next pass of the host clock
+-- (a pump between two host steps must not run the resource under test).
+function TXS.step(holdHostEvents)
     local q = TXS.queue
     TXS.queue = {}
-    for _, e in ipairs(q) do deliver(e) end
+    for _, e in ipairs(q) do
+        if holdHostEvents and e.host then
+            TXS.queue[#TXS.queue + 1] = { name = e.name, args = e.args, host = true, local_done = true }
+            if not e.local_done and TXS.running then
+                for _, fn in ipairs(TXS.handlers[e.name] or {}) do spawn(fn, nil, table.unpack(e.args, 1, e.args.n)) end
+            end
+        elseif e.local_done then
+            if e.host and H.threads and H.handlers then
+                CreateThread(function() TriggerEvent(e.name, table.unpack(e.args, 1, e.args.n)) end)
+            end
+        else
+            deliver(e)
+        end
+    end
     local list = {}
     for i, th in ipairs(TXS.threads) do list[i] = th end
     for _, th in ipairs(list) do
@@ -245,7 +260,8 @@ function TXS.start(options)
     TXS.generation = TXS.generation + 1
     TXS.running = true
     TXS.handlers, TXS.exports, TXS.commands = {}, {}, {}
-    local dir = TX_DIR
+    -- TX_DIR; TX_ROOT is the older name some runners still pass (the B2 suite's, B7's).
+    local dir = TX_DIR or TX_ROOT
     local scripts, version = manifest(dir)
     local env = newEnv(version)
     TXS.env = env

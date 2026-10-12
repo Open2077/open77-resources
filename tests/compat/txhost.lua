@@ -335,6 +335,29 @@ local exportsTable = setmetatable({}, { __index = function(_, name)
     }
 end })
 
+-- Direct calls on the coordinator object (a scenario's foreign writer, seeding): the real
+-- coordinator answers store results on main.lua's work queue, so after each call its own
+-- scheduler is pumped (no clock time passes, nothing else runs) until the work settles, as the
+-- wave-0 harness answered at once. With a deferred store the commit still waits for a flush.
+function TX.pump(passes)
+    for _ = 1, passes or 16 do TXS.step(true) end
+end
+
+function TX.direct(co)
+    return setmetatable({}, {
+        __index = function(_, key)
+            local value = co[key]
+            if type(value) ~= "function" then return value end
+            return function(_, ...)
+                local r = table.pack(value(co, ...))
+                TX.pump()
+                return table.unpack(r, 1, r.n)
+            end
+        end,
+        __newindex = function(_, key, value) co[key] = value end,
+    })
+end
+
 -- (Re)starts the coordinator resource. keepStore: a restart over the same store (the database
 -- survives); storeMode "lab_kvp" boots it in its lab store (both switches set); tunables merge.
 -- The boot (schema, self-test, ready) runs at once on the coordinator's own scheduler.
@@ -349,7 +372,7 @@ function TX.start(options)
     local convars = { open77_transactions_lab = TX.storeMode == "lab_kvp" and "1" or "0",
         sv_masterServerEnabled = TX.storeMode == "lab_kvp" and "false" or "true" }
     TXS.start({ keepStore = options.keepStore, tunables = tunables, convars = convars, dbMode = options.dbMode or "sql" })
-    TX.store, TX.co = TXS.store, TXS.co
+    TX.store, TX.co = TXS.store, TX.direct(TXS.co)
     H.down.open77_transactions = nil
     H.resources.open77_transactions = exportsTable
     for _ = 1, 64 do
