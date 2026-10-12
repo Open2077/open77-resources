@@ -27,6 +27,13 @@ Config.models = {
     nomad_crate = "crate.small",
 }
 
+-- Model alias -> the height one box of that model takes in a stack (metres). A layout's
+-- `stackHeight` is measured with crate.small; a shorter box listed here stacks on the one under it
+-- instead of floating above it (measured live: ammo boxes hung a hand's width over the layer below).
+Config.stackHeights = {
+    ["crate.ammo_box"] = 0.32,
+}
+
 -- Optional allowlist of the resources that may call load / unload (GetInvokingResource()).
 -- nil = any server resource (they are trusted code; players never reach these exports).
 Config.callers = nil

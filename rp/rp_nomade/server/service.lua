@@ -1379,7 +1379,8 @@ function S:checkpoint(run, ck, plate, vid, force)
         run.checking[ck.id] = nil
         self.stats.passes = self.stats.passes + 1
         self:persistPassed(run)
-        self:log("run %s passed %s (roll %d >= %d)", run.key, ck.id, roll, ck.searchChance)
+        self:log("run %s passed %s (%s)", run.key, ck.id, forced == "pass" and ("forced by an operator, roll %d"):format(roll)
+            or ("roll %d >= %d"):format(roll, ck.searchChance))
         local who = driver or ownerPid
         if who then self:tell(who, ("%s: the cops wave you through."):format(ck.label), "info") end
         self:fixer("checkpoint_passed", ownerPid or driver, "nmd.ck:" .. run.key .. ":" .. ck.id,

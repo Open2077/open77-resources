@@ -61,6 +61,8 @@ class Cargo(unittest.TestCase):
         self.assertIn("measured is true but", r["v_measured"])
         self.assertIn("capacityKg must be", r["v_capacity"])
         self.assertIn("maxStack must be an integer", r["v_stack"])
+        # ammo boxes stack at their own height, not the crate.small step that left them floating
+        self.assertEqual((r["stack_z"], r["stack_z_default"]), ("0.90/1.22/1.54", "0.90/1.45/2.00"))
 
     def test_slot_allocation_and_projection(self):
         self.check(scenario("allocation"), {

@@ -226,16 +226,26 @@ end
 -- not fit (more objects than the layout holds: they stay in the account, undrawn).
 -- Deterministic: stacks ordered by (layer, instance); slotless or overflowing objects take the
 -- least-filled slot (floor first, layout order), by instance id.
-function L.placements(layout, occupants)
+-- `heights` (optional): model alias -> the height a box of that model takes in a stack. A slot's
+-- `stackHeight` was measured with one model (crate.small); a shorter box stacked at that height
+-- floats above the one under it. A stack then rises by the heights of the boxes below.
+function L.placements(layout, occupants, heights)
     local slots, loose = bySlot(layout, occupants)
-    local placements, count, hidden = {}, {}, {}
+    local placements, count, hidden, top = {}, {}, {}, {}
+    local function place(s, o, reassigned)
+        count[s.id] = count[s.id] + 1
+        local offset, rotation = L.offset(layout, s.id, 1)
+        offset.z = s.z + (top[s.id] or 0.0)
+        local h = type(heights) == "table" and tonumber(heights[o.model or layout.model or ""]) or nil
+        top[s.id] = (top[s.id] or 0.0) + (h or s.stackHeight)
+        placements[o.instance] = { slot = s.id, rank = count[s.id], offset = offset, rotation = rotation,
+            reassigned = reassigned or nil }
+    end
     for _, s in ipairs(layout.slots) do
         count[s.id] = 0
         for _, o in ipairs(slots[s.id] or {}) do
             if count[s.id] < s.maxStack then
-                count[s.id] = count[s.id] + 1
-                local offset, rotation = L.offset(layout, s.id, count[s.id])
-                placements[o.instance] = { slot = s.id, rank = count[s.id], offset = offset, rotation = rotation }
+                place(s, o)
             else
                 loose[#loose + 1] = o
             end
@@ -245,9 +255,7 @@ function L.placements(layout, occupants)
     for _, o in ipairs(loose) do
         local s = floorFirst(layout, count)
         if s then
-            count[s.id] = count[s.id] + 1
-            local offset, rotation = L.offset(layout, s.id, count[s.id])
-            placements[o.instance] = { slot = s.id, rank = count[s.id], offset = offset, rotation = rotation, reassigned = true }
+            place(s, o, true)
         else
             hidden[#hidden + 1] = o.instance
         end
