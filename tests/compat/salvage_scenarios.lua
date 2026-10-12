@@ -10,14 +10,14 @@ dofile(COMPAT_DIR .. "/salvage_world.lua")
 local scenarios = {}
 
 local A, B = "acct-a", "acct-b"
-local AT_NODE = { x = 1380.0, y = -1680.6, z = 49.4 }      -- 1.4 m from the Burnt-out Thorton
-local AT_NODE_B = { x = 1381.2, y = -1681.0, z = 49.4 }    -- the other side of the same wreck
+local AT_NODE = { x = 1368.0, y = -1689.4, z = 49.4 }      -- 1.4 m from the Burnt-out Thorton
+local AT_NODE_B = { x = 1369.2, y = -1689.8, z = 49.4 }    -- beside the same wreck
 local AT_FOREMAN = { x = 1374.0, y = -1670.5, z = 49.4 }
 local LOAD_BAY = { x = 1378.0, y = -1671.0, z = 49.4 }
 local TRUCK_AT_LOAD = { x = 1378.0, y = -1674.0, z = 49.4 }
 local UNLOAD_BAY = { x = 1373.0, y = -1678.5, z = 49.4 }
 local TRUCK_AT_UNLOAD = { x = 1373.0, y = -1681.0, z = 49.4 }
-local COUNTER = { x = 1368.4, y = -1677.9, z = 49.4 }
+local COUNTER = { x = 1374.9, y = -1684.4, z = 49.4 }
 local TRUCK = 501
 local PLATE = "NC-SLV01"
 local NODE_T = "rp_salvage:node_thorton"
@@ -76,8 +76,8 @@ end
 local function bootLines(created, from)
     local out = {}
     for _, pattern in ipairs({ "coordinator ready %(store=", "items defined through rp_inventory: 5",
-        "7 wreck node%(s%) ready %(" .. created .. " created%)", "crates rebuilt from the coordinator: ",
-        "ready: 7 wreck nodes, foreman, loading bay, unloading bay, buyer counter %(job ferrailleur%)" }) do
+        "5 wreck node%(s%) ready %(" .. created .. " created%)", "crates rebuilt from the coordinator: ",
+        "ready: 5 wreck nodes, foreman, loading bay, unloading bay, buyer counter %(job ferrailleur%)" }) do
         local n = 0
         for index = (from or 1), #MH.logs do
             local line = MH.logs[index]
@@ -90,7 +90,7 @@ end
 
 function scenarios.happy_path()
     SW.boot({ writers = SW.WRITERS_STRICT })
-    local startLines = bootLines(7)
+    local startLines = bootLines(5)
     local nodeWarnings = SW.printed("unavailable") + SW.printed("not created")
     SW.watch()
     SW.join(1, A, "Vik", AT_FOREMAN)
@@ -228,9 +228,9 @@ function scenarios.lab_console()
 end
 
 -- Positions next to the other wrecks used below.
-local AT_QUADRA = { x = 1384.8, y = -1676.6, z = 49.4 }
-local AT_ARCHER = { x = 1376.6, y = -1661.2, z = 49.4 }
-local NEAR_CRATE_B = { x = 1380.5, y = -1681.6, z = 49.4 }
+local AT_QUADRA = { x = 1371.6, y = -1689.4, z = 49.4 }
+local AT_ARCHER = { x = 1381.0, y = -1689.4, z = 49.4 }
+local NEAR_CRATE_B = { x = 1369.6, y = -1688.6, z = 49.4 }
 
 local function committedWorks()
     local n = 0
@@ -656,7 +656,7 @@ end
 -- open77_containers restarts under a running yard: the nodes come back with the same ids (keyed,
 -- durable); a charge spent while it was stopped, then while it was booting (it answers
 -- `unknown_container` until its boot join, here held by an absent coordinator), is kept and spent
--- once it is ready again; rp_salvage's own restart finds the seven nodes and creates none.
+-- once it is ready again; rp_salvage's own restart finds the five nodes and creates none.
 -- ---------------------------------------------------------------------------------------------
 function scenarios.containers_restart()
     SW.boot()
@@ -677,13 +677,13 @@ function scenarios.containers_restart()
     SW.startContainers()
     MH.run(12)                         -- two rp_salvage sweeps meet `unknown_container`
     local pendingBooting = pending()
-    local createdBefore = SW.printed("7 wreck node%(s%) ready %(0 created%)")
+    local createdBefore = SW.printed("5 wreck node%(s%) ready %(0 created%)")
     SW.startCoordinator()
     MH.until_(function() return pending() == 0 end, 30)
     MH.run(2)
     local same = true
     for key, node in pairs(svc().nodes) do if node.id ~= ids[key] then same = false end end
-    local refound = SW.printed("7 wreck node%(s%) ready %(0 created%)") - createdBefore
+    local refound = SW.printed("5 wreck node%(s%) ready %(0 created%)") - createdBefore
     local chargesAfter = charges("thorton")
     local logMark = #MH.logs + 1
     MH.stop("rp_salvage")
@@ -739,9 +739,9 @@ function scenarios.writers_missing()
     local w = work(1, "cut")
     return SW.result({
         ready = svc().ready, missing = missing, warned = SW.printed("node thorton %(node%.thorton%) unavailable: namespace_denied"),
-        summary_line = SW.printed("WARNING: 7 of 7 wreck nodes unavailable"),
-        no_prompt = refused == nil, back = back, ready_line = SW.printed("ready: 0 of 7 wreck nodes, foreman"),
-        nodes_line = SW.printed("7 wreck node%(s%) ready %(7 created%)"), w = w and w.state,
+        summary_line = SW.printed("WARNING: 5 of 5 wreck nodes unavailable"),
+        no_prompt = refused == nil, back = back, ready_line = SW.printed("ready: 0 of 5 wreck nodes, foreman"),
+        nodes_line = SW.printed("5 wreck node%(s%) ready %(5 created%)"), w = w and w.state,
         charges = charges("thorton"),
     })
 end

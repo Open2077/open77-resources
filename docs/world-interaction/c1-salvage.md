@@ -67,7 +67,7 @@ describes what the server asks for, not what renders.
 | D5 | (not specified) | rp_cargo and rp_economy reach the hold through **two-party grants** (`authorize(op, grantee, { hold }, ttl)`) | Neither needs the `world` namespace; least-privilege `writers` work (the happy path runs with `rp_salvage:world+char, rp_cargo:veh/cargo, rp_economy:cash+bank+soc, rp_inventory`). |
 | D6 | (not specified) | coordinator op ids are `slv.<kind>:<coordinator newOpId>`, the sale's `slv.sale:<hold key>.a<n>`; **never** derived from an open77_actions op id | open77_actions' op ids carry a boot tag from the **monotonic** clock (`engine.lua` `bootTag = base36(P.now())`), which restarts with the process: deriving durable ids from them could replay another boot's receipt. B5-1 is resolved since (c926a3d6: wall clock + random boot tag); rp_salvage keeps minting its own ids, which stays correct. |
 | D7 | the commit does ONE operation: node charge −1, crate + materials, tool wear | ONE coordinator operation (materials + token + wear); the node charge is spent right after it with `consume(node, { ref = op id })` | A node holds no value (A13 §6.1: a lease budget; its world row has zero capacity); A6 `consume` is idempotent by ref. A crash between the two leaves one extra charge on a wreck, never value (tested: charges agree with commits in every crash window). A charge refused while open77_containers restarts (stopped, or booting and knowing no container yet) is kept and spent once it is ready again (tested). |
-| D8 | prompts robust: interaction targets with explicit positions + a console path | open77_actions targets at fixed positions (foreman, 7 wrecks, loading bay, counter, unloading bay: 11 targets); a stripped wreck keeps "Check the haul"; **every step** has a `salvage.lab.*` command with explicit player ids | the A0/B5 live run did not show the lab node card once (research ledger B5/A5 live); the console path makes the two-client run independent of prompt aiming. |
+| D8 | prompts robust: interaction targets with explicit positions + a console path | open77_actions targets at fixed positions (foreman, 5 wrecks, loading bay, counter, unloading bay: 9 targets); a stripped wreck keeps "Check the haul"; **every step** has a `salvage.lab.*` command with explicit player ids | the A0/B5 live run did not show the lab node card once (research ledger B5/A5 live); the console path makes the two-client run independent of prompt aiming. |
 
 ## 3. The loop and the crate's states
 
@@ -113,7 +113,7 @@ than 2 min → closed.
 | server restart: crates on ground / in hands / in a bed | ground at its spot; hands back where it was last put down; bed redrawn by rp_cargo; all three sell | `restart` |
 | open77_containers stopped, then booting (it knows no container until its boot join) | same node ids (keyed); a charge spent meanwhile is kept and spent once `open77_containers:ready` fires; rp_salvage re-runs its node boot then | `containers_restart` |
 | an operator closes a node (`containers.remove node.thorton`) | its prompt is withdrawn, a WRN says the key is spent (never reused by open77_containers); the other nodes are untouched; config `containerKey` brings it back | `containers_restart` |
-| `writers` without `open77_containers:world` | every node refused `namespace_denied` (said once per node); the yard starts without wreck prompts (`ready: 0 of 7 wreck nodes`); the entry added live: nodes back within 30 s | `writers_missing` |
+| `writers` without `open77_containers:world` | every node refused `namespace_denied` (said once per node); the yard starts without wreck prompts (`ready: 0 of 5 wreck nodes`); the entry added live: nodes back within 30 s | `writers_missing` |
 
 **Commit hook and transient refusals (B5-3, since open77_actions 62925a62).** The ledger maps a lost
 answer to a submitted write (`export_timeout`, `export_resource_stopped`) to `in_doubt`; a refusal
@@ -157,7 +157,7 @@ vehicles, NPCs, state bags, tunables, readJson). Sources outside the pack are re
 
 | Test | Shows |
 |---|---|
-| `happy_path` | the five start lines of README §1 once each (seven nodes created), no node warning; clock in by prompt; cut, cut, pry into one crate (welder 28/30, crowbar 19/20, wreck 0/3); carry; load at the bay under **strict writers** (grants carry rp_cargo and rp_economy into the hold; `open77_containers:world` for the nodes); token in the bed, one bed prop; unload into the hands; sale: seller and society paid exactly the quote; hold closed, token retired; materials minted = sold; every op balanced; "Check the haul" on a stripped wreck; hand prop falls back to `tool.fire_axe` and is removed; buyer NPC requested; clock out → `off_duty`; a player with no job refused `no_job` and told |
+| `happy_path` | the five start lines of README §1 once each (five nodes created), no node warning; clock in by prompt; cut, cut, pry into one crate (welder 28/30, crowbar 19/20, wreck 0/3); carry; load at the bay under **strict writers** (grants carry rp_cargo and rp_economy into the hold; `open77_containers:world` for the nodes); token in the bed, one bed prop; unload into the hands; sale: seller and society paid exactly the quote; hold closed, token retired; materials minted = sold; every op balanced; "Check the haul" on a stripped wreck; hand prop falls back to `tool.fire_axe` and is removed; buyer NPC requested; clock out → `off_duty`; a player with no job refused `no_job` and told |
 | `contention` | two claims on one wreck in one pass: one `committed`, the other refused `target_claimed` holding nothing; two pickups of one crate: one carrier; two put-downs on the bay: `target_claimed`; two `/salvage load` on one truck at once: both commit, slots 1, 2, 3 distinct |
 | `full_crate` | seeded hold: `cut` and `pry` both `failed crate_full` at stage `reserve`, never presented; tool, charges, contents unchanged; player told |
 | `crash_windows` | §4 rows 1–5; after each, minted = held, wear = committed works = charges spent; window 5 (coordinator gone before the commit): `failed coordinator_unavailable`, no doubt left, player told |
@@ -166,8 +166,8 @@ vehicles, NPCs, state bags, tunables, readJson). Sources outside the pack are re
 | `stranger_load` | a scrapper without a key: `failed no_access`, still carrying, token in the hold, `/salvage load` same; a civilian cannot lift a crate (`no_job`); with a key: loads |
 | `cancellations` | death mid-work: `cancelled dead`, no crate, no wear, no charge; vehicle, job change (epoch), disconnect, rp_salvage restart while carrying: each `true/true/ground/1` (was carrying / not any more / on the ground / one item), custody in the hold; wear exactly once |
 | `lab_console` | the loop from `salvage.lab.setup/work/pickup/load/unload/sell`; `salvage.lab.state` prints tools, cash, receipts; `salvage.status`; `salvage.lab.reset` refills in place (same node id, 2 → 3/3); `salvage.lab.truck` prints the manual path; `salvage.lab.clock off` |
-| `containers_restart` | nodes keyed `node.<key>`, seven zero-capacity world rows; open77_containers stopped during a work, then booting without the coordinator: the charge is kept both times (1 pending), spent once it is ready (3 → 1 after two works), same node ids, node boot re-run on `:ready`; rp_salvage restarted: the five start lines with `(0 created)`; `containers.remove node.thorton`: prompt withdrawn, key spent (said once), other nodes kept |
-| `writers_missing` | strict writers without `open77_containers:world`: seven `namespace_denied` warnings, `WARNING: 7 of 7 wreck nodes unavailable`, `ready: 0 of 7 wreck nodes`, no wreck prompt; the entry added live (`onTunableChanged`): seven nodes back within 30 s and a work commits |
+| `containers_restart` | nodes keyed `node.<key>`, five zero-capacity world rows; open77_containers stopped during a work, then booting without the coordinator: the charge is kept both times (1 pending), spent once it is ready (3 → 1 after two works), same node ids, node boot re-run on `:ready`; rp_salvage restarted: the five start lines with `(0 created)`; `containers.remove node.thorton`: prompt withdrawn, key spent (said once), other nodes kept |
+| `writers_missing` | strict writers without `open77_containers:world`: seven `namespace_denied` warnings, `WARNING: 7 of 7 wreck nodes unavailable`, `ready: 0 of 5 wreck nodes`, no wreck prompt; the entry added live (`onTunableChanged`): five nodes back within 30 s and a work commits |
 | sources | no BOM, LF, Lua 5.4 compile; manifest opt-in and least privilege |
 
 Not established offline: anything in game (poses, props, prompts, FPP/TPP, timing on a live
@@ -205,7 +205,7 @@ this branch's commit). After any `ensure` of a client-distributed resource, reco
    * 2000; rp_economy sys:* money 1000000`. The B3-1 allowlist entry (§7) is in rp_economy from
    `wi/integration` ff0d303; an older copy needs it added. With strict writers and the
    ff0d303 rp_cargo, R-1 (§7) must be fixed first, or every load answers `namespace_denied`.
-   Expect the five start lines of README §1 (`7 wreck node(s) ready (7 created)` on a fresh
+   Expect the five start lines of README §1 (`5 wreck node(s) ready (5 created)` on a fresh
    database, `(0 created)` after).
 2. A and B in the world (`worldReady matched pristine transition`, `alive=yes`), teleported into
    the yard (Warden teleport + bring, 3–4 m apart, never `/goto`).
@@ -250,7 +250,7 @@ carrying, reconnects (crate where A stood); `ensure rp_salvage` while A carries 
 last put-down spot after `ready:`).
 
 **Run 4: durability.** `salvage.status` (note the node ids); `restart open77_containers` → the log
-shows `7 wreck node(s) ready (0 created)` and `salvage.status` the same ids; `salvage.lab.reset
+shows `5 wreck node(s) ready (0 created)` and `salvage.status` the same ids; `salvage.lab.reset
 thorton` → `node thorton: refilled world:… to 3/3` with the same id. With crates on the ground, in
 A's hands and in the bed: restart the server. Expect `crates rebuilt from the coordinator: 3 (ground 2, in a bed 1, …)`; the bed crate
 redrawn when the truck is taken out again (`salvage.lab.truck <A> <plate>`); sell all three. Then

@@ -106,7 +106,7 @@ class SalvageLoop(unittest.TestCase):
 
     def test_happy_path_end_to_end(self):
         r = self.run_ok("happy_path")
-        # README section 1 start lines, once each (a first boot creates the seven nodes)
+        # README section 1 start lines, once each (a first boot creates the five nodes)
         self.assertEqual(r["boot_lines"], "1/1/1/1/1")
         self.assertEqual(r["node_warnings"], "0")
         self.assertEqual(r["clock"], "committed")
@@ -261,14 +261,14 @@ class SalvageLoop(unittest.TestCase):
         restarts and finds the nodes without creating any."""
         r = self.run_ok("containers_restart")
         self.assertEqual((r["w1"], r["w2"]), ("committed", "committed"))
-        self.assertEqual(r["keys"], ",".join(["ok"] * 7))    # every node keyed node.<key>
+        self.assertEqual(r["keys"], ",".join(["ok"] * 5))    # every node keyed node.<key>
         self.assertEqual((r["pending_stopped"], r["pending_booting"], r["pending_after"]), ("1", "1", "0"))
         self.assertEqual(r["same_ids"], "true")
         self.assertEqual(r["refound"], "1")                  # re-run on open77_containers:ready
         self.assertEqual((r["charges"], r["works"]), ("1", "2"))
         self.assertEqual(r["same_after_salvage_restart"], "true")
         self.assertEqual(r["salvage_boot_lines"], "1/1/1/1/1")  # its restart: "(0 created)"
-        self.assertEqual(r["node_rows"], "7")                # zero-capacity world rows, one per node
+        self.assertEqual(r["node_rows"], "5")                # zero-capacity world rows, one per node
         # an operator closes a node: prompt withdrawn, key spent (said once), the others untouched
         self.assertEqual((r["closed_id_dropped"], r["closed_target"]), ("true", "true/false"))
         self.assertEqual((r["closed_warned"], r["key_spent"], r["others_kept"]), ("1", "1", "true"))
@@ -278,10 +278,10 @@ class SalvageLoop(unittest.TestCase):
         (namespace_denied), the yard still boots without wreck prompts and says so; fixed live,
         the sweep restores them."""
         r = self.run_ok("writers_missing")
-        self.assertEqual((r["ready"], r["missing"]), ("true", "7"))
+        self.assertEqual((r["ready"], r["missing"]), ("true", "5"))
         self.assertEqual((r["warned"], r["summary_line"]), ("1", "1"))
         self.assertEqual((r["no_prompt"], r["ready_line"]), ("true", "1"))   # no wreck target declared
-        self.assertEqual((r["back"], r["nodes_line"]), ("7", "1"))
+        self.assertEqual((r["back"], r["nodes_line"]), ("5", "1"))
         self.assertEqual((r["w"], r["charges"]), ("committed", "2"))
 
     def test_cancellations_release_and_conserve(self):

@@ -27,7 +27,7 @@ economies, plan decision 5; both also define the item `crowbar`). It never start
    `rp_salvage:world+char, rp_cargo:veh/cargo, rp_economy:cash+bank+soc, rp_inventory,
    open77_containers:world`, and a mint rule `rp_salvage sys:salvage * 2000` (materials and crate
    tokens; size the hourly cap to your population) plus the wallet's `rp_economy sys:* money <cap>`.
-   `open77_containers:world` is new with open77_containers 0.2.0: it mints the seven wreck nodes'
+   `open77_containers:world` is new with open77_containers 0.2.0: it mints the five wreck nodes'
    world rows itself (zero capacity: they carry the placement and hold nothing, so it needs no mint
    rule for them). Without it every node is refused `namespace_denied`: the yard starts without
    wreck prompts and says so (see the lines below); adding it live brings them back within 30 s.
@@ -44,9 +44,9 @@ Expected start lines:
 ```text
 [rp_salvage] coordinator ready (store=sql)
 [rp_salvage] items defined through rp_inventory: 5
-[rp_salvage] 7 wreck node(s) ready (7 created)        -- "(0 created)" on later boots
+[rp_salvage] 5 wreck node(s) ready (5 created)        -- "(0 created)" on later boots
 [rp_salvage] crates rebuilt from the coordinator: N (ground g, in a bed b, sold s, new n, orphans closed o)
-[rp_salvage] ready: 7 wreck nodes, foreman, loading bay, unloading bay, buyer counter (job ferrailleur)
+[rp_salvage] ready: 5 wreck nodes, foreman, loading bay, unloading bay, buyer counter (job ferrailleur)
 ```
 
 The nodes are open77_containers 0.2.0 containers keyed `node.<key>` (`node.thorton`...): a later
@@ -57,8 +57,8 @@ then the start goes on without those wrecks:
 
 ```text
 [rp_salvage] WRN node thorton (node.thorton) unavailable: namespace_denied      -- writers, step 3
-[rp_salvage] WARNING: 7 of 7 wreck nodes unavailable (reasons above); asked for again every 30 s
-[rp_salvage] ready: 0 of 7 wreck nodes, foreman, loading bay, unloading bay, buyer counter (job ferrailleur)
+[rp_salvage] WARNING: 5 of 5 wreck nodes unavailable (reasons above); asked for again every 30 s
+[rp_salvage] ready: 0 of 5 wreck nodes, foreman, loading bay, unloading bay, buyer counter (job ferrailleur)
 ```
 
 ## 2. Play it

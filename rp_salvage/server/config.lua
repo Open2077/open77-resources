@@ -54,36 +54,40 @@ C.accounts = {
 -- The foreman: clock in / clock out (rp_jobs setDuty). A point target with an explicit position,
 -- like every prompt of this resource.
 C.foreman = {
-    position = { x = 1374.0, y = -1671.5, z = 49.4 }, yaw = 180.0, measured = false,
+    position = { x = 1374.0, y = -1671.5, z = 49.3 }, yaw = 180.0, measured = true,   -- walked 2026-10-12
     label = "Yard foreman", distance = 2.5,
 }
 
--- Wreck nodes: rp_ferrailleur's seven measured wreck points, now durable open77_containers nodes
+-- Wreck nodes: five points walked in game on 2026-10-12 (integrator, two clients): four kneeling
+-- spots 1.5 m in front of the crushed-car stack at the south end of the yard lane (yaw 180 faces
+-- the stack; the first stands at a red wreck badged THORTON) and one beside the rusted wreck west
+-- of the lane. rp_ferrailleur's seven arithmetic points fell inside a trailer, a porch and a shed,
+-- so they were dropped (makigai keeps its key at a new spot; villefort and chevillon are gone).
+-- They are durable open77_containers nodes
 -- named by the key `node.<key>` (one charge spent per completed work, one charge back every
 -- regrowMs, across restarts). Charges and regrowMs apply when a node is first created; an existing
 -- node keeps its own (salvage.lab.reset refills it to its maximum). A node closed in
 -- open77_containers keeps its key spent for good: give it `containerKey = "node.<key>.2"` here.
--- `yaw` is the heading the welder kneels with (playAt); unmeasured, 0 = facing +y.
+-- `yaw` is the heading the welder kneels with (playAt); 0 = facing +y, 180 = facing -y.
 C.nodeDefaults = { charges = 3, regrowMs = 5 * 60 * 1000 }
 C.nodes = {
-    { key = "thorton",   label = "Burnt-out Thorton",  position = { x = 1380.0, y = -1682.0, z = 49.4 }, yaw = 0.0 },
-    { key = "quadra",    label = "Gutted Quadra",      position = { x = 1386.0, y = -1676.0, z = 49.4 }, yaw = 0.0 },
-    { key = "mizutani",  label = "Rusted Mizutani",    position = { x = 1388.0, y = -1664.0, z = 49.4 }, yaw = 0.0 },
-    { key = "archer",    label = "Crushed Archer",     position = { x = 1376.0, y = -1660.0, z = 49.4 }, yaw = 0.0 },
-    { key = "makigai",   label = "Stripped Makigai",   position = { x = 1366.0, y = -1664.0, z = 49.4 }, yaw = 0.0 },
-    { key = "villefort", label = "Flipped Villefort",  position = { x = 1362.0, y = -1686.0, z = 49.4 }, yaw = 0.0 },
-    { key = "chevillon", label = "Scorched Chevillon", position = { x = 1372.0, y = -1690.0, z = 49.4 }, yaw = 0.0 },
+    { key = "thorton",   label = "Burnt-out Thorton",  position = { x = 1368.0, y = -1690.8, z = 49.3 }, yaw = 180.0 },
+    { key = "quadra",    label = "Gutted Quadra",      position = { x = 1371.0, y = -1690.8, z = 49.3 }, yaw = 180.0 },
+    { key = "mizutani",  label = "Rusted Mizutani",    position = { x = 1378.0, y = -1690.8, z = 49.3 }, yaw = 180.0 },
+    { key = "archer",    label = "Crushed Archer",     position = { x = 1381.0, y = -1690.8, z = 49.3 }, yaw = 180.0 },
+    { key = "makigai",   label = "Stripped Makigai",   position = { x = 1371.0, y = -1671.5, z = 49.3 }, yaw = 45.0 },
 }
 -- A new crate is set down this far from the node, towards the yard centre, so it does not sit in
 -- the welder's kneeling spot.
 C.crateOffsetM = 1.4
-C.yardCentre = { x = 1374.9, y = -1674.9, z = 49.3 }
+C.yardCentre = { x = 1374.5, y = -1681.0, z = 49.3 }   -- the open lane between the stack and the bays
 
--- The buyer: rp_ferrailleur's dealer position. The counter is the drop point a crate is handed
--- over at (1.2 m in front of the buyer, computed from the measured yaw -173).
+-- The buyer stands on the east verge of the lane, facing it (yaw 90 = facing -x); the counter is the
+-- drop point a crate is handed over at, 1.2 m in front of the buyer. rp_ferrailleur's dealer point
+-- was inside the shed west of the lane (walked 2026-10-12), out of reach for a crate carrier.
 C.buyer = {
-    position = { x = 1368.0, y = -1676.0, z = 49.4 }, yaw = -173.0,
-    counter = { x = 1368.15, y = -1677.19, z = 49.4 }, measured = false,
+    position = { x = 1376.3, y = -1684.0, z = 49.3 }, yaw = 90.0,
+    counter = { x = 1375.1, y = -1684.0, z = 49.3 }, measured = true,
     label = "Rusty's scale", name = "Rusty",
     -- An NPC behind the counter (presentation only; a refusal is logged, the counter still works).
     -- damagePolicy 2 = invulnerable (Open77.npcs.damage).
@@ -93,10 +97,10 @@ C.buyer = {
 -- Bays: a truck parked with its bed on the marker (rp_cargo also checks the player stands within
 -- 5 m of the vehicle origin). `truckRadius` is how far from the bay the truck may stand.
 C.bays = {
-    load = { position = { x = 1378.0, y = -1671.0, z = 49.4 }, label = "Truck loading bay", truckRadius = 7.0,
-             measured = false },
-    unload = { position = { x = 1373.0, y = -1678.5, z = 49.4 }, label = "Unloading bay", truckRadius = 7.0,
-               measured = false },
+    load = { position = { x = 1378.0, y = -1671.0, z = 49.3 }, label = "Truck loading bay", truckRadius = 7.0,
+             measured = true },
+    unload = { position = { x = 1373.0, y = -1678.5, z = 49.3 }, label = "Unloading bay", truckRadius = 7.0,
+               measured = true },
 }
 -- `/salvage load`, `/salvage unload` and the lab look for a truck this close to the player.
 C.truckNearM = 6.0
@@ -151,7 +155,8 @@ C.crate = {
     model = "crate.ammo_box",
     label = "scrap crate",
     contentsKg = 12,             -- materials one crate holds (the token's 2 kg come on top)
-    joinRadiusM = 4.0,           -- work at a node fills YOUR ground crate within this radius
+    joinRadiusM = 2.0,           -- work at a node fills YOUR ground crate within this radius (a crate is
+                                 -- set down 1.4 m from its wreck; the measured wrecks stand 3 m apart)
     maxPerPlayer = 4,            -- open crates (ground, hands or bed) per subject
     maxOpen = 48,                -- open crates on the server (ground crates are carry items: <= 128)
     pickupBy = "crew",           -- "crew": anyone eligible (on duty as a scrapper); "owner": the filler only
