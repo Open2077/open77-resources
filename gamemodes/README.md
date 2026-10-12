@@ -21,4 +21,4 @@ Complete game modes and their HUDs: free roam, races, pursuit, deathmatch, battl
 | [`pursuit_hud`](pursuit_hud/) | Draws the Pursuit match HUD for each player: their role, the queue position, the countdown and round timer, the bust and escape meters, the score, and for the runner the live separation and scanner age. | none yet |
 | [`race`](race/) | This is a compatibility alias: races now run inside [freeroam](../freeroam/), and this resource only exists so an older server profile that still loads `race` starts Freeroam instead. | none yet |
 
-Exported from the Open77 platform repository, commit `b721940e7fa6`.
+Exported from the Open77 platform repository; `EXPORT.json` names the commit.

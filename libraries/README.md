@@ -8,4 +8,4 @@ Shared code other resources depend on: PolyZone zones and the ArchiveXL / TweakX
 | [`archivexl`](archivexl/) | Installs the ArchiveXL loader in your players' games, so your world resources can use `.xl` extensions: streaming blocks, sector patches, resource patches and dynamic appearances. | [Mods your server requires](https://open2077.net/docs/server-mods), [Mods: the complete guide](https://open2077.net/docs/mods) |
 | [`tweakxl`](tweakxl/) | Installs the TweakXL loader in your players' games, so your world resources can add TweakDB records from `r6/tweaks` YAML files, such as fast travel points, vehicles and items. | [Mods your server requires](https://open2077.net/docs/server-mods), [Mods: the complete guide](https://open2077.net/docs/mods) |
 
-Exported from the Open77 platform repository, commit `b721940e7fa6`.
+Exported from the Open77 platform repository; `EXPORT.json` names the commit.

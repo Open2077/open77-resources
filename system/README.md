@@ -58,4 +58,4 @@ The platform resources every Open77 server runs on: chat, HUD, vehicles, weapons
 | [`open77_worldui`](open77_worldui/) | Puts a point of interest in the world with one call: a ground marker and an action prompt above it, created together under one handle and removed together. | [World-anchored POIs](https://open2077.net/docs/worldui) |
 | [`open77_zones`](open77_zones/) | The client-side zone poller: enter/exit events with hysteresis, for spheres, boxes, polygons, combinations and entity-attached shapes. | [Zones](https://open2077.net/docs/zones) |
 
-Exported from the Open77 platform repository, commit `b721940e7fa6`.
+Exported from the Open77 platform repository; `EXPORT.json` names the commit.
