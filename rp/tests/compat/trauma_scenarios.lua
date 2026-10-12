@@ -1013,6 +1013,13 @@ function scenarios.down_body_fell_through()
         put_back = after - before, back_at_death = back ~= nil and near(back, DEATH) and math.abs(back.z - DEATH.z) < 0.01,
         logged = TW.printed("held body [%d%.]+ m from its spot") >= 1, again = quiet - after,
         still_held = (TW.entry(2) or {}).held == true,
+        hidden_for = (function()
+            local engine = MH.resources.open77_actions.env.Open77ActionsRuntime.engine
+            local t = engine.targets["rp_trauma:tti_patient_2"]
+            return t and t.hideFor and table.concat(t.hideFor, ",") or "none"
+        end)(),
+        crowd_off = tostring((MH.resources.open77_actions.env.Open77ActionsRuntime.engine
+            .targets["rp_trauma:tti_patient_2"] or {}).keepCrowdOff),
     })
 end
 

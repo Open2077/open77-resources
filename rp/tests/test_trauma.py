@@ -383,6 +383,8 @@ class TraumaService(unittest.TestCase):
         r = self.run_ok("down_body_fell_through")
         self.assertEqual((r["put_back"], r["back_at_death"], r["logged"], r["again"], r["still_held"]),
                          ("1", "true", "true", "0", "true"))
+        # the patient's own card is hidden from them; the crowd is kept off the body
+        self.assertEqual((r["hidden_for"], r["crowd_off"]), ("2", "1.5"))
 
     def test_down_survives_a_resource_restart(self):
         r = self.run_ok("down_resource_restart")

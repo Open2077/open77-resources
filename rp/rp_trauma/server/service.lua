@@ -265,6 +265,7 @@ function S:targetPatient(call)
         id = call.targetId, position = call.position, yaw = 0.0, bucket = call.bucket or 0,
         label = ("Trauma Team patient #%d"):format(call.id), distance = t.distance, promptHeight = t.promptHeight,
         markerDistance = t.markerDistance, color = "#FF3B3B", keepCrowdOff = t.keepCrowdOff,
+        hideFor = { call.patient },   -- the patient is not offered the medic's card over their own body
         actions = { call.stable and a.evacuate.id or a.stabilise.id },
         data = { patient = call.patient, episode = call.episode, call = call.id },
     })
@@ -855,9 +856,14 @@ function S:reserveCare(ctx, kind)
             local fees = cfg.fees
             self:tell(medic, ("Asking %s to accept the charges (%d s)..."):format(self:nameOf(patient),
                 math.floor(cfg.consent.timeoutMs / 1000)))
-            local state = self:askConsent(patient, ("A Trauma Team medic is with you. You hold no plan: " ..
-                "stabilisation %s and evacuation to %s %s are charged to you (bank, then cash; the rest is invoiced). " ..
-                "Accept?"):format(M.money(fees.stabilise), cfg.evacuation.label, M.money(fees.evacuate)))
+            -- Stable already (the stabilisation is paid; a restart or a new medic asks again): only
+            -- what is left to pay is named.
+            local charges = kind == "evacuate" and call.stable
+                and ("the evacuation to %s (%s) is charged to you"):format(cfg.evacuation.label, M.money(fees.evacuate))
+                or ("stabilisation %s and evacuation to %s %s are charged to you"):format(M.money(fees.stabilise),
+                    cfg.evacuation.label, M.money(fees.evacuate))
+            local state = self:askConsent(patient, ("A Trauma Team medic is with you. You hold no plan: %s " ..
+                "(bank, then cash; the rest is invoiced). Accept?"):format(charges))
             consent = { state = state, at = self.P.nowMs() }
             call.consent = consent
             if not self.P.actions.verify(ctx.opId, "reserve") then return nil, "not_owner" end
