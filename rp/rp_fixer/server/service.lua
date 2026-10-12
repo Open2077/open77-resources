@@ -203,7 +203,13 @@ function S:ensureViewer(pid)
     if v then return v end
     pid = self.M.playerId(pid)
     if not pid then return nil, why end
-    if not self.players[pid] then self:playerJoined(pid) end
+    local p = self.players[pid]
+    if not p then
+        self:playerJoined(pid)
+    elseif not self.reps[p.subject] then
+        local rep = self.St.loadRep(p.subject)
+        if rep then self.reps[p.subject] = rep end
+    end
     return self:viewer(pid)
 end
 
@@ -501,7 +507,7 @@ function S:post(spec)
         reward, why2 = M.chooseReward(t, spec.reward, cfg.rewardStep)
         if not reward then return nil, why2 end
         if spec.hours ~= nil then
-            local okHours = false
+            local okHours = tonumber(spec.hours) == t.hours
             for _, h in ipairs(cfg.postHours) do if tonumber(spec.hours) == h then okHours = true end end
             if not okHours then return nil, "invalid_hours" end
             hours = tonumber(spec.hours)
@@ -517,9 +523,11 @@ function S:post(spec)
         end
         poster = { kind = "npc", name = hub.fixer }
     end
+    local itemLabel
     if t.kind == "retrieval" and self.P.running("rp_inventory") then
         local def = self.P.inventory.itemDefinition(t.item)
         if type(def) ~= "table" then return nil, "unknown_item" end
+        itemLabel = type(def.label) == "string" and M.ascii(def.label, 40) or nil
     end
     local mode = nil
     if t.kind == "bounty" and spec.kind == "player" and (spec.mode == "open" or spec.mode == "claimed") then
@@ -532,6 +540,7 @@ function S:post(spec)
         reward = reward, hours = hours, brief = spec.brief and M.ascii(spec.brief, cfg.briefMax) or nil,
         mode = mode, now = self.P.unix(), cutRate = cfg.cutRate[poster.kind] or 0, cfg = cfg,
     })
+    if c.want and itemLabel and itemLabel ~= "" then c.want.label = itemLabel end
     -- A player-posted retrieval delivers the goods into the poster's drop box: it must exist.
     if c.kind == "retrieval" and poster.kind == "player" then
         local opened, owhy = self.L.open(self.L.box(poster.subject), { capacityG = 200000 })
@@ -711,7 +720,7 @@ function S:cancel(pid, ref)
     if not c.poster.subject or c.poster.subject ~= v.subject then return nil, "not_your_contract" end
     if c.state == "taken" then return nil, "contract_taken" end
     if c.state ~= "open" then return nil, "contract_unavailable" end
-    return self:startRefund(c, "cancelled")
+    return self:startRefund(c, "cancelled", nil, "open")
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -732,11 +741,13 @@ function S:beginPayout(c, payee)
     return true
 end
 
--- Refunds the poster. Takes the contract's lock itself.
-function S:startRefund(c, outcome, note)
+-- Refunds the poster. Takes the contract's lock itself; `onlyIn` limits it to one state (a
+-- cancellation must not refund a contract a runner took in the meantime).
+function S:startRefund(c, outcome, note, onlyIn)
     local runner
     local ok, why = self:withLock(c.id, function()
         if c.state ~= "open" and c.state ~= "taken" then return nil, "contract_unavailable" end
+        if onlyIn and c.state ~= onlyIn then return nil, c.state == "taken" and "contract_taken" or "contract_unavailable" end
         runner = c.state == "taken" and c.runner or nil
         return self:change(c, function(x)
             x.state = "refunding"
@@ -1184,6 +1195,7 @@ function S:engage()
     local any = false
     for _ in pairs(self.psychos) do any = true break end
     if not any then return end
+    local now = self.P.now()
     local positions = self.P.players.positions()
     for key, id in pairs(self.psychos) do
         local c = self.contracts[id]
@@ -1198,11 +1210,17 @@ function S:engage()
                     if d and d <= self.cfg.psycho.engageDistance and (not bestD or d < bestD) then best, bestD = pid, d end
                 end
             end
-            if best and rt.engaged ~= best then
+            -- A new nearest player, or the same one again every 10 s (an attack the engine
+            -- refused on a mounted player fails without telling us).
+            if best and (rt.engaged ~= best or now - (rt.engagedAt or 0) >= 10000) then
                 local task, why = self.P.npcs.attack(rt.npc, best)
-                if task then rt.engaged = best else self:warn("contract %s attack refused: %s", id, tostring(why)) end
+                if task then
+                    rt.engaged, rt.engagedAt = best, now
+                else
+                    self:warn("contract %s attack refused: %s", id, tostring(why))
+                end
             elseif not best then
-                rt.engaged = nil
+                rt.engaged, rt.engagedAt = nil, nil
             end
         end
     end
@@ -1346,7 +1364,8 @@ function S:contractDialog(pid, id, hubKey)
         local drop = cfg.hubs[c.route.to] or cfg.drops[c.route.to]
         lines[#lines + 1] = ("Pick the crate up at %s, carry it on foot to %s."):format(cfg.points[c.route.from].label, drop.label)
     elseif c.kind == "retrieval" then
-        lines[#lines + 1] = ("Bring %d x %s to %s."):format(c.want.count, c.want.item, cfg.hubs[c.want.drop].label)
+        lines[#lines + 1] = ("Bring %d x %s to %s."):format(c.want.count, c.want.label or c.want.item,
+            cfg.hubs[c.want.drop].label)
     elseif c.kind == "job" then
         lines[#lines + 1] = ("Job order: %d x %s (%s). Progress %d / %d."):format(c.order.count,
             table.concat(c.order.kinds, "/"), c.order.job, c.order.progress or 0, c.order.count)
@@ -1407,8 +1426,13 @@ function S:postDialog(pid, hubKey)
     local templateId = tostring(answer.value.id or ""):match("^t:(.+)$")
     local t = templateId and self.templates[templateId]
     if not t then return end
+    -- The offered durations, with the template's own (the default) among them.
+    local hourList, seen = {}, {}
+    for _, h in ipairs(cfg.postHours) do hourList[#hourList + 1] = h; seen[h] = true end
+    if not seen[t.hours] then hourList[#hourList + 1] = t.hours end
+    table.sort(hourList)
     local hours = {}
-    for _, h in ipairs(cfg.postHours) do hours[#hours + 1] = { value = tostring(h), label = ("%d h"):format(h) } end
+    for _, h in ipairs(hourList) do hours[#hours + 1] = { value = tostring(h), label = ("%d h"):format(h) } end
     local fields = {
         { id = "reward", type = "slider", label = "Reward (eddies, escrowed now)", min = t.reward.min, max = t.reward.max,
           step = cfg.rewardStep, default = t.reward.min },
@@ -1454,7 +1478,10 @@ function S:collectBox(pid)
     local receipt, twhy = self.L.transfer({ opId = self.L.newOpId("box"), kind = "fixer.box", actor = pockets, lines = lines })
     if not receipt then return self:refuse(pid, twhy) end
     local parts = {}
-    for _, l in ipairs(lines) do parts[#parts + 1] = ("%d x %s"):format(l.count, l.item) end
+    for _, l in ipairs(lines) do
+        local def = self.P.inventory.itemDefinition(l.item)
+        parts[#parts + 1] = ("%d x %s"):format(l.count, type(def) == "table" and def.label or l.item)
+    end
     self:tell(pid, "You collect your drop box: " .. table.concat(parts, ", ") .. ".", "success")
 end
 

@@ -174,7 +174,7 @@ AddEventHandler("open77_actions:transition", function(op)
             local c = type(op.receipt) == "table" and Svc.contracts[op.receipt.contract or ""] or nil
             if c then
                 Svc:tell(op.playerId, ("Handed over: %d x %s. The payout of %s is on its way."):format(c.want.count,
-                    c.want.item, M.code(c)), "success")
+                    c.want.label or c.want.item, M.code(c)), "success")
             end
         elseif op.state == "failed" and op.stage == "reserve" then
             Svc:refuse(op.playerId, op.reason)

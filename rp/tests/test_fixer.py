@@ -238,7 +238,7 @@ class FixerLoop(unittest.TestCase):
         # Player fixer: the chips land in their drop box, collected at the board.
         self.assertEqual((r["h2"], r["c2"], r["box_chips"], r["box_after"], r["a_chips"], r["b_chips"]),
                          ("committed", "completed", "3", "0", "3", "0"))
-        self.assertEqual((r["told_box"], r["rep_end"], r["society"]), ("true", "2", "160"))
+        self.assertEqual((r["told_box"], r["told_label"], r["rep_end"], r["society"]), ("true", "true", "2", "160"))
         self.assertEqual((r["escrow_end"], r["escrow_agrees"]), ("0", "true"))
 
     def test_job_order_satisfied_by_another_jobs_events(self):
@@ -315,6 +315,28 @@ class FixerLoop(unittest.TestCase):
         # An escrow that never committed: the contract is void.
         self.assertEqual((r["c4"], r["c4_reason"]), ("void", "escrow_failed"))
         self.assertEqual(r["escrow_agrees"], "true")
+
+    def test_edges_distance_disconnect_library_restart(self):
+        r = self.run_ok("edges")
+        self.assertEqual(r["ui_mismatch"], "none")
+        # Walking away while the dialog is open: the take is refused at the server's distance check.
+        self.assertEqual((r["walked_away"], r["told_far"]), ("open", "true"))
+        # A taken contract cannot be cancelled under its runner.
+        self.assertEqual(r["cancel_taken"], "true")
+        # A disconnect drops the crate where the runner stood; the place is saved; the contract stays theirs.
+        self.assertEqual((r["still_taken"], r["saved_x"], r["saved_carried"]), ("taken", "true", "false"))
+        self.assertEqual((r["reminded"], r["pins"]), ("true", "1"))
+        # open77_actions restarts: the crate comes back where it lay, the prompts work again.
+        self.assertEqual((r["crate_new"], r["crate_at"], r["board_after_restart"]), ("true", "true", "committed"))
+        self.assertEqual((r["pick"], r["drop"], r["state"], r["paid"]), ("committed", "committed", "completed", "450"))
+        self.assertEqual(r["escrow_agrees"], "true")
+        # The post dialog offers the template's own duration (6 h) and posts with it.
+        self.assertEqual((r["hours_offered"], r["hours_default"], r["c2"], r["c2_hours"]), ("1,2,4,6,8,24", "6", "open", "6"))
+
+    def test_board_in_chat_without_the_ui_kit(self):
+        r = self.run_ok("no_uikit")
+        self.assertEqual((r["board"], r["listed"], r["hint"], r["nearest"], r["state"]),
+                         ("committed", "true", "true", "true", "open"))
 
     def test_npc_fixers_stock_their_boards(self):
         r = self.run_ok("npc_board")

@@ -172,7 +172,7 @@ Every point below is marked `measured = false`: stand on it, read `/pos`, correc
 | `northside` (sighting) | -1914.454, 2739.485, 10.899 | Northside industrial district | catalogue spot 8055 |
 | `junkyard` (sighting) | 1374.5, -1681.0, 49.3 | Rancho Coronado junkyard lane | rp_salvage's yard |
 
-The contacts stand 1.2 to 1.7 m beside each board (`hubs.<key>.contact`).
+The contacts stand about 1.6 m beside each board (`hubs.<key>.contact`), on the same floor height.
 
 ### For other resources
 

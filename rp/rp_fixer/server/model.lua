@@ -306,8 +306,8 @@ function M.progressLine(c, cfg, now)
             or ("pick it up at " .. cfg.points[c.route.from].label)
         return ("%s %s: %s, %s left."):format(M.code(c), c.title, where, left)
     elseif c.kind == "retrieval" then
-        return ("%s %s: bring %d x %s to %s, %s left."):format(M.code(c), c.title, c.want.count, c.want.item,
-            cfg.hubs[c.want.drop].label, left)
+        return ("%s %s: bring %d x %s to %s, %s left."):format(M.code(c), c.title, c.want.count,
+            c.want.label or c.want.item, cfg.hubs[c.want.drop].label, left)
     elseif c.kind == "job" then
         return ("%s %s: %d / %d done, %s left."):format(M.code(c), c.title, c.order.progress or 0, c.order.count, left)
     elseif c.kind == "bounty" then

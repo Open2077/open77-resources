@@ -207,7 +207,8 @@ function scenarios.retrieval()
         h2 = h2 and h2.state, c2 = c2.state, box_chips = boxChips, box_after = FXW.count("stash:fxbox." .. A, "chip"),
         a_chips = FXW.count("char:" .. A, "chip"), b_chips = FXW.count("char:" .. B, "chip"), rep_end = repOf(B),
         escrow_agrees = agrees, escrow_end = FXW.balance("soc:fixer_escrow"), society = FXW.balance("soc:fixer"),
-        told_box = FXW.told(1, "You collect your drop box: 3 x chip"), unbalanced = tostring(SFW.unbalanced()),
+        told_box = FXW.told(1, "You collect your drop box: 3 x Data chip"), unbalanced = tostring(SFW.unbalanced()),
+        told_label = FXW.told(2, "Handed over: 3 x Data chip"),
         ui_mismatch = MH.shared.uiMismatch or "none",
     })
 end
@@ -660,6 +661,129 @@ function scenarios.npc_board()
         afterlife = perHub.afterlife or 0, wakako = perHub.wakako or 0, regina = perHub.regina or 0, total = total,
         minted_is_escrow = minted == FXW.balance("soc:fixer_escrow"), escrow_agrees = FXW.escrowAgrees(),
         contacts = contacts, told = FXW.told(2, "New contract at"), unbalanced = tostring(SFW.unbalanced()),
+    })
+end
+
+-- ---------------------------------------------------------------------------------------------
+-- Edges: walking away during the take dialog, a disconnect while carrying, an open77_actions
+-- restart, a poster cancelling a contract that was taken in the meantime.
+-- ---------------------------------------------------------------------------------------------
+function scenarios.edges()
+    FXW.boot()
+    local REGINA, NOODLE = FXW.hub("regina"), FXW.point("kabuki_noodle_row")
+    FXW.join(1, A, "Fixer Ana", near(REGINA))
+    FXW.join(2, B, "Runner Ben", near(REGINA, -0.6))
+    FXW.setJob(1, "fixer", true)
+    FXW.give(1, 5000)
+    MH.command("contract", 1, { "post", "regina_noodle_drop", "500", "2" })
+    MH.until_(function() return FXW.contract(1) ~= nil and FXW.contract(1).state == "open" end, 30)
+    local c = FXW.contract(1)
+    -- The runner reads the contract, walks off, then presses "Take": refused, too far.
+    FXW.script(2, {
+        { kind = "context", value = { id = "c:" .. c.id } },
+        { kind = "alert", fn = function()
+            SFW.move(2, { x = REGINA.x + 30, y = REGINA.y, z = REGINA.z })
+            return { ok = true, outcome = "ok", value = "confirm" }
+        end },
+    })
+    FXW.board(2, "regina")
+    MH.run(2)
+    local walkedAway = c.state
+    local toldFar = FXW.told(2, "stand at a fixer point")
+    SFW.move(2, near(REGINA, -0.6))
+    MH.run(1)
+    takeThroughBoard(2, "regina", c)
+    FXW.until_(c, "taken", 20)
+    -- The poster tries to cancel it now: refused, a runner is on it.
+    cmd(1, "cancel", "1")
+    local cancelTaken = FXW.told(1, "A runner is on it")
+    -- The runner lifts the crate, walks 15 m and disconnects: the crate drops where they stood.
+    SFW.move(2, near(NOODLE, -0.4))
+    MH.run(1)
+    FXW.pickup(2, c)
+    local spot = { x = NOODLE.x - 15, y = NOODLE.y, z = NOODLE.z }
+    SFW.move(2, spot)
+    MH.run(2)
+    MH.disconnect(2)
+    MH.run(4)
+    local savedAt = FXW.decode(liveRow(c.id).data).crate
+    local stillTaken = c.state
+    -- They come back: reminded, the map pin shows the crate, they deliver it.
+    FXW.join(2, B, "Runner Ben", spot)
+    local reminded = FXW.told(2, "Your contract #1")
+    local pins = 0
+    for _, e in ipairs(MH.shared.world.client) do
+        if e.resource == "rp_fixer" and e.name == "rp_fixer:objectives" and e.pid == 2 and type(e.args[1]) == "table" then
+            pins = #e.args[1]
+        end
+    end
+    -- open77_actions restarts under them: the board, the drop and the crate come back.
+    local crateBefore = FXW.crateOf(c)
+    MH.stop("open77_actions")
+    MH.run(1)
+    SFW.startActions()
+    MH.run(3)
+    local crateAfter = FXW.crateOf(c)
+    local ok, item = MH.callSync("fx_probe", "open77_actions", "carryGet", crateAfter)
+    local pick = FXW.pickup(2, c)
+    SFW.move(2, near(REGINA, -0.4))
+    MH.run(1)
+    local cashB0 = FXW.balance("cash:" .. B)
+    local drop = FXW.deliver(2, "regina")
+    FXW.until_(c, "completed", 40)
+    MH.run(1)
+    FXW.script(1, { { kind = "context", cancel = true } })
+    local board = FXW.board(1, "regina")
+    -- A template whose own duration is not in the offered list (6 h) is posted with it.
+    postThroughBoard(1, "regina", "afterlife_implant", 1500, 6)
+    MH.until_(function() return FXW.contract(2) ~= nil and FXW.contract(2).state == "open" end, 30)
+    local c2 = FXW.contract(2)
+    local hoursOffered = {}
+    for i = #MH.shared.ui, 1, -1 do
+        local e = MH.shared.ui[i]
+        if e.kind == "input" and e.pid == 1 then
+            for _, f in ipairs(e.def.fields) do
+                if f.id == "hours" then
+                    for _, o in ipairs(f.options) do hoursOffered[#hoursOffered + 1] = o.value end
+                    hoursOffered.default = f.default
+                end
+            end
+            break
+        end
+    end
+    return FXW.result({
+        c2 = c2 and c2.state, c2_hours = c2 and math.floor((c2.expiresAt - c2.postedAt) / 3600 + 0.5),
+        hours_offered = table.concat(hoursOffered, ","), hours_default = hoursOffered.default,
+        walked_away = walkedAway, told_far = toldFar, cancel_taken = cancelTaken, still_taken = stillTaken,
+        saved_x = math.floor(savedAt.position.x + 0.5) == math.floor(spot.x + 0.5) or (savedAt.position.x .. "~" .. spot.x),
+        saved_carried = tostring(savedAt.carried), reminded = reminded, pins = pins,
+        crate_new = crateAfter ~= nil and crateAfter ~= crateBefore,
+        crate_at = ok and type(item) == "table" and math.abs(item.position.x - savedAt.position.x) < 0.01,
+        pick = pick and pick.state, drop = drop and drop.state, state = c.state,
+        paid = FXW.balance("cash:" .. B) - cashB0, board_after_restart = board and board.state,
+        escrow_agrees = FXW.escrowAgrees(), unbalanced = tostring(SFW.unbalanced()),
+        ui_mismatch = MH.shared.uiMismatch or "none",
+    })
+end
+
+-- Without the UI kit (a refused or failed dialog), the board answers in chat.
+function scenarios.no_uikit()
+    FXW.boot({ noUikit = true })
+    local REGINA = FXW.hub("regina")
+    FXW.join(2, B, "Runner Ben", near(REGINA, -0.6))
+    local c = npcPost("regina_noodle_drop", "regina", 500)
+    local board = FXW.board(2, "regina")
+    MH.run(2)
+    MH.command("contracts", 2, {})
+    MH.run(2)
+    SFW.move(2, { x = REGINA.x + 200, y = REGINA.y, z = REGINA.z })
+    MH.run(1)
+    MH.command("contracts", 2, {})
+    MH.run(2)
+    return FXW.result({
+        board = board and board.state, listed = FXW.told(2, "#1 Noodle Row pickup at Regina's corner: pays 425 eddies"),
+        hint = FXW.told(2, "/contract take <number>"), nearest = FXW.told(2, "Nearest fixer: Regina's corner"),
+        state = c.state, unbalanced = tostring(SFW.unbalanced()),
     })
 end
 
