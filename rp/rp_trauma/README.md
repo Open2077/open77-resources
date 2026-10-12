@@ -1,311 +1,213 @@
 # rp_trauma
 
-Replaces the instant respawn with a roleplay death: a player who dies stays down while on-duty Trauma Team medics are called, then is revived where they fell or wakes up at Viktor's clinic with a bill. It includes the medic commands of rp_medic, so run one or the other.
+Replaces the instant respawn with a roleplay death and runs Trauma Team International: players buy Silver, Gold or Platinum plans at Trauma Team kiosks, a player who goes down raises a call to the on-duty medics, one team stabilises the body and evacuates it to Vik's clinic, and every charge goes through the transaction coordinator.
 
-- **Docs:** [Player health and stamina](https://open2077.net/docs/player-stats)
-- **Starts:** on its own
-- **Needs:** `open77_uikit`, `open77_contextmenu`, `open77_notifications`, `open77_props`
+- **Docs:** [Build a job](https://open2077.net/docs/world-interaction), [Actions and carrying](https://open2077.net/docs/actions), [Durable transactions](https://open2077.net/docs/transactions), [UI kit](https://open2077.net/docs/ui-kit), [Player health and stamina](https://open2077.net/docs/player-stats)
+- **Starts:** on its own (`auto_start true`); the Trauma Team service (plans, calls, Stabilise and Evacuate, billing) starts once `open77_transactions`, `rp_inventory` and `open77_actions` run
+- **Needs:** `open77_uikit`, `open77_contextmenu`, `open77_notifications`, `open77_props`; for the service `open77_transactions`, `open77_actions` (with `open77_animations`, `open77_interactions`), `rp_inventory` (transactions backend), `rp_jobs`, `rp_economy`; `rp_identity` for names
 - **Runs on:** server and client
 
-Open77 Lua resource (build `2.31.13+op77.76`) that replaces the automatic freeroam respawn
-with an RP death: a player who dies is **down** for `Config.downSeconds`, on-duty Trauma Team
-employees are dispatched (chat, toast, map pin with distance), and the player either gets
-revived where they fell or gives up with `/respawn` and wakes up at the hospital with a bill.
-It **absorbs `rp_medic`**: `/soin /reanimer /911 /medic` live here with the same names, now
-gated by `rp_jobs` (`hasJob(id, "trauma")` **and** `onDuty(id)`). Unload `rp_medic` when this
-resource is loaded — a command name registered twice is served by the first resource only.
+It includes the medic commands of `rp_medic` (`/soin /reanimer /911 /medic`): run one or the other, a
+command name registered twice is served by the first resource only.
 
-Server-authoritative: the client renders (map pins, input block, countdown hint) and requests
-(ALT+click actions); every decision — money, jobs, distances, life state — is made in
-`server/main.lua`.
+## How to play
 
-## Files
+### Citizens: plans
 
-| File | Runtime | Role |
+Walk to a Trauma Team kiosk (`/tti plans` lists them) and press **E** on *Trauma Team plans*. A menu
+shows the three tiers with their price, priority and cover:
+
+| Plan | Price per 7 days | Priority | Covers (stabilise, evacuate, Vik's bill, revive, patch up) | Health on arrival |
+|---|---|---|---|---|
+| Silver | 1 500 eddies | 3 (calls held back 5 s) | 100 %, 50 %, 50 %, 50 %, 0 % | 50 % |
+| Gold | 4 000 eddies | 2 | 100 %, 100 %, 100 %, 100 %, 50 % | 75 % |
+| Platinum | 10 000 eddies | 1 | everything | 100 % |
+
+Pick one: a 4 s bar runs ("Signing the Trauma Team contract", tablet in hand) and the price leaves
+your bank account (the cash wallet pays what the bank cannot), in one operation with your membership
+card. Picking your current tier again renews it: one more week after the current end, at most four
+weeks ahead. Picking another tier starts it now; the rest of the old plan is lost (the menu says so).
+Leaving the menu signs nothing. Not enough money: the kiosk says so and nothing is held.
+
+A plan that ends is renewed automatically from your bank account while you are connected, once per
+period. If the account is short, the plan lapses and you are told once. `/tti autorenew off` stops the
+renewals. `/tti` (or `/contrat`) shows your plan, its time left and what you owe.
+
+### Citizens: going down
+
+When you die you stay **down**: the freeroam respawn happens, then you are brought back to where you
+fell, frozen, at 5 % health, inputs blocked except the chat, with a countdown hint. A call goes out:
+
+- with a plan: "Trauma Team Gold: call #3 placed, priority 2. A team is on the way.";
+- without: "No Trauma Team plan: emergency call #3 placed, the care is billed to you." The call reaches
+  the medics after 15 s.
+
+When a medic takes the call you read "Trauma Team medic <name> is responding to your call #3." Without
+a plan, a dialog asks you to accept the charges (stabilisation 400 and evacuation 800 eddies, bank,
+then cash, the rest invoiced): **Accept** lets the medic work, **Refuse** stops them for a minute. No
+answer within 15 s counts as unconscious: the medic treats you and you are billed after. With a plan
+there is no dialog: the plan's terms apply and you pay only the part it does not cover.
+
+Once stable your hint reads "STABLE - Trauma Team is evacuating you". The evacuation fades your screen
+and you wake up at Vik's clinic at your plan's health, with a chat line listing the charges ("400 eddies
+covered by your plan, 400 eddies from your account"). What your wallets could not pay becomes an
+invoice: `/tti pay` (or `/trauma payer`) settles it from the bank, then cash.
+
+`/respawn` still works after the countdown (at once when no medic is on duty): you wake up at Vik's
+and the bill (500 eddies) follows your plan. It closes your call.
+
+### Trauma Team medics
+
+Get the `trauma` job and clock in with `/service` (rp_jobs). Every call reaches you as a chat line, a
+toast and a map pin whose title carries the call's tag and live distance: `[PLATINUM #3] Name down -
+120 m`, `[UNINSURED #4] ...`, `[TAKEN #3] ...` once a team has it.
+
+1. `/tti take` answers the best open call (priority, then oldest), `/tti take 3` a given one. One team
+   per call: another medic reads "Another Trauma Team unit has this call." and can join with
+   `/tti assist 3`. `/tti drop` leaves your calls (an empty team reopens the call for everyone).
+2. Fly or drive: `/trauma av` on the AV pad of the Afterlife street spawns the Trauma Team AV with you at
+   the controls; `/trauma av off` sends it back.
+3. At the body, **E** *Stabilise the patient*: you kneel for 8 s (X cancels). One medic per body at a
+   time. The patient is now stable (25 % health, still down).
+4. **E** *Evacuate to Vik's clinic*: a 6 s bar, then the patient is moved to the clinic.
+
+Each act pays the team 40 % of what the patient paid, straight from their wallet, plus 40 % of what
+their plan covered, paid by the Trauma Team society while it can afford it. The medics of the call's
+team (`/tti take`, `/tti assist`) on duty within 30 m of the patient share it evenly; you read "+N
+eddies to your account". The rest stays with the society (`soc:trauma`).
+
+The older acts remain: ALT+click a player or `/soin <id>` **Patch up** a hurt standing citizen (they
+accept the charges first; no answer is a no), ALT+click or `/reanimer <id>` **Revive** a down
+citizen where they lie (same rules as Stabilise). `/911 <message>` alerts Trauma Team and the NCPD,
+`/medic` lists the medics on duty, `/tti calls` and `/trauma` show the dispatch.
+
+### What everyone around sees
+
+The medic kneeling over the body (the `examine` pose), the patient in the wounded seated pose while
+down, the prompt card over the body for the medics close enough, then the patient disappearing when
+evacuated (their own screen fades). The poses are played by the server, so every client sees them.
+
+## Setup
+
+In `resources.load`, the libraries first, and **not** `rp_medic`:
+
+```text
+resources.load: [ ..., "open77_transactions", "open77_animations", "open77_props", "open77_interactions",
+                  "open77_uikit", "open77_contextmenu", "open77_notifications", "open77_actions",
+                  "rp_jobs", "rp_inventory", "rp_economy", "rp_identity", "rp_trauma" ]
+```
+
+Once, in the server console (merge with the other jobs' entries: `writers` is one list for the whole
+server, and use a `mintN` number no other rule uses):
+
+```text
+tunable.set open77_transactions writers rp_trauma:cash+bank+soc+stash/tti, rp_economy:cash+bank+soc, rp_inventory
+tunable.set open77_transactions mint1 rp_trauma sys:trauma.plans tti_card 500; rp_trauma sys:trauma.billing tti_invoice 2000000
+ensure open77_transactions
+ensure open77_actions
+ensure rp_trauma
+```
+
+- `writers`: rp_trauma moves money between wallets (`cash`, `bank`), into the society (`soc:trauma`)
+  and writes each holder's file `stash:<subject>:tti`. It creates no money.
+- `mint`: the membership card (`tti_card`) is created out of `sys:trauma.plans`, invoices
+  (`tti_invoice`, one unit per eddy owed) out of `sys:trauma.billing`. Paying an invoice burns it.
+- The convar `rp_inventory_backend` set to `transactions` (before `rp_inventory` starts): the two
+  items are declared through `rp_inventory:define`, which reaches the coordinator only with that
+  backend.
+- `rp_jobs` must know the `trauma` job (it ships it).
+
+Expected log lines:
+
+```text
+[rp_trauma] started: down=60 s, hospital bill=500, fees heal=100 revive=300 stabilise=400 evacuate=800, plans silver/gold/platinum, ...
+[rp_trauma] coordinator ready (store=sql)
+[rp_trauma] items defined through rp_inventory: 2
+[rp_trauma] ready: 3 plans, 2 kiosk and patient targets, job trauma, society trauma
+[rp_trauma] call #1 raised: player 3 gold priority 2 at -1195, 2001, 8
+[rp_trauma] stabilise tt.care:...: player 3 by 4 fee=400 covered=400 paid=0 invoiced=0 cut=0 bounty=160
+[rp_trauma] evacuate tt.care:...: player 3 by 4 moved=true fee=800 covered=800 ...
+```
+
+Console (restricted, ACL `command.tti.*`): `tti.status` (counters and open calls), `tti.setup <id>`
+(the trauma job, on duty), `tti.act <medic> stabilise|evacuate <patient>` (the request the body's
+prompt makes), `tti.file <id>` (a holder's plan and invoices as the coordinator holds them).
+
+### rp_trauma 1.x servers
+
+On a player's first join, their 1.x state is imported once: an active contract becomes a Gold plan
+until its paid period ends, every unpaid bill (SQL `rp_trauma_bills` or the kvp `debt:` fallback)
+becomes an invoice. The rows are marked (`paid_at = 0`, `active = 0`) and the operation ids come from
+them, so a second import moves nothing. The two tables keep their schema (created when missing, for
+`rp_mdt`); nothing else is written to them.
+
+## Config
+
+`server/config.lua` (`TraumaConfig`), server only:
+
+| Key | Value | Meaning |
 |---|---|---|
-| `open77.lua` | manifest | dependencies, permissions, scripts |
-| `shared/config.lua` | both | every number and position (`Config`) |
-| `server/main.lua` | server | the down state, medic acts, hospital, AV, contracts, bills, exports, events |
-| `client/main.lua` | client | input block + countdown hint while down; medic map pins; ALT+click actions |
+| `plans.<tier>` | see the table above | `price`, `periodHours`, `priority`, `dispatchDelaySeconds`, `covers.<act>`, `evacHealth`, `pitch` |
+| `maxPrepaidPeriods` | 4 | how far ahead a plan can be paid |
+| `autoRenew` | default on, from the bank, every 30 s | renewal of an ended plan |
+| `payFrom` / `invoices.payFrom` | bank, then cash | wallets that pay a plan / a charge or an invoice |
+| `fees` | stabilise 400, evacuate 800, hospital 500, revive 300, heal 100 | before the plan's cover (the last three come from `shared/config.lua`) |
+| `medicShare` / `medicWallet` / `teamShareRadius` | 0.4 / bank / 30 m | the team's cut, where it lands, who shares it |
+| `consent` | 15 s, a refusal holds 60 s | the dialog shown to a patient without cover |
+| `calls` | uninsured calls on, priority 9, held back 15 s, reminders every 60 s, 48 at once | dispatch |
+| `actions` | plan 4 s (`tablet`), stabilise 8 s (`examine`, 25 % health), evacuate 6 s (`tablet2`) | open77_actions definitions |
+| `evacuation` | Vik's clinic (`Config.hospital.respawn`) | where an evacuated patient wakes up |
+| `accounts` | `sys:trauma.plans`, `sys:trauma.billing`, file part `tti` | coordinator accounts |
+| `legacy` | on, contracts become `gold` | the 1.x import |
 
-Dependencies (all ship a client half): `open77_uikit` (progress bars, `/contrat` menu — server
-twins), `open77_contextmenu` (ALT+click), `open77_notifications` (toasts), `open77_props` (the
-client projection that draws the injector and the kit while a medic works). `rp_jobs`,
-`rp_bank`, `rp_economy`, `rp_identity` are reached through `pcall` and are **not**
-declared (their READMEs ask a resource with a client script not to; `rp_economy` is server-only).
-Without `rp_jobs` every medic verb refuses with "roster unavailable"; without `rp_bank` /
-`rp_economy` the cash path / the unpaid bill path takes over; without `rp_identity` account
-names are used. `rp_zones` is not called: `/trauma av` only checks the distance to the AV pad.
+Kiosks (open77_actions targets; estimates near measured points, to be walked):
 
-## The death flow
-
-**What the platform offers.** There is no death-hold API, no cancellable death event and no
-freeroam export or tunable that a resource could use to hold or cancel the freeroam respawn
-(searched: `open77_search`, `open77_events` prefixes `death`/`life`/`player`, the
-`server-api`, `player-stats`, `player-freeze`, `gamemode-kernel`, `resource-exports` guides and
-the `server.jsonc` schema). `onPlayerLifeStateChanged` is a plain host event (not cancellable),
-`open77_death` is a client read-only package, and the only life mutators are `kill`, `revive`,
-`respawn`.
-
-**So the respawn happens, and the down state is re-applied.** On the `dead` phase the server
-records the death position and dispatches the medics. The moment the phase is back to `alive`
-(the freeroam respawn), the server:
-
-1. `Open77.players.teleport` the body back to the death position (fade, settle watch);
-2. `Open77.players.setFrozen(id, true)` — the engine's own `NoMovement` restriction;
-3. `Open77.stats.setHealth` to `Config.downHealthFraction` (5 %) of the maximum and
-   `setHealthRegenEnabled(false)`;
-4. tells the client, which takes the whole input stream (`Open77.input.blockAll` — chat and
-   voice keep working, so `/respawn` can be typed) and shows a UI-kit hint with the countdown;
-5. sends "You are down. Trauma Team has been notified." (chat + toast) and repeats it every
-   `Config.downReminderSeconds`.
-
-Dying again while down keeps the same countdown. A player who disconnects while down comes back
-free (no bill). Stopping the resource frees everyone it holds. A medic revive or a hospital
-respawn removes the down entry **before** acting, so the next `alive` phase is left alone.
-
-## Commands
-
-| Command | Who | Effect |
+| Id | Position | Landmark |
 |---|---|---|
-| `/respawn` | a down player | Refused while the countdown runs **and** at least one other medic is on duty (`Trauma Team is on duty (1 medic). /respawn opens in N s.`) — or, with `Config.countdownWithoutMedics = true` (this eval config), while the countdown runs at all (`Hold on, choom: /respawn opens in N s.`). Otherwise: hold released, body moved to the hospital (`Config.hospital.respawn`; `Open77.players.respawn` if still dead, `Open77.players.teleport` if already respawned), full health, **`Config.hospitalBill` (500 €$)** collected: `rp_bank:charge(id, 500, "trauma", "hospital")`, else what cash covers (`rp_economy:remove` + `societyAdd`), else an unpaid row in `rp_trauma_bills`. Raises `rp_trauma:revived (id, nil)`. |
-| `/soin <playerId>` | Trauma Team on duty | Stabilise a **hurt, standing** patient within 5 m: 5 s progress bar (UI kit, movement and combat disabled), then full health and **100 €$** billed to the patient (same account → cash → bill order). |
-| `/reanimer <playerId>` | Trauma Team on duty | Revive a **down** (or still dead) patient within 5 m: 8 s progress bar, then `Open77.players.revive` (dead) or the hold released (held) at 50 % health, **300 €$** billed — **free for contract holders**. Raises `rp_trauma:revived (id, medicId)`. |
-| ALT+click a player → **Revive** / **Stabilise** | Trauma Team on duty | The same two acts from the context menu (3 m). The client only shows the entry when it was told the player is a medic and the target is down/hurt; the server re-checks everything. |
-| `/911 <message>` | everyone | The message and the caller's rounded position go to every on-duty medic and NCPD officer (chat + toast) and `rp_ncpd:alert("911", position, message, callerId)` is raised for `rp_ncpd`. |
-| `/medic` | everyone | On-duty medics nearest first with their distance; a medic also sees their counters. |
-| `/trauma` | everyone | Your status: down or not, contract, unpaid bills. An on-duty medic also gets the dispatch list (who is down, where, how far). |
-| `/trauma av` | Trauma Team on duty, **within 12 m of the AV pad** (`Config.av.pad`; only the distance is checked, no zone) | Spawns the Trauma Team AV (`Config.av.record` = `Vehicle.av_trauma`) 8 m in front of the medic and warps them into the driver seat. One AV per medic; calling it again replaces it. `/trauma av off` removes it. |
-| `/trauma factures` | everyone | Lists your unpaid Trauma Team bills. |
-| `/trauma payer` | everyone | Pays them oldest first, each from the account then from cash; stops at the first one you cannot cover. |
-| `/contrat` | everyone (not while down) | UI-kit menu: **Subscribe** (1 000 €$ per 30 min of server time, charged from the account through `rp_bank:charge(id, 1000, "trauma", "contract")`), or **My contract** / **Cancel my contract** when active. |
+| `tti_kiosk_pad` | -1376.0, 950.5, 23.5 | Afterlife street, 6.5 m west of the Trauma Team AV pad centre |
+| `tti_kiosk_market` | -1186.5, 2010.5, 7.82 | Kabuki Market, 6 m north-east of the market centre |
 
-Every command refuses the server console politely (`run it from the game`); every refusal is
-explained in chat. Player ids are the session ids (`/id`, `/players`).
+`shared/config.lua` (`Config`, both sides) keeps the down state: `downSeconds` (60; 600 for a live
+server), `countdownWithoutMedics` (true; false for a live server: `/respawn` at once with nobody on
+duty), `hospitalBill`, `healFee`, `reviveFee`, the bars of the older acts, `downHealthFraction`
+(0.05), `reviveHealthFraction` (0.5), the hospital point (Vik's clinic, `-1546, 1231, 11.6`), the AV
+(`Vehicle.av_trauma`, pad `-1370, 953, 23.5` r 12) and the staging poses.
 
-Medic rules shared by the two acts: one act at a time per medic, `Config.medicCooldownSeconds`
-(10 s) between two paid acts, never on yourself, never on a player not yet in the world, range
-re-checked after the progress bar, a cancelled bar (X / Escape) does nothing and charges nothing.
-Fees are paid **into the `trauma` society** (`rp_bank`), which pays the medics through the
-`rp_jobs` payroll.
-
-### The contract
-
-Holders get **free revives**, `[CONTRACT]` in front of their name in the dispatch line, a
-different (gold `important` sprite) map pin — a per-blip colour does not exist on 2.31 — and
-a distinct toast title (`Trauma Team: contract holder down`) on every medic's screen. Every 30 s the server renews the contracts of
-connected players whose period ended: a successful charge extends it by `Config.contractMinutes`;
-a failed charge (`insufficient_funds`, bank offline…) counts one failure, warns the player and
-grants one more period; the **second consecutive failure cancels** the contract
-(`Config.contractMaxFailures`). Offline players are not charged; their period is caught up when
-they come back. Cancelling gives no refund.
-
-## Exports (server, synchronous, never yield)
+### Exports and events
 
 ```lua
-exports.rp_trauma:isDown(playerId)                 -- boolean: has a down entry (dead, or held at the death spot)
-exports.rp_trauma:revive(playerId, byPlayerId)     -- true | nil, reason  (no fee: the caller owns the money)
-exports.rp_trauma:heal(playerId, byPlayerId)       -- true | nil, reason  (full health; refuses a down patient with patient_down)
-exports.rp_trauma:hasContract(playerId)            -- boolean
+exports.rp_trauma:isDown(playerId)        -- boolean
+exports.rp_trauma:hasContract(playerId)   -- boolean: an active plan of any tier
+exports.rp_trauma:planOf(playerId)        -- { tier, label, untilAt, autoRenew, priority } | nil
+exports.rp_trauma:owed(playerId)          -- eddies invoiced and not paid (connected players)
+exports.rp_trauma:calls()                 -- { { id, patient, priority, tier, state, responder, stable, position } }
+exports.rp_trauma:revive(playerId, byId)  -- true | nil, reason (no fee)
+exports.rp_trauma:heal(playerId, byId)    -- true | nil, reason (no fee)
 ```
 
-Reasons: `invalid_player_id`, `player_not_found`, `patient_down` (heal), `patient_not_down`
-(revive), or the platform's own (`invalid_argument`, …). `revive` raises `rp_trauma:revived`
-with `byPlayerId` (a number or `nil`). Call them inside `pcall`.
+| Event (host bus) | Arguments |
+|---|---|
+| `rp:job:completed` | `{ job = "trauma", kind = "subscribe" \| "stabilise" \| "evacuate" \| "revive", playerId, ref, data }`: the buyer for `subscribe`, the medic otherwise; `ref` is the coordinator operation id |
+| `rp_trauma:down` | `playerId, position` |
+| `rp_trauma:revived` | `playerId, byPlayerId \| nil` (a revive, an evacuation, a hospital respawn) |
+| `rp_trauma:call` | `callId, "open" \| "taken" \| "closed", patientId, medicId \| reason` |
+| `rp_trauma:subscribed` | `playerId, tier, untilAt` |
 
-## Events (host bus, `TriggerEvent`)
+Durable state lives in the coordinator: each holder's file `stash:<subject>:tti` holds the membership
+card (a unique item whose metadata is the plan: tier, end, periods, auto-renewal) and the invoices.
+The medics' counters stay in `Open77.kvp`. Calls, consents and the down state are runtime state.
 
-| Event | Arguments | When |
-|---|---|---|
-| `rp_trauma:down` | `playerId, position { x, y, z }` | The player just died and is now down (once per down episode, not on a re-death while down). |
-| `rp_trauma:revived` | `playerId, byPlayerId \| nil` | A medic revived them (`byPlayerId` = the medic, or whatever id the `revive` export was given), or they took the hospital respawn (`nil`). |
+## Limits
 
-Consumed: `rp_jobs:duty`, `rp_jobs:changed` (to refresh the medic state on the client).
-Raised for others: `rp_ncpd:alert("911", position, text, callerId)`.
-
-Internal net events (`rp_trauma:clientReady`, `rp_trauma:action`, `rp_trauma:hold`,
-`rp_trauma:medic`, `rp_trauma:downBlip`, `rp_trauma:downClear`) are this resource's
-client/server transport, not an API.
-
-## Persistence
-
-Created inside `Open77.database.ready(...)` with `CREATE TABLE IF NOT EXISTS`, permission
-`database.access`, keyed by the durable `Open77.players.identifier`:
-
-```sql
-rp_trauma_contracts (
-    identifier VARCHAR(64) PRIMARY KEY,
-    active     TINYINT(1) NOT NULL DEFAULT 1,   -- 0 once cancelled (by the player or by two failed renewals)
-    until_at   BIGINT     NOT NULL DEFAULT 0,   -- unix seconds, end of the paid period
-    failures   TINYINT    NOT NULL DEFAULT 0,   -- consecutive failed renewals
-    started_at BIGINT     NOT NULL DEFAULT 0,
-    renewed_at BIGINT     NOT NULL DEFAULT 0
-)
-rp_trauma_bills (
-    id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    identifier VARCHAR(64) NOT NULL,
-    amount     INT NOT NULL,
-    reason     VARCHAR(32) NOT NULL DEFAULT '',   -- hospital | heal | revive
-    created_at BIGINT NOT NULL DEFAULT 0,
-    paid_at    BIGINT NULL                        -- NULL = unpaid
-)
-```
-
-Both are cached in memory (loaded per player on `onPlayerReady`) and written through with the
-callback forms, so the exports never touch the database. Medic counters (`heal:<identifier>`,
-`revive:<identifier>`) stay in `Open77.kvp`.
-
-**No database** (`ready` answers `database_unavailable`, or the database still is not answering
-20 s after the first player is ready): contracts fall back to `Open77.kvp`
-(`contract:<identifier>:active|until|failures|started`) and bills to a single running total
-(`debt:<identifier>`); the log says `[rp_trauma] store=kvp reason=...`. The choice is kept for
-the whole boot.
-
-## Eval configuration (`shared/config.lua`)
-
-| Key | Eval value | Production suggestion |
-|---|---|---|
-| `downSeconds` | **60** | 600 |
-| `countdownWithoutMedics` | **true** (the timer applies even with nobody on duty, so one tester sees it) | false (`/respawn` immediate when no medic is on duty) |
-| `hospitalBill` | 500 €$ | |
-| `healFee` / `reviveFee` | 100 / 300 €$ | |
-| `stabiliseMs` / `reviveMs` | 5 000 / 8 000 ms | |
-| `contractPrice` / `contractMinutes` / `contractMaxFailures` | 1 000 €$ / 30 min / 2 | |
-| `actionRange` / `commandRange` | 3 m / 5 m | |
-| `downHealthFraction` / `reviveHealthFraction` | 0.05 / 0.5 | |
-| `medicCooldownSeconds` / `downReminderSeconds` | 10 s / 30 s | |
-| `hospital.zone` / `hospital.respawn` | `viktor_clinic` / `-1546, 1231, 11.6` (heading 180) | |
-| `av.record` / `av.pad` | `Vehicle.av_trauma` / `-1370, 953, 23.5` r 12 (the Afterlife street) | |
-| `blip.sprite` / `blip.contractSprite` | `SOSsignalVariant` / `important` | |
-
-**"The hospital" is Vik's.** In the lore you wake up at Viktor Vektor's, so `/respawn` puts the
-body in **Vik's clinic** (Little China, Watson): the rp_zones `viktor_clinic` zone (radius 12 m,
-centre `-1548, 1230, 11.6`, the AMM chair room), 855 m south-west of the freeroam spawn (Kabuki
-Market Centre `-1191.30, 2006.88, 7.82`); `Config.hospital.respawn` is 2 m off the chair. The
-config keys keep the `hospital` name (rp_config overrides `rp_trauma.hospital.*`); the
-player-facing lines say Vik's. **The AV pad** is not the clinic (an interior cannot take an AV)
-but the real street outside the Afterlife ramp: `Config.av.pad` `-1370, 953, 23.5`, 12 m radius
-(planar), east of the rp_garage bays so the AV never lands on a parked car, about 105 m from the
-Afterlife's bar floor. `/trauma av` needs the medic standing within 12 m of it.
-
-**The AV.** `Vehicle.av_trauma` is the "AV Trauma" record of the 2.31 catalogue (class `av`,
-4 seats; `open77_data vehicles "av_trauma"`). No AV record has a `_player` variant and the
-catalogue carries no "player-spawnable" flag, so the record is the lore-correct pick, not a
-proven one: if `Open77.vehicles.create` refuses it (the medic reads `AV request refused
-(<reason>)`), set `Config.av.record` to `Vehicle.av_rayfield_excalibur` and try again.
-
-## Log (grep-able)
-
-```text
-[rp_trauma] started: down=60 s, hospital bill=500, fees heal=100 revive=300, contract=1000 €$/30 min, hospital at -1546, 1231, 12, av=Vehicle.av_trauma
-[rp_trauma] store=sql tables=rp_trauma_contracts,rp_trauma_bills
-[rp_trauma] player 3 down at -1191, 2007, 8, 1 medic(s) notified, 60 s
-[rp_trauma] player 3 held down at -1191, 2007, 8, 55 s left
-[rp_trauma] player 4 revived player 3 fee=300 dead=false
-[rp_trauma] player 3 hospital respawn: account=500 cash=0 debt=0
-[rp_trauma] player 3 owes 200 (hospital), total debt 200
-[rp_trauma] player 3 contract signed until 1789000000 account=4000
-[rp_trauma] player 4 spawned AV 12 (Vehicle.av_trauma) at -1370, 961, 25 seat=true
-```
-
-## Test in 2 minutes (one player, freeroam spawn)
-
-Load `open77_uikit`, `open77_contextmenu`, `open77_notifications`, `open77_props`, `rp_economy`,
-`rp_bank`, `rp_jobs`, `rp_zones`, `rp_identity` and `rp_trauma` (and **not** `rp_medic`). Log on start:
-`[rp_trauma] started: down=60 s ...` then `store=sql ...`.
-
-1. Connect (id `1`), stand at the spawn, Kabuki Market Centre `-1191.30, 2006.88, 7.82`.
-   `/trauma` → `Trauma Team: you are on your feet; no contract (/contrat); unpaid bills 0 €$.`
-2. `/suicide` (freeroam test command). Chat: `You are down. Trauma Team has been notified.
-   /respawn opens in 60 s (Vik's bill 500 €$).` + red toast. The freeroam respawn runs, then
-   the screen fades and you are back **at the death spot**, frozen, at 5 % health, with the
-   bottom hint `DOWN - Trauma Team notified - /respawn opens in N s`. W/A/S/D, jump and fire do
-   nothing; the chat still opens. Log: `player 1 down at ...` then `player 1 held down at ...`.
-3. `/respawn` right away → `Hold on, choom: /respawn opens in N s.` (eval config:
-   `countdownWithoutMedics = true`; in production, with nobody on duty, it would be accepted at
-   once). Wait 60 s: chat `/respawn is open: Vik's clinic takes you for 500 €$...`, the hint
-   changes, a toast confirms.
-4. `/respawn` → fade, you stand in Vik's clinic next to the chair (`-1546, 1231`, 855 m from
-   the market; toast **Vik's Clinic** from rp_zones), full health, chat `Trauma Team dropped
-   you at Vik's clinic. Bill: 500 €$ from your account.` (or `... in cash`, or `... 200 €$ still
-   owed (/trauma payer)` when broke). `/solde` shows the debit; `/trauma factures` lists a debt
-   if any; `/trauma payer` settles it once you have money. The `ATM - Vik's Clinic` ring is
-   3 m away at the door.
-5. `/contrat` → menu; **Subscribe** → `Trauma Team contract signed: 1000 €$ charged...`
-   (fund the account first: `/bank` at the clinic ATM or console `givemoney 1 2000` then
-   deposit). `/contrat` again shows **My contract** / **Cancel my contract**.
-6. Console: `setjob 1 trauma 3`, then in game `/service` → you are an on-duty medic. `/trauma`
-   now adds `Dispatch: nobody is down.` Drive to the AV pad on the street outside the Afterlife
-   ramp (`-1370, 953`, about 46 m east of the rp_ncpd outpost ring at `-1416, 957`), `/trauma av`
-   → the AV appears in front of you and you are in its seat; `/trauma av off`. More than 12 m
-   from the pad, the command answers `The AV pad is on the Afterlife street (-1370, 953), N m
-   from you: stand on it first.`
-7. `/soin 1` → `You can't treat yourself, choom.`; `/soin 99` → `Player 99 not found`.
-8. **Two players** (second client id `2`, no job): player 2 `/suicide` → player 1 (on duty)
-   reads `<name> (id 2) is down at ..., 12 m away. ALT+click the body: Revive.`, gets a toast
-   and a `SOS` pin on the map whose title carries the live distance. Player 2 `/respawn` →
-   `Trauma Team is on duty (1 medic). /respawn opens in N s.`
-9. Player 1 walks to the body, holds **ALT**, clicks it, picks **Revive (Trauma Team, 300 €$)**:
-   8 s bar (X cancels), then player 2 stands up at 50 % health, reads `Medic <name> revived
-   you: 300 €$ from your account.`, the pin disappears, the trauma society gains 300 €$
-   (`/societe` on player 1). With a contract on player 2: `Contract holder: no charge.`
-10. Player 2 loses some health (fall, fight) → ALT+click → **Stabilise (Trauma Team, 100 €$)**
-    → 5 s bar → full health, 100 €$. `/soin 2` / `/reanimer 2` do the same from 5 m.
-11. Player 2 `/911 shots fired` → player 1 reads the `911` line with the position and a toast;
-    player 2 reads `Call relayed to 1 responder(s) on duty (Trauma Team and NCPD).`
-12. `/medic` on player 2 → `1 medic(s) on duty:` + `- <name> (id 1): 8 m`. Player 1
-    `/service` (clock out) → `/medic` says `No medic on duty: /respawn is immediate if you go
-    down.`
-13. Other resources: `print(exports.rp_trauma:isDown(2), exports.rp_trauma:hasContract(2))`,
-    `exports.rp_trauma:revive(2, 1)`.
-
-## Staging: poses, props and durations
-
-Every action below plays a pose from the server's `open77_animations` catalogue
-(`Open77.animations.play`, permission `players.animations.control`), shows a curated prop
-attached to the body (`Open77.props.create` + `attach`, permission `world.props`) where one
-makes sense, and takes its time behind the UI-kit bar (X cancels; the bar keeps the player
-still on the client, the server never freezes anyone). Other players see all of it: poses
-and props are server-driven. Everything is in `Config.Stage` (`shared/config.lua`) and follows rp_nomade's carry-pose
-pattern: `pose.profiles` is a list tried in order through `Open77.animations.get` -- the
-best future name first (the 76-profile catalogue of the pending base PR), then what today's
-18-profile eval catalogue has -- and `prop.models` a list of aliases tried in order. A
-refusal (unknown profile, `player_in_vehicle`, `animation_owned`, an attach the client
-cannot bind) is logged once and never blocks the action. Hand-slot offsets are not measured
-on 2.31: if a prop sits wrong, move one axis of `offset` / `rotation` at a time.
-
-| Action | Pose today (future name) | Prop | Duration |
-|---|---|---|---|
-| Stabilise (`/soin`, ALT+click) | `examine` kneel over the patient, looped (`medical`) | `medical.device` in the right hand (`medical.injector` once it exists) | 5 s bar (`stabiliseMs`) |
-| Revive (`/reanimer`, ALT+click) | same kneel, looped | same injector + `medical.container` kit at the medic's feet (root frame) | 8 s bar (`reviveMs`) |
-| the down player | `wounded` (seated, hand on the belly), looped from the hold to the revive / respawn | none | the whole down state |
-| `/911` | `phone` one-shot: the call | the profile's holo | 3 s |
-
-Log lines (grep `stage`, `gesture`, `hold`):
-
-```text
-[rp_trauma] player 3 stage stabilise: pose=examine/kneel__rk_on_ground__01__inspect_ground__01 prop=medical.device@RightHand place=none 5000 ms -> ok
-[rp_trauma] player 3 stage revive: pose=examine/kneel__rk_on_ground__01__inspect_ground__01 prop=medical.device@RightHand place=medical.container 8000 ms -> ok
-[rp_trauma] player 5 hold down: pose=wounded/sit_ground_lean180__rh_on_belly__01__deep_breath__01 prop=none
-[rp_trauma] player 5 gesture call: pose=phone/stand__2h_phone__03__tap_phone__01 prop=none 3000 ms
-```
-
-`-> ok` means the bar ran to the end; `-> cancelled` the player pressed X;
-`-> failed:<reason>` the bar never showed (a plain wait kept the beat). A refused pose reads
-`stage <key>: pose <profile> refused for player N: <reason> (the action runs without it)`,
-an unknown list `stage <key>: no known profile among [...]`, a refused prop `stage
-<key>.prop: attach of <alias> to player N refused: <reason> (no prop shown)`.
-The `wounded` pose on a frozen body is not proven on 2.31: if the platform refuses it (`player_not_alive`, `position_unavailable`), the line `stage down: pose wounded refused ...` appears once and the down state works as before.
-
-## Manifest permissions
-
-`players.stats.read` (`Open77.stats.get`, both sides), `players.stats.apply` (`setHealth`,
-`restoreHealth`, `setHealthRegenEnabled`), `players.life.read` (`isDead`, `getLifeState`, both
-sides), `players.life.revive` (`revive`), `players.life.respawn` (`respawn`),
-`players.life.freeze` (`setFrozen`), `players.teleport` (`teleport`), `world.vehicles`
-(`vehicles.create` / `remove` / `warpPlayerIntoVehicle`), `network.events`
-(`RegisterNetEvent`, `TriggerClientEvent`, `Open77.notifications.send`, `TriggerServerEvent`),
-`database.access` (`Open77.database.*`), `input.blockAll` (`Open77.input.blockAll`, client),
-`ui.vanilla.map` (`Open77.blips.*`, client), `players.animations.control`
-(`Open77.animations.play` / `stop`: the medic's kneel, the wounded pose, the `/911` dial),
-`world.props` (`Open77.props.create` / `attach` / `remove`: the injector and the kit).
+- The platform cannot hold the freeroam respawn: the down state re-applies itself after it (a
+  teleport back to the death spot under a fade). A body is never carried: the evacuation is a fade
+  and a teleport to Vik's clinic.
+- The consent dialog is shown to a player whose gameplay inputs are blocked; the UI kit takes its own
+  focus. Any answer that never comes (closed dialog, another resource's dialog open, the kit
+  unavailable) counts as unconscious: treated and billed after.
+- The medic kneels where they stand, not turned towards the body.
+- A covered act pays the medic only while the society can afford the bounty; an invoiced amount pays
+  the society when the patient settles it, not the medic.
+- A restart forgets the open calls and frees every held player (no bill); plans and invoices stay.
+- `rp_mdt` reads the 1.x tables for contracts and bills: point it at `planOf`, `owed` and `calls`.
+- Stabilise and Evacuate need `open77_actions`; without it only the older acts and `/respawn` remain.

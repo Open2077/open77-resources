@@ -3,17 +3,19 @@
 -- * While the server holds this player down: the whole gameplay input stream is taken
 --   (Open77.input.blockAll - chat keeps working so /respawn can be typed) and a UI-kit
 --   hint shows the countdown.
--- * For an on-duty medic: one map pin per down citizen (Open77.blips) whose title
---   carries the live distance, and two ALT+click actions on another player's body,
---   Stabilise and Revive (open77_contextmenu). Both only send a request; the server
---   re-checks duty, range and the patient's state before anything happens.
+-- * For an on-duty medic: one map pin per Trauma Team call (Open77.blips) whose title
+--   carries the call's tag (tier or TAKEN) and the live distance, and two ALT+click
+--   actions on another player's body, Patch up and Revive (open77_contextmenu). Both only
+--   send a request; the server re-checks duty, range and the patient's state. Stabilise and
+--   Evacuate are open77_actions prompts on the body, drawn by that library.
 
 local RESOURCE = GetCurrentResourceName()
 
 local held = false
 local heldUntil = 0        -- Open77.time.monotonic() when /respawn opens; 0 = open or unknown
+local heldStable = false   -- a medic stabilised this player: the evacuation is coming
 local isMedic = false
-local downPins = {}        -- [playerId] = { blip, position, name, contract }
+local downPins = {}        -- [playerId] = { blip, position, name, tag }
 local downSet = {}         -- [playerId] = true, for the context-menu predicates
 
 local function log(fmt, ...)
@@ -56,6 +58,9 @@ end
 -- ---------------------------------------------------------------------------
 
 local function holdText()
+    if heldStable then
+        return "STABLE - Trauma Team is evacuating you to Vik's clinic"
+    end
     local left = 0
     if heldUntil > 0 then
         left = math.max(0, math.ceil(heldUntil - Open77.time.monotonic()))
@@ -66,7 +71,8 @@ local function holdText()
     return "DOWN - /respawn wakes you up at Vik's clinic, or wait for Trauma Team"
 end
 
-local function applyHold(seconds)
+local function applyHold(seconds, stable)
+    heldStable = stable == true
     if not held then
         local ok, reason = Open77.input.blockAll()
         if not ok then
@@ -83,6 +89,7 @@ local function releaseHold()
     end
     held = false
     heldUntil = 0
+    heldStable = false
     CreateThread(function()
         uikit("hideTextUI")
     end)
@@ -113,7 +120,19 @@ end)
 
 local function pinTitle(entry, metres)
     local dist = metres and ("%.0f m"):format(metres) or "? m"
-    return ("%s%s down - %s"):format(entry.contract and "[CONTRACT] " or "", entry.name, dist)
+    return ("%s%s down - %s"):format(entry.tag and ("[" .. entry.tag .. "] ") or "", entry.name, dist)
+end
+
+-- The server sends a tag string ("PLATINUM #3", "UNINSURED #4", "TAKEN #3"); older servers a
+-- boolean contract flag.
+local function tagOf(value)
+    if type(value) == "string" and value ~= "" then return value end
+    if value == true then return "CONTRACT" end
+    return nil
+end
+
+local function insured(tag)
+    return tag ~= nil and not tag:find("^UNINSURED") and not tag:find("^TAKEN")
 end
 
 local function removePin(playerId)
@@ -127,14 +146,14 @@ local function removePin(playerId)
     downSet[playerId] = nil
 end
 
-local function addPin(playerId, position, name, contract)
+local function addPin(playerId, position, name, tag)
     removePin(playerId)
-    local entry = { position = position, name = name or ("player " .. tostring(playerId)), contract = contract == true }
+    local entry = { position = position, name = name or ("player " .. tostring(playerId)), tag = tagOf(tag) }
     local blip, reason = Open77.blips.create({
         position = position,
-        sprite = entry.contract and Config.blip.contractSprite or Config.blip.sprite,
+        sprite = insured(entry.tag) and Config.blip.contractSprite or Config.blip.sprite,
         title = pinTitle(entry, distanceTo(position)),
-        description = "Trauma Team dispatch: a citizen is down here. ALT+click the body: Revive.",
+        description = "Trauma Team dispatch: a citizen is down here. /tti take answers the call; E on the body: Stabilise, then Evacuate.",
         active = true,
         visibleThroughWalls = true,
     })
@@ -169,9 +188,9 @@ end)
 -- Server -> client
 -- ---------------------------------------------------------------------------
 
-RegisterNetEvent("rp_trauma:hold", function(active, seconds)
+RegisterNetEvent("rp_trauma:hold", function(active, seconds, stable)
     if active then
-        applyHold(tonumber(seconds) or 0)
+        applyHold(tonumber(seconds) or 0, stable == true)
     else
         releaseHold()
     end
@@ -184,16 +203,16 @@ RegisterNetEvent("rp_trauma:medic", function(onDuty, list)
         for _, item in ipairs(list or {}) do
             local id = tonumber(item.playerId)
             if id and item.position then
-                addPin(id, item.position, item.name, item.contract)
+                addPin(id, item.position, item.name, item.tag or item.contract)
             end
         end
     end
 end)
 
-RegisterNetEvent("rp_trauma:downBlip", function(playerId, position, name, contract)
+RegisterNetEvent("rp_trauma:downBlip", function(playerId, position, name, tag)
     local id = tonumber(playerId)
     if isMedic and id and position then
-        addPin(id, position, name, contract)
+        addPin(id, position, name, tag)
     end
 end)
 
@@ -264,8 +283,8 @@ local function registerActions()
     local tokens, err = menu("registerPlayers", {
         {
             id = "trauma_revive",
-            label = ("Revive (Trauma Team, %d €$)"):format(Config.reviveFee),
-            description = "Bring a down citizen back on their feet. Free for contract holders.",
+            label = ("Revive (Trauma Team, %d eddies)"):format(Config.reviveFee),
+            description = "Bring a down citizen back on their feet where they lie. Their plan covers its share.",
             group = "Trauma Team",
             icon = "person",
             networked = true,
@@ -276,8 +295,8 @@ local function registerActions()
         },
         {
             id = "trauma_stabilise",
-            label = ("Stabilise (Trauma Team, %d €$)"):format(Config.healFee),
-            description = "Patch up a hurt citizen to full health.",
+            label = ("Patch up (Trauma Team, %d eddies)"):format(Config.healFee),
+            description = "Patch up a hurt citizen to full health. They accept the charges first.",
             group = "Trauma Team",
             icon = "interact",
             networked = true,
