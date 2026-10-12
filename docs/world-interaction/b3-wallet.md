@@ -6,8 +6,11 @@
 
 **Status: offline only.** Nothing was deployed, launched or run against a database. Every claim
 below comes from the source or from the offline suite (`tests/test_compat_wallet.py`,
-`tests/test_compat_economy.py`), where the coordinator is the A13 **prototype** behind a test
-stand-in for its exports. **Fact** = seen in source or measured offline; **inference** = follows
+`tests/test_compat_economy.py`). Since the reconcile of 2026-10-12 (branch `wi/reconcile-a13`) the
+coordinator there is the **final** wave-1 `open77_transactions` of Open77 `697e9e2f`, vendored
+unmodified and run whole as a resource (`server/main.lua` included; the only seam is
+`tests/compat/txshim.lua`); the wave-0 build used the prototype behind a stand-in. §8 says what the
+final coordinator resolved. **Fact** = seen in source or measured offline; **inference** = follows
 but unmeasured; **open** = a decision.
 
 ---
@@ -33,9 +36,13 @@ but unmeasured; **open** = a decision.
    `rp_bank_societies`, paged so the bridge's silent 10 000-row truncation cannot drop accounts;
    the 1.x ledger stays a read-only archive.
 6. **Offline suite: 24 tests, OK** (15 new in `test_compat_wallet.py`, the B8 ones updated).
-7. **Coordinator API needs** (§8): readiness and subject-provider exports, replay before hold
-   validation, fresh attempts after a definitive failure, mint caps per sys account, a reason
-   field, a history read. The facade works around the two replay gaps today.
+7. **Coordinator API needs** (§8): resolved by Open77 `697e9e2f` (health, subjectOf, replay before
+   refusal, fresh attempt after a failure, mint rules, reasons, history, `authorize`); the facade
+   uses them. Left: the mint-rule grammar names one `sys:` segment, and the bank statement does not
+   read `history` yet (§8).
+8. **Reconcile additions (2026-10-12):** `sale` accepts instance lines and asks
+   `rp_inventory:grantPockets` under strict writers; `rp_salvage` (C1) on the allowlist;
+   `rp_economy:pendingChanged(playerId)` for a HUD (B7).
 
 ## 1. Files
 
@@ -103,13 +110,23 @@ allowlist (`onBehalfOf`).
 - `refund` reverses the money lines of a committed operation onto the **original instruments**
   (B8 §5.3: rp_shops refunded account payments as cash). Goods are not returned.
 - `sale` takes goods from `char:<subject>` (or any container named in the spec) to an NPC buyer
-  `sys:<caller>:<label>` (goods destroyed, price minted) or a player's pockets.
+  `sys:<caller>:<label>` (goods destroyed, price minted) or a player's pockets. An item entry is
+  `{ item, count, from? }` or, since the reconcile, `{ instance, from? }` (one unique unit with its
+  metadata, e.g. a C1 salvage crate out of `veh:<plate>:cargo`; `invalid_instance` for a bad id).
+- **Strict writers.** When the coordinator's `writers` keeps `char` to `rp_inventory`, `sale` asks
+  `rp_inventory:grantPockets(opId, playerId)` (a one-operation `authorize`) for a connected seller's
+  pockets before it commits; without it the sale is refused `namespace_denied` and nothing is
+  attempted. Goods out of `veh:`/`stash:`/`world:` need `rp_economy` in `writers` for them (no
+  grant is requested there).
+- **`rp_economy:pendingChanged(playerId)`** (reconcile, for B7's HUD): raised when an operation on a
+  connected player's wallet enters `in_doubt`, and when an atomic or in-doubt one settles; a hint to
+  re-read, coalesce it.
 
 ### 2.4 Mapping and policy kept in the adapter (contract §7.3)
 
 | Policy | Where |
 |---|---|
-| subject of a player | the coordinator's provider `subjectOf` (decision 5); fallback to the account identifier, logged once, when the export is missing |
+| subject of a player | the coordinator's provider `subjectOf` (decision 5), for a player id or an account identifier (offline subjects, the 1.x import); a refusal is passed through and a coordinator that is not running answers `coordinator_unavailable` (no fallback: adapters never build owner keys) |
 | limits, reason texts | 1.x checks kept (amount, 64-byte reason, 1e9 per bank operation, 1e12 balance) |
 | typo protection on wires | synchronous `transfer`: only accounts this server has loaded (it cannot ask the coordinator without yielding); the ATM and `/virement` use `pay` after `balanceOf(...).exists` |
 | funds known before a debit | a society not loaded yet refuses debits (`bank_not_ready`), accepts credits |
@@ -144,7 +161,16 @@ allowlist (`onBehalfOf`).
 
 Booked per original caller, net (created minus destroyed) in a fixed one-hour window; burns
 restore budget, so a resource that only moves money between players nets to zero. Unlisted =
-`mint_denied`. Estimates from a read-only survey of every call site (32 active players; the
+`mint_denied`.
+
+**The coordinator's own rule (697e9e2f, contract §12.6).** The coordinator sees one caller,
+`rp_economy`, and its rule grammar names one `sys:` segment (`sys:<name>` or `sys:*`), so it cannot
+address `sys:<resource>:<label>` one by one (a rule for `sys:rp_economy:start` is ignored with a
+warning; `test_final_coordinator_api`). The server therefore sets one ceiling for this resource,
+for example `mint1 = "rp_economy sys:* money 2000000"`, and the table below caps each original
+caller. `Tx.mayMint` asks `allowed(rp_economy, sys:..., money)` inline, so a missing rule refuses a
+write-behind credit at once (`mint_denied`) instead of reverting it later; an exhausted cap
+(`mint_cap_exceeded`) reverts it. C1's items are its own rule (`rp_salvage sys:salvage * 400`). Estimates from a read-only survey of every call site (32 active players; the
 survey's own assumptions; order of magnitude, **not** measured).
 
 | Resource | Creates money today (call site) | Est. max/h | Cap (€$/h) |
@@ -163,6 +189,7 @@ survey's own assumptions; order of magnitude, **not** measured).
 | `rp_ferrailleur` | scrap sale to the NPC dealer + 10 % society (`:714`, `:723`) | 7 000–20 000 | 30 000 |
 | `rp_netrunner` | breach bounty (`:852`, `:859`) | 2 500–27 000 | 30 000 |
 | `rp_shops` | robbery loot (`:1515`), refunds | ~9 000 | 30 000 |
+| `rp_salvage` (C1, reconcile) | scrap and crate sales to the NPC buyer through `sale`, society share | — | 30 000 |
 | `rp_mecano` | impound fee to the society with no payer (`:1242`) | ~12 000 | 20 000 |
 | `rp_vigile` | corpo guard contracts (`:375-387`) | ~1 200 per zone | 20 000 |
 | `rp_garage`, `rp_ripperdoc` | refunds after burns, impound release | ~0 net | 20 000 |
@@ -218,7 +245,16 @@ Not covered: the `rp_jobs` `seeded:<job>` KVP flags (B8 §5.3) stay in `rp_jobs`
 
 ## 6. Offline tests
 
-`python -m unittest discover -s tests -p "test_compat*.py"`: **24 tests, OK**, ~8 s, on the
+**Reconcile (2026-10-12):** `test_compat_wallet.py` + `test_compat_economy.py` 20 tests, OK (about
+14 s), against the final coordinator; the whole `python -m unittest discover -s tests -p "test_*.py"`
+85 tests, all pass but the pre-existing `test_held_actions` (needs `lupa`). The coordinator is a
+resource of its own on `multihost.lua` (which gained `Open77.tunables` and `MH.setTunable`), hosted
+by `txhost_wallet.lua` (the database: a deferred memory store, its pace, its crash modes);
+`WW.txTunables` holds the test server's `writers`/mint rules. New: `test_final_coordinator_api`
+(mint rules, reasons, strict writers + grant, instance sale, character provider), and
+`test_vendored_coordinator_is_unmodified` checks the eight vendored files against `697e9e2f`.
+
+Wave-0 run: `python -m unittest discover -s tests -p "test_compat*.py"`: **24 tests, OK**, ~8 s, on the
 KeraLua `lua54.dll` through ctypes (no `lupa` on this workstation). New engine piece:
 `tests/compat/multihost.lua` runs several resources with one environment each, synchronous and
 promise exports (`export_yielded`, `export_timeout`, `export_resource_stopped`,
@@ -270,42 +306,32 @@ Lab only, two clients at most, after the coordinator's wave-1 wiring lands (§8 
 7. Restart the server between steps 4 and 5: balances and the statement survive.
 8. Measure the latency of `/pay` and of an ATM deposit (A13 I4) and watch for `in_doubt`.
 
-## 8. Coordinator API needs (for A13 wave 1)
+## 8. Coordinator API needs: resolved by Open77 `697e9e2f`
 
-Found while wiring and testing against the prototype; the stand-in `txhost.lua` marks the first two.
+Reconciled 2026-10-12 against the final coordinator (contract §7.2, §13.5, §13.7: B3 a–g).
 
-1. **`health()` readiness export** — `{ ready, store, reason }`, non-yielding or cheap. The contract
-   requires adapters to refuse while the store is unavailable (§4.1) but lists no way to ask.
-   Without it the facade probes with `status()`.
-2. **`subjectOf(playerId | { identifier })` export**, non-yielding (called inside synchronous
-   exports), plus the one-override registration of decision 5. Offline credits need the
-   identifier form.
-3. **Replay before validation.** After a coordinator restart, `reserve`/`transfer` of an id that
-   is committed in `op77_tx_ops` re-validates its holds first: the replay of a sale whose goods are
-   gone answers `insufficient_items` instead of the receipt (**fact**, offline). The facade asks
-   `status(opId)` after such a refusal and returns the stored receipt; the coordinator should
-   consult the operation row itself (contract §3.4 "replay from the operation row").
-4. **Fresh attempt after a definitive failure.** A failed operation (`conflict`, `store_unavailable`
-   other than a fence) stays in the coordinator's memory and every later `reserve` with the same
-   id answers the old failure until the coordinator restarts; §3.4 says a fresh attempt. The
-   write-behind path retries under attempt ids; a caller-owned id is stuck meanwhile.
-5. **Receipts.** A replay found through the duplicate key (`_settleCommitted(op, false, row.receipt)`)
-   is returned with `replay = false`, and stored receipts carry no `versions`; the facade re-reads
-   in that case. Per-account versions in `open77_transactions:committed` would save a read.
-6. **Mint policy per sys account** (decision 6): the facade caps each original caller, but the
-   coordinator only sees `rp_economy`. It should cap `rp_economy` in aggregate per
-   `sys:<resource>:<label>` family and allow `sys:rp_economy:migration` only during an import.
-7. **ACL:** `rp_economy` needs `cash`, `bank`, `soc`, `sys` and, for `sale`, `char`, `veh`, `stash`,
-   `world`. `rp_bank` needs nothing (it goes through `rp_economy`).
-8. **A bounded `reason`/`note`** on the operation row and receipt (≤ 64 bytes): today the business
-   reason survives only in the id, the kind (≤ 32) and the facade's log.
-9. **`history(account, { limit, before })`** over `op77_tx_journal` for the bank statement, and a way
-   to enumerate `soc:` wallets for preloading.
-10. `newOpId()` should take its boot component from wall-clock time (§3 last bullet: the facade hit
-    the monotonic-clock collision itself).
+| # | Need (wave 0) | Outcome | Facade now |
+|---|---|---|---|
+| 1 | `health()` readiness | resolved (`health`, superset of `info`) | `Tx.probe` is healthy only when `ready` and not `coordinator.down` (the coordinator marks the store down after an unreachable answer and clears it itself); the `status()` fallback is gone |
+| 2 | `subjectOf(playerId \| identifier)` + one override | resolved | `Tx.subjectOf` passes the identifier string; offline credits, the 1.x import and `isLegacySubject` (keyed by the identifier) follow the provider; `~` accepted in subjects; opIds with a `~` key are hashed |
+| 3 | replay before validation | resolved (the operation row is read before a business refusal) | the `status` probe is kept only for `op_id_conflict` (a recomputed cash-then-bank split) and `unknown_account` |
+| 4 | fresh attempt after a failure | resolved: failed = fresh attempt, fenced = `aborted` for ever | unchanged and consistent: write-behind retries under `<opId>-r<n>` (always safe), an atomic caller may reuse its id after a failure, never after `aborted` (`info.state`) |
+| 5 | receipts (`replay`, `versions`) | partly: `replay` is set; a replayed receipt's `versions` are the stored receipt's (none) or the pre-reload mirror's | a replayed receipt's versions are ignored: the wallet is re-read |
+| 6 | mint caps per sys account | resolved for one-segment names | one coordinator ceiling for `rp_economy` (§4) plus this resource's per-caller budgets; `Tx.mayMint` pre-checks |
+| 7 | ACL for `sale` | resolved (`writers` per namespace/part, `authorize`) | `sale` asks `rp_inventory:grantPockets` for a connected seller's pockets |
+| 8 | bounded `reason` | resolved | every operation carries the business reason (≤ 64 bytes) to the receipt and journal; not part of the request hash |
+| 9 | `history`, `soc:` enumeration | `history(account, { limit, before })` resolved; no `soc:` listing (`list` covers containers only) | **not used yet**: the bank statement still shows this boot plus the 1.x archive; merging `history(bank:<subject>)` is a follow-up |
+| 10 | `newOpId` boot component | resolved (wall-clock boot) | unchanged (the facade mints its own ids) |
+
+**What remains (not in the final coordinator):** a mint rule cannot name `sys:<resource>:<label>`;
+`allowed()` takes no amount; `status` always yields (B7 asked for a cheap one); the `committed`
+event names no invoking resource (A9 N5).
 
 ## 9. Needed from the `rp_inventory` row (B2/B12; not edited here)
 
+- **Done in B2 and reconciled:** pockets are `char:<subject>` containers with the same subject
+  provider; definitions re-sent when the coordinator restarts; `grantPockets` for `sale` under
+  strict writers.
 - Pockets as coordinator containers **`char:<subject>`**, opened (capacity) at join, with the same
   subject provider; item definitions registered through the coordinator's `define`, re-sent when
   `open77_transactions` restarts (its definitions live in memory).

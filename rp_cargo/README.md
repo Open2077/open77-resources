@@ -131,9 +131,9 @@ on both clients (see the measurement steps in the A9 doc).
 ## Manifest
 
 Permissions `world.props`, `world.vehicles`, `filesystem.read` (the data file). Dependencies
-`rp_garage` and `open77_props >=0.1.0`. The coordinator `open77_transactions` is called through
-`Open77.exports.call` and not declared yet (its wave-0 prototype has no manifest): without it
-every operation answers `coordinator_unavailable`. Declare it once it publishes a version.
+`rp_garage`, `open77_props >=0.1.0` and `open77_transactions >=0.1.0` (Open77 `697e9e2f`; list it in
+`resources.load`). Under a per-part `writers` list (`rp_cargo:veh/cargo`) the pockets side of a
+load or unload is granted per operation by `rp_inventory:grantPockets`.
 
 ## Log (grep-able)
 

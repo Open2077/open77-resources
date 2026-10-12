@@ -914,3 +914,16 @@ Appended, never rewritten: each later row records here what it changed in the fr
   - **Behaviour deliberately fixed (5.1).** `define` refuses colliding ids (`details.collisions`), ids
     over 32 bytes and ids containing `__`. No collision exists in the pack (all nine definers register
     every item unchanged, offline).
+- **2026-10-12, reconcile with the final coordinator** (`wi/reconcile-a13`; Open77 `697e9e2f`).
+  - **Migration rule changed (5.6, B2/B3 imports).** A failed operation id is a fresh attempt when reused;
+    only a fenced one (`aborted`) is final (contract §13.5). `rp_inventory`'s import retries a failed chunk
+    id and moves to the next id of its sequence only past a fence. Both imports need a coordinator mint
+    rule (`rp_inventory sys:migration *`, `rp_economy sys:* money`): nothing mints by default, and a
+    missing rule refuses the subject before any chunk. The 1.x wallet import keys wallets by
+    `subjectOf(identifier)` (the identifier by default), and the opIds stay named after the 1.x row.
+  - **Exports.** Additive only: `rp_inventory:grantPockets` (consumed by `rp_cargo` and `rp_economy`'s
+    `sale`, so `FROZEN_SURFACE["rp_inventory"]` gained it), `rp_garage:labIssue` (lab, convar-gated),
+    events `rp_inventory:settled` and `rp_economy:pendingChanged`; `rp_economy:sale` accepts
+    `{ instance, from? }` entries. No signature or token of a frozen export changed. No schema change.
+  - **Suite.** The coordinator in every suite is the vendored final resource
+    (`tests/compat/vendor/open77_transactions`, `server/main.lua` included); the B8 suite runs unchanged.

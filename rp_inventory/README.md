@@ -345,8 +345,8 @@ container to the picker; a refused pickup leaves the goods in the container and
 re-creates the loot **where it lay**; an expired drop evaporates through a
 journaled operation. The native loot pickup still grants its record to the
 picker's game inventory (the `Items.money` default), as before. An rp_inventory
-restart loses the loot projection but not the goods, which stay in their
-`world:` container until a projection owner re-creates them.
+restart loses the loot projection but not the goods: the coordinator keeps the
+drop's metadata, and the next start projects it again where it lay.
 
 ## Manifest permissions
 
