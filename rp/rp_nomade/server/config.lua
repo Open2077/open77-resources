@@ -195,16 +195,20 @@ C.actions = {
 }
 C.maxDistance = 2.5
 
--- The crate players carry (an open77_actions carry kind). crate.ammo_box carries well with the
--- library's own Chest binding (measured for rp_salvage). rp_nomade 1.0 carried crate.small with
--- its own binding (Chest, offset { x = -0.135, y = -0.60, z = 0.008 }, rotation { 0, 90, 0 }): put
--- that model and binding here to get the 1.0 look back.
+-- The crate players carry (an open77_actions carry kind). The library's default binding is tuned
+-- for crate.small (a body-width load between both hands); crate.ammo_box is a small box: measured in
+-- game (actions.lab.bind, both views), it sits on the forearms against the chest in third person and
+-- lies flat, centred, low in the first-person view.
 C.crate = {
     model = "crate.ammo_box",
     bedModel = "crate.ammo_box",   -- what rp_cargo draws in the bed
     label = "nomad crate",
     reach = 2.0, vehicleReach = 4.5,
-    binding = nil,
+    binding = {
+        bone = "Chest",
+        offset = { x = -0.12, y = -0.42, z = -0.22 }, rotation = { x = 0.0, y = 90.0, z = 0.0 },
+        firstPerson = { offset = { x = 0.10, y = -0.55, z = 0.0 }, rotation = { x = 90.0, y = 0.0, z = 0.0 } },
+    },
     -- Who may lift a crate off the ground: "anyone" (a crate left alone can be stolen: the run of
     -- its nomad fails) or "crew" (nomads on duty only).
     pickupBy = "anyone",
