@@ -390,6 +390,21 @@ RegisterCommand("fixer.kill", function(source, args)
     end)
 end, true)
 
+-- fixer.setrep <playerId> <score>: an operator sets a connected player's reputation (one keyed
+-- change, written like any other).
+RegisterCommand("fixer.setrep", function(source, args)
+    local pid = M.playerId(args[1])
+    local score = M.int(args[2])
+    local p = pid and Svc.players[pid]
+    if not p or not score or score < 0 then return reply(source, "usage: fixer.setrep <playerId> <score>") end
+    CreateThread(function()
+        local rep = Svc.reps[p.subject] or { score = 0 }
+        local result, why = Svc:reputation(p.subject, ("admin:%s:%d"):format(p.subject, P.now()), score - rep.score, 0, 0)
+        local now = Svc.reps[p.subject]
+        reply(source, "player %d reputation %s: %s", pid, tostring(now and now.score), tostring(result or why))
+    end)
+end, true)
+
 -- fixer.rep <playerId>: the player's reputation.
 RegisterCommand("fixer.rep", function(source, args)
     local pid = M.playerId(args[1])

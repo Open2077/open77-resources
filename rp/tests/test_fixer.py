@@ -250,6 +250,7 @@ class FixerLoop(unittest.TestCase):
                          ("completed", "10", "1700", "1700", "5"))
         self.assertEqual((r["event_kind"], r["event_player"], r["event_contract_kind"]), ("contract_completed", "2", "job"))
         self.assertEqual((r["told_progress"], r["escrow_agrees"]), ("true", "true"))
+        self.assertEqual(r["setrep"], "4/4")
 
     def test_cyberpsycho_bounties(self):
         r = self.run_ok("bounty")

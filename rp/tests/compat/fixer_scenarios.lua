@@ -227,26 +227,31 @@ function scenarios.job_order()
     cmd(3, "take", tostring(c.seq))
     local lowRep = FXW.told(3, "reputation is too low")
     -- An event before anyone holds it counts for nobody.
-    emitJob({ job = "chooh2", kind = "refine", playerId = 2, ref = "chooh2:early", data = { count = 5 } })
+    emitJob({ job = "chooh2", kind = "refine", playerId = 2, ref = "chooh2:early", data = { canisters = 5 } })
     cmd(2, "take", tostring(c.seq))
     local cashB0 = FXW.balance("cash:" .. B)
-    emitJob({ job = "chooh2", kind = "refine", playerId = 2, ref = "chooh2:r1", data = { count = 4 } })
+    emitJob({ job = "chooh2", kind = "refine", playerId = 2, ref = "chooh2:r1", data = { canisters = 4 } })
     local p1 = c.order.progress
-    emitJob({ job = "chooh2", kind = "refine", playerId = 2, ref = "chooh2:r1", data = { count = 4 } })   -- replayed
-    emitJob({ job = "chooh2", kind = "sell", playerId = 2, ref = "chooh2:s1", data = { count = 4 } })     -- other kind
-    emitJob({ job = "netrunner", kind = "refine", playerId = 2, ref = "nr:x", data = { count = 4 } })     -- other job
-    emitJob({ job = "chooh2", kind = "refine", playerId = 3, ref = "chooh2:c1", data = { count = 9 } })   -- not the runner
+    emitJob({ job = "chooh2", kind = "refine", playerId = 2, ref = "chooh2:r1", data = { canisters = 4 } })   -- replayed
+    emitJob({ job = "chooh2", kind = "sell", playerId = 2, ref = "chooh2:s1", data = { canisters = 4 } })     -- other kind
+    emitJob({ job = "netrunner", kind = "refine", playerId = 2, ref = "nr:x", data = { canisters = 4 } })     -- other job
+    emitJob({ job = "chooh2", kind = "refine", playerId = 3, ref = "chooh2:c1", data = { canisters = 9 } })   -- not the runner
     emitJob({ job = "chooh2", kind = "refine", playerId = "2", ref = "chooh2:bad" })                      -- 1 unit, string id
     emitJob({ job = "chooh2", playerId = 2, ref = "x" })                                                     -- malformed
     emitJob("garbage")
     local p2 = c.order.progress
     local row = FXW.decode(liveRow(c.id).data)
-    emitJob({ job = "chooh2", kind = "refine", playerId = 2, ref = "chooh2:r2", data = { count = 6 } })
+    emitJob({ job = "chooh2", kind = "refine", playerId = 2, ref = "chooh2:r2", data = { canisters = 6 } })
     FXW.until_(c, "completed", 40)
     MH.run(1)
-    emitJob({ job = "chooh2", kind = "refine", playerId = 2, ref = "chooh2:r3", data = { count = 6 } })   -- after
+    emitJob({ job = "chooh2", kind = "refine", playerId = 2, ref = "chooh2:r3", data = { canisters = 6 } })   -- after
     local ev = jobEvent("contract_completed")
+    -- The operator sets a reputation (SQL and the cache agree).
+    MH.command("fixer.setrep", 0, { "3", "4" })
+    MH.run(2)
+    local setrep = repOf(C) .. "/" .. tostring(svc().reps[C].score)
     return FXW.result({
+        setrep = setrep,
         low_rep = lowRep, state = c.state, p1 = p1, p2 = p2, saved_progress = row and row.order.progress,
         saved_refs = row and #row.order.refs, progress_end = c.order.progress,
         paid = FXW.balance("cash:" .. B) - cashB0, net = c.net, rep_b = repOf(B),
@@ -573,7 +578,7 @@ function scenarios.crash()
     cmd(2, "take", tostring(c1.seq))
     local cashB0 = FXW.balance("cash:" .. B)
     MH.shared.txStore.down = true
-    emitJob({ job = "chooh2", kind = "refine", playerId = 2, ref = "c:1", data = { count = 10 } })
+    emitJob({ job = "chooh2", kind = "refine", playerId = 2, ref = "c:1", data = { canisters = 10 } })
     MH.run(8)
     local stuck = c1.state
     MH.shared.txStore.down = false
@@ -585,7 +590,7 @@ function scenarios.crash()
     local c2 = npcPost("wakako_chooh2", "wakako", 1500)
     cmd(2, "take", tostring(c2.seq))
     MH.shared.txStore.down = true
-    emitJob({ job = "chooh2", kind = "refine", playerId = 2, ref = "c:2", data = { count = 10 } })
+    emitJob({ job = "chooh2", kind = "refine", playerId = 2, ref = "c:2", data = { canisters = 10 } })
     MH.run(4)
     local before2 = c2.state
     local saved2 = liveRow(c2.id).state

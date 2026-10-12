@@ -73,7 +73,8 @@ C.hubs = {
         -- Rogue's booth at the back of the Afterlife (rp_fixer 1.0 office, AMM floor + 0.1).
         position = { x = -1436.8, y = 977.0, z = 17.0 }, yaw = 83.0, measured = false,
         contact = { position = { x = -1435.6, y = 978.0, z = 16.9 }, yaw = 263.0 },
-        offers = { "afterlife_meds_run", "afterlife_chips", "afterlife_breach", "afterlife_implant", "afterlife_box" },
+        offers = { "afterlife_meds_run", "afterlife_chips", "afterlife_breach", "afterlife_implant", "afterlife_box",
+                   "afterlife_smuggle" },
         keepOpen = 2,
     },
     wakako = {
@@ -82,7 +83,7 @@ C.hubs = {
         -- -651.212, 925.495, 9.390, yaw 95), on Wakako's side of Japantown.
         position = { x = -652.71, y = 925.36, z = 9.39 }, yaw = -85.0, measured = false,
         contact = { position = { x = -653.9, y = 926.6, z = 9.39 }, yaw = -85.0 },
-        offers = { "wakako_ripper_run", "wakako_components", "wakako_chooh2" },
+        offers = { "wakako_ripper_run", "wakako_components", "wakako_chooh2", "wakako_hardware" },
         keepOpen = 2,
     },
     regina = {
@@ -91,7 +92,8 @@ C.hubs = {
         -- -1234.111, 1983.707, 7.973, yaw -116.22), inside the market's safe zone.
         position = { x = -1232.77, y = 1983.04, z = 7.97 }, yaw = 63.8, measured = false,
         contact = { position = { x = -1231.6, y = 1984.3, z = 7.97 }, yaw = 63.8 },
-        offers = { "regina_psycho_kabuki", "regina_psycho_northside", "regina_noodle_drop", "regina_chooh2" },
+        offers = { "regina_psycho_kabuki", "regina_psycho_northside", "regina_noodle_drop", "regina_chooh2",
+                   "regina_patch_up" },
         keepOpen = 2,
     },
 }
@@ -194,8 +196,14 @@ C.templates = {
     },
     afterlife_implant = {
         kind = "job", title = "Install an implant", posters = { npc = true, player = true },
-        brief = "Somebody owes Rogue a favour and wants chrome. Get an implant installed.",
-        job = "ripperdoc", kinds = { "install" }, count = 1, reward = { min = 1200, max = 1800 }, hours = 6,
+        brief = "Somebody owes Rogue a favour and wants chrome. Install an implant in a ripperdoc's chair.",
+        job = "ripperdoc", kinds = { "operation" }, match = { action = "install" }, count = 1,
+        reward = { min = 1200, max = 1800 }, hours = 6, minRep = 3, repGain = 2,
+    },
+    afterlife_smuggle = {
+        kind = "job", title = "A nomad run", posters = { npc = true, player = true },
+        brief = "Rogue has a buyer waiting for a load from the Badlands. Bring a nomad run home.",
+        job = "nomad", kinds = { "deliver" }, count = 1, reward = { min = 1500, max = 2500 }, hours = 8,
         minRep = 3, repGain = 2,
     },
     afterlife_box = {
@@ -217,9 +225,15 @@ C.templates = {
     },
     wakako_chooh2 = {
         kind = "job", title = "Refine 10 CHOOH2", posters = { npc = true, player = true },
-        brief = "Wakako has a buyer for fresh CHOOH2. Refine ten cans at the plant.",
-        job = "chooh2", kinds = { "refine" }, count = 10, countField = "count",
+        brief = "Wakako has a buyer for fresh CHOOH2. Refine ten canisters at the plant.",
+        job = "chooh2", kinds = { "refine" }, count = 10, countField = "canisters",
         reward = { min = 1500, max = 2200 }, hours = 8, minRep = 3, repGain = 2,
+    },
+    wakako_hardware = {
+        kind = "job", title = "Two clean pieces", posters = { npc = true, player = true },
+        brief = "Wakako's people need hardware without a history. Assemble two weapons at a bench.",
+        job = "techie", kinds = { "assemble" }, count = 2, reward = { min = 900, max = 1400 }, hours = 6,
+        minRep = 0, repGain = 1,
     },
     -- Regina's corner
     regina_psycho_kabuki = {
@@ -244,6 +258,12 @@ C.templates = {
         brief = "Regina's driver is dry. Two CHOOH2 fuel cans, at her corner.",
         item = "chooh2", count = 2, drop = "regina", reward = { min = 500, max = 750 }, hours = 4, minRep = 0, repGain = 1,
     },
+    regina_patch_up = {
+        kind = "job", title = "Keep them breathing", posters = { npc = true, player = true },
+        brief = "The psychos leave bodies. Regina pays for every one a medic brings back: stabilise or revive two.",
+        job = "trauma", kinds = { "stabilise", "revive" }, count = 2, reward = { min = 800, max = 1200 }, hours = 6,
+        minRep = 0, repGain = 1,
+    },
     junkyard_psycho = {
         kind = "bounty", title = "Cyberpsycho at the junkyard", posters = { player = true },
         brief = "Scrappers saw a psycho at the Rancho Coronado junkyard.",
@@ -255,7 +275,8 @@ C.templates = {
 C.templateOrder = {
     "afterlife_meds_run", "regina_noodle_drop", "wakako_ripper_run",
     "afterlife_chips", "wakako_components", "regina_chooh2", "afterlife_box",
-    "afterlife_breach", "afterlife_implant", "wakako_chooh2",
+    "wakako_hardware", "regina_patch_up", "afterlife_breach", "afterlife_implant", "wakako_chooh2",
+    "afterlife_smuggle",
     "regina_psycho_kabuki", "regina_psycho_northside", "junkyard_psycho",
 }
 

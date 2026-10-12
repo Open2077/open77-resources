@@ -42,7 +42,7 @@ where to go next.
 |---|---|---|
 | Delivery | A sealed crate appears at the pickup point (Vik's clinic, Noodle Row, the Japantown ripperdoc). Walk to it, **E Pick up**. Carry it on foot to the drop (a fixer point) and press **E Deliver the crate** there. Only you can lift it. A car, a drawn weapon or a fall drops it where you stand: pick it up again. | the crate touches the drop |
 | Retrieval | Bring the named goods (3 data chips, 4 components, 2 CHOOH2 cans, an implant box) to the fixer point named in the contract and press **F Hand over the goods**. Without them nothing starts and you are told what is missing. | the hand-over bar ends |
-| Job order | Do the other job: refine CHOOH2, breach a terminal, have an implant installed. Each step that job reports for you counts once; `/contract` shows `4 / 10`. | the count is reached |
+| Job order | Do the other job: refine CHOOH2 at the plant, breach a terminal, install an implant as a ripperdoc, assemble weapons at a techie bench, stabilise or revive patients, bring a nomad run home. Each step that job reports for you counts once; `/contract` shows `4 / 10`. | the count is reached |
 | Bounty | A cyberpsycho waits at the sighting (Kabuki south of the market, Northside industrial, the Rancho Coronado junkyard). Kill it. | the kill is credited to you |
 
 Paid means: the contract's net reward lands in your cash in one operation, the fixers' cut goes to
@@ -113,7 +113,7 @@ Expected start lines:
 
 ```text
 [rp_fixer] loaded 0 live contracts (), next number 1
-[rp_fixer] ready: 3 fixer points, 13 templates, escrow society fixer_escrow, cut society fixer
+[rp_fixer] ready: 3 fixer points, 16 templates, escrow society fixer_escrow, cut society fixer
 [rp_fixer] contract srv.fx1 open: delivery afterlife_meds_run reward=700 net=595 cut=105 by npc Rogue at afterlife expires in 1 h 59 min
 [rp_fixer] contract srv.fx5 cyberpsycho 4100 at kabuki_south
 ```
@@ -129,6 +129,7 @@ Console commands (restricted: console or ACL `command.fixer.*`):
 | `fixer.job <playerId> <job> <kind> [count] [ref]` | fires the `rp:job:completed` event another job would fire |
 | `fixer.kill <n> <playerId>` | the cyberpsycho of `#n` dies credited to that player (the same path as a real kill) |
 | `fixer.rep <playerId>` | a connected player's reputation |
+| `fixer.setrep <playerId> <score>` | sets a connected player's reputation (one logged change) |
 
 Player commands: `/contracts`, `/contract`, `/contract take <n>`, `/contract drop <n>`,
 `/contract cancel <n>`, `/contract box`, `/contract post <template> <reward> [hours]` (take, box and
@@ -154,7 +155,7 @@ Everything is in `server/config.lua`.
 | `sightings` | 3 | where a bounty's cyberpsycho spawns |
 | `psycho` | Maelstrom combat record, 400 health | record, health, leash, engage distance, credit window, respawn, body removal |
 | `contactNpc` | the passive alias `civilian_female_relaxed_01` | the NPC standing at each board; puppet records of Rogue, Wakako and Regina are listed to try |
-| `templates`, `templateOrder` | 13 | the contract types (fields documented in the file) |
+| `templates`, `templateOrder` | 16 | the contract types (fields documented in the file) |
 
 ### Places to walk
 
@@ -179,7 +180,7 @@ The contacts stand about 1.6 m beside each board (`hubs.<key>.contact`), on the 
 ```lua
 -- Another job reports a committed step a contract may ask for (server side):
 TriggerEvent("rp:job:completed", { job = "chooh2", kind = "refine", playerId = 3, ref = "<the step's opId>",
-    data = { count = 4 } })
+    data = { canisters = 4 } })
 -- A paid contract (fired by rp_fixer):
 -- { job = "fixer", kind = "contract_completed", playerId, ref = "fixer.pay:<id>",
 --   data = { contract, seq, contractKind, template, hub, reward, net, cut, poster } }
@@ -196,8 +197,17 @@ Open77.exports.call("rp_fixer", "postContract", { template = "regina_psycho_kabu
 A job order counts an event when its `job` and `kind` match the template (`kinds` may list
 several, `"*"` is any), every `match` field equals the event's `data` field, and its `ref` was not
 counted before for that contract. `countField` names a `data` field holding a count (CHOOH2:
-`count`); otherwise each event counts 1. Only the runner's own events count, and only while the
-contract is taken.
+`canisters`); otherwise each event counts 1. Only the runner's own events count, and only while
+the contract is taken. The shipped job orders read:
+
+| Template | `job` | `kind` | Counted |
+|---|---|---|---|
+| `wakako_chooh2` | `chooh2` | `refine` | `data.canisters`, up to 10 |
+| `afterlife_breach` | `netrunner` | `breach` | 1 |
+| `afterlife_implant` | `ripperdoc` | `operation` with `data.action = "install"` | 1 |
+| `wakako_hardware` | `techie` | `assemble` | 2 |
+| `regina_patch_up` | `trauma` | `stabilise` or `revive` | 2 |
+| `afterlife_smuggle` | `nomad` | `deliver` | 1 |
 
 ## Limits
 
