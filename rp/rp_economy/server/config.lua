@@ -70,14 +70,14 @@ EconomyConfig.mint = {
         rp_medic = 5000,           -- refunds
         rp_ncpd = 5000,            -- refunds
         rp_netrunner = 30000,      -- breach bounties
+        rp_techie = 30000,         -- shop sales of weapon mods and cyberware parts
         rp_chooh2 = 30000,         -- CHOOH2 canister sales at the depot
-        rp_nomade = 100000,        -- crate delivery pay, convoy bonus, society share
+        rp_nomade = 100000,        -- crate sales to the fence (rp_economy `sale`), the camp's share
         rp_ripperdoc = 20000,      -- refunds
         rp_salvage = 30000,        -- C1 salvage: scrap and crate sales to the NPC buyer (sale), society share
         rp_selftest = 1000,        -- the boot probe (+100 / -100 on society selftest)
         rp_shop = 100000,          -- v1 vehicle sell-back (duplicate economy, see README)
         rp_shops = 30000,          -- robbery loot, refunds
-        rp_trauma = 10000,         -- refunds
         rp_vigile = 20000,         -- corpo guard contracts
     },
     -- This resource's own sources (sys:rp_economy:<label>).
