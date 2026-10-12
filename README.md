@@ -29,7 +29,7 @@ visuals, holding versus drinking, permissions and current first-person limits.
 | Group | Resources |
 |---|---|
 | Core | `rp_config` (live tunables, `/rpconfig`), `rp_identity`, `rp_economy` (SQL wallets, payday), `rp_inventory` (WebUI backpack, stashes), `rp_jobs` (jobs, grades, societies), `rp_hud`, `rp_chat` (`/me`, `/do`, proximity), `rp_logs`, `rp_whitelist`, `rp_admin` |
-| Jobs | `rp_mecano` (repair, paint, refuel, invoices, impound), `rp_ferrailleur` (scrapper), `rp_bar`, `rp_ripperdoc`, `rp_medic`, `rp_trauma` (death, respawn at Vik's, bills), `rp_ncpd` (cuff, search, fines, jail) + `rp_mdt`, `rp_netrunner`, `rp_fixer`, `rp_nomade` (crate convoys: carry animation, cargo in the truck bed, GPS route), `rp_delamain` (taxi) |
+| Jobs | `rp_mecano` (repair, paint, refuel, invoices, impound), `rp_ferrailleur` (scrapper) or its successor `rp_salvage` (opt-in pilot C1: wrecks, crates, truck, buyer on the world-interaction libraries; never both), `rp_bar`, `rp_ripperdoc`, `rp_medic`, `rp_trauma` (death, respawn at Vik's, bills), `rp_ncpd` (cuff, search, fines, jail) + `rp_mdt`, `rp_netrunner`, `rp_fixer`, `rp_nomade` (crate convoys: carry animation, cargo in the truck bed, GPS route), `rp_delamain` (taxi) |
 | World | `rp_zones`, `rp_ambiance`, `rp_shops` (kiosks + vendors), `rp_bank` (ATMs), `rp_garage` (plates, keys, job orders, warrants: `canAccess`), `rp_cargo` (opt-in: cargo layouts and slots on the A13 coordinator), `rp_housing` (five real flats, doors found through `open77_doors`), `rp_needs` (hunger/thirst/fatigue), `rp_phone`, `rp_radio`, `rp_vigile` (security), `rp_fireworks` (synchronized shows) |
 | Crime | `rp_crime` (lockpick, shop robbery, dealer, fence), `rp_gangs` (territories, street market) |
 | Spectacle | `rp_fireworks` (synchronized shows), `rp_drones` (a drone light show: real drone bodies held in the sky, an OPEN//77 sign, cut and flip-book choreography) |
@@ -106,10 +106,12 @@ database connection string is the server's (`OP77_DATABASE_CONNECTION`).
 - `PLAN.html` — the delivery plan the set was built from
 - `docs/world-interaction/` — the world-interaction rows done in this repository:
   [B8 compatibility audit](docs/world-interaction/b8-compat-audit.md),
-  [A9 vehicle access and cargo](docs/world-interaction/a9-cargo.md)
+  [A9 vehicle access and cargo](docs/world-interaction/a9-cargo.md),
+  [C1 salvage pilot](docs/world-interaction/c1-salvage.md)
 - `tests/` — offline checks, no game and no database:
   `python -m unittest discover -s tests -p "test_compat*.py"` (B8 contracts, `rp_economy`) and
-  `-p "test_a9*.py"` (`rp_garage` access matrix, `rp_cargo`); they need a Lua 5.4 engine
+  `-p "test_a9*.py"` (`rp_garage` access matrix, `rp_cargo`) and `-p "test_c1*.py"` (`rp_salvage` on
+  the real open77_actions / open77_containers / open77_transactions); they need a Lua 5.4 engine
   (`lupa`, or the KeraLua `lua54.dll`, see `tests/compat/luahost.py`)
 
 ## License
