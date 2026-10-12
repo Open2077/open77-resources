@@ -949,8 +949,20 @@ AddEventHandler("onResourceStart", function(name)
         -- standing, by their next alive phase otherwise. A player still connecting is resumed by
         -- onPlayerReady.
         local okRead, read = pcall(Open77.players.get, id)
-        if okRead and type(read) == "table" and read.ready ~= false and resumeDown(id, "restart") then
-            CreateThread(function() holdIfAlive(id) end)
+        if okRead and type(read) == "table" and read.ready ~= false then
+            -- The coordinator may not answer subjectOf yet while the resources restart (measured
+            -- live: a stable patient was not held again and healed back to full): retried for 30 s.
+            CreateThread(function()
+                for _ = 1, 30 do
+                    if down[id] or not Open77.players.get(id) then break end
+                    if resumeDown(id, "restart") then
+                        holdIfAlive(id)
+                        break
+                    end
+                    if subjectFor(id) then break end   -- a subject and nothing saved: not down
+                    Wait(1000)
+                end
+            end)
         end
     end
     purgeStaleDowns()
@@ -1001,12 +1013,30 @@ local function healedElsewhere(id, entry)
     return true
 end
 
+-- A held body whose wounded pose is not playing (refused while the body was still being moved
+-- into place, or ended by a server move): played again, every 3 s at most. Measured live: the
+-- second alive phase of a respawn re-held a patient while the body was in transit, the pose was
+-- refused `player_unavailable` and observers saw the patient standing for the rest of the down.
+local function keepDownPose(id, entry)
+    if not entry.held or entry.applying or (entry.poseRetryAt or 0) > nowMono() then return end
+    if not stageAnimationsApi() or type(Open77.animations.current) ~= "function" then return end
+    local ok, current = pcall(Open77.animations.current, id)
+    if not ok then return end
+    local playbackId = entry.pose and entry.pose.playbackId
+    if type(current) == "table" and playbackId and current.playbackId == playbackId then return end
+    entry.poseRetryAt = nowMono() + 3
+    if entry.pose then stageRelease(id, entry.pose); entry.pose = nil end
+    entry.pose = stageHold(id, "down")
+    log("player %d: wounded pose played again (%s)", id, playbackId and "it had ended" or "it had been refused")
+end
+
 -- Countdown reminders for down players.
 CreateThread(function()
     while true do
         Wait(1000)
         for id, entry in pairs(down) do
           if not healedElsewhere(id, entry) then
+            keepDownPose(id, entry)
             local left = secondsLeft(entry)
             if left == 0 and not entry.announcedOpen then
                 entry.announcedOpen = true
@@ -1909,10 +1939,13 @@ AddEventHandler("onResourceStop", function(name)
     for id, entry in pairs(down) do
         if entry.pose then stageRelease(id, entry.pose) end
         Open77.players.setFrozen(id, false)
-        Open77.stats.setHealthRegenEnabled(id, true)
         if persistEnabled() and entry.saved then
+            -- Regeneration stays off: measured live, a stable patient regenerated to full health
+            -- in the seconds of a restart. The next start holds them again (and sets it back on
+            -- when they get up).
             kept = kept + 1
         else
+            Open77.stats.setHealthRegenEnabled(id, true)
             Open77.stats.restoreHealth(id)
         end
         TriggerClientEvent("rp_trauma:hold", id, false, 0)

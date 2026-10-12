@@ -105,7 +105,8 @@ class TraumaSources(unittest.TestCase):
         self.assertNotIn('dependency "rp_', code)
         perms = sorted(re.findall(r'"([^"]+)"', re.search(r"permissions\s*\{([^}]*)\}", code).group(1)))
         self.assertEqual(perms, sorted([
-            "players.animations.control", "world.props", "players.stats.read", "players.stats.apply",
+            "players.animations.control", "players.animations.read", "world.props", "players.stats.read",
+            "players.stats.apply",
             "players.life.read", "players.life.revive", "players.life.respawn", "players.life.freeze",
             "players.teleport", "world.vehicles", "network.events", "database.access", "input.blockAll",
             "ui.vanilla.map"]))
@@ -380,9 +381,10 @@ class TraumaService(unittest.TestCase):
 
     def test_down_survives_a_resource_restart(self):
         r = self.run_ok("down_resource_restart")
-        # the stop unfreezes and releases the client hold, without healing; the saved state stays
+        # the stop unfreezes and releases the client hold, without healing or regenerating; the
+        # saved state stays
         self.assertEqual((r["low_health"], r["stopped_frozen"], r["stopped_regen"], r["stopped_unhold"]),
-                         ("5", "false", "true", "false"))
+                         ("5", "false", "false", "false"))
         self.assertEqual((r["stopped_health"], r["health_between"], r["stopped_saved"], r["stopped_logged"]),
                          ("5", "5", "true", "true"))
         # the start holds the body down again, same spot, same deadline, a new call, said once

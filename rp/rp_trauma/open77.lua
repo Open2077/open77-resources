@@ -43,9 +43,12 @@ dependency "open77_props >=0.1.0"
 --   ui.vanilla.map        Open77.blips.* (client: the down-player pin on a medic's map)
 --   players.animations.control  Open77.animations.play / stop (the medic's kneel, the wounded pose of a
 --                         down player, the /911 dial; Config.Stage)
+--   players.animations.read     Open77.animations.current (a held body's wounded pose is played
+--                         again when it stopped)
 --   world.props           Open77.props.create / attach / remove (the injector and kit shown while treating)
 permissions {
     "players.animations.control",
+    "players.animations.read",
     "world.props",
     "players.stats.read",
     "players.stats.apply",
