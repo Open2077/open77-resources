@@ -653,7 +653,9 @@ function scenarios.npc_board()
     local items = {}
     for id, def in pairs(FXW.ITEMS) do if id ~= "implant_box_arms" then items[id] = def end end
     FXW.boot({ npcBoard = true, items = items })
+    -- Three offers and room for three: the box is always tried, the two others are posted.
     FXW.cfg().hubs.afterlife.offers = { "afterlife_box", "afterlife_chips", "afterlife_meds_run" }
+    FXW.cfg().hubs.afterlife.keepOpen = 3
     FXW.join(2, B, "Runner Ben", near(FXW.hub("regina"), -0.6))
     MH.run(40)
     local boxPosted = false
