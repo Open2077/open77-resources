@@ -879,3 +879,21 @@ The plan's review scanned `C:\Games\cyberm\rp-scripts`, an older snapshot (2026-
 > a lab-only guard.
 >
 > **Open:** whether `.await` raises on a failed statement; database write ordering; runtime vehicle-id reuse.
+
+---
+
+## 10. Contract changes after this audit
+
+Appended, never rewritten: each later row records here what it changed in the frozen contract.
+
+- **2026-10-12, rows B1/B2** (`wi/b1b2-inventory`, `docs/world-interaction/b1b2-inventory.md`).
+  - **Schema.** One new table, `rp_inventory_migrations` (per-subject import markers, transactions
+    backend only), added to `tests/compat/schema-snapshot.json`. The two legacy tables are unchanged and
+    are never written by the transactions backend.
+  - **Exports.** The seven frozen `rp_inventory` exports keep their signatures and tokens on both
+    backends (`tests/test_compat_inventory.py`, `test_existing_exports_answer_the_same_on_both_backends`).
+    `add`/`remove` gain an optional fourth argument (`meta`); `define` gains a third return value
+    (`details`). New exports are additive; no consumer calls them yet, so `FROZEN_SURFACE` is unchanged.
+  - **Behaviour deliberately fixed (5.1).** `define` refuses colliding ids (`details.collisions`), ids
+    over 32 bytes and ids containing `__`. No collision exists in the pack (all nine definers register
+    every item unchanged, offline).

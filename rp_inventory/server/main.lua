@@ -1,21 +1,47 @@
 -- rp_inventory / server: the authoritative inventory of a Night City RP server.
 --
 -- Everything that moves an item runs here. Clients only render and request.
--- Exports are synchronous-safe (they never yield): the in-memory cache is the
--- truth for a connected player, and every change is written straight through
--- to SQL (or the kvp store when no database answers). The /inv panel is a
--- WebUI page (web/index.html) fed by rp_inventory:panel and driven by
--- rp_inventory:intent; every intent lands in the same functions as the commands.
+-- The /inv panel is a WebUI page (web/index.html) fed by rp_inventory:panel and
+-- driven by rp_inventory:intent; every intent lands in the same functions as the commands.
+--
+-- Two backends, chosen once per boot (convar `rp_inventory_backend`, else
+-- RpInventoryConfig.backend), never switched while running:
+--   legacy        the original store: the in-memory cache is the truth for a connected player
+--                 and every change is written straight through to SQL (or the kvp store when
+--                 no database answers). Kept verbatim as the rollback path.
+--   transactions  a facade over open77_transactions (world-interaction B2, A13 contract):
+--                 char:<identifier> pockets, stash:<id>, veh:<plate>:<part>, world:<id>;
+--                 synchronous exports are write-behind, the *Async exports are one atomic
+--                 operation with a receipt; never a KVP fallback; legacy rows are imported
+--                 once per subject (server/migration.lua).
+-- Item definitions go through the B1 schema (shared/schema.lua) in both backends.
 
 local RESOURCE = GetCurrentResourceName()
 local Items = RpInventoryItems
 local Config = RpInventoryConfig
+local Schema = RpItemSchema
+local Accounts = RpInvAccounts
+
+local BACKEND = GetConvar("rp_inventory_backend", Config.backend or "legacy")
+if BACKEND ~= "transactions" then BACKEND = "legacy" end
+local TX = BACKEND == "transactions"
+
+-- B1: the built-in table is normalised in place, so Items[id] readers see the v1 definition.
+local Registry = Schema.newRegistry(Items, { freezeShape = TX, builtin = RESOURCE })
+local builtinRejected = Registry:importBuiltins()
 
 local inventories = {}   -- [playerId] = { kind = "player", id = playerId, identifier, items = {}, capacity, loaded }
 local stashes = {}       -- [stashId]  = { kind = "stash", id = stashId, items = {}, capacity, loaded }
 local drops = {}         -- [tostring(lootId)] = { itemId, count }
 local dbReady = false
 local dbFailReason = nil
+
+-- Transactions backend state (unused by the legacy backend).
+local Facade = nil       -- RpInvFacade instance
+local Migration = nil    -- RpInvMigration instance
+local charPlayers = {}   -- [account] = { [playerId] = true }
+local stashByAccount = {} -- [account] = stashId
+local authorizers = {}   -- [scope] = { resource, export }
 
 -- Panel refresh hooks, defined with the panel code below and forward-declared
 -- so the primitive mutations can schedule a push whoever caused the change
@@ -62,6 +88,19 @@ local REASONS = {
     loot_unavailable = "The loot system is not running. Nothing dropped.",
     dialog_active = "Close the other dialog first.",
     progress_active = "Finish what you are doing first.",
+    -- transactions backend
+    store_unavailable = "The pockets service is unavailable. Nothing moved; try again in a minute.",
+    in_doubt = "The pockets service is slow to confirm. Check your pockets in a moment before retrying.",
+    busy = "Still saving your last change. Try again in a second.",
+    stack_limit = "That stack is full.",
+    unknown_meta_field = "That item does not take that property.",
+    invalid_meta = "That item property is not valid.",
+    meta_unsupported = "This server's pockets cannot hold item properties.",
+    not_migrated = "Your pockets are waiting for their import. Tell an admin.",
+    legacy_diverged = "Your pockets need an admin check before they open (the old store changed).",
+    migration_version_mismatch = "Your pockets were imported by a newer version. Tell an admin.",
+    not_authorized = "You are not allowed to open that.",
+    conflict = "Your pockets changed meanwhile. Try again.",
 }
 
 local function explain(reason)
@@ -91,6 +130,7 @@ local function findItem(query)
 end
 
 local function containerWeight(c)
+    if c.view then return Facade:weightG(c.view) / 1000 end
     local total = 0
     for itemId, n in pairs(c.items) do
         local def = Items[itemId]
@@ -102,7 +142,14 @@ end
 local function canCarry(c, itemId, n)
     local def = Items[itemId]
     if not def then return false end
+    if c.view then return Facade:usedG(c.view) + def.weightG * n <= c.view.capacityG end
     return containerWeight(c) + def.weight * n <= c.capacity + 1e-6
+end
+
+-- The `sys:` account a legacy credit or debit is journaled against: the calling resource, so
+-- the coordinator's journal says who minted or burned (A13 12.6 mint allowlist).
+local function sysOf(name)
+    return Accounts.sys(name or "unknown") or "sys:unknown"
 end
 
 local function sortedEntries(c)
@@ -114,6 +161,7 @@ local function sortedEntries(c)
                 id = itemId, label = def.label, count = n, weight = def.weight,
                 total = def.weight * n, usable = def.usable == true, illegal = def.illegal == true,
                 category = def.category or (def.effect and def.effect.kind) or "misc",
+                unique = def.unique or nil,
             }
         end
     end
@@ -261,8 +309,191 @@ local function loadContainer(c)
 end
 
 ---------------------------------------------------------------------------
+-- Transactions backend plumbing (B2). Nothing here runs in the legacy backend.
+---------------------------------------------------------------------------
+
+-- One open77_transactions export, awaited. A refused dispatch or a lost answer is reported as
+-- coordinator_unavailable; `ambiguous` says the request may have run (A13 2.6: in doubt).
+local function txCall(name, ...)
+    local pending, why = Open77.exports.call("open77_transactions", name, ...)
+    if not pending then
+        return nil, "coordinator_unavailable", { dispatch = why, retryable = true, ambiguous = false }
+    end
+    local r = table.pack(pending:await())
+    if r[1] == nil and type(r[2]) == "string" and r[2]:find("^export_") then
+        local ambiguous = r[2] == "export_timeout" or r[2] == "export_resource_stopped"
+        return nil, "coordinator_unavailable", { dispatch = r[2], retryable = true, ambiguous = ambiguous }
+    end
+    return table.unpack(r, 1, r.n)
+end
+
+-- One database call (callback form) with a deadline: value | nil, reason. Yields.
+local function dbCall(method, sql, params)
+    local p = promise.new()
+    local timer = SetTimeout(15000, function() p:reject("database_timeout") end)
+    local fn = method == "query" and Open77.database.query or Open77.database.update
+    local accepted, refusal = fn(sql, params or {}, function(result, reason)
+        ClearTimeout(timer)
+        p:resolve({ value = result, reason = reason })
+    end)
+    if accepted == false then
+        ClearTimeout(timer)
+        return nil, refusal or "database_refused"
+    end
+    local box, reason = p:await()
+    if type(box) ~= "table" then return nil, reason or "database_failed" end
+    if box.reason then return nil, box.reason end
+    return box.value
+end
+
+local function playersOf(account)
+    local list = {}
+    for playerId in pairs(charPlayers[account] or {}) do list[#list + 1] = playerId end
+    table.sort(list)
+    return list
+end
+
+-- The facade says a view changed by itself (reload, lost write-behind, committed operation):
+-- refresh the counts the legacy code reads, raise rp_inventory:changed, push the panels.
+local function onViewChanged(view, changes)
+    for _, playerId in ipairs(playersOf(view.account)) do
+        local inv = inventories[playerId]
+        if inv and inv.view == view then
+            inv.items = Facade:counts(view)
+            for _, itemId in ipairs((function()
+                local keys = {}
+                for k in pairs(changes) do keys[#keys + 1] = k end
+                table.sort(keys)
+                return keys
+            end)()) do
+                TriggerEvent("rp_inventory:changed", playerId, itemId, changes[itemId])
+            end
+            if refreshPanel then refreshPanel(playerId) end
+        end
+    end
+    local stashId = stashByAccount[view.account]
+    local stash = stashId and stashes[stashId]
+    if stash and stash.view == view then
+        stash.items = Facade:counts(view)
+        if refreshStashViewers then refreshStashViewers(stashId) end
+    end
+end
+
+if TX then
+    Facade = RpInvFacade.new({
+        call = txCall, spawn = CreateThread, wait = Wait,
+        now = function() return Open77.time.monotonic() * 1000 end,
+        log = function(fmt, ...) print(("[rp_inventory] " .. fmt):format(...)) end,
+        registry = Registry, resource = RESOURCE, onView = onViewChanged,
+    })
+    Migration = RpInvMigration.new({
+        db = dbCall, call = txCall, registry = Registry, facade = Facade,
+        log = function(fmt, ...) print(("[rp_inventory] " .. fmt):format(...)) end,
+        now = function() return Open77.time.unix() end,
+        importUnknown = Config.importUnknownItems == true,
+        requireStoreInfo = Config.requireDurableStore ~= false,
+    })
+end
+
+-- Imports a subject's legacy rows once (when the server has a database). Yields.
+-- Returns true | nil, reason.
+local function ensureMigrated(account, kind, key, capacityG)
+    if not waitForDatabase(10000) then
+        local ready, state = Open77.database.isReady()
+        if not ready and state == "database_unavailable" then return true end -- no database: no legacy rows
+        return nil, "store_unavailable"
+    end
+    if Config.migrateOnLoad == false then
+        local sourceOk, sourceWhy = Migration:checkSource()
+        if not sourceOk then return nil, sourceWhy end
+        local marker = Migration:marker(account)
+        if marker == nil then return nil, "store_unavailable" end
+        if marker then return true end
+        local rows = Migration:legacyRows(kind, key)
+        if rows and #rows == 0 then return true end
+        return nil, "not_migrated"
+    end
+    local result, reason, info = Migration:ensure(account, kind, key, capacityG)
+    -- Definers re-register their items when rp_inventory starts, concurrently with the first
+    -- player loads: give them a moment before refusing a subject over an undefined id.
+    for _ = 1, 3 do
+        if result or reason ~= "unknown_items" then break end
+        Wait(5000)
+        result, reason, info = Migration:ensure(account, kind, key, capacityG)
+    end
+    if not result then
+        log("%s not loaded: %s %s", account, tostring(reason), info and Schema.encode(info) or "")
+        return nil, reason
+    end
+    return true
+end
+
+-- Authorization hooks (B2): a resource that owns access rules registers one scope
+-- (`veh`, `world`, `stash`, `stash:<prefix>` such as `stash:home`) through registerAuthorizer.
+-- Opening a trunk on screen is never authorization: vehicle scopes fail closed when nobody
+-- registered; any registered scope fails closed when its owner does not answer `true`.
+local function scopeOfStash(stashId)
+    local prefix = stashId:match("^([^:]+):")
+    if prefix and authorizers["stash:" .. prefix] then return "stash:" .. prefix end
+    return "stash"
+end
+
+local function authorize(scope, request, required)
+    local auth = authorizers[scope]
+    if not auth then
+        if required then return nil, "not_authorized", { detail = "no_authorizer", scope = scope } end
+        return true
+    end
+    local pending = Open77.exports.call(auth.resource, auth.export, request)
+    if not pending then return nil, "not_authorized", { detail = "authorizer_unavailable", scope = scope } end
+    local allowed, reason = pending:await()
+    if allowed == true then return true end
+    return nil, "not_authorized", { detail = type(reason) == "string" and reason or "refused", scope = scope }
+end
+
+---------------------------------------------------------------------------
 -- Player containers
 ---------------------------------------------------------------------------
+
+-- Transactions backend: import the legacy rows once, then open char:<identifier>.
+local function loadPlayerTx(playerId, inv)
+    local account, why = Accounts.char(inv.identifier)
+    if not account then
+        inv.error = why
+        log("player %d inventory not loaded: %s", playerId, tostring(why))
+        return nil
+    end
+    inv.account = account
+    if not Facade:awaitReady(15000) then
+        inv.error = "store_unavailable"
+        tell(playerId, explain("store_unavailable"))
+        return nil
+    end
+    local capacityG = math.floor(Config.maxCarryWeight * 1000 + 0.5)
+    local ok, reason = ensureMigrated(account, "char", inv.identifier, capacityG)
+    if inventories[playerId] ~= inv then return nil end
+    if not ok then
+        inv.error = reason
+        tell(playerId, explain(reason))
+        return nil
+    end
+    local view, vreason = Facade:load(account, capacityG)
+    if inventories[playerId] ~= inv then return nil end
+    if not view then
+        inv.error = vreason
+        tell(playerId, "Your pockets could not be read (" .. tostring(vreason) .. "). Reconnect in a minute.")
+        return nil
+    end
+    charPlayers[account] = charPlayers[account] or {}
+    charPlayers[account][playerId] = true
+    inv.view = view
+    inv.items = Facade:counts(view)
+    inv.loaded = true
+    inv.source = "transactions"
+    log("player %d inventory loaded from open77_transactions (%s): %d item kinds, %.1f kg", playerId, account,
+        #sortedEntries(inv), containerWeight(inv))
+    return inv
+end
 
 local function loadPlayer(playerId)
     local identifier = Open77.players.identifier(playerId)
@@ -273,6 +504,7 @@ local function loadPlayer(playerId)
     local inv = { kind = "player", id = playerId, identifier = identifier, items = {},
                   capacity = Config.maxCarryWeight, loaded = false }
     inventories[playerId] = inv
+    if TX then return loadPlayerTx(playerId, inv) end
     loadContainer(inv)
     if inventories[playerId] ~= inv then return nil end  -- left while loading
     if not inv.loaded then
@@ -293,23 +525,44 @@ local function resolvePlayer(playerId)
     return inv, playerId
 end
 
+-- Metadata on a legacy store: validated (unknown / invalid refused), but only the plain stack
+-- can be stored, because rp_inventory_items has no metadata column.
+local function legacyMetaProblem(itemId, meta)
+    if meta == nil then return nil end
+    local asset, canonical = Registry:assetFor(itemId, meta)
+    if not asset then return canonical end
+    local def = Items[itemId]
+    if def.unique or asset ~= itemId then return "meta_unsupported" end
+    return nil
+end
+
 -- The two primitive mutations. Both are synchronous and both log + persist + notify.
-local function creditPlayer(playerId, itemId, n, why)
+-- `meta` (B1 metadata) and `source` (the sys: account a transactions credit is journaled
+-- against) are optional.
+local function creditPlayer(playerId, itemId, n, why, meta, source)
     local inv, reason = resolvePlayer(playerId)
     if not inv then return nil, reason end
     local def = Items[itemId]
     if not def then return nil, "unknown_item" end
     if not isCount(n) then return nil, "invalid_count" end
     if not canCarry(inv, itemId, n) then return nil, "too_heavy" end
-    inv.items[itemId] = (inv.items[itemId] or 0) + n
-    persist(inv, itemId)
+    if inv.view then
+        local ok, wreason = Facade:credit(inv.view, itemId, n, meta, source or sysOf("unknown"))
+        if not ok then return nil, wreason end
+        inv.items = Facade:counts(inv.view)
+    else
+        local metaProblem = legacyMetaProblem(itemId, meta)
+        if metaProblem then return nil, metaProblem end
+        inv.items[itemId] = (inv.items[itemId] or 0) + n
+        persist(inv, itemId)
+    end
     log("player %d +%d %s total=%d%s", inv.id, n, itemId, inv.items[itemId], why and (" " .. why) or "")
     TriggerEvent("rp_inventory:changed", inv.id, itemId, n)
     if refreshPanel then refreshPanel(inv.id) end
     return true
 end
 
-local function debitPlayer(playerId, itemId, n, why)
+local function debitPlayer(playerId, itemId, n, why, sink, meta)
     local inv, reason = resolvePlayer(playerId)
     if not inv then return nil, reason end
     local def = Items[itemId]
@@ -318,8 +571,17 @@ local function debitPlayer(playerId, itemId, n, why)
     local have = inv.items[itemId] or 0
     if have < n then return nil, "not_enough" end
     local left = have - n
-    inv.items[itemId] = left > 0 and left or nil
-    persist(inv, itemId)
+    if inv.view then
+        local ok, wreason = Facade:debit(inv.view, itemId, n, meta, sink or sysOf("unknown"))
+        if not ok then return nil, wreason end
+        inv.items = Facade:counts(inv.view)
+        left = inv.items[itemId] or 0
+    else
+        local metaProblem = legacyMetaProblem(itemId, meta)
+        if metaProblem then return nil, metaProblem end
+        inv.items[itemId] = left > 0 and left or nil
+        persist(inv, itemId)
+    end
     log("player %d -%d %s total=%d%s", inv.id, n, itemId, left, why and (" " .. why) or "")
     TriggerEvent("rp_inventory:changed", inv.id, itemId, -n)
     if refreshPanel then refreshPanel(inv.id) end
@@ -348,35 +610,46 @@ end
 
 ---------------------------------------------------------------------------
 -- Exports (phase 1 contract): has add remove count list openStash
--- Synchronous callers (exports.rp_inventory:add(...)) are fine: nothing here yields.
+-- Synchronous callers (exports.rp_inventory:add(...)) are fine: nothing here yields. In the
+-- transactions backend add/remove are write-behind (A13 7.4 decision (i)).
 ---------------------------------------------------------------------------
 
--- define(items) -> registered, rejected | nil, reason
+-- Client catalogue push and coordinator definitions, coalesced after a burst of define calls.
+local scheduleCatalogue -- forward: defined with the catalogue code below
+local definitionsPushPending = false
+local function definitionsChanged()
+    if scheduleCatalogue then scheduleCatalogue() end
+    if TX and not definitionsPushPending then
+        definitionsPushPending = true
+        SetTimeout(250, function()
+            definitionsPushPending = false
+            if Facade:isReady() then Facade:_pushDefinitions() end
+        end)
+    end
+end
+
+-- define(items) -> registered, rejected, details
 -- Lets another resource declare its own items (a crowbar, a boxed implant, a quickhack...) in
--- the same shape as shared/items.lua. Idempotent: a definer calls it from its onResourceStart
--- and again when rp_inventory itself restarts (its VM restarts with the built-in table only;
--- rows of undefined ids stay in SQL and come back after the next definition + load).
+-- the shape of shared/items.lua, plus the optional B1 v1 fields (weightG, maxStack, unique,
+-- metadata, durability, serial, quality, prop, hand, loot). Idempotent for its definer: call it
+-- from onResourceStart and again when rp_inventory itself restarts (its VM restarts with the
+-- built-in table only; rows of undefined ids stay in the store and come back after the next
+-- definition). An id owned by another definer is REFUSED (details.collisions), never overwritten.
+-- `registered` and `rejected` stay counts (rp_selftest, rp_crime and rp_fixer read them).
 exports("define", function(items)
     if type(items) ~= "table" then return nil, "invalid_items" end
-    local registered, rejected = 0, 0
-    for id, def in pairs(items) do
-        if type(id) == "string" and id:match("^[%l%d_]+$") and type(def) == "table"
-            and type(def.label) == "string" and #def.label > 0 and #def.label <= 48
-            and type(def.weight) == "number" and def.weight >= 0 and def.weight <= 100 then
-            Items[id] = {
-                label = def.label, weight = def.weight, usable = def.usable == true,
-                illegal = def.illegal == true, permit = def.permit,
-                effect = type(def.effect) == "table" and def.effect or nil,
-                record = def.record, visual = def.visual, definedBy = GetInvokingResource(),
-                category = (type(def.category) == "string" and def.category:match("^%l+$")) and def.category or nil,
-            }
-            registered = registered + 1
-        else
-            rejected = rejected + 1
-        end
+    local definer = GetInvokingResource() or "unknown"
+    local registered, rejected, details = Registry:define(items, definer)
+    if #details.collisions > 0 then
+        log("define by %s: REFUSED colliding id(s) %s (owned by another resource)", definer,
+            table.concat(details.collisions, ","))
+    end
+    if #details.warnings > 0 then
+        log("define by %s: ignored unknown field(s) %s", definer, table.concat(details.warnings, ","))
     end
     log("define: %d item(s) registered, %d rejected", registered, rejected)
-    return registered, rejected
+    if registered > 0 then definitionsChanged() end
+    return registered, rejected, details
 end)
 
 exports("has", function(playerId, itemId, count)
@@ -386,12 +659,17 @@ exports("has", function(playerId, itemId, count)
     return (inv.items[itemId] or 0) >= n
 end)
 
-exports("add", function(playerId, itemId, count)
-    return creditPlayer(playerId, itemId, tonumber(count) or 1, "(export add)")
+-- add(playerId, itemId, count?, meta?) -- meta is the optional B1 metadata (stack variant or
+-- instance fields); unknown or invalid metadata is refused.
+exports("add", function(playerId, itemId, count, meta)
+    return creditPlayer(playerId, itemId, tonumber(count) or 1, "(export add)", meta,
+        sysOf(GetInvokingResource()))
 end)
 
-exports("remove", function(playerId, itemId, count)
-    return debitPlayer(playerId, itemId, tonumber(count) or 1, "(export remove)")
+-- remove(playerId, itemId, count?, meta?) -- without meta: the plain stack first, then the
+-- variants, then the most worn instances.
+exports("remove", function(playerId, itemId, count, meta)
+    return debitPlayer(playerId, itemId, tonumber(count) or 1, "(export remove)", sysOf(GetInvokingResource()), meta)
 end)
 
 exports("count", function(playerId, itemId)
@@ -533,7 +811,7 @@ local function useItem(playerId, itemId)
     if (inv.items[itemId] or 0) < 1 then return nil, "not_enough" end
     local ok, why = applyEffect(playerId, itemId, def)
     if not ok then return nil, why end
-    local debited, dreason = debitPlayer(playerId, itemId, 1, "(used)")
+    local debited, dreason = debitPlayer(playerId, itemId, 1, "(used)", "sys:used")
     if not debited then return nil, dreason end
     TriggerEvent("rp_inventory:used", playerId, itemId)
     return true
@@ -556,6 +834,88 @@ local function createDrop(def, itemId, count, pos)
     })
 end
 
+-- Transactions backend: a drop is a world:<id> container that holds the goods; the native loot
+-- is only its projection (A13 6.1, option b). The pickup credit is conditional on the picker's
+-- capacity, and a refused pickup re-projects the drop where it lay, not at the picker's feet.
+-- The projection does not survive an rp_inventory restart (the loot registry is in memory, A13
+-- F4): the goods then stay, conserved and journaled, in their world: container until a
+-- projection owner (A6) re-creates it. A restart no longer destroys them.
+local function dropItemsTx(inv, playerId, def, itemId, count, pos)
+    local account, why = Accounts.world(Facade:mintWorldId())
+    if not account then return nil, why end
+    local view, vreason = Facade:load(account, math.max(1, def.weightG * count))
+    if not view then return nil, vreason end
+    local lines, preason = Facade:planMove(inv.view, account, itemId, count)
+    if not lines then Facade:release(account); return nil, preason end
+    local dropId, lreason = createDrop(def, itemId, count, pos)
+    if not dropId then Facade:release(account); return nil, lreason or "loot_unavailable" end
+    local key = tostring(dropId)
+    local place = { x = pos.x, y = pos.y, z = pos.z, bucket = pos.bucket }
+    drops[key] = { itemId = itemId, count = count, world = account, pos = place }
+    local receipt, reason = Facade:transact({
+        kind = "inv.drop", actor = inv.account, lines = lines, capacityReason = { [account] = "stash_full" },
+    })
+    if not receipt then
+        drops[key] = nil
+        Open77.loot.remove(dropId)
+        Facade:release(account)
+        return nil, reason
+    end
+    log("player %d dropped %s x%d into %s (loot %s, op %s)", playerId, itemId, count, account, key, tostring(receipt.opId))
+    return true, dropId
+end
+
+-- Transactions backend pickup: world:<id> -> char:<picker>, one winner, capacity checked by the
+-- coordinator. Anything but a commit leaves the goods in the world container and re-projects.
+local function pickupTx(playerId, key, drop, how)
+    local def = Items[drop.itemId]
+    local inv, reason = resolvePlayer(playerId)
+    local receipt
+    if inv then
+        local wview, wreason = Facade:load(drop.world)
+        if wview then
+            local lines, preason = Facade:planMove(wview, inv.account, drop.itemId, drop.count)
+            if lines then
+                receipt, reason = Facade:transact({
+                    kind = "inv.pickup", actor = inv.account, lines = lines,
+                    capacityReason = { [inv.account] = "too_heavy" },
+                })
+            else
+                reason = preason
+            end
+        else
+            reason = wreason
+        end
+    end
+    if receipt then
+        Facade:release(drop.world)
+        log("player %d picked up %s x%d from %s (loot %s%s, op %s)", playerId, drop.itemId, drop.count, drop.world,
+            key, how, tostring(receipt.opId))
+        if def then tell(playerId, ("Picked up %s x%d."):format(def.label, drop.count)) end
+        return true
+    end
+    local newId = def and drop.pos and createDrop(def, drop.itemId, drop.count, drop.pos) or nil
+    if newId then drops[tostring(newId)] = drop end
+    log("pickup of %s by player %s refused (%s): goods stay in %s%s", key, tostring(playerId), tostring(reason),
+        drop.world, newId and (", re-projected as loot " .. tostring(newId)) or "")
+    if inv then tell(playerId, explain(reason) .. (newId and " It stays on the ground." or "")) end
+    return nil, reason
+end
+
+-- A drop's TTL ran out: the goods evaporate, as before, but through a journaled operation.
+local function expireTx(key, drop)
+    local wview = Facade:load(drop.world)
+    local lines = wview and Facade:planMove(wview, "sys:expired", drop.itemId, drop.count)
+    local receipt, reason = nil, "store_unavailable"
+    if lines then receipt, reason = Facade:transact({ kind = "inv.expire", lines = lines }) end
+    if receipt then
+        Facade:release(drop.world)
+        log("drop %s (%s x%d) evaporated from %s (op %s)", key, drop.itemId, drop.count, drop.world, tostring(receipt.opId))
+    else
+        log("drop %s expired but %s keeps its goods (%s)", key, drop.world, tostring(reason))
+    end
+end
+
 local function dropItems(playerId, itemId, count)
     local inv, reason = resolvePlayer(playerId)
     if not inv then return nil, reason end
@@ -565,6 +925,7 @@ local function dropItems(playerId, itemId, count)
     if (inv.items[itemId] or 0) < count then return nil, "not_enough" end
     local pos = Open77.players.position(playerId)
     if not pos then return nil, "position_unknown" end
+    if inv.view then return dropItemsTx(inv, playerId, def, itemId, count, pos) end
     -- Loot first, debit second: a refused drop costs nothing.
     local dropId, lreason = createDrop(def, itemId, count, pos)
     if not dropId then return nil, lreason or "loot_unavailable" end
@@ -580,6 +941,7 @@ end
 
 -- Credits a picked-up drop, or puts it back on the ground when the picker cannot carry it.
 local function creditDrop(playerId, key, drop, how)
+    if drop.world then return pickupTx(playerId, key, drop, how) end
     local def = Items[drop.itemId]
     if not def then return end
     local ok, reason = creditPlayer(playerId, drop.itemId, drop.count, ("(picked up loot %s%s)"):format(key, how))
@@ -609,9 +971,11 @@ AddEventHandler("onLootRemoved", function(id, reason, resource)
     if resource ~= RESOURCE then return end
     if reason == "picked_up" then return end   -- onLootPickup owns that path
     local key = tostring(id)
-    if drops[key] then
-        log("drop %s (%s x%d) gone: %s", key, drops[key].itemId, drops[key].count, tostring(reason))
+    local drop = drops[key]
+    if drop then
+        log("drop %s (%s x%d) gone: %s", key, drop.itemId, drop.count, tostring(reason))
         drops[key] = nil
+        if drop.world and reason == "expired" then expireTx(key, drop) end
     end
 end)
 
@@ -666,7 +1030,20 @@ local function checkTarget(source, targetId)
     return targetId, tinv
 end
 
-local function giveItems(source, targetId, itemId, count)
+-- Transactions backend: one operation char:<giver> -> char:<receiver>; nothing to roll back.
+local function moveBetweenPlayers(kind, inv, tinv, itemId, count, opts, toReceiverReason)
+    local lines, why = Facade:planMove(inv.view, tinv.account, itemId, count, opts and opts.meta, opts and opts.instances)
+    if not lines then return nil, why end
+    local receipt, reason, info = Facade:transact({
+        kind = kind, actor = inv.account, opId = opts and opts.opId, lines = lines,
+        capacityReason = { [tinv.account] = toReceiverReason },
+    })
+    if not receipt then return nil, reason, info end
+    log("player %d -> player %d %s x%d (%s, op %s)", inv.id, tinv.id, itemId, count, kind, tostring(receipt.opId))
+    return receipt
+end
+
+local function giveItems(source, targetId, itemId, count, opts)
     local inv, reason = resolvePlayer(source)
     if not inv then return nil, reason end
     local def = Items[itemId]
@@ -676,6 +1053,15 @@ local function giveItems(source, targetId, itemId, count)
     local tid, tinv = checkTarget(source, targetId)
     if not tid then return nil, tinv end
     if not canCarry(tinv, itemId, count) then return nil, "target_too_heavy" end
+    if inv.view then
+        local receipt, greason, info = moveBetweenPlayers("inv.give", inv, tinv, itemId, count, opts, "target_too_heavy")
+        if not receipt then return nil, greason, info end
+        local from = Open77.players.name(source) or ("#" .. source)
+        local to = Open77.players.name(tid) or ("#" .. tid)
+        tell(source, ("You hand %s x%d to %s."):format(def.label, count, to))
+        tell(tid, ("%s hands you %s x%d."):format(from, def.label, count))
+        return true, receipt
+    end
     local ok, dreason = debitPlayer(source, itemId, count, ("(given to player %d)"):format(tid))
     if not ok then return nil, dreason end
     local credited, creason = creditPlayer(tid, itemId, count, ("(given by player %d)"):format(source))
@@ -801,6 +1187,13 @@ local function seizeItem(source, targetId, itemId)
     local inv = resolvePlayer(source)
     if not inv then return nil, "not_loaded" end
     if not canCarry(inv, itemId, n) then return nil, "too_heavy" end
+    if inv.view then
+        local receipt, sreason = moveBetweenPlayers("inv.seize", tinv, inv, itemId, n, nil, "too_heavy")
+        if not receipt then return nil, sreason end
+        tell(source, ("Seized %s x%d from %s."):format(def.label, n, Open77.players.name(tid) or ("#" .. tid)))
+        tell(tid, ("%s seized your %s x%d."):format(Open77.players.name(source) or "Someone", def.label, n))
+        return true
+    end
     local ok, reason = debitPlayer(tid, itemId, n, ("(seized by player %d)"):format(source))
     if not ok then return nil, reason end
     local credited, creason = creditPlayer(source, itemId, n, ("(seized from player %d)"):format(tid))
@@ -895,12 +1288,31 @@ end
 
 -- Loads a stash on first use and waits for a load already in flight. Yields.
 -- Returns the stash | nil.
+-- Transactions backend: import the legacy stash rows once, then open stash:<id>.
+local function loadStashTx(stash, capacity)
+    local account, why = Accounts.stash(stash.id)
+    if not account then stash.error = why; return nil end
+    stash.account = account
+    if not Facade:awaitReady(15000) then stash.error = "store_unavailable"; return nil end
+    local capacityG = math.floor(capacity * 1000 + 0.5)
+    local ok, reason = ensureMigrated(account, "stash", stash.id, capacityG)
+    if not ok then stash.error = reason; return nil end
+    local view, vreason = Facade:load(account, capacityG)
+    if not view then stash.error = vreason; return nil end
+    stashByAccount[account] = stash.id
+    stash.view = view
+    stash.items = Facade:counts(view)
+    stash.loaded = true
+    stash.source = "transactions"
+    return stash
+end
+
 local function loadStash(stashId, capacity)
     local stash = stashes[stashId]
     if not stash then
         stash = { kind = "stash", id = stashId, items = {}, capacity = capacity, loaded = false }
         stashes[stashId] = stash
-        loadContainer(stash)
+        if TX then loadStashTx(stash, capacity) else loadContainer(stash) end
         if not stash.loaded then
             stashes[stashId] = nil   -- let the next caller retry the read
             return nil
@@ -915,6 +1327,9 @@ local function loadStash(stashId, capacity)
             stashes[stashId] = nil
             return nil
         end
+    end
+    if stash.view and capacity ~= stash.capacity then
+        Facade:load(stash.account, math.floor(capacity * 1000 + 0.5))
     end
     stash.capacity = capacity
     return stash
@@ -938,13 +1353,40 @@ local function openPanel(playerId, stashId, capacity)
     refreshPanel(playerId)
 end
 
+-- Transactions backend: one operation between the pockets and the stash, re-authorized on every
+-- move when the stash's prefix has an authorizer (a key revoked while the panel is open stops
+-- the next move).
+local function stashMoveTx(action, inv, stash, itemId, n, opts)
+    local request = { playerId = inv.id, subject = inv.account, account = stash.account, stashId = stash.id,
+        action = action, item = itemId, count = n }
+    local allowed, why, info = authorize(scopeOfStash(stash.id), request, false)
+    if not allowed then return nil, why, info end
+    local fromView, to = inv.view, stash.account
+    local capacityReason = { [stash.account] = "stash_full" }
+    if action == "take" then
+        fromView, to = stash.view, inv.account
+        capacityReason = { [inv.account] = "too_heavy" }
+    end
+    local lines, preason = Facade:planMove(fromView, to, itemId, n, opts and opts.meta, opts and opts.instances)
+    if not lines then return nil, preason end
+    local receipt, reason, rinfo = Facade:transact({
+        kind = "inv." .. action, actor = inv.account, opId = opts and opts.opId, lines = lines,
+        capacityReason = capacityReason,
+    })
+    if not receipt then return nil, reason, rinfo end
+    log("player %d %s %s x%d %s stash %s (op %s)", inv.id, action == "take" and "took" or "stored", itemId, n,
+        action == "take" and "from" or "into", stash.id, tostring(receipt.opId))
+    return true, receipt
+end
+
 -- Pockets <-> stash moves. Both check the receiving side first, then move with a rollback.
-local function takeFromStash(playerId, stash, itemId, n)
+local function takeFromStash(playerId, stash, itemId, n, opts)
     local inv, reason = resolvePlayer(playerId)
     if not inv then return nil, reason end
     if not isCount(n) then return nil, "invalid_count" end
     if (stash.items[itemId] or 0) < n then return nil, "not_enough" end
     if not canCarry(inv, itemId, n) then return nil, "too_heavy" end
+    if stash.view then return stashMoveTx("take", inv, stash, itemId, n, opts) end
     local ok, why = debitStash(stash, playerId, itemId, n)
     if not ok then return nil, why end
     local credited, cwhy = creditPlayer(playerId, itemId, n, ("(from stash %s)"):format(stash.id))
@@ -955,12 +1397,13 @@ local function takeFromStash(playerId, stash, itemId, n)
     return true
 end
 
-local function storeToStash(playerId, stash, itemId, n)
+local function storeToStash(playerId, stash, itemId, n, opts)
     local inv, reason = resolvePlayer(playerId)
     if not inv then return nil, reason end
     if not isCount(n) then return nil, "invalid_count" end
     if (inv.items[itemId] or 0) < n then return nil, "not_enough" end
     if not canCarry(stash, itemId, n) then return nil, "stash_full" end
+    if stash.view then return stashMoveTx("store", inv, stash, itemId, n, opts) end
     local ok, why = debitPlayer(playerId, itemId, n, ("(into stash %s)"):format(stash.id))
     if not ok then return nil, why end
     local stored, swhy = creditStash(stash, playerId, itemId, n)
@@ -1091,10 +1534,452 @@ exports("openStash", function(playerId, stashId, capacity)
     if type(stashId) ~= "string" or #stashId == 0 or #stashId > 64 or not stashId:match("^[%w_%-:%.]+$") then
         return nil, "invalid_stash"
     end
+    if TX then
+        -- Durable keys only: no session id, no runtime vehicle/prop id as a stash key.
+        local account, why = Accounts.stash(stashId)
+        if not account then return nil, why end
+    end
     local cap = tonumber(capacity) or Config.defaultStashCapacity
     if cap <= 0 then return nil, "invalid_capacity" end
     CreateThread(function() openPanel(inv.id, stashId, cap) end)
     return true
+end)
+
+---------------------------------------------------------------------------
+-- B1/B2 exports. Synchronous ones never yield; the *Async ones and read/status/openVehicle/
+-- createWorld yield: call them with Open77.exports.call(...):await() from a managed task.
+-- Every async mutation is ONE open77_transactions operation: receipt | nil, reason, info
+-- (info.opId lets the caller poll `status` after an in_doubt). Transactions backend only:
+-- the legacy backend answers nil, "backend_legacy".
+---------------------------------------------------------------------------
+
+exports("backend", function() return BACKEND end)
+
+-- The client catalogue's head: { schema, version, hash, pages, items }.
+exports("catalogueVersion", function()
+    local head = Registry:catalogue()
+    return Schema.copy(head)
+end)
+
+-- A copy of one normalised definition (B1 v1 shape) | nil, "unknown_item".
+exports("itemDefinition", function(itemId)
+    local def = Registry:get(itemId)
+    if not def then return nil, "unknown_item" end
+    local out = Schema.copy(def)
+    out.definedBy = Registry:definerOf(itemId)
+    return out
+end)
+
+-- Durable account ids (pure, both backends): char:<identifier>, stash:<id>, veh:<PLATE>:<part>,
+-- world:<id>. A session id or a runtime entity id is refused (session_key / runtime_id_key).
+exports("accountOf", function(playerId)
+    playerId = tonumber(playerId)
+    if not playerId or playerId < 1 or playerId % 1 ~= 0 then return nil, "invalid_player" end
+    local inv = inventories[playerId]
+    if inv and inv.account then return inv.account end
+    local identifier = Open77.players.identifier(playerId)
+    if not identifier then return nil, "player_not_found" end
+    return Accounts.char(identifier)
+end)
+exports("stashAccount", function(stashId) return Accounts.stash(stashId) end)
+exports("vehicleAccount", function(plate, part) return Accounts.vehicle(plate, part) end)
+exports("worldAccount", function(worldId) return Accounts.world(worldId) end)
+
+-- registerAuthorizer(scope, exportName) -> true | nil, reason
+-- scope: "veh" | "world" | "stash" | "stash:<prefix>". The caller resource answers
+-- exports.<caller>:<exportName>(request) with true, or false/nil plus a reason; request =
+-- { playerId, subject, account, action, item, count, plate?, part?, stashId?, worldId? }.
+-- One resource per scope (A9 owns `veh`); the same resource may re-register after a restart.
+exports("registerAuthorizer", function(scope, exportName)
+    local caller = GetInvokingResource()
+    if not caller then return nil, "invalid_caller" end
+    if type(scope) ~= "string" or not (scope == "veh" or scope == "world" or scope == "stash"
+        or scope:match("^stash:[%w_%-%.]+$")) then
+        return nil, "invalid_scope"
+    end
+    if type(exportName) ~= "string" or not exportName:match("^[%a_][%w_]*$") then return nil, "invalid_export" end
+    local current = authorizers[scope]
+    if current and current.resource ~= caller then return nil, "authorizer_taken" end
+    authorizers[scope] = { resource = caller, export = exportName }
+    log("authorizer for %s: %s:%s", scope, caller, exportName)
+    return true
+end)
+
+local function requireTx()
+    if not TX then return nil, "backend_legacy" end
+    if not Facade:isReady() then return nil, "store_unavailable" end
+    return true
+end
+
+local function loadedPlayer(playerId)
+    local inv, reason = resolvePlayer(playerId)
+    if not inv then return nil, reason end
+    if not inv.view then return nil, "not_loaded" end
+    return inv
+end
+
+local function countArg(count)
+    local n = tonumber(count) or 1
+    if not isCount(n) then return nil end
+    return math.tointeger(n)
+end
+
+-- giveAsync(fromPlayerId, toPlayerId, itemId, count, opts?) -> receipt | nil, reason, info
+-- opts: { opId, meta, instances, maxDistance }. Both players loaded; no reach rule unless
+-- maxDistance is given (the caller owns its interaction rules, /give keeps its 3 m).
+exports("giveAsync", function(fromId, toId, itemId, count, opts)
+    local ok, why = requireTx()
+    if not ok then return nil, why end
+    local n = countArg(count)
+    if not n then return nil, "invalid_count" end
+    if not Items[itemId] then return nil, "unknown_item" end
+    local inv, r1 = loadedPlayer(fromId)
+    if not inv then return nil, r1 end
+    local tinv, r2 = loadedPlayer(toId)
+    if not tinv then return nil, r2 end
+    if inv == tinv then return nil, "self_target" end
+    opts = type(opts) == "table" and opts or {}
+    if opts.maxDistance then
+        local metres = Open77.players.distance(inv.id, tinv.id)
+        if not metres then return nil, "position_unknown" end
+        if metres > opts.maxDistance then return nil, "too_far" end
+    end
+    return moveBetweenPlayers("inv.give", inv, tinv, itemId, n, opts, "target_too_heavy")
+end)
+
+-- storeAsync / takeAsync(playerId, stashId, itemId, count, opts?) -> receipt | nil, reason, info
+-- The caller (housing...) keeps its own access checks; a registered stash authorizer is asked too.
+local function stashAsync(action, playerId, stashId, itemId, count, opts)
+    local ok, why = requireTx()
+    if not ok then return nil, why end
+    local n = countArg(count)
+    if not n then return nil, "invalid_count" end
+    if not Items[itemId] then return nil, "unknown_item" end
+    local inv, reason = loadedPlayer(playerId)
+    if not inv then return nil, reason end
+    local account, aw = Accounts.stash(stashId)
+    if not account then return nil, aw end
+    opts = type(opts) == "table" and opts or {}
+    local capacity = tonumber(opts.capacity) or (stashes[stashId] and stashes[stashId].capacity)
+        or Config.defaultStashCapacity
+    local stash = loadStash(stashId, capacity)
+    if not stash then return nil, "store_unavailable" end
+    local moved, result, info
+    if action == "store" then
+        moved, result, info = storeToStash(inv.id, stash, itemId, n, opts)
+    else
+        moved, result, info = takeFromStash(inv.id, stash, itemId, n, opts)
+    end
+    if not moved then return nil, result, info end
+    return result
+end
+exports("storeAsync", function(playerId, stashId, itemId, count, opts)
+    return stashAsync("store", playerId, stashId, itemId, count, opts)
+end)
+exports("takeAsync", function(playerId, stashId, itemId, count, opts)
+    return stashAsync("take", playerId, stashId, itemId, count, opts)
+end)
+
+-- sellAsync(playerId, sale) -> receipt | nil, reason, info
+-- sale = { items = { { item, count, meta? }... }, buyer = "dealer" (a sys: name), payouts =
+-- { { to = "cash" | "bank" | "soc:<name>", amount }... }, opId?, kind? }. Goods leave the
+-- pockets and every payout lands in ONE operation (A13 6.1 sale). Requires
+-- Config.coordinatorWallets: until B3 moves the wallets onto open77_transactions, a coordinator
+-- cash credit would be invisible to rp_economy (a fork), so it refuses wallet_not_coordinated.
+exports("sellAsync", function(playerId, sale)
+    local ok, why = requireTx()
+    if not ok then return nil, why end
+    if Config.coordinatorWallets ~= true then return nil, "wallet_not_coordinated" end
+    if type(sale) ~= "table" or type(sale.items) ~= "table" or #sale.items == 0 or #sale.items > 16 then
+        return nil, "invalid_sale"
+    end
+    local inv, reason = loadedPlayer(playerId)
+    if not inv then return nil, reason end
+    local buyer = Accounts.sys(type(sale.buyer) == "string" and sale.buyer or (GetInvokingResource() or "buyer"))
+    if not buyer then return nil, "invalid_sale" end
+    local lines = {}
+    for _, entry in ipairs(sale.items) do
+        local n = type(entry) == "table" and countArg(entry.count)
+        if not n or not Items[entry.item] then return nil, "invalid_sale" end
+        local moved, mwhy = Facade:planMove(inv.view, buyer, entry.item, n, entry.meta)
+        if not moved then return nil, mwhy end
+        for _, l in ipairs(moved) do lines[#lines + 1] = l end
+    end
+    for _, payout in ipairs(type(sale.payouts) == "table" and sale.payouts or {}) do
+        local amount = type(payout) == "table" and math.tointeger(tonumber(payout.amount))
+        if not amount or amount < 1 then return nil, "invalid_sale" end
+        local to
+        if payout.to == "cash" or payout.to == "bank" then
+            to = payout.to .. ":" .. inv.identifier
+        elseif type(payout.to) == "string" and payout.to:match("^soc:[%w_%-]+$") then
+            to = payout.to
+        end
+        if not to then return nil, "invalid_sale" end
+        lines[#lines + 1] = { money = amount, from = buyer, to = to }
+    end
+    local kind = type(sale.kind) == "string" and sale.kind:sub(1, 32) or "inv.sell"
+    local receipt, reason2, info = Facade:transact({ kind = kind, actor = inv.account, opId = sale.opId, lines = lines })
+    if not receipt then return nil, reason2, info end
+    log("player %d sold %d line(s) to %s (op %s)", inv.id, #lines, buyer, tostring(receipt.opId))
+    return receipt
+end)
+
+-- openVehicle(plate, part, capacityKg) -> { account, capacityKg } | nil, reason
+-- Creates or resizes veh:<PLATE>:<part>. The cargo layout owner (A9) decides parts and sizes.
+exports("openVehicle", function(plate, part, capacityKg)
+    local ok, why = requireTx()
+    if not ok then return nil, why end
+    local account, aw = Accounts.vehicle(plate, part)
+    if not account then return nil, aw end
+    local cap = tonumber(capacityKg)
+    if not cap or cap <= 0 or cap > 100000 then return nil, "invalid_capacity" end
+    local view, vreason = Facade:load(account, math.floor(cap * 1000 + 0.5))
+    if not view then return nil, vreason end
+    return { account = account, capacityKg = cap }
+end)
+
+local function vehicleMove(action, playerId, plate, part, itemId, count, opts)
+    local ok, why = requireTx()
+    if not ok then return nil, why end
+    local n = countArg(count)
+    if not n then return nil, "invalid_count" end
+    if not Items[itemId] then return nil, "unknown_item" end
+    local inv, reason = loadedPlayer(playerId)
+    if not inv then return nil, reason end
+    local account, aw = Accounts.vehicle(plate, part)
+    if not account then return nil, aw end
+    opts = type(opts) == "table" and opts or {}
+    local allowed, deny, dinfo = authorize("veh", { playerId = inv.id, subject = inv.account, account = account,
+        plate = Accounts.plate(plate), part = part, action = action, item = itemId, count = n }, true)
+    if not allowed then return nil, deny, dinfo end
+    local view, vreason = Facade:load(account)
+    if not view then return nil, vreason end
+    if not view.committed.exists then return nil, "vehicle_not_tracked" end
+    local fromView, to, capacityReason = inv.view, account, { [account] = "stash_full" }
+    if action == "take" then fromView, to, capacityReason = view, inv.account, { [inv.account] = "too_heavy" } end
+    local lines, preason = Facade:planMove(fromView, to, itemId, n, opts.meta, opts.instances)
+    if not lines then return nil, preason end
+    local receipt, r2, info = Facade:transact({ kind = "inv.veh_" .. action, actor = inv.account, opId = opts.opId,
+        lines = lines, capacityReason = capacityReason })
+    if not receipt then return nil, r2, info end
+    log("player %d %s %s x%d %s %s (op %s)", inv.id, action, itemId, n, action == "take" and "from" or "into",
+        account, tostring(receipt.opId))
+    return receipt
+end
+-- vehicleStoreAsync / vehicleTakeAsync(playerId, plate, part, itemId, count, opts?)
+-- Fail closed: refused with not_authorized unless the `veh` authorizer (A9: keys, owner,
+-- mechanic, police) answers true for this player, vehicle part and action.
+exports("vehicleStoreAsync", function(playerId, plate, part, itemId, count, opts)
+    return vehicleMove("store", playerId, plate, part, itemId, count, opts)
+end)
+exports("vehicleTakeAsync", function(playerId, plate, part, itemId, count, opts)
+    return vehicleMove("take", playerId, plate, part, itemId, count, opts)
+end)
+
+-- createWorld(capacityKg, opts?) -> { account, worldId } | nil, reason
+-- A new, empty world:<id> container (a crate, a pile). Its prop and prompt are the projection
+-- owner's (A6); this inventory only holds what is inside.
+exports("createWorld", function(capacityKg, opts)
+    local ok, why = requireTx()
+    if not ok then return nil, why end
+    local cap = tonumber(capacityKg)
+    if not cap or cap <= 0 or cap > 100000 then return nil, "invalid_capacity" end
+    local worldId = type(opts) == "table" and opts.worldId or Facade:mintWorldId()
+    local account, aw = Accounts.world(worldId)
+    if not account then return nil, aw end
+    local view, vreason = Facade:load(account, math.floor(cap * 1000 + 0.5))
+    if not view then return nil, vreason end
+    return { account = account, worldId = worldId }
+end)
+
+local function worldMove(action, playerId, worldId, itemId, count, opts)
+    local ok, why = requireTx()
+    if not ok then return nil, why end
+    local n = countArg(count)
+    if not n then return nil, "invalid_count" end
+    if not Items[itemId] then return nil, "unknown_item" end
+    local inv, reason = loadedPlayer(playerId)
+    if not inv then return nil, reason end
+    local account, aw = Accounts.world(worldId)
+    if not account then return nil, aw end
+    opts = type(opts) == "table" and opts or {}
+    local allowed, deny, dinfo = authorize("world", { playerId = inv.id, subject = inv.account, account = account,
+        worldId = worldId, action = action, item = itemId, count = n }, false)
+    if not allowed then return nil, deny, dinfo end
+    local view, vreason = Facade:load(account)
+    if not view then return nil, vreason end
+    if not view.committed.exists then return nil, "unknown_container" end
+    local fromView, to, capacityReason = inv.view, account, { [account] = "stash_full" }
+    if action == "take" then fromView, to, capacityReason = view, inv.account, { [inv.account] = "too_heavy" } end
+    local lines, preason = Facade:planMove(fromView, to, itemId, n, opts.meta, opts.instances)
+    if not lines then return nil, preason end
+    local receipt, r2, info = Facade:transact({ kind = "inv.world_" .. action, actor = inv.account, opId = opts.opId,
+        lines = lines, capacityReason = capacityReason })
+    if not receipt then return nil, r2, info end
+    return receipt
+end
+-- worldPutAsync / worldTakeAsync(playerId, worldId, itemId, count, opts?): pockets <-> world:<id>.
+-- Concurrent takes have one winner (the coordinator holds the units of the first).
+exports("worldPutAsync", function(playerId, worldId, itemId, count, opts)
+    return worldMove("put", playerId, worldId, itemId, count, opts)
+end)
+exports("worldTakeAsync", function(playerId, worldId, itemId, count, opts)
+    return worldMove("take", playerId, worldId, itemId, count, opts)
+end)
+
+-- wearAsync(playerId, itemId, amount, opts?) -> { receipt, instance, durability, broken } | nil, reason
+-- Wears the most worn unit (or opts.instance) of a durability item: a compare-and-set update
+-- of its metadata, or its destruction at zero (durability.breaks, default true).
+exports("wearAsync", function(playerId, itemId, amount, opts)
+    local ok, why = requireTx()
+    if not ok then return nil, why end
+    local inv, reason = loadedPlayer(playerId)
+    if not inv then return nil, reason end
+    local n = math.tointeger(tonumber(amount) or 1)
+    if not n or n < 1 or n > 1000000 then return nil, "invalid_amount" end
+    opts = type(opts) == "table" and opts or {}
+    local lines, iid, left, broken = Facade:planWear(inv.view, itemId, n, opts.instance)
+    if not lines then return nil, iid end
+    local receipt, r2, info = Facade:transact({ kind = "inv.wear", actor = inv.account, opId = opts.opId, lines = lines })
+    if not receipt then return nil, r2, info end
+    return { receipt = receipt, instance = iid, durability = left, broken = broken }
+end)
+
+-- addAsync(playerId, itemId, count, meta?, opts?) / removeAsync(playerId, itemId, count, opts?)
+-- Durable credit / debit with a receipt and an explicit capacity refusal (C1: a salvage credit
+-- the job can rely on). The sys: account is the calling resource.
+exports("addAsync", function(playerId, itemId, count, meta, opts)
+    local ok, why = requireTx()
+    if not ok then return nil, why end
+    local n = countArg(count)
+    if not n then return nil, "invalid_count" end
+    local inv, reason = loadedPlayer(playerId)
+    if not inv then return nil, reason end
+    opts = type(opts) == "table" and opts or {}
+    local lines, lwhy = Facade:createLines(itemId, n, meta, sysOf(GetInvokingResource()), inv.account)
+    if not lines then return nil, lwhy end
+    return Facade:transact({ kind = "inv.add", actor = inv.account, opId = opts.opId, lines = lines,
+        capacityReason = { [inv.account] = "too_heavy" } })
+end)
+exports("removeAsync", function(playerId, itemId, count, opts)
+    local ok, why = requireTx()
+    if not ok then return nil, why end
+    local n = countArg(count)
+    if not n then return nil, "invalid_count" end
+    local inv, reason = loadedPlayer(playerId)
+    if not inv then return nil, reason end
+    opts = type(opts) == "table" and opts or {}
+    local lines, lwhy = Facade:planMove(inv.view, sysOf(GetInvokingResource()), itemId, n, opts.meta, opts.instances)
+    if not lines then return nil, lwhy end
+    return Facade:transact({ kind = "inv.remove", actor = inv.account, opId = opts.opId, lines = lines })
+end)
+
+-- moveAsync(moves, opts?) -> receipt | nil, reason, info
+-- Server-to-server: moves = { { item, count, meta?, from, to } | { instance, from, to }... } with
+-- explicit durable accounts (char:/stash:/veh:/world:/sys:). No player authorization: the
+-- calling resource owns its rules; the journal names it in `kind`.
+exports("moveAsync", function(moves, opts)
+    local ok, why = requireTx()
+    if not ok then return nil, why end
+    if type(moves) ~= "table" or #moves == 0 or #moves > 24 then return nil, "invalid_spec" end
+    opts = type(opts) == "table" and opts or {}
+    local capacityG = math.floor(Config.maxCarryWeight * 1000 + 0.5)
+    local lines = {}
+    for _, m in ipairs(moves) do
+        if type(m) ~= "table" then return nil, "invalid_spec" end
+        local from, fwhy = Accounts.parse(m.from)
+        if not from then return nil, fwhy end
+        local to, twhy = Accounts.parse(m.to)
+        if not to then return nil, twhy end
+        for _, a in ipairs({ from, to }) do
+            -- An offline character's pockets can be credited: open them at the carry capacity.
+            if Accounts.kindOf(a) == "char" and not Facade:view(a) then
+                local view, lwhy = Facade:load(a, capacityG)
+                if not view then return nil, lwhy end
+            end
+        end
+        if m.instance then
+            lines[#lines + 1] = { instance = m.instance, from = from, to = to }
+        else
+            local n = countArg(m.count)
+            if not n or not Items[m.item] then return nil, "invalid_spec" end
+            local part, pwhy
+            if Accounts.kindOf(from) == "sys" then
+                part, pwhy = Facade:createLines(m.item, n, m.meta, from, to)
+            else
+                local view, vwhy = Facade:view(from), nil
+                if not view then view, vwhy = Facade:load(from) end
+                if not view then return nil, vwhy end
+                part, pwhy = Facade:planMove(view, to, m.item, n, m.meta)
+            end
+            if not part then return nil, pwhy end
+            for _, l in ipairs(part) do lines[#lines + 1] = l end
+        end
+    end
+    local caller = GetInvokingResource() or "unknown"
+    return Facade:transact({ kind = ("mv:" .. caller):sub(1, 32), actor = opts.actor, opId = opts.opId, lines = lines })
+end)
+
+-- read(account) -> { account, items = { [itemId] = n }, stacks, instances, weightKg, capacityKg, exists }
+exports("read", function(account)
+    local ok, why = requireTx()
+    if not ok then return nil, why end
+    local view, reason = Facade:view(account), nil
+    if not view then view, reason = Facade:load(account) end
+    if not view then return nil, reason end
+    local stacks, instances = Facade:effective(view)
+    return {
+        account = account, items = Facade:counts(view), stacks = stacks, instances = Schema.copy(instances),
+        weightKg = Facade:weightG(view) / 1000, capacityKg = view.capacityG / 1000, exists = view.committed.exists,
+    }
+end)
+
+-- status(opId) -> { state, receipt? } | nil, reason: after an in_doubt answer.
+exports("status", function(opId)
+    local ok, why = requireTx()
+    if not ok then return nil, why end
+    return txCall("status", opId, { resolve = true })
+end)
+
+---------------------------------------------------------------------------
+-- Client catalogue (B1): bounded pages on request, never one large state bag.
+-- Server -> client: rp_inventory:catalogue(head) on join and after definitions change.
+-- Client -> server: rp_inventory:catalogueRequest(version, page) -> rp_inventory:cataloguePage.
+---------------------------------------------------------------------------
+
+local catalogueBroadcastPending = false
+scheduleCatalogue = function()
+    if catalogueBroadcastPending then return end
+    catalogueBroadcastPending = true
+    SetTimeout(1000, function()
+        catalogueBroadcastPending = false
+        TriggerClientEvent("rp_inventory:catalogue", -1, (Registry:catalogue()))
+    end)
+end
+
+local catalogueQuota = {} -- [playerId] = { version, served, windowStart, inWindow }
+
+RegisterNetEvent("rp_inventory:catalogueRequest", function(version, page)
+    local playerId = source
+    if type(playerId) ~= "number" or playerId <= 0 then return end
+    local head, pages = Registry:catalogue()
+    if version ~= head.version then
+        TriggerClientEvent("rp_inventory:catalogue", playerId, head)
+        return
+    end
+    local index = math.tointeger(tonumber(page))
+    if not index or index < 1 or index > head.pages then return end
+    local now = Open77.time.monotonic()
+    local q = catalogueQuota[playerId]
+    if not q or q.version ~= head.version then
+        q = { version = head.version, served = 0, windowStart = now, inWindow = 0 }
+        catalogueQuota[playerId] = q
+    end
+    if now - q.windowStart >= 10 then q.windowStart, q.inWindow = now, 0 end
+    -- Bounded: every page about twice per version, at most 20 pages per 10 s per player.
+    if q.served >= head.pages * 2 + 4 or q.inWindow >= 20 then return end
+    q.served, q.inWindow = q.served + 1, q.inWindow + 1
+    TriggerClientEvent("rp_inventory:cataloguePage", playerId, pages[index])
 end)
 
 ---------------------------------------------------------------------------
@@ -1180,10 +2065,63 @@ RegisterCommand("giveitem", function(source, args)
     local itemId = findItem(args[2])
     local n = math.floor(tonumber(args[3]) or 1)
     if not target or not itemId then return tell(source, "Usage: /giveitem <playerId> <item> [count]") end
-    local ok, reason = creditPlayer(target, itemId, n, ("(giveitem by %d)"):format(source))
+    local ok, reason = creditPlayer(target, itemId, n, ("(giveitem by %d)"):format(source), nil, "sys:admin")
     if not ok then return tell(source, explain(reason)) end
     tell(source, ("Gave %s x%d to player %d."):format(Items[itemId].label, n, target))
     if target ~= source then tell(target, ("%s x%d appeared in your pockets."):format(Items[itemId].label, n)) end
+end, true)
+
+-- Admin / console: the one-shot legacy import (transactions backend). ACL: command.invmigrate.
+--   invmigrate status               backend, coordinator readiness, write-behind counters
+--   invmigrate all                  import every legacy subject not imported yet
+--   invmigrate char <identifier>    import one character's pockets
+--   invmigrate stash <stashId>      import one stash
+--   invmigrate accept char|stash <key>   after legacy_diverged: keep the imported state
+RegisterCommand("invmigrate", function(source, args)
+    local function say(text) tell(source, "[invmigrate] " .. text) end
+    if not TX then return say("the legacy backend is active: nothing to import (convar rp_inventory_backend)") end
+    local verb = args[1] or "status"
+    if verb == "status" then
+        local st = Facade.stats
+        return say(("backend %s, coordinator %s, submitted %d, committed %d, retried %d, in doubt %d, LOST %d"):format(
+            BACKEND, Facade:isReady() and "ready" or "UNAVAILABLE", st.submitted, st.committed, st.retried, st.inDoubt, st.lost))
+    end
+    if not waitForDatabase(10000) then return say("no database: nothing to import") end
+    local capacityOf = {
+        char = math.floor(Config.maxCarryWeight * 1000 + 0.5),
+        stash = math.floor(Config.defaultStashCapacity * 1000 + 0.5),
+    }
+    local function one(kind, key)
+        local account, why
+        if kind == "char" then account, why = Accounts.char(key) else account, why = Accounts.stash(key) end
+        if not account then return nil, why end
+        return Migration:ensure(account, kind, key, capacityOf[kind])
+    end
+    if verb == "all" then
+        local done, failed = 0, 0
+        local visited, reason = Migration:eachLegacySubject(function(kind, key)
+            local result, why = one(kind, key)
+            if result then done = done + 1 else
+                failed = failed + 1
+                say(("%s %s: %s"):format(kind, key, tostring(why)))
+            end
+        end)
+        if not visited then return say("refused: " .. tostring(reason)) end
+        return say(("%d subject(s) visited, %d ok, %d refused"):format(visited, done, failed))
+    end
+    if verb == "char" or verb == "stash" then
+        local result, why, info = one(verb, args[2])
+        if not result then return say(("refused: %s %s"):format(tostring(why), info and Schema.encode(info) or "")) end
+        return say(("%s: %s %s"):format(tostring(args[2]), result.state, result.report and Schema.encode(result.report) or ""))
+    end
+    if verb == "accept" and (args[2] == "char" or args[2] == "stash") then
+        local account, why
+        if args[2] == "char" then account, why = Accounts.char(args[3]) else account, why = Accounts.stash(args[3]) end
+        if not account then return say("refused: " .. tostring(why)) end
+        local ok, aw = Migration:accept(account, args[2], args[3])
+        return say(ok and (account .. ": the imported state is kept") or ("refused: " .. tostring(aw)))
+    end
+    say("usage: invmigrate status | all | char <identifier> | stash <stashId> | accept char|stash <key>")
 end, true)
 
 ---------------------------------------------------------------------------
@@ -1224,6 +2162,20 @@ local SUGGESTIONS = {
 }
 
 local readyOk, readyReason = Open77.database.ready(function()
+    if TX then
+        -- Transactions backend: the coordinator owns the item rows; this resource only keeps its
+        -- per-subject import markers and reads the legacy tables once per subject.
+        local ok, why = Migration:ensureTable()
+        if not ok then
+            dbFailReason = why
+            log("database answered ready but rp_inventory_migrations could not be ensured (%s): "
+                .. "subjects with legacy rows will not load", tostring(why))
+            return
+        end
+        dbReady = true
+        log("database ready: rp_inventory_migrations ensured (transactions backend)")
+        return
+    end
     local _, e1, a1 = dbAwait(Open77.database.update, [[
         CREATE TABLE IF NOT EXISTS rp_inventory_items (
             identifier VARCHAR(64) NOT NULL,
@@ -1251,12 +2203,26 @@ local readyOk, readyReason = Open77.database.ready(function()
 end)
 if not readyOk then
     dbFailReason = readyReason
-    log("database not available (%s): persistence falls back to Open77.kvp", tostring(readyReason))
+    if TX then
+        log("database not available (%s): no legacy import; pockets live in open77_transactions only", tostring(readyReason))
+    else
+        log("database not available (%s): persistence falls back to Open77.kvp", tostring(readyReason))
+    end
+end
+for id, why in pairs(builtinRejected) do
+    log("built-in item %s rejected by the B1 schema: %s", tostring(id), tostring(why))
 end
 
 AddEventHandler("onResourceStart", function(name)
+    if TX and name == "open77_transactions" then
+        -- A restarted coordinator lost its definitions and its opId counter: shake hands again.
+        Facade:lost("open77_transactions restarted")
+        return
+    end
     if name ~= RESOURCE then return end
     Open77.chat.addSuggestions(-1, SUGGESTIONS)
+    log("backend: %s, %d item definition(s), catalogue v%d", BACKEND, Registry.count, Registry.version)
+    if TX then Facade:start() end
     -- Hot reload: players already in the city need their pockets back.
     for _, id in ipairs(Open77.players.all() or {}) do
         local playerId = tonumber(id)
@@ -1275,18 +2241,42 @@ end)
 
 AddEventHandler("onPlayerReady", function(playerId)
     playerId = tonumber(playerId)
-    if not playerId then return end
+    if not playerId or playerId < 1 then return end
+    TriggerClientEvent("rp_inventory:catalogue", playerId, (Registry:catalogue()))
     if inventories[playerId] and inventories[playerId].loaded then return end
     loadPlayer(playerId)
 end)
 
 AddEventHandler("onResourceStop", function(name)
-    if name ~= RESOURCE then return end
+    if name ~= RESOURCE then
+        if TX and name == "open77_transactions" then Facade:lost("open77_transactions stopped") end
+        for scope, auth in pairs(authorizers) do
+            if auth.resource == name then
+                authorizers[scope] = nil
+                log("authorizer for %s removed: %s stopped", scope, name)
+            end
+        end
+        return
+    end
     for id in pairs(panels) do
         TriggerClientEvent("rp_inventory:panel", id, { open = false })
     end
     panels = {}
     panelPending = {}
+    if TX then
+        local unsent = 0
+        for _, view in pairs(Facade.views) do unsent = unsent + #view.queue end
+        if unsent > 0 then
+            log("stopping with %d write-behind operation(s) not acknowledged: they may be lost", unsent)
+        end
+    end
+end)
+
+-- Another resource committed an operation on open77_transactions (A13 7.2 event): reload the
+-- containers this inventory shows. Payload: (opId, kind, accounts).
+AddEventHandler("open77_transactions:committed", function(opId, kind, accounts)
+    if not TX or type(opId) ~= "string" then return end
+    Facade:onCommitted(opId, accounts)
 end)
 
 AddEventHandler("onPlayerDisconnected", function(playerId)
@@ -1294,8 +2284,22 @@ AddEventHandler("onPlayerDisconnected", function(playerId)
     if not playerId then return end
     panels[playerId] = nil
     panelPending[playerId] = nil
-    if inventories[playerId] then
-        log("player %d inventory unloaded (every change was already persisted)", playerId)
+    catalogueQuota[playerId] = nil
+    local inv = inventories[playerId]
+    if inv then
         inventories[playerId] = nil
+        if inv.account then
+            local sessions = charPlayers[inv.account]
+            if sessions then
+                sessions[playerId] = nil
+                if next(sessions) == nil then
+                    charPlayers[inv.account] = nil
+                    Facade:release(inv.account)
+                end
+            end
+            log("player %d inventory unloaded (%s; pending writes keep going)", playerId, inv.account)
+        else
+            log("player %d inventory unloaded (every change was already persisted)", playerId)
+        end
     end
 end)
