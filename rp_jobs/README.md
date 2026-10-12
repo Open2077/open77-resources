@@ -1,8 +1,14 @@
-# rp_jobs v2 — grades, bosses, duty, societies and payroll
+# rp_jobs v2.1 — grades, bosses, duty, societies and payroll
 
 Server-authoritative jobs for an Open77 RP server (build `2.31.13+op77.76`). Replaces the
 phase-0 `rp_jobs` in place: the `getJob` / `hasJob` exports and the `rp_jobs:changed` event are
 kept, the courier run is gone (see "Removed from v1" at the end).
+
+v2.1 adds the world-interaction **B4 adapter**: an authoritative eligibility export, a per-player
+**work epoch** that invalidates pending work on any job, grade or duty change, a small public
+summary, a server `setDuty` for foreman-style clock-in targets, durable keys through the subject
+provider rule and no SQL-to-KVP fallback. Every v2 export, event and command is unchanged. Design
+and contract: [`docs/world-interaction/b4-jobs.md`](../docs/world-interaction/b4-jobs.md).
 
 A player holds **one job** with a **grade 0..3** (`recruit`, `employee`, `senior`, `boss`), can
 clock in and out (`/service`), and is paid **in cash** from the job's **society** (`rp_bank`)
@@ -45,6 +51,7 @@ Everything above is `shared/config.lua` (`RpJobsConfig.Jobs`, `.Grades`, `.Payro
 | `/virer <playerId>` | boss | Fires an employee of your job. They are told. |
 | `/promouvoir <playerId> <grade>` | boss | Sets an employee's grade 0..2. `3` **hands over the boss seat**: they become boss, you step down to senior. |
 | `/setjob <playerId> <job\|none> [grade]` | admin (ACL `command.setjob`) or the console | Gives or removes a job, any grade 0..3. The first time a job gets a boss this way, its society is **seeded** with `SocietyStartingFund` (50 000 €$) through `rp_bank`. |
+| `/jobcheck <playerId> [job\|any] [minGrade] [duty]` | admin (ACL `command.jobcheck`) or the console | Prints the server's own eligibility verdict and the player's work epoch, e.g. `jobcheck player 1: refused off_duty (job=ferrailleur grade=0 duty=off epoch=..., store=sql)`. Changes nothing. |
 
 Every player-facing refusal is explained in chat: no job, not the boss, too far (with the
 distance), already employed elsewhere, unknown player, reserved job, invalid grade. From the
@@ -56,8 +63,9 @@ when it runs, else from the account name.
 
 ## Duty, tags and payroll
 
-- Duty is in memory only. It is **cleared on disconnect** and when the resource stops; a player
-  who comes back is off duty (and told they still hold the job).
+- Duty is written through to SQL (`on_duty`) but **never restored**: it is cleared on
+  disconnect, when the resource stops, and for every row at boot (a crash cannot leave a stale
+  flag). A player who comes back is off duty (and told they still hold the job).
 - While on duty, every *other* client draws your nameplate as `[NCPD] Vince Rocker` in the job
   colour (`Open77.nameplates.set`, `maxDistance` 40 m). The nameplate API only overrides remote
   players, so you never see your own tag. The server broadcasts the roster; clients only render.
@@ -85,8 +93,45 @@ exports.rp_jobs:salary("ncpd", 2)              -- 600
 ```
 
 `setJob` reasons: `invalid_player_id`, `player_not_found`, `not_loaded` (the file is still being
-read), `unknown_job`, `reserved_job` (`gang`), `invalid_grade`. `getJob`/`getGrade` answer `nil`
+read), `store_unavailable` (the database is configured but not answering, or the store is
+refused: nothing changed), `subject_unavailable` / `invalid_key` (no durable key for that
+player), `unknown_job`, `reserved_job` (`gang`), `invalid_grade`. `getJob`/`getGrade` answer `nil`
 and `hasJob`/`isBoss`/`onDuty` answer `false` for a player whose file is not loaded.
+
+### World-interaction adapter (B4)
+
+```lua
+exports.rp_jobs:eligible(playerId, requirement)    -- true, epoch | nil, reason
+exports.rp_jobs:workEpoch(playerId)                 -- epoch | nil, reason
+exports.rp_jobs:summary(playerId)                   -- { job, label, grade, gradeLabel, onDuty } | nil, reason
+exports.rp_jobs:setDuty(playerId, true, { job = "ferrailleur" })  -- true, epoch | nil, reason
+```
+
+`requirement` is a table, every field optional (`nil` = any loaded file):
+
+| Field | Meaning |
+|---|---|
+| `job` | a job name or a list of names (aliases accepted); the player must hold one of them |
+| `minGrade` | integer 0..3; the player's grade must be at least this (`3` = boss **of that job**, unlike `isBoss`) |
+| `duty` | `true` = must be on duty; `false` or absent = no duty constraint |
+| `society` | the job's society name (today the job name) |
+| `epoch` | a value from an earlier `eligible`/`workEpoch`; refused with `stale_job_epoch` if it moved |
+
+Refusals: `invalid_requirement` (wrong type, unknown key, bad grade), `unknown_job`,
+`invalid_player_id`, `player_not_found`, `not_loaded`, `store_unavailable`,
+`subject_unavailable`/`invalid_key`, then `stale_job_epoch`, `no_job`, `wrong_job`,
+`wrong_society`, `grade_too_low`, `off_duty` (checked in that order). `setDuty` adds
+`invalid_duty` and `no_job`; do not put `duty` in its requirement.
+
+The **work epoch** is an integer that moves on every job, grade and duty change of that player
+(and is fresh at every load). Keep the epoch `eligible` returns when work begins and pass it back
+as `requirement.epoch` at commit: any change in between answers `stale_job_epoch`. Epochs never
+repeat for another player on the same seat nor after a restart of `rp_jobs`; compare them with
+`==` only. A canInteract or a prompt only decides what a client is **shown**; the server's
+`eligible` decides what happens.
+
+Client side, `exports.rp_jobs:summary()` returns the local player's own file
+(`{ job, label, grade, gradeLabel, boss, onDuty }`) for prompt presentation.
 
 They read the in-memory cache only. Call them inside `pcall` from another resource (a
 synchronous export raises when the resource is missing). A resource **without** a client script
@@ -98,10 +143,23 @@ clients, and `rp_jobs` itself ships a client script).
 ```lua
 AddEventHandler("rp_jobs:changed", function(playerId, jobName) end)       -- jobName is nil when the job was removed
 AddEventHandler("rp_jobs:duty",    function(playerId, jobName, onDuty) end) -- onDuty is a boolean
+AddEventHandler("rp_jobs:workEpoch", function(playerId, epoch, reason) end)
+-- epoch: the new integer, or false when the file is gone (disconnect);
+-- reason: loaded | job_changed | grade_changed | duty_on | duty_off | unloaded
 ```
 
 `rp_jobs:duty (…, false)` is raised before `rp_jobs:changed` when an on-duty player changes or
-loses their job, with the **old** job name.
+loses their job, with the **old** job name. Each change raises its `rp_jobs:workEpoch` just before
+its legacy event.
+
+### Public summary (state bag)
+
+While a player is on duty, their replicated player bag holds
+`rp_jobs = { job = "ncpd", label = "NCPD", grade = "senior", duty = true }`; otherwise
+`rp_jobs = { duty = false }`. The audience is the player's routing bucket, so the off-duty job
+stays private, as the nameplate does. No identifier, hire record, salary, epoch or balance is ever
+in it. Key name: `RpJobsConfig.PublicStateKey` (`false` = no bag key). Needs `state.write`; a
+refused write is logged once and changes nothing else.
 
 Internal net events (`rp_jobs:clientReady`, `rp_jobs:agency`, `rp_jobs:hire`, `rp_jobs:plate`,
 `rp_jobs:roster`, `rp_jobs:self`) are this resource's client/server transport, not an API.
@@ -124,13 +182,31 @@ rp_jobs_employees (
 
 A row exists only while the player holds a job (`none` deletes it). The file is read on
 `onPlayerReady` (and for everyone already connected on a hot start); every change is written
-through with the callback forms, so the exports never touch the database. A failed SQL read is
-never treated as "no job": the player is told to reconnect.
+through with the callback forms, so the exports never touch the database. Writes are **serialized
+per subject and coalesced**: one statement in flight per row, the next one built from the newest
+state, so two quick changes can never land in SQL in the wrong order. A failed write is retried
+(for as long as the database is unreachable, a few times otherwise). A failed SQL read is never
+treated as "no job": the player is told to reconnect.
 
-**No database** (`ready` answers `database_unavailable`, or the database still is not answering
-15 s after the first player is ready): records fall back to `Open77.kvp` (key
-`emp:<identifier>`), the log says `[rp_jobs] store=kvp reason=...`, and the choice is kept for
-the whole boot.
+**Durable key.** `identifier` is the player's subject from the subject provider rule
+(`RpJobsConfig.Subject`): `open77_transactions:subjectOf` when that coordinator runs, else
+`Open77.players.identifier`, the account id either way until a character layer registers an
+override. A session-shaped (`session...`), all-digit or over-long key is refused (`invalid_key`).
+
+**Database configured but not answering:** no fallback. Job files stay unloaded (`getJob` nil,
+`hasJob` false, `setJob`/`eligible` answer `store_unavailable`, `/service` says the records are
+offline), the log says `store=pending after 15 s`, and the files load the moment the database
+answers, in the same boot. A failing schema statement refuses the store (`store=refused`); an
+unreachable one is retried.
+
+**No database configured at all** (`ready` answers `database_unavailable`): with
+`RpJobsConfig.LabKvpWithoutDatabase = true` (default) employment lives in `Open77.kvp`
+(`emp:<identifier>`), a disposable lab store the log names at every boot
+(`store=kvp reason=database_unavailable`) and that never leaks into SQL; with `false`, job files
+are refused instead.
+
+The society seed flags (`seeded:<job>`) still live in the resource's KVP file in every mode: they
+are wallet state that moves with the societies in the B3 migration.
 
 ## Log (grep-able)
 
@@ -138,13 +214,18 @@ the whole boot.
 [rp_jobs] job board prop 123456 at -1172.3 2088.3 11.9
 [rp_jobs] started: 12 jobs, payroll every 10 min, agency at -1173.1 2087.4 11.9
 [rp_jobs] store=sql table=rp_jobs_employees
-[rp_jobs] player 3 loaded job=ncpd grade=3 (sql)
+[rp_jobs] player 3 loaded job=ncpd grade=0 (sql)
+[rp_jobs] player 3 work epoch=1760261234001 (loaded)
 [rp_jobs] player 3 job=ncpd grade=3 (setjob by console)
+[rp_jobs] player 3 work epoch=1760261234002 (grade_changed)
 [rp_jobs] society ncpd seeded +50000 balance=50000
 [rp_jobs] player 3 duty=on job=ncpd (player_request)
+[rp_jobs] player 3 work epoch=1760261234003 (duty_on)
 [rp_jobs] player 4 job=ncpd grade=0 (hired by player 3)
 [rp_jobs] payroll player 3 ncpd grade=3 +800 cash=1300 society=49200
 [rp_jobs] player 4 duty=off job=ncpd (disconnected)
+[rp_jobs] store=pending after 15 s (database_unreachable): job files stay unloaded until the database answers; no KVP fallback
+[rp_jobs] SQL write for <subject> failed (database_unreachable ...): attempt 1, retry in 1 s
 ```
 
 ## The agency POI
@@ -163,7 +244,8 @@ anywhere.
 
 ## Manifest
 
-Permissions: `network.events`, `database.access`, `ui.nameplates`, `world.props`. Dependencies:
+Permissions: `network.events`, `database.access`, `ui.nameplates`, `world.props`, `state.write`
+(the public summary bag). Dependencies:
 `open77_uikit` (the agency menu, server twin `context`), `open77_worldui` (the POI),
 `open77_contextmenu` (the hire action) — all three ship a client half. `rp_bank`, `rp_economy`
 and `rp_identity` are server-only and reached through `pcall`: without `rp_bank` payroll and
@@ -207,6 +289,12 @@ store=sql table=rp_jobs_employees`.
    the tag is gone for everyone until the next `/service`.
 10. From another resource: `print(exports.rp_jobs:getJob(2), exports.rp_jobs:isBoss(2),
     exports.rp_jobs:hasJob(2, "police"))` → `ncpd true true`.
+11. Each change above also logs a `work epoch=` line with its reason (`job_changed`,
+    `grade_changed`, `duty_on`, `duty_off`). The B4 eligibility and epoch steps are in
+    `docs/world-interaction/b4-jobs.md` ("Integrator test steps").
+
+Offline: `python -m unittest discover -s tests -p "test_compat*.py"` from the repository root runs
+this resource's real server script on the B8 fake host (`tests/test_compat_jobs.py`).
 
 ## Removed from v1
 

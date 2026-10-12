@@ -81,6 +81,27 @@ RpJobsConfig.Agency = {
 -- How far away an on-duty nameplate tag stays readable (metres).
 RpJobsConfig.NameplateMaxDistance = 40
 
+-- Durable keys (world-interaction B4). Employment rows are keyed by the player's durable
+-- subject, never by the session id. The subject comes from the transaction coordinator's
+-- provider when it runs (`open77_transactions:subjectOf`, A13 contract section 12.5: the
+-- account id, unless a character layer registered an override), else from
+-- Open77.players.identifier -- the same account id the default provider answers.
+--   required = true : refuse to load a job file while the provider is not running
+--                     (set it once a character override provider exists, so a boot
+--                     without the coordinator cannot key rows by the bare account id).
+RpJobsConfig.Subject = { resource = "open77_transactions", export = "subjectOf", required = false }
+
+-- Store. A server WITH a database never falls back to KVP: while the database is not
+-- answering, job files stay unloaded and every change is refused (store_unavailable).
+-- A server with NO database configured at all may keep employment in the resource's own
+-- KVP file -- a disposable lab store, logged as such at every boot. false refuses instead.
+RpJobsConfig.LabKvpWithoutDatabase = true
+
+-- Public summary in the player's replicated state bag (audience: their routing bucket).
+-- On duty: { job, label, grade (label), duty = true }; otherwise { duty = false } -- an
+-- off-duty job stays private, as the on-duty nameplate does. false = no bag key.
+RpJobsConfig.PublicStateKey = "rp_jobs"
+
 -- Colour of the resource's chat lines.
 RpJobsConfig.ChatAuthor = "NC Jobs"
 RpJobsConfig.ChatColor = { 34, 216, 226 }
