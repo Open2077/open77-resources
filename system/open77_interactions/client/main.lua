@@ -673,8 +673,14 @@ end
 
 local TARGET_KINDS = {
     model = true, class = true, globalVehicle = true,
-    globalPlayer = true, globalNpc = true, zone = true,
+    globalPlayer = true, globalNpc = true, zone = true, prop = true,
 }
+-- `prop` targets name server props by id. A prop's position comes from the
+-- projection mirror `open77_props` keeps (the server record, refreshed on
+-- every upsert, gone on stream-out), never from a world query: on a crowded
+-- street `Open77.world.nearby` was measured at 300-740 ms a call (2026-10-12).
+local MAX_PROPS_PER_TARGET = 128
+local PROP_DEFAULT_OFFSET = { x = 0.0, y = 0.0, z = 0.5 }
 local ZONE_SHAPES = { sphere = true, box = true, poly = true }
 -- Bit indices into a vehicle snapshot's `doors` mask, mirroring the runtime's
 -- own `Open77.vehicles.doors`. These are NOT slot or bone names and carry no
@@ -1068,6 +1074,123 @@ local function evaluatePredicate(owner, predicate, payload)
     return allowed == true
 end
 
+-- Prop ids are decimal strings (64-bit registry ids); an integer is accepted
+-- and canonicalised. Never passed through tonumber.
+local function canonicalPropId(value)
+    if math.type(value) == "integer" and value > 0 then return tostring(value) end
+    if type(value) == "number" and value > 0 and value % 1 == 0 and value < 2 ^ 53 then
+        return tostring(math.tointeger(value))
+    end
+    if type(value) == "string" and #value <= 20 and value:match("^[1-9][0-9]*$") then return value end
+    return nil
+end
+
+local function normalizePropIds(value)
+    if type(value) ~= "table" then value = { value } end
+    local count = #value
+    if count < 1 or count > MAX_PROPS_PER_TARGET then return nil, "invalid_props" end
+    local seen, out = {}, {}
+    for index = 1, count do
+        local id = canonicalPropId(value[index])
+        if not id then return nil, "invalid_props" end
+        if not seen[id] then
+            seen[id] = true
+            out[#out + 1] = id
+        end
+    end
+    return out
+end
+
+-- Which server props this client projects right now, kept from the events
+-- `open77_props` raises (`added` once per prop, `removed` on removal and on
+-- stream-out), seeded once from its `all` export. A prop target may name
+-- hundreds of ids; only the projected ones -- the props around the player --
+-- cost an export call per resolve pass.
+local projectedProps = nil
+
+local function seedProjectedProps()
+    projectedProps = {}
+    local ok, all = pcall(Open77.exports.callSync, "open77_props", "all")
+    if ok and type(all) == "table" then
+        for _, record in ipairs(all) do
+            local id = type(record) == "table" and canonicalPropId(record.id) or nil
+            if id then projectedProps[id] = true end
+        end
+    end
+end
+
+AddEventHandler("open77:props:added", function(id)
+    if projectedProps == nil then return end
+    local key = canonicalPropId(id)
+    if key then projectedProps[key] = true end
+end)
+
+AddEventHandler("open77:props:removed", function(id)
+    if projectedProps == nil then return end
+    local key = canonicalPropId(id)
+    if key then projectedProps[key] = nil end
+end)
+
+-- The projected record of one server prop, or nil when this client does not
+-- currently project it (other bucket, out of range, removed). `open77_props`
+-- is the projection layer's own mirror: its record carries the owning
+-- `resource`, which `Open77.props.projected` does not.
+local function propRecord(id)
+    countNative("lists")
+    local ok, record = pcall(Open77.exports.callSync, "open77_props", "get", id)
+    if not ok or type(record) ~= "table" then return nil end
+    return record
+end
+
+local function propPosition(record)
+    local position = record.position
+    if type(position) ~= "table" then position = { x = record.x, y = record.y, z = record.z } end
+    if not finite(position.x) or not finite(position.y) or not finite(position.z) then return nil end
+    return { x = position.x + 0.0, y = position.y + 0.0, z = position.z + 0.0 }
+end
+
+-- Every prop of a `prop` target this client projects, inside the target's
+-- marker distance, nearest first: `maxMatches` keeps the closest ones, so a
+-- target naming a whole yard of crates still spends at most a handful of the
+-- shared anchor budget (32 per resource, measured as the binding limit with
+-- sixty targets on 2026-10-12).
+--
+-- A CLIENT-declared prop target only ever matches props its own resource owns:
+-- the client cannot see server grants, so a prompt on somebody else's prop must
+-- be declared from the server, where `define` checks the owner's grant.
+-- A SERVER-declared target arrives already reduced to the props the server
+-- authorized, and the client applies it as sent.
+local function propCandidates(target, playerPosition)
+    local out = {}
+    if projectedProps == nil then seedProjectedProps() end
+    for _, id in ipairs(target.props) do
+        local record = projectedProps[id] and propRecord(id) or nil
+        if record and record.visible ~= false and (record.kind == nil or record.kind == "prop") and
+            (target.includeAttached or record.attachment == nil or record.attachment == false) and
+            (target.source == "server" or record.resource == target.owner) then
+            local position = propPosition(record)
+            if position then
+                local gap = distance(position, playerPosition)
+                if gap <= target.showDistance then
+                    out[#out + 1] = {
+                        key = "prop:" .. id,
+                        position = position,
+                        distance = gap,
+                        propId = id,
+                        propModel = record.model,
+                        propOwner = record.resource,
+                    }
+                end
+            end
+        end
+    end
+    table.sort(out, function(left, right)
+        if left.distance ~= right.distance then return left.distance < right.distance end
+        return left.key < right.key
+    end)
+    return out
+end
+
 local function normalizeTarget(owner, definition, existingHandle)
     if not validName(owner, 64) then return nil, "invalid_owner" end
     if type(definition) ~= "table" then return nil, "definition_must_be_a_table" end
@@ -1090,6 +1213,14 @@ local function normalizeTarget(owner, definition, existingHandle)
         local zone, reason = normalizeZone(definition.zone or definition)
         if not zone then return nil, reason end
         target.zone = zone
+    elseif kind == "prop" then
+        local props, reason = normalizePropIds(definition.props or definition.prop)
+        if not props then return nil, reason end
+        target.props = props
+        if definition.includeAttached ~= nil and type(definition.includeAttached) ~= "boolean" then
+            return nil, "invalid_include_attached"
+        end
+        target.includeAttached = definition.includeAttached == true
     end
 
     if definition.part ~= nil then
@@ -1150,8 +1281,13 @@ local function normalizeTarget(owner, definition, existingHandle)
     template.classes, template.class, template.zone = nil, nil, nil
     template.groups, template.maxMatches, template.canInteract = nil, nil, nil
     template.part, template.entity, template.npcs = nil, nil, nil
+    template.props, template.prop, template.includeAttached = nil, nil, nil
     template.position = { x = 0.0, y = 0.0, z = 0.0 }
     template.id = id
+    if kind == "prop" and definition.offset == nil then
+        -- A prop's origin is its base: lift the card onto the object.
+        template.offset = PROP_DEFAULT_OFFSET
+    end
     if kind == "zone" then
         -- The card sits at the volume's centre unless the definition names its
         -- own anchor point. `addBoxZone`/`addSphereZone` pass the centre as
@@ -1269,6 +1405,11 @@ local function targetPayload(target, candidate, part)
     end
     if candidate.vehicleId ~= nil and payload.vehicleId == nil then payload.vehicleId = candidate.vehicleId end
     if target.kind == "zone" then payload.zoneId = target.id end
+    if candidate.propId ~= nil then
+        payload.propId = candidate.propId
+        payload.propModel = candidate.propModel
+        payload.propOwner = candidate.propOwner
+    end
     if part then
         payload.part = part
         payload.partIndex = VEHICLE_PART_BITS[part]
@@ -1878,7 +2019,25 @@ local function resolveTargets(playerPosition)
                 groups = groups or localGroups()
                 gated = not anyGroup(target.groups, groups)
             end
-            if not gated and target.kind == "zone" then
+            if not gated and target.kind == "prop" then
+                local matches = propCandidates(target, playerPosition)
+                local matched = 0
+                for index = 1, #matches do
+                    work = work + RESOLVE_MATERIALISE_WEIGHT
+                    if work >= RESOLVE_CHUNK then
+                        work = 0
+                        yieldFrame()
+                    end
+                    local candidate = matches[index]
+                    local fresh = target.matches[candidate.key] == nil
+                    if materialise(target, candidate, budget, now) then
+                        if fresh then budget = budget - 1 end
+                        seen[candidate.key] = true
+                        matched = matched + 1
+                        if matched >= target.maxMatches then break end
+                    end
+                end
+            elseif not gated and target.kind == "zone" then
                 if zoneContains(target.zone, playerPosition) then
                     local fresh = target.matches.zone == nil
                     local candidate = {
@@ -1956,6 +2115,9 @@ local function recheckWinner(candidate)
         playerId = payload.playerId,
         playerName = payload.playerName,
         npcId = payload.npcId,
+        propId = payload.propId,
+        propModel = payload.propModel,
+        propOwner = payload.propOwner,
         vehicle = payload.vehicleId and Open77.vehicles.get(payload.vehicleId) or nil,
     })
     if entry.visible ~= visible then touchEntries() end
@@ -2079,6 +2241,7 @@ sugar("addGlobalPlayer", "globalPlayer")
 sugar("addGlobalPed", "globalNpc")
 sugar("addGlobalNpc", "globalNpc")
 sugar("addZone", "zone")
+sugar("addProp", "prop", "props")
 exports("addBoxZone", function(definition)
     local owner, callerError = caller()
     if not owner then return response(false, { error = callerError }) end

@@ -274,7 +274,7 @@ setOpen = function(value, immediate, errorMessage)
     mapRequest = nil
     local generation = menuGeneration
     if value then
-        -- The engine mounts a resource-owned INK tree for this focus lease.
+        -- The WebUI owns input without entering a vanilla pause scenario.
         menu:setFocus(true, true)
         publishState()
         menu:send("pause:open", {generation=generation, error=errorMessage})
@@ -885,11 +885,19 @@ AddEventHandler("onClientResourceStart", function(name)
     startVoiceRestoreLoop()
 
     local errorMessage
-    menu, errorMessage = Open77NativePause.create()
+    -- Keep the transparent surface alive: DOM transitions own visibility.
+    -- Recreating/revealing an idle CEF surface used to leave a stale first frame.
+    menu, errorMessage = WebUI.create({
+        entry = "web/index.html", layer = "system", policy = "images",
+        width = 1920, height = 1080, fps = 144,
+        transparent = true, visible = true,
+    })
     if not menu then
-        print("Open77 pause menu INK failed: " .. tostring(errorMessage))
+        print("Open77 pause menu WebUI failed: " .. tostring(errorMessage))
         return
     end
+    -- Consume both keyboard streams, including the closing Escape's release.
+    menu:setConsumedKeys({"escape"})
 
     menu:on("pause:ready", function()
         TriggerEvent("open77:privacy:request")
@@ -920,7 +928,9 @@ AddEventHandler("onClientResourceStart", function(name)
     end)
     menu:on("pause:closed", function(payload)
         if type(payload) ~= "table" or payload.generation ~= menuGeneration then return end
-        menuGeneration = menuGeneration + 1 -- retire the delayed Lua focus release too
+        -- Browser-initiated close retires the open generation. An immediate
+        -- host close already did so; keep any map request made in that generation.
+        if open then menuGeneration = menuGeneration + 1 end
         open = false
         stateLoopGeneration = stateLoopGeneration + 1
         Open77.voice.setMicrophoneTest(false)
@@ -980,22 +990,20 @@ AddEventHandler("onClientResourceStart", function(name)
         -- not render. It is its own menu scenario and freezes the world while
         -- open; that is accepted for a deliberate, rare action.
         setOpen(false, true)
-        menu:afterClose(function() Open77.session.openSettings() end)
+        Open77.session.openSettings()
     end)
 
     menu:on("pause:action", function(payload)
         local action = payload and payload.action or ""
         if action == "map" then
             setOpen(false, true)
-            menu:afterClose(function()
-                local ticket, reason = Open77.map.open()
-                if not ticket then
-                    print("Open77 map: " .. tostring(reason))
-                    setOpen(true, false, fmt(S.mapUnavailable, {reason=reason or "map_unavailable"}))
-                else
-                    mapRequest = {id=ticket, generation=menuGeneration}
-                end
-            end)
+            local ticket, reason = Open77.map.open()
+            if not ticket then
+                print("Open77 map: " .. tostring(reason))
+                setOpen(true, false, fmt(S.mapUnavailable, {reason=reason or "map_unavailable"}))
+            else
+                mapRequest = {id=ticket, generation=menuGeneration}
+            end
         elseif action == "quit-session" then
             -- The native session lifecycle owns the rest: the phase leaves
             -- `active`, the client host notices, covers the screen, walks the
@@ -1029,7 +1037,10 @@ AddEventHandler("open77:pauseKey", function()
     -- The system host runs before the server-resource host, so the focus
     -- snapshot still belongs to the modal that received this Escape press.
     -- Its own pauseKey handler closes it; do not also open a second modal.
-    if not open and Open77.input.isCaptured() then return end
+    -- A cursor-only page (an inventory panel) closes on this same press: the
+    -- second result of isCaptured() says a page holds the cursor.
+    local keyboard, cursor = Open77.input.isCaptured()
+    if not open and (keyboard or cursor == true) then return end
     setOpen(not open)
 end)
 

@@ -142,9 +142,58 @@ function Open77PedestrianScheduler:cower(key)
     occupant.cower = task and tostring(task) or nil
 end
 
+-- Whether a player holds a seat over spot `spot` (open77_seating through the seat guard, row B6):
+-- no pedestrian spawns on it, and none walks back or sits down on it.
+function Open77PedestrianScheduler:seatHeld(bucket, spot)
+    local held = self.api.seatBlocked
+    return held ~= nil and held(bucket, self.spotX[spot], self.spotY[spot], self.spotZ[spot]) == true
+end
+
+-- The pedestrian holding a seat within `radius` (on the ground, 1 m in height) of (x, y, z) in `bucket`,
+-- or nil: a player may not sit there (row B6). A seated pedestrian counts at its spot, as does one walking
+-- back to it; a corpse where it lies. A fleeing or cowering one is away, and its walk back checks the
+-- seat guard (`goHome`, `sit`), so a player may take the seat it fled.
+local HOLDING = { seated = true, returning = true }
+function Open77PedestrianScheduler:occupantNear(bucket, x, y, z, radius)
+    local r2 = radius * radius
+    for _, occupant in pairs(self.occupants) do
+        if occupant.bucket == bucket then
+            local ox, oy, oz
+            if HOLDING[occupant.state] then
+                local i = occupant.spot
+                ox, oy, oz = self.spotX[i], self.spotY[i], self.spotZ[i]
+            elseif occupant.state == "dead" then
+                local at = self.api.position(occupant.npc)
+                if at then ox, oy, oz = at.x, at.y, at.z end
+            end
+            if ox then
+                local dx, dy = ox - x, oy - y
+                local d2 = dx * dx + dy * dy
+                if d2 <= r2 and math.abs(oz - z) <= 1.0 then
+                    return { npc = occupant.npc, state = occupant.state, source = "seated", spot = occupant.spot,
+                        distance = math.floor(math.sqrt(d2) * 1000 + 0.5) / 1000 }
+                end
+            end
+        end
+    end
+    return nil
+end
+
 function Open77PedestrianScheduler:goHome(key)
     local occupant = self.occupants[key]
     local i = occupant.spot
+    if self:seatHeld(occupant.bucket, i) then
+        -- A player sat down on the seat it fled: it does not walk back onto them. It keeps cowering, and
+        -- the walk back costs an attempt, so a seat held for long strands it (and the stranded rule
+        -- retires it once nobody stands close).
+        local now = self.api.now()
+        occupant.attempts = (occupant.attempts or 0) + 1
+        occupant.returnAt = occupant.attempts < self.config.returnAttempts and
+            now + self.api.random(self.config.cowerMinS, self.config.cowerMaxS) or nil
+        if not occupant.returnAt then occupant.strandedAt = now end
+        self.failures.seat_held = (self.failures.seat_held or 0) + 1
+        return
+    end
     local cowering = occupant.cower
     occupant.state, occupant.cower, occupant.returnAt = "returning", nil, nil
     occupant.attempts = (occupant.attempts or 0) + 1
@@ -162,6 +211,13 @@ function Open77PedestrianScheduler:sit(key)
     local occupant = self.occupants[key]
     local i = occupant.spot
     occupant.move = nil
+    if self:seatHeld(occupant.bucket, i) then
+        -- A player sat down while it walked back: it cowers where it arrived instead, out of attempts.
+        self.failures.seat_held = (self.failures.seat_held or 0) + 1
+        occupant.attempts = self.config.returnAttempts
+        self:cower(key)
+        return
+    end
     self.api.setAiMode(occupant.npc, "frozen")
     local task = self.api.workspot(occupant.npc, self.catalog.profiles[self.spotProfile[i]], {
         loop = true, clip = occupant.clip,
@@ -418,7 +474,7 @@ function Open77PedestrianScheduler:tick(budget)
                         local x, y, z = xs[spotIndex], ys[spotIndex], zs[spotIndex]
                         local blocked, examined = query(full, x, y, z, streamed, nil, true)
                         cost = cost + examined
-                        if blocked == math.huge and clear(bucket, spotIndex) then
+                        if blocked == math.huge and clear(bucket, spotIndex) and not self:seatHeld(bucket, spotIndex) then
                             -- Only the `keep` nearest can spawn this tick: past the farthest kept so
                             -- far, the distance is not worth measuring.
                             local worst = #candidates >= keep and candidates[keep]
@@ -456,6 +512,8 @@ function Open77PedestrianScheduler:tick(budget)
     for _, candidate in ipairs(candidates) do
         if created >= config.spawnsPerTick then break end
         local spot = candidate.spot
+        -- A player may have sat down there while the pass waited between slices.
+        if self:seatHeld(candidate.bucket, spot) then goto continue end
         local x, y, z, yaw = xs[spot], ys[spot], zs[spot], self.spotYaw[spot]
         local streaming = {}
         query(players[candidate.bucket], x, y, z, streamed, nil, false, streaming)

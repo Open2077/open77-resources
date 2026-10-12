@@ -13,6 +13,7 @@ server_scripts {
     "server/lanes-points-3.lua",
     "server/crowdspots-generated.lua",
     "server/spatial.lua",
+    "server/seatguard.lua",
     "server/scheduler.lua",
     "server/crowd.lua",
     "server/main.lua",
