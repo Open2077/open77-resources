@@ -11,7 +11,7 @@ Scenario code: tests/compat/salvage_scenarios.lua; world: tests/compat/salvage_w
 
 Sources outside this pack are READ in place, never copied or edited:
   OP77_SYS_DIR   the Open77 resources/system folder with open77_actions and open77_containers
-                 (default: ../wt-world-interaction/resources/system next to this pack)
+                 (default: this repository's system/ folder, else ../wt-world-interaction/resources/system)
   OP77_TX_FINAL  the final open77_transactions folder (default: SYS_DIR's copy when it has a
                  server/main.lua, else ../wt-wi-a13b/resources/system/open77_transactions)
 A missing source skips the suite with the reason.
@@ -36,6 +36,9 @@ def sys_dir():
     explicit = os.environ.get("OP77_SYS_DIR")
     if explicit and Path(explicit).is_dir():
         return Path(explicit)
+    bundled = ROOT.parent / "system"          # this repository's own system/ folder
+    if (bundled / "open77_actions").is_dir():
+        return bundled
     return ROOT.parent / "wt-world-interaction" / "resources" / "system"
 
 
