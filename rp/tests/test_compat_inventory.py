@@ -60,11 +60,12 @@ class B1Definitions(unittest.TestCase):
         self.assertEqual(r["builtin_fields_unchanged"], "true")
         self.assertEqual(r["chip_weightG"], "50")
         # Every definer of the pack, with its real shared config, registers everything.
-        for definer, expected in {"rp_bar": "7/0", "rp_crime": "1/0", "rp_ferrailleur": "1/0", "rp_fixer": "2/0",
+        # rp_fixer 2.0 defines no item any more (its two 1.0 gig items are gone).
+        for definer, expected in {"rp_bar": "7/0", "rp_crime": "1/0", "rp_ferrailleur": "1/0",
                                   "rp_gangs": "1/0", "rp_mecano": "2/0", "rp_netrunner": "4/0",
                                   "rp_nomade": "2/0", "rp_ripperdoc": "7/0"}.items():
             self.assertEqual(r["def_" + definer], expected, definer)
-        self.assertEqual(r["registry_count"], "44")
+        self.assertEqual(r["registry_count"], "42")
         self.assertEqual(r["selftest"], "1/1")           # rp_selftest reads counts
         self.assertEqual(r["redefine_same_definer"], "1/0")
 

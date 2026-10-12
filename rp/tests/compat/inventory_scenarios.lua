@@ -122,7 +122,8 @@ end
 local function packDefinitions()
     local defs = {}
     defs.rp_crime = definerItems("rp_crime", "shared/config.lua", function(e) return e.RpCrimeConfig.items end)
-    defs.rp_fixer = definerItems("rp_fixer", "shared/config.lua", function(e) return e.Config.items end)
+    -- rp_fixer 2.0 defines no item (its crate is an open77_actions carry prop, retrievals ask for
+    -- other resources' items): it is no longer a definer.
     defs.rp_gangs = definerItems("rp_gangs", "shared/config.lua", function(e) return e.RpGangsConfig.items end)
     defs.rp_mecano = definerItems("rp_mecano", "shared/items.lua", function(e) return e.RpMecanoItems end)
     defs.rp_netrunner = definerItems("rp_netrunner", "shared/config.lua", function(e) return e.Config.items end)
@@ -171,7 +172,7 @@ function scenarios.b1_definitions()
     out.chip_weightG = RpInventoryItems.chip.weightG
 
     local total = reg.count
-    for _, definer in ipairs({ "rp_bar", "rp_crime", "rp_ferrailleur", "rp_fixer", "rp_gangs", "rp_mecano",
+    for _, definer in ipairs({ "rp_bar", "rp_crime", "rp_ferrailleur", "rp_gangs", "rp_mecano",
         "rp_netrunner", "rp_nomade", "rp_ripperdoc" }) do
         local items = packDefinitions()[definer]
         local r, j = reg:define(items, definer)
