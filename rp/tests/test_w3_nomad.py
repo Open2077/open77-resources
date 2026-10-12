@@ -119,11 +119,12 @@ class NomadSources(unittest.TestCase):
             self.assertNotIn(unneeded, perms)
 
     def test_prompt_labels_are_ascii_and_points_flagged(self):
-        """Prompt labels in plain ASCII; every place in the config carries `measured = false`."""
+        """Prompt labels in plain ASCII; every place in the config says whether it was walked
+        (`measured = true` for the points walked in game, `false` for the estimates)."""
         text = (ROOT / "rp_nomade" / "server" / "config.lua").read_text(encoding="utf-8")
         self.assertTrue(all(ord(ch) < 128 for ch in text), "config.lua has a non-ASCII character")
-        self.assertNotIn("measured = true", text)
-        self.assertGreaterEqual(text.count("measured = false"), 12)
+        self.assertGreaterEqual(text.count("measured = false") + text.count("measured = true"), 12)
+        self.assertEqual(text.count("measured = true"), 2)   # the Afterlife drop: bay and fence
 
     def test_readme_standard_format(self):
         text = (ROOT / "rp_nomade" / "README.md").read_text(encoding="utf-8")

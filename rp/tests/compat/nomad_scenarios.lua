@@ -21,9 +21,9 @@ local AT_STASH = { x = 1788.2, y = 2254.0, z = 180.3 }
 local CK1 = { x = 905.0, y = 1900.0, z = 120.0 }      -- inside badlands_toll
 local CK2 = { x = -495.0, y = 1700.0, z = 40.0 }      -- inside watson_ramp
 local ROAD = { x = 300.0, y = 1800.0, z = 60.0 }      -- between the two, in no checkpoint
-local TRUCK_AT_DROP = { x = -1426.0, y = 970.0, z = 23.6 }
-local AT_UNLOAD = { x = -1426.0, y = 966.0, z = 23.6 }   -- behind the bed of the truck at the drop
-local AT_FENCE = { x = -1426.0, y = 976.0, z = 23.6 }
+local TRUCK_AT_DROP = { x = -1422.5, y = 975.0, z = 23.35 }
+local AT_UNLOAD = { x = -1422.5, y = 971.0, z = 23.35 }  -- behind the bed of the truck at the drop
+local AT_FENCE = { x = -1418.5, y = 975.5, z = 24.25 }
 local TRUCK = 701
 local PLATE = "NC-NMD01"
 

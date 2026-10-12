@@ -163,7 +163,7 @@ Where things are (every point `measured = false`):
 | Loading points 1 to 4 | 1786 / 1788 / 1790 / 1792, 2256 to 2258.5, 180.3 | north of the board |
 | Convoy truck bay | 1800.0, 2240.0, 180.2 | 12 m south-east of the board |
 | Camp stash | 1788.2, 2253.6, 180.3 | beside the board |
-| Afterlife drop: unload bay / fence | -1426.0, 974.0, 23.6 / -1426.0, 976.5, 23.6 | the street outside the Afterlife's ramp, Watson |
+| Afterlife drop: unload bay / fence | -1422.5, 975.0, 23.35 / -1417.5, 975.5, 24.25 | the street outside the Afterlife's ramp, Watson: the lane against the east curb, the fence on the sidewalk (walked) |
 | Kabuki drop: unload bay / fence | -1188.9, 1566.2, 22.9 / -1186.4, 1567.5, 22.9 | the street outside Lizzie's Bar, Kabuki |
 | Checkpoint `badlands_toll` | 900, 1900 (r 120 m) | on the camp to city corridor where the Badlands end |
 | Checkpoint `watson_ramp` | -500, 1700 (r 120 m) | on the corridor where it enters Watson |

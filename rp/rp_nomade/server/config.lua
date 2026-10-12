@@ -111,10 +111,11 @@ C.routes = {
         crates = 3, goodsPerCrate = 4, price = 600, timeLimitMs = 25 * 60 * 1000,
         destination = {
             label = "Afterlife street, Watson",
-            -- rp_nomade 1.0's Afterlife drop: the street outside the club's ramp, 20 m up from the
-            -- garage lot (a Mackinaw parked there in the 2026-09-19 bot run).
-            unloadBay = { position = { x = -1426.0, y = 974.0, z = 23.6 }, truckRadius = 8.0, measured = false },
-            fence = { position = { x = -1426.0, y = 976.5, z = 23.6 }, yaw = 180.0, measured = false,
+            -- Walked in game: the truck parks in the northbound lane against the east curb outside the
+            -- club's ramp; the fence waits on the sidewalk by the trash bags, facing the road (the
+            -- 1.0 points put both on the centre line, the fence standing in traffic).
+            unloadBay = { position = { x = -1422.5, y = 975.0, z = 23.35 }, truckRadius = 8.0, measured = true },
+            fence = { position = { x = -1417.5, y = 975.5, z = 24.25 }, yaw = 90.0, measured = true,
                       name = "Rook", label = "Rook, the fence" },
             arrivalRadius = 40.0,
         },
