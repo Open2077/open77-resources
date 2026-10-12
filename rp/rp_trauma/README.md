@@ -71,9 +71,10 @@ toast and a map pin whose title carries the call's tag and live distance: `[PLAT
    time. The patient is now stable (25 % health, still down).
 4. **E** *Evacuate to Vik's clinic*: a 6 s bar, then the patient is moved to the clinic.
 
-Each act pays you 40 % of what the patient paid, straight from their wallet, plus 40 % of what their
-plan covered, paid by the Trauma Team society while it can afford it; you read "+N eddies to your
-account". The rest stays with the society (`soc:trauma`).
+Each act pays the team 40 % of what the patient paid, straight from their wallet, plus 40 % of what
+their plan covered, paid by the Trauma Team society while it can afford it. The medics of the call's
+team (`/tti take`, `/tti assist`) on duty within 30 m of the patient share it evenly; you read "+N
+eddies to your account". The rest stays with the society (`soc:trauma`).
 
 The older acts remain: ALT+click a player or `/soin <id>` **Patch up** a hurt standing citizen (they
 accept the charges first; no answer is a no), ALT+click or `/reanimer <id>` **Revive** a down
@@ -151,7 +152,7 @@ them, so a second import moves nothing. The two tables keep their schema (create
 | `autoRenew` | default on, from the bank, every 30 s | renewal of an ended plan |
 | `payFrom` / `invoices.payFrom` | bank, then cash | wallets that pay a plan / a charge or an invoice |
 | `fees` | stabilise 400, evacuate 800, hospital 500, revive 300, heal 100 | before the plan's cover (the last three come from `shared/config.lua`) |
-| `medicShare` / `medicWallet` | 0.4 / bank | the medic's cut and where it lands |
+| `medicShare` / `medicWallet` / `teamShareRadius` | 0.4 / bank / 30 m | the team's cut, where it lands, who shares it |
 | `consent` | 15 s, a refusal holds 60 s | the dialog shown to a patient without cover |
 | `calls` | uninsured calls on, priority 9, held back 15 s, reminders every 60 s, 48 at once | dispatch |
 | `actions` | plan 4 s (`tablet`), stabilise 8 s (`examine`, 25 % health), evacuate 6 s (`tablet2`) | open77_actions definitions |

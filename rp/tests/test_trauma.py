@@ -250,6 +250,11 @@ class TraumaService(unittest.TestCase):
         self.assertEqual((r["a"], r["responder4"], r["stable4"]), ("committed", "1", "true"))
         self.assertIn("target_claimed", r["claim_refusals"])
         self.assertEqual(r["jobs_s"], "2")
+        # the team at the scene shares the cut: 40 % of 400 eddies, 80 each
+        self.assertEqual((r["bank1"], r["bank3"], r["told_team_pay"]), ("80", "80", "true"))
+        self.assertEqual((r["job_team"], r["job_team_pay"]), ("3,1", "80,80"))
+        # the second call is one medic's alone
+        self.assertEqual((r["bank1_end"], r["bank3_end"]), ("240", "80"))
 
     def test_call_closes_on_respawn_revive_and_disconnect(self):
         r = self.run_ok("call_closes")

@@ -530,7 +530,8 @@ end
 
 -- ---------------------------------------------------------------------------------------------
 -- Charges: quote (reserve before the work), settle (commit after it), release (cancel).
--- spec = { patient, medic?, kind ("stabilise"|"evacuate"|"hospital"|"revive"|"heal"), opId? }
+-- spec = { patient, medic?, team? (medic ids, the acting one first), kind ("stabilise"|"evacuate"|
+-- "hospital"|"revive"|"heal"), opId? }
 -- Returns a reservation: { txOpId|nil, kind, fee, covered, due, fromBank, fromCash, paid, invoiced,
 -- cut, bounty, tier, patient, medic, subject } (txOpId nil: nothing to move), or one with
 -- `unbilled = reason` when the money path is down (care goes on), or nil, reason.
@@ -539,8 +540,9 @@ function S:quote(spec)
     local cfg, M, L = self.cfg, self.M, self.L
     local patient = spec.patient
     local fee = cfg.fees[spec.kind] or 0
+    local team = spec.team or (spec.medic and { spec.medic }) or {}
     local base = { kind = spec.kind, patient = patient, medic = spec.medic, fee = fee, covered = 0, due = 0,
-        fromBank = 0, fromCash = 0, paid = 0, invoiced = 0, cut = 0, bounty = 0 }
+        fromBank = 0, fromCash = 0, paid = 0, invoiced = 0, cut = 0, bounty = 0, team = team, teamPay = {} }
     local function unbilled(reason)
         base.unbilled = reason
         self.stats.unbilled = self.stats.unbilled + 1
@@ -560,8 +562,9 @@ function S:quote(spec)
     local accounts = { bank = bank, cash = cash, society = "soc:" .. cfg.society, file = self:fileOf(subject),
         billing = cfg.accounts.billing }
     local societyFunds = 0
-    if spec.medic then
-        accounts.medic = L.account(spec.medic, cfg.medicWallet)
+    if #team > 0 then
+        accounts.medics = {}
+        for i, m in ipairs(team) do accounts.medics[i] = L.account(m, cfg.medicWallet) end
         if coverage > 0 then societyFunds = L.funds(accounts.society) end
     end
     local txOpId = spec.opId or L.newOpId("care")
@@ -809,6 +812,20 @@ function S:reservePlan(ctx)
     return r
 end
 
+-- The medics paid for an act: the one who acts, then the other members of the call's team who are
+-- on duty within `teamShareRadius` of the patient.
+function S:teamAtScene(call, medic)
+    local team = { medic }
+    local radius = self.cfg.teamShareRadius or 0
+    for _, m in ipairs(teamList(call)) do
+        if m ~= medic and radius > 0 and self:isMedic(m) then
+            local d = self.P.players.distance(m, call.position)
+            if d and d <= radius then team[#team + 1] = m end
+        end
+    end
+    return team
+end
+
 -- A response act on a patient: take the call, ask consent when the patient pays, hold the charge.
 function S:reserveCare(ctx, kind)
     local cfg, M = self.cfg, self.M
@@ -854,7 +871,7 @@ function S:reserveCare(ctx, kind)
             return nil, "patient_declined"
         end
     end
-    local res, qwhy = self:quote({ patient = patient, medic = medic, kind = kind,
+    local res, qwhy = self:quote({ patient = patient, medic = medic, kind = kind, team = self:teamAtScene(call, medic),
         ttlMs = cfg.actions[kind].durationMs + 60000 })
     if not res then
         self:refuseTo(medic, qwhy)
@@ -863,7 +880,8 @@ function S:reserveCare(ctx, kind)
     local r = { kind = kind, txOpId = res.txOpId, patient = patient, medic = medic, episode = call.episode,
         callId = call.id, subject = res.subject, tier = res.tier, fee = res.fee, covered = res.covered,
         fromBank = res.fromBank, fromCash = res.fromCash, paid = res.paid, invoiced = res.invoiced, cut = res.cut,
-        bounty = res.bounty, unbilled = res.unbilled, consent = call.consent and call.consent.state or "plan" }
+        bounty = res.bounty, unbilled = res.unbilled, consent = call.consent and call.consent.state or "plan",
+        team = res.team, teamPay = res.teamPay }
     self.work[ctx.opId] = r
     return r
 end
@@ -959,6 +977,15 @@ function S:afterPlan(r)
         mode = r.mode })
 end
 
+-- The other team members' pay lines (the acting medic is told with the act's result).
+function S:tellTeam(r, callLabel)
+    for i, m in ipairs(r.team or {}) do
+        if i > 1 and (r.teamPay and r.teamPay[i] or 0) > 0 then
+            self:tell(m, ("Team pay, %s: %s."):format(callLabel, self.M.paySentence(r, i)), "success")
+        end
+    end
+end
+
 function S:chargeLine(r)
     if r.unbilled then return "billing offline: nothing charged" end
     return self.M.chargeSentence(r)
@@ -977,12 +1004,14 @@ function S:afterStabilise(r, key)
     self:tell(r.patient, ("Stabilised by %s. Hold on: evacuation next. Charges: %s."):format(medicName,
         self:chargeLine(r)), "success")
     self:tell(r.medic, ("%s is stable. Evacuate them (E on the body). Pay: %s."):format(patientName,
-        self.M.paySentence(r)), "success")
+        self.M.paySentence(r, 1)), "success")
+    self:tellTeam(r, ("call #%s stabilised"):format(tostring(r.callId)))
     self:log("stabilise %s: player %d by %d fee=%d covered=%d paid=%d invoiced=%d cut=%d bounty=%d%s", tostring(key),
         r.patient, r.medic, r.fee or 0, r.covered or 0, r.paid or 0, r.invoiced or 0, r.cut or 0, r.bounty or 0,
         r.unbilled and (" unbilled=" .. r.unbilled) or "")
     self:jobCompleted("stabilise", r.medic, key, { patient = r.patient, call = r.callId, tier = r.tier or false,
-        fee = r.fee, covered = r.covered, paid = r.paid, invoiced = r.invoiced, cut = r.cut, bounty = r.bounty })
+        fee = r.fee, covered = r.covered, paid = r.paid, invoiced = r.invoiced, cut = r.cut, bounty = r.bounty,
+        team = r.team, teamPay = r.teamPay })
 end
 
 function S:afterEvacuate(r, key)
@@ -1006,14 +1035,15 @@ function S:afterEvacuate(r, key)
             tostring(why), self:chargeLine(r)), "warning")
     end
     self:tell(r.medic, ("%s evacuated to %s. Pay: %s."):format(patientName, cfg.evacuation.label,
-        self.M.paySentence(r)), "success")
+        self.M.paySentence(r, 1)), "success")
+    self:tellTeam(r, ("call #%s evacuated"):format(tostring(r.callId)))
     self:log("evacuate %s: player %d by %d moved=%s%s fee=%d covered=%d paid=%d invoiced=%d cut=%d bounty=%d",
         tostring(key), r.patient, r.medic, tostring(moved), why and (" (" .. tostring(why) .. ")") or "", r.fee or 0,
         r.covered or 0, r.paid or 0, r.invoiced or 0, r.cut or 0, r.bounty or 0)
     self.P.emit("rp_trauma:revived", r.patient, r.medic)
     self:jobCompleted("evacuate", r.medic, key, { patient = r.patient, call = r.callId, tier = r.tier or false,
         destination = cfg.evacuation.label, fee = r.fee, covered = r.covered, paid = r.paid, invoiced = r.invoiced,
-        cut = r.cut, bounty = r.bounty, moved = moved == true })
+        cut = r.cut, bounty = r.bounty, team = r.team, teamPay = r.teamPay, moved = moved == true })
 end
 
 -- ---------------------------------------------------------------------------------------------

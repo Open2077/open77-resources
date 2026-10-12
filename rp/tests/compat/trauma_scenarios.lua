@@ -384,6 +384,9 @@ function scenarios.one_team()
     TW.say(3, "tti", { "assist", "1" })
     local team = (callOf(2) or { team = {} }).team[3] == true
     local st = TW.act(3, "tti_stabilise", "tti_patient_2", 60)
+    local bank1, bank3 = TW.balance("bank:" .. MEDIC), TW.balance("bank:" .. MEDIC2)
+    local toldTeamPay = TW.told(1, "Team pay, call #1 stabilised: %+80 eddies")
+    local teamJob = TW.jobs("stabilise")[1] or { data = {} }
     -- Second patient: both medics press E in the same tick on an open call.
     TW.move(1, { x = DEATH.x + 31, y = DEATH.y + 0.6, z = DEATH.z })
     TW.move(3, { x = DEATH.x + 29.2, y = DEATH.y + 0.8, z = DEATH.z })
@@ -399,6 +402,9 @@ function scenarios.one_team()
         told_taken = toldTaken, s2 = opState(s2), refused = refused, team = tostring(team), st = opState(st),
         stabilised_by = (callOf(2) or {}).stabilisedBy, a = opState(a), claim_refusals = claimRefusals,
         responder4 = call4.responder, stable4 = tostring(call4.stable), jobs_s = #TW.jobs("stabilise"),
+        bank1 = bank1, bank3 = bank3, told_team_pay = toldTeamPay,
+        job_team = table.concat(teamJob.data.team or {}, ","), job_team_pay = table.concat(teamJob.data.teamPay or {}, ","),
+        bank1_end = TW.balance("bank:" .. MEDIC), bank3_end = TW.balance("bank:" .. MEDIC2),
         unbalanced = tostring(TW.unbalanced()),
     })
 end

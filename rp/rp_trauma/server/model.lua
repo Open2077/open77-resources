@@ -151,14 +151,27 @@ end
 --   funds        { bank = n, cash = n } available now (balance - held)
 --   order        { "bank", "cash" }: which wallets pay, in order
 --   accounts     { bank = "bank:<s>", cash = "cash:<s>", society = "soc:x", file = "stash:<s>:tti",
---                  billing = "sys:...", medic = "bank:<m>" | nil }
---   share        the medic's cut (0..1)
+--                  billing = "sys:...", medics = { "bank:<m1>", "bank:<m2>" } | medic = "bank:<m>" | nil }
+--   share        the team's cut (0..1), split evenly between the medics (the first, the one who
+--                acted, takes the remainder)
 --   societyFunds what the society can spend on a bounty now (0 = no bounty)
 --   invoice      true: what the wallets miss becomes an invoice; false: refuse insufficient_funds
 --   reason       a line reason (<= 64 bytes)
--- Returns { fee, covered, due, fromBank, fromCash, paid, invoiced, cut, bounty, lines } | nil, reason
--- `lines` may be empty: nothing to move (a covered act with no medic to pay).
+-- Returns { fee, covered, due, fromBank, fromCash, paid, invoiced, cut, bounty, teamPay, lines } |
+-- nil, reason. `teamPay[i]` is what medic i gets. `lines` may be empty: nothing to move (a covered
+-- act with no medic to pay).
 -- ---------------------------------------------------------------------------------------------
+
+-- `amount` in `n` whole shares, the remainder on the first one.
+function M.split(amount, n)
+    local out = {}
+    if n < 1 then return out end
+    local each = amount // n
+    for i = 1, n do out[i] = each end
+    out[1] = out[1] + (amount - each * n)
+    return out
+end
+
 function M.charge(spec)
     local fee = math.max(0, math.floor(tonumber(spec.fee) or 0))
     local coverage = tonumber(spec.coverage) or 0
@@ -187,7 +200,9 @@ function M.charge(spec)
     end
     local share = tonumber(spec.share) or 0
     if share < 0 then share = 0 elseif share > 1 then share = 1 end
-    if acc.medic then
+    local medics = acc.medics or (acc.medic and { acc.medic }) or {}
+    r.teamPay = {}
+    if #medics > 0 then
         r.cut = math.floor(r.paid * share)
         local bounty = math.floor(covered * share)
         local afford = math.max(0, math.floor(tonumber(spec.societyFunds) or 0))
@@ -195,14 +210,25 @@ function M.charge(spec)
     end
     local reason = spec.reason
     local function add(line) line.reason = reason; r.lines[#r.lines + 1] = line end
-    -- The medic's cut comes out of the bank part first, then the cash part.
-    local cutBank = math.min(r.cut, r.fromBank)
-    local cutCash = r.cut - cutBank
-    if cutBank > 0 then add({ money = cutBank, from = acc.bank, to = acc.medic }) end
-    if r.fromBank - cutBank > 0 then add({ money = r.fromBank - cutBank, from = acc.bank, to = acc.society }) end
-    if cutCash > 0 then add({ money = cutCash, from = acc.cash, to = acc.medic }) end
-    if r.fromCash - cutCash > 0 then add({ money = r.fromCash - cutCash, from = acc.cash, to = acc.society }) end
-    if r.bounty > 0 then add({ money = r.bounty, from = acc.society, to = acc.medic }) end
+    -- Each medic's part of the cut comes out of the bank part first, then the cash part; what is
+    -- left of the patient's money goes to the society, which pays the bounties.
+    local cuts, bounties = M.split(r.cut, #medics), M.split(r.bounty, #medics)
+    local bankLeft, cashLeft = r.fromBank, r.fromCash
+    for i, medic in ipairs(medics) do
+        local need = cuts[i]
+        local b = math.min(need, bankLeft)
+        if b > 0 then add({ money = b, from = acc.bank, to = medic }) end
+        bankLeft, need = bankLeft - b, need - b
+        local c = math.min(need, cashLeft)
+        if c > 0 then add({ money = c, from = acc.cash, to = medic }) end
+        cashLeft = cashLeft - c
+        r.teamPay[i] = cuts[i] + bounties[i]
+    end
+    if bankLeft > 0 then add({ money = bankLeft, from = acc.bank, to = acc.society }) end
+    if cashLeft > 0 then add({ money = cashLeft, from = acc.cash, to = acc.society }) end
+    for i, medic in ipairs(medics) do
+        if bounties[i] > 0 then add({ money = bounties[i], from = acc.society, to = medic }) end
+    end
     if r.invoiced > 0 then add({ item = "tti_invoice", count = r.invoiced, from = acc.billing, to = acc.file }) end
     return r
 end
@@ -219,10 +245,11 @@ function M.chargeSentence(r)
     return table.concat(parts, ", ")
 end
 
--- What a medic reads about their pay for one act.
-function M.paySentence(r)
+-- What medic `index` of the team (1 = the one who acted) reads about their pay for one act.
+function M.paySentence(r, index)
     if type(r) ~= "table" then return "no pay" end
-    local total = (r.cut or 0) + (r.bounty or 0)
+    local total = type(r.teamPay) == "table" and r.teamPay[index or 1]
+    if total == nil then total = (r.cut or 0) + (r.bounty or 0) end
     if total <= 0 then return "no pay for this one" end
     return ("+%s to your account"):format(M.money(total))
 end

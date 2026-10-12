@@ -82,11 +82,15 @@ C.fees = {
     heal = Config and Config.healFee or 100,
 }
 
--- The responding medic's cut, as a fraction: of what the patient pays (straight from the
+-- The responding team's cut, as a fraction: of what the patient pays (straight from the
 -- patient's wallet) and of what the plan covers (paid by the society when it can afford it).
 -- The rest stays with the society.
 C.medicShare = 0.4
 C.medicWallet = "bank"
+-- The cut is shared evenly by the medics of the call's team (/tti take, /tti assist) who are on
+-- duty within this many metres of the patient when the act ends; the one who acted takes the
+-- remainder. 0 pays only the medic who acted.
+C.teamShareRadius = 30.0
 
 -- An uninsured patient who answers the consent dialog is conscious: the charges need their yes.
 -- No answer within `timeoutMs` counts as unconscious: the medic treats and the patient is billed
