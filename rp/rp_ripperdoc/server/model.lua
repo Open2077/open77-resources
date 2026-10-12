@@ -331,7 +331,7 @@ M.TEXT = {
 }
 
 function M.textFor(reason)
-    return M.TEXT[reason] or ("Refused: " .. tostring(reason))
+    return M.TEXT[reason] or "That did not work. Try again in a moment."   -- never the raw code on screen; the server log keeps it
 end
 
 -- What open77_actions shows when one of this resource's actions is refused or stops: the same words

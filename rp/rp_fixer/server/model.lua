@@ -387,7 +387,7 @@ M.TEXT = {
 }
 
 function M.textFor(reason)
-    return M.TEXT[reason] or ("Refused: " .. tostring(reason) .. ".")
+    return M.TEXT[reason] or "That did not work. Try again in a moment."   -- never the raw code on screen; the server log keeps it
 end
 
 return M

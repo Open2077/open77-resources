@@ -392,7 +392,7 @@ local TEXTS = {
 M.TEXT = TEXTS   -- read by ports.lua (open77_actions `messages`)
 
 function M.textFor(reason)
-    return TEXTS[reason] or ("Refused: " .. tostring(reason))
+    return TEXTS[reason] or "That did not work. Try again in a moment."   -- never the raw code on screen; the server log keeps it
 end
 
 -- A word open77_actions accepts as a reason (letters, digits, `_ : . -`, up to 64).

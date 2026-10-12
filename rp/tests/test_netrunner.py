@@ -390,7 +390,7 @@ class NetrunnerLoop(unittest.TestCase):
                           r["sale_buyer"], r["sale_item"], r["sale_from"]),
                          ("1000", "2", "850", "fixer", "7", "client", "nrs.x", "char:s1"))
         self.assertEqual((r["valid_record"], r["invalid_record"]), ("true", "false"))
-        self.assertEqual(r["text_unknown"], "Refused: weird_token")
+        self.assertEqual(r["text_unknown"], "That did not work. Try again in a moment.")   # never the raw code
 
 
 if __name__ == "__main__":
