@@ -194,6 +194,7 @@ function scenarios.gold_response()
     local held = entry and entry.held
     local frozen = MH.players[2].frozen
     local backAtDeath = near(MH.players[2].position, DEATH)
+    local savedDown = TW.saved(PAT) ~= nil
     -- The platform reports two alive phases per respawn: the second holds again, in silence.
     MH.shared.trauma.revision = MH.shared.trauma.revision + 1
     MH.emit("onPlayerLifeStateChanged", 2, MH.shared.trauma.revision, "alive")
@@ -214,6 +215,7 @@ function scenarios.gold_response()
     local stable = call.stable
     local healthStable = MH.players[2].health
     local stillDown = TW.entry(2) ~= nil
+    local savedStable = (TW.saved(PAT) or ""):find("stable=1", 1, true) ~= nil
     local target2 = targetActions(2)
     local medicBank1 = TW.balance("bank:" .. MEDIC)
     local socAfterStab = TW.balance(SOC)
@@ -242,6 +244,7 @@ function scenarios.gold_response()
         job_s_bounty = jobsS[1] and jobsS[1].data.bounty or -1, job_e_moved = jobsE[1] and tostring(jobsE[1].data.moved) or "",
         revived_by = revived.by or 0, told_clinic = TW.told(2, "Trauma Team brought you to Vik's clinic"),
         held_soc = TW.held(SOC), unbalanced = tostring(TW.unbalanced()),
+        saved_down = savedDown, saved_stable = savedStable, saved_end = TW.saved(PAT) == nil,
     })
 end
 
@@ -441,6 +444,7 @@ function scenarios.call_closes()
     local toldMedic1 = TW.told(1, "Call #1 closed: the patient woke up at Vik's")
     local targetGone1 = not targetExists(2)
     local toldNotDown = TW.told(2, "You are not down")
+    local saved1Gone = TW.saved(PAT) == nil
     -- A revive in place closes the next call (consent asked: no plan).
     TW.move(2, DEATH)
     TW.die(2)
@@ -452,6 +456,7 @@ function scenarios.call_closes()
     local reviveOps = TW.committed("trauma.revive")
     local toldRevive = TW.told(2, "Medic Medic revived you")
     local jobsRevive = #TW.jobs("revive")
+    local saved2Gone = TW.saved(PAT) == nil
     -- A disconnect closes the third (the leaver's).
     TW.die(3)
     local call3 = callOf(3) or {}
@@ -463,7 +468,8 @@ function scenarios.call_closes()
         call2 = call2.id, revived = revived, closed2 = closed2, revive_ops = reviveOps, told_revive = toldRevive,
         jobs_revive = jobsRevive, call3 = call3.id, call3_gone = callOf(3) == nil, closed3 = events("closed", 3),
         target3_gone = not targetExists(3), owed = TW.count(TW.file(PAT), "tti_invoice"),
-        unbalanced = tostring(TW.unbalanced()),
+        unbalanced = tostring(TW.unbalanced()), saved1_gone = saved1Gone, saved2_gone = saved2Gone,
+        saved3_kept = TW.saved(PAT2) ~= nil,
     })
 end
 
@@ -484,7 +490,9 @@ function scenarios.healed_elsewhere()
     local freed = TW.entry(2) == nil
     local frozenAfter = MH.players[2].frozen == true
     local toldPatched = TW.told(2, "You were patched up")
+    local savedHealedGone = TW.saved(PAT) == nil
     local held2 = TW.die(2)
+    local savedAgain = TW.saved(PAT) ~= nil
     MH.command("trauma.release", 0, { "2" })
     MH.run(1)
     return TW.result({
@@ -492,6 +500,7 @@ function scenarios.healed_elsewhere()
         told_patched = toldPatched, held_again = held2 ~= nil, released_by_console = TW.entry(2) == nil,
         told_console = TW.told(2, "An operator got you back on your feet"),
         paid = cash0 - TW.balance("cash:" .. PAT), unbalanced = tostring(TW.unbalanced()),
+        saved_healed_gone = savedHealedGone, saved_again = savedAgain, saved_released_gone = TW.saved(PAT) == nil,
     })
 end
 
@@ -604,7 +613,8 @@ function scenarios.restart_keeps_plan()
     TW.die(2)
     local call = callOf(2) or {}
     local tier = call.tierKey
-    -- rp_trauma alone restarts: the held player is freed, the plan is read again.
+    -- rp_trauma alone restarts: the plan is read again, the held player is held down again and
+    -- their Gold call goes out again.
     MH.restart("rp_trauma", { { source = SFW.PATCH, name = "p.lua" }, { source = TW.PATCH, name = "t.lua" },
         table.unpack(SFW.scripts(ROOT_DIR .. "/rp_trauma")) }, { host = true })
     MH.until_(function() return TW.svc() and TW.svc().ready and TW.svc().actionsReady end, 30)
@@ -613,8 +623,8 @@ function scenarios.restart_keeps_plan()
     return TW.result({
         until_same = plan.untilAt == until1, tier = plan.tier, has = tostring(has), told_active = toldActive,
         call_tier = tier, call_priority = call.priority, after_restart_tier = plan2.tier,
-        freed = tostring(MH.players[2].frozen), patient_target = targetActions(2),
-        unbalanced = tostring(TW.unbalanced()),
+        frozen_after = tostring(MH.players[2].frozen), patient_target = targetActions(2),
+        call2_tier = tostring((callOf(2) or {}).tierKey), unbalanced = tostring(TW.unbalanced()),
     })
 end
 
@@ -850,6 +860,257 @@ function scenarios.legacy_acts()
         paid_revive = bank1 - TW.balance("bank:" .. PAT), heal_ops = TW.committed("trauma.heal"),
         revive_ops = TW.committed("trauma.revive"), call_closed = callOf(2) == nil,
         unbalanced = tostring(TW.unbalanced()),
+    })
+end
+
+-- ---------------------------------------------------------------------------------------------
+-- The down state is durable. Each scenario below reads the saved entry (rp_trauma's kvp store,
+-- which survives restarts) and the body itself (spot, freeze, health).
+-- ---------------------------------------------------------------------------------------------
+
+-- No escape by leaving: a player down who disconnects is down again when they come back, at the
+-- spot where they fell, with what the countdown had left (it runs on while they are away). The
+-- call closes while they are away and a new one goes out on their return. Said once.
+function scenarios.down_reconnect()
+    TW.boot()
+    TW.join(1, MEDIC, "Medic", NEAR)
+    TW.join(2, PAT, "Patient", DEATH)
+    TW.setup(1)
+    TW.settle()
+    local entry = TW.die(2) or {}
+    local deadlineUnix = entry.deadlineUnix or -1
+    local saved1 = TW.saved(PAT) ~= nil
+    TW.say(1, "tti", { "take", "1" })
+    MH.run(8)
+    MH.disconnect(2)
+    MH.run(1)
+    local callGone = callOf(2) == nil
+    local closedLeft = events("closed", 2)
+    local toldMedicClosed = TW.told(1, "Call #1 closed: the patient disconnected")
+    local keptSaved = TW.saved(PAT) ~= nil
+    MH.run(15)
+    local back = TW.rejoin(2, PAT, "Patient") or {}
+    local leftBack = back.deadline and math.ceil(back.deadline - MH.now) or -1
+    local leftExpected = deadlineUnix - math.floor(MH.now)
+    local held, frozen = back.held == true, MH.players[2].frozen == true
+    local atDeath = near(MH.players[2].position, DEATH)
+    local health = MH.players[2].health
+    local call2 = callOf(2) or {}
+    -- A second alive phase of the same spawn holds again, in silence.
+    MH.shared.trauma.revision = MH.shared.trauma.revision + 1
+    MH.emit("onPlayerLifeStateChanged", 2, MH.shared.trauma.revision, "alive")
+    MH.run(18)    -- an uninsured call reaches the medics after 15 s
+    return TW.result({
+        saved1 = saved1, call_gone = callGone, closed_left = closedLeft, told_medic_closed = toldMedicClosed,
+        kept_saved = keptSaved, back_down = back.position ~= nil, held = held, frozen = frozen, at_death = atDeath,
+        health = health, same_deadline = back.deadlineUnix == deadlineUnix, left_back = leftBack,
+        left_expected = leftExpected, call2 = tostring(call2.id), open_events = events("open", 2),
+        told_call2 = TW.told(2, "emergency call #2 placed"),
+        told_medic2 = TW.told(1, "%[UNINSURED #2%] Patient %(id 2%) is down"),
+        target = targetActions(2), still_told = TW.toldCount(2, "^You are still down where you fell%. Trauma Team"),
+        down_told = TW.toldCount(2, "^You are down%. Trauma Team"), frozen_end = tostring(MH.players[2].frozen),
+    })
+end
+
+-- A stable patient who disconnects comes back stable: same health, a Gold call that is already
+-- stable (the body offers Evacuate, the stabilisation is not sold twice), and the evacuation of the
+-- resumed body clears the saved state.
+function scenarios.down_stable_reconnect()
+    TW.boot()
+    TW.join(1, MEDIC, "Medic", NEAR)
+    TW.join(2, PAT, "Patient", KIOSK)
+    TW.setup(1)
+    TW.fund("bank:" .. PAT, 10000)
+    subscribe(2, "gold")
+    TW.move(2, DEATH)
+    TW.settle()
+    TW.die(2)
+    TW.say(1, "tti", { "take" })
+    local st = TW.act(1, "tti_stabilise", "tti_patient_2", 60)
+    local stableHealth = MH.players[2].health
+    local savedStable = (TW.saved(PAT) or ""):find("stable=1", 1, true) ~= nil
+    MH.disconnect(2)
+    MH.run(5)
+    local back = TW.rejoin(2, PAT, "Patient") or {}
+    MH.run(2)
+    local call = callOf(2) or {}
+    local result = {
+        st = opState(st), stable_health = stableHealth, saved_stable = savedStable, back_stable = back.stable == true,
+        held = back.held == true, health = MH.players[2].health, at_death = near(MH.players[2].position, DEATH),
+        call_stable = call.stable == true, call_tier = tostring(call.tierKey), target = targetActions(2),
+        still_told = TW.toldCount(2, "^You are still down, but stable"),
+    }
+    TW.say(1, "tti", { "take" })
+    local ev = TW.act(1, "tti_evacuate", "tti_patient_2", 60)
+    MH.run(1)
+    result.ev = opState(ev)
+    result.released = TW.entry(2) == nil
+    result.at_clinic = near(MH.players[2].position, CLINIC)
+    result.saved_gone = TW.saved(PAT) == nil
+    result.stab_ops = TW.committed("trauma.stabilise")
+    result.unbalanced = tostring(TW.unbalanced())
+    return TW.result(result)
+end
+
+-- No escape by a restart: rp_trauma stops while a player is down. The body is unfrozen (the
+-- resource is going away) but keeps its down health; the next start holds it down again at the
+-- same spot, with the same deadline, and raises a new call.
+function scenarios.down_resource_restart()
+    TW.boot()
+    TW.join(1, MEDIC, "Medic", NEAR)
+    TW.join(2, PAT, "Patient", DEATH)
+    TW.setup(1)
+    TW.settle()
+    local entry = TW.die(2) or {}
+    local deadlineUnix = entry.deadlineUnix or -1
+    local lowHealth = MH.players[2].health
+    MH.run(5)
+    MH.stop("rp_trauma")
+    MH.run(1)
+    local holds = TW.clientEvents(2, "rp_trauma:hold")
+    local last = holds[#holds] or {}
+    local stopped = {
+        frozen = tostring(MH.players[2].frozen), health = MH.players[2].health, regen = tostring(MH.players[2].regen),
+        unhold = tostring(last[1]), saved = TW.saved(PAT) ~= nil,
+        logged = TW.printed("stopped: every held player unfrozen, 1 down state%(s%) kept") == 1,
+    }
+    MH.run(3)
+    local healthBetween = MH.players[2].health
+    TW.startTrauma()
+    MH.until_(function() return TW.svc() and TW.svc().ready and TW.svc().actionsReady end, 30)
+    MH.run(3)
+    local back = TW.entry(2) or {}
+    return TW.result({
+        low_health = lowHealth, stopped_frozen = stopped.frozen, stopped_health = stopped.health,
+        stopped_regen = stopped.regen, stopped_unhold = stopped.unhold, stopped_saved = stopped.saved,
+        stopped_logged = stopped.logged, health_between = healthBetween,
+        back_down = back.position ~= nil, held = back.held == true, frozen = tostring(MH.players[2].frozen),
+        health = MH.players[2].health, at_death = near(MH.players[2].position, DEATH),
+        same_deadline = back.deadlineUnix == deadlineUnix, call = tostring((callOf(2) or {}).id),
+        target = targetActions(2), still_told = TW.toldCount(2, "^You are still down where you fell"),
+    })
+end
+
+-- The countdown ran out while the player was away: they are still down when they come back, and
+-- /respawn is open at once (even with a medic on duty). Before the body is held, /respawn waits.
+-- This join reports no alive phase after the entry is back: the connect grace holds the body.
+function scenarios.down_expired_while_away()
+    TW.boot()
+    TW.join(1, MEDIC, "Medic", NEAR)
+    TW.join(2, PAT, "Patient", DEATH)
+    TW.setup(1)
+    TW.settle()
+    TW.die(2)
+    MH.disconnect(2)
+    MH.run(70)
+    TW.join(2, PAT, "Patient", TW.SPAWN)
+    local early = TW.entry(2) or {}
+    local resumedEarly, heldEarly = early.position ~= nil, early.held == true
+    TW.say(2, "respawn", {}, 1)
+    local toldSettling = TW.told(2, "Hold on, the body is still settling")
+    local stillAfterEarly = TW.entry(2) ~= nil
+    MH.run(15)
+    local back = TW.entry(2) or {}
+    local left = back.deadline and math.max(0, math.ceil(back.deadline - MH.now)) or -1
+    local held, frozen, atDeath = back.held == true, MH.players[2].frozen == true, near(MH.players[2].position, DEATH)
+    local health = MH.players[2].health
+    local toldRanOut = TW.toldCount(2, "^You are still down where you fell, and your countdown has run out")
+    MH.run(3)
+    local toldOpenAgain = TW.toldCount(2, "^/respawn is open")
+    TW.say(2, "respawn", {}, 4)
+    return TW.result({
+        resumed_early = resumedEarly, held_early = heldEarly, told_settling = toldSettling,
+        still_after_early = stillAfterEarly, held = held, frozen = frozen, at_death = atDeath, health = health,
+        left = left, told_ran_out = toldRanOut, told_open_again = toldOpenAgain,
+        released = TW.entry(2) == nil, at_clinic = near(MH.players[2].position, CLINIC),
+        hosp_ops = TW.committed("trauma.hospital"), saved_gone = TW.saved(PAT) == nil,
+        unbalanced = tostring(TW.unbalanced()),
+    })
+end
+
+-- Getting up clears the saved state: after /respawn at Vik's, a disconnect and a return find the
+-- player on their feet.
+function scenarios.down_respawn_clears()
+    TW.boot()
+    TW.join(2, PAT, "Patient", DEATH)
+    TW.settle()
+    TW.die(2)
+    local saved1 = TW.saved(PAT) ~= nil
+    MH.run(61)
+    TW.say(2, "respawn", {}, 4)
+    local released = TW.entry(2) == nil
+    local savedAfter = TW.saved(PAT) ~= nil
+    MH.disconnect(2)
+    MH.run(5)
+    TW.rejoin(2, PAT, "Patient")
+    MH.run(16)
+    return TW.result({
+        saved1 = saved1, released = released, saved_after = savedAfter, back_down = TW.entry(2) ~= nil,
+        frozen = tostring(MH.players[2].frozen == true), health = MH.players[2].health,
+        at_spawn = near(MH.players[2].position, TW.SPAWN), still_told = TW.toldCount(2, "^You are still down"),
+        unbalanced = tostring(TW.unbalanced()),
+    })
+end
+
+-- A stale saved state is dropped. Through a server restart (the kvp file survives it): back a
+-- minute later, the player is still down; back five hours later (the cap is 3 h), the start drops
+-- the entry and the player comes back up. On a return: an entry older than the cap is dropped.
+function scenarios.down_stale_dropped()
+    TW.boot()
+    TW.join(2, PAT, "Patient", DEATH)
+    TW.settle()
+    local entry = TW.die(2) or {}
+    local deadlineUnix = entry.deadlineUnix or -1
+    TW.boot({ keep = TW.keep() })
+    local back = TW.rejoin(2, PAT, "Patient") or {}
+    local restartDown, restartHeld = back.position ~= nil, back.held == true
+    local restartAtDeath = near(MH.players[2].position, DEATH)
+    local restartSameDeadline = back.deadlineUnix == deadlineUnix
+    local keep = TW.keep()
+    keep.now = keep.now + 5 * 3600
+    TW.boot({ keep = keep })
+    local purged = TW.printed("1 stale saved down state%(s%) dropped") == 1
+    local savedAfterPurge = TW.saved(PAT) ~= nil
+    TW.rejoin(2, PAT, "Patient")
+    MH.run(16)
+    local upAfterPurge = TW.entry(2) == nil and MH.players[2].frozen ~= true
+    -- On a return: the cap lowered to 2 minutes, the player away for 3.
+    TW.join(3, PAT2, "Leaver", DEATH)
+    TW.settle()
+    TW.die(3)
+    local savedLeaver = TW.saved(PAT2) ~= nil
+    MH.resources.rp_trauma.env.Config.downPersistMaxSeconds = 120
+    MH.disconnect(3)
+    MH.run(180)
+    TW.rejoin(3, PAT2, "Leaver")
+    MH.run(16)
+    return TW.result({
+        restart_down = restartDown, restart_held = restartHeld, restart_at_death = restartAtDeath,
+        restart_same_deadline = restartSameDeadline, purged = purged, saved_after_purge = savedAfterPurge,
+        up_after_purge = upAfterPurge, saved_leaver = savedLeaver, leaver_down = TW.entry(3) ~= nil,
+        leaver_frozen = tostring(MH.players[3].frozen == true), leaver_health = MH.players[3].health,
+        leaver_saved = TW.saved(PAT2) ~= nil, leaver_logged = TW.printed("saved down state dropped %(fell %d+ s ago") == 1,
+    })
+end
+
+-- Config.downPersist = false: the old rules. Nothing is saved, a stop frees the body at full
+-- health, and the next start finds nobody down.
+function scenarios.down_persist_off()
+    TW.boot()
+    TW.join(2, PAT, "Patient", DEATH)
+    TW.settle()
+    MH.resources.rp_trauma.env.Config.downPersist = false
+    TW.die(2)
+    local savedOff = TW.saved(PAT) ~= nil
+    MH.stop("rp_trauma")
+    MH.run(1)
+    local healthStopped, frozenStopped = MH.players[2].health, tostring(MH.players[2].frozen == true)
+    TW.startTrauma()
+    MH.until_(function() return TW.svc() and TW.svc().ready and TW.svc().actionsReady end, 30)
+    MH.run(3)
+    return TW.result({
+        saved_off = savedOff, health_stopped = healthStopped, frozen_stopped = frozenStopped,
+        down_after = TW.entry(2) ~= nil, logged = TW.printed("0 down state%(s%) kept") == 1,
     })
 end
 

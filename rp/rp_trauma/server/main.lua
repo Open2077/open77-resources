@@ -16,6 +16,12 @@
 -- Vik's clinic. /respawn is accepted after the countdown, or at once when no medic is on
 -- duty: the body goes to the hospital and the bill follows the patient's plan.
 --
+-- The down state is durable (Config.downPersist): it is saved in this resource's kvp store under
+-- the player's durable subject when they go down, die again or become stable, and deleted on every
+-- way up. A player who disconnects while down, or whom a restart (of this resource or of the
+-- server) lets go, is held down again at the same spot when they are back, with what their
+-- countdown had left; a new call goes out for them.
+--
 -- Authority: everything is decided here and in service.lua; the client only renders (pins,
 -- input block) and requests (ALT+click actions). Every eddy moves through the coordinator
 -- (server/ledger.lua): reserve before the act, commit after it, cancel on any other end.
@@ -33,9 +39,12 @@ TraumaRuntime = { service = Svc }
 -- ---------------------------------------------------------------------------
 
 -- [playerId] = { position, heading, since, deadline, deaths, held, applying, reminderAt,
---               announcedOpen, announced, episode, stable, stableFraction, pose }
+--               announcedOpen, announced, episode, stable, stableFraction, pose,
+--               subject, sinceUnix, deadlineUnix, saved, resumed, resumeTold, reapply }
 -- A player with an entry here is down: the next "alive" life phase re-applies the hold.
--- Removing the entry is what frees them.
+-- Removing the entry is what frees them. `deadline` is monotonic (the live countdown),
+-- `deadlineUnix` / `sinceUnix` are wall-clock (what is saved); `resumed` marks an entry read back
+-- from the store after a disconnect or a restart.
 local down = {}
 
 -- The 1.x tables. Plans and invoices now live in the coordinator; the tables are kept
@@ -193,6 +202,68 @@ local function statsLine(medicId)
 end
 
 -- ---------------------------------------------------------------------------
+-- The down state on disk (kvp, keyed by the durable subject)
+-- ---------------------------------------------------------------------------
+-- One string per down player, "down:<subject>" (TraumaModel.encodeDown): the spot, the heading,
+-- the fall and the moment /respawn opens in wall-clock unix seconds, stable or not, the deaths.
+-- Open77.kvp and not the coordinator or SQL: it is synchronous (a death, a disconnect and the
+-- stop handler cannot wait on a promise), needs neither a database nor a running library, is
+-- flushed when the resource stops, and already holds this resource's medic counters. The
+-- coordinator keeps money and items; a body's position is neither. The subject is the one the
+-- Trauma Team file uses (Svc:subjectOf: the coordinator's provider, else the identifier).
+
+local DOWN_KEY = "down:"
+
+local function persistEnabled()
+    return Config.downPersist ~= false
+end
+
+local function persistMaxSeconds()
+    return tonumber(Config.downPersistMaxSeconds) or 3 * 60 * 60
+end
+
+local function downKey(subject)
+    return DOWN_KEY .. subject
+end
+
+-- The durable subject of a connected player, or nil. Never yields.
+local function subjectFor(playerId)
+    local ok, subject = pcall(Svc.subjectOf, Svc, playerId)
+    if ok and type(subject) == "string" and subject ~= "" then
+        return subject
+    end
+    return nil
+end
+
+-- Writes a down entry (on the fall, a death while down, stabilisation, a disconnect).
+local function saveDown(playerId, entry)
+    if not persistEnabled() then
+        return
+    end
+    entry.subject = entry.subject or subjectFor(playerId)
+    if not entry.subject then
+        log("player %d: no durable subject, the down state is not saved", playerId)
+        return
+    end
+    local ok, why = Open77.kvp.set(downKey(entry.subject), TraumaModel.encodeDown({
+        position = entry.position, heading = entry.heading, at = entry.sinceUnix, untilAt = entry.deadlineUnix,
+        stable = entry.stable == true, stableFraction = entry.stableFraction, deaths = entry.deaths,
+    }))
+    entry.saved = ok == true
+    if not ok then
+        log("player %d: down state not saved: %s", playerId, tostring(why))
+    end
+end
+
+-- Deletes the saved entry: the player is up again, by whatever path.
+local function forgetDown(entry)
+    if entry and entry.subject then
+        Open77.kvp.delete(downKey(entry.subject))
+        entry.saved = false
+    end
+end
+
+-- ---------------------------------------------------------------------------
 -- The down state
 -- ---------------------------------------------------------------------------
 
@@ -216,6 +287,19 @@ local function downMessage(entry, playerId)
         return ("You are down. Trauma Team has been notified. /respawn opens in %d s (Vik's bill %d eddies)."):format(left, bill)
     end
     return ("You are down. /respawn wakes you up at Vik's clinic (%d eddies) - or wait for Trauma Team."):format(bill)
+end
+
+-- The notice of a down state read back after a disconnect or a restart (said once).
+local function stillDownMessage(entry, playerId)
+    local left = secondsLeft(entry)
+    local bill = Svc:estimate(playerId, "hospital")
+    if entry.stable then
+        return "You are still down, but stable: Trauma Team has been called again and will take you to Vik's clinic. Hold on."
+    end
+    if left > 0 then
+        return ("You are still down where you fell. Trauma Team has been called again. /respawn opens in %d s (Vik's bill %d eddies)."):format(left, bill)
+    end
+    return ("You are still down where you fell, and your countdown has run out: /respawn wakes you up at Vik's clinic now (%d eddies) - or wait for Trauma Team."):format(bill)
 end
 
 -- ---------------------------------------------------------------------------
@@ -479,6 +563,7 @@ end
 local function releaseHold(playerId, healthFraction, how, by)
     local entry = down[playerId]
     down[playerId] = nil
+    forgetDown(entry)
     if entry and entry.pose then stageRelease(playerId, entry.pose); entry.pose = nil end
     local ok, reason = Open77.players.setFrozen(playerId, false)
     if not ok then
@@ -503,10 +588,17 @@ end
 -- spot, frozen, low health, inputs blocked on the client.
 local function applyHold(playerId)
     local entry = down[playerId]
-    if not entry or entry.applying then
+    if not entry then
+        return
+    end
+    if entry.applying then
+        -- Another alive phase while the body is in transit (the join spawn of a player who comes
+        -- back down, a second phase of the same respawn): the hold runs once more after this one.
+        entry.reapply = true
         return
     end
     entry.applying = true
+    entry.reapply = nil
 
     -- Back to the death spot. The respawn may still be settling ("recovering"), so a
     -- refusal is retried a few times before the hold is applied where the body stands.
@@ -565,14 +657,21 @@ local function applyHold(playerId)
     entry.pose = stageHold(playerId, "down")
     TriggerClientEvent("rp_trauma:hold", playerId, true, secondsLeft(entry), entry.stable == true)
     -- Said once per state: the second alive phase of the same respawn holds again in silence.
+    -- A down state read back after a disconnect or a restart says so, once.
     local state = entry.stable and "stable" or "down"
     if entry.announced ~= state then
         entry.announced = state
-        say(playerId, downMessage(entry, playerId))
-        toast(playerId, "error", "You are down", entry.stable and "Stable. Evacuation coming." or "Trauma Team has been notified.", 8000)
+        local resumed = entry.resumed and not entry.resumeTold
+        if resumed then entry.resumeTold = true end
+        say(playerId, resumed and stillDownMessage(entry, playerId) or downMessage(entry, playerId))
+        toast(playerId, "error", resumed and "You are still down" or "You are down",
+            entry.stable and "Stable. Evacuation coming." or "Trauma Team has been notified.", 8000)
     end
     log("player %d held down at %s, %d s left%s", playerId, fmtPos(entry.position), secondsLeft(entry),
         entry.stable and " (stable)" or "")
+    if entry.reapply and down[playerId] == entry then
+        applyHold(playerId)
+    end
 end
 
 -- The Trauma Team response, as main.lua's down state lets service.lua see and act on it.
@@ -585,6 +684,7 @@ local function stabiliseHeld(playerId, fraction)
     end
     entry.stable = true
     entry.stableFraction = fraction
+    saveDown(playerId, entry)
     if Open77.players.isDead(playerId) then
         local ok, reason = Open77.players.revive(playerId, { health = fraction, graceMs = Config.reviveGraceMs })
         if not ok then
@@ -676,6 +776,7 @@ local function onDeath(playerId)
             Svc:patientMoved(playerId, entry.position)
         end
         entry.held = false
+        saveDown(playerId, entry)
         log("player %d died again while down (%d deaths)", playerId, entry.deaths)
         return
     end
@@ -683,11 +784,14 @@ local function onDeath(playerId)
         log("player %d died with no known position: no down state", playerId)
         return
     end
+    local unix = nowUnix()
     entry = {
         position = { x = pos.x, y = pos.y, z = pos.z },
         heading = (read and read.heading) or 0.0,
         since = nowMono(),
         deadline = nowMono() + Config.downSeconds,
+        sinceUnix = unix,
+        deadlineUnix = unix + Config.downSeconds,
         deaths = 1,
         held = false,
         applying = false,
@@ -695,14 +799,136 @@ local function onDeath(playerId)
         announcedOpen = false,
         announced = "down",      -- the state the player was last told about (down, stable)
         episode = Svc:newEpisode(),
+        subject = subjectFor(playerId),
     }
     down[playerId] = entry
+    saveDown(playerId, entry)
     local call = Svc:raiseCall(playerId, entry)
     say(playerId, downMessage(entry, playerId))
     toast(playerId, "error", "You are down", "Trauma Team has been notified.", 8000)
     TriggerEvent("rp_trauma:down", playerId, entry.position)
     log("player %d down at %s, call #%s, %d s", playerId, fmtPos(entry.position), call and tostring(call.id) or "-",
         Config.downSeconds)
+end
+
+-- ---------------------------------------------------------------------------
+-- Back after a disconnect or a restart: the saved down state is held again
+-- ---------------------------------------------------------------------------
+
+local function lifePhase(playerId)
+    local life = Open77.players.getLifeState(playerId)
+    return type(life) == "table" and life.phase or nil
+end
+
+-- The call of a resumed down state, raised once the patient's plan is read (its tier sets the
+-- priority and the words the patient reads): Svc:onReady reads it on a join, the service boot on a
+-- start. After 20 s the call goes out with what is known. Yields.
+local function resumeCall(playerId, entry)
+    for _ = 1, 40 do
+        if down[playerId] ~= entry then
+            return
+        end
+        if Svc.plans[entry.subject] ~= nil then
+            break
+        end
+        Wait(500)
+    end
+    if down[playerId] ~= entry or Svc.calls[playerId] then
+        return
+    end
+    local call = Svc:raiseCall(playerId, entry)
+    log("player %d still down: call #%s raised again", playerId, call and tostring(call.id) or "-")
+end
+
+-- The saved down state of a player who is back (a join, or a start that finds them connected),
+-- put back in `down`: the same spot, what the countdown had left (0 when it ran out while they
+-- were away: still down, /respawn open at once), stable or not, and a new call. No server action
+-- here: the hold is applied by the "alive" life phase handler, or by holdIfAlive for a body that
+-- is already standing. An entry older than Config.downPersistMaxSeconds is dropped. Never yields.
+-- Returns the entry, or nil.
+local function resumeDown(playerId, why)
+    if not persistEnabled() or down[playerId] then
+        return nil
+    end
+    local subject = subjectFor(playerId)
+    if not subject then
+        return nil
+    end
+    local raw = Open77.kvp.get(downKey(subject))
+    if raw == nil then
+        return nil
+    end
+    local saved = TraumaModel.decodeDown(raw)
+    local now = nowUnix()
+    local left = saved and TraumaModel.downResume(saved, now, persistMaxSeconds())
+    if not left then
+        Open77.kvp.delete(downKey(subject))
+        log("player %d: saved down state dropped (%s)", playerId,
+            saved and ("fell %d s ago, more than %d s"):format(now - saved.at, persistMaxSeconds()) or "unreadable")
+        return nil
+    end
+    -- Never more than a full countdown (a clock set back, a shorter Config.downSeconds since).
+    if left > Config.downSeconds then
+        left = Config.downSeconds
+        saved.untilAt = now + left
+    end
+    local entry = {
+        position = saved.position,
+        heading = saved.heading,
+        since = nowMono() - math.max(0, now - saved.at),
+        deadline = nowMono() + left,
+        sinceUnix = saved.at,
+        deadlineUnix = saved.untilAt,
+        deaths = saved.deaths,
+        held = false,
+        applying = false,
+        reminderAt = nowMono() + Config.downReminderSeconds,
+        announcedOpen = left <= 0,   -- the resumed notice already says /respawn is open
+        announced = nil,             -- the resumed notice is said at the first hold
+        resumed = true,
+        episode = Svc:newEpisode(),
+        stable = saved.stable,
+        stableFraction = saved.stableFraction,
+        subject = subject,
+        saved = true,
+    }
+    down[playerId] = entry
+    log("player %d is still down (%s): at %s, %d s left%s", playerId, why, fmtPos(entry.position), left,
+        entry.stable and " (stable)" or "")
+    CreateThread(function() resumeCall(playerId, entry) end)
+    return entry
+end
+
+-- A resumed body whose player already stands: no life phase will come to apply the hold (a start
+-- finds the players settled long ago; a join may report its alive phase before the entry is back).
+-- The same hold, from the same "alive" condition, never on a body that is not alive. Yields.
+local function holdIfAlive(playerId)
+    local entry = down[playerId]
+    if entry and not entry.held and not entry.applying and lifePhase(playerId) == "alive" then
+        applyHold(playerId)
+    end
+end
+
+-- Saved down states older than the cap, of players who never came back: dropped at start.
+local function purgeStaleDowns()
+    if not persistEnabled() then
+        return
+    end
+    local ok, keys = pcall(Open77.kvp.keys, DOWN_KEY, 256)
+    if not ok or type(keys) ~= "table" then
+        return
+    end
+    local now, dropped = nowUnix(), 0
+    for _, key in ipairs(keys) do
+        local saved = TraumaModel.decodeDown(Open77.kvp.get(key))
+        if not saved or not TraumaModel.downResume(saved, now, persistMaxSeconds()) then
+            Open77.kvp.delete(key)
+            dropped = dropped + 1
+        end
+    end
+    if dropped > 0 then
+        log("%d stale saved down state(s) dropped", dropped)
+    end
 end
 
 -- A connecting client reports a "dead" phase while its pristine template loads (measured
@@ -719,7 +945,15 @@ AddEventHandler("onResourceStart", function(name)
     for _, id in ipairs(Open77.players.all()) do
         readyAt[id] = nowMono() - CONNECT_GRACE_SECONDS
         seenAlive[id] = not Open77.players.isDead(id)
+        -- Down when the resource stopped (or when the server went down): held again now when
+        -- standing, by their next alive phase otherwise. A player still connecting is resumed by
+        -- onPlayerReady.
+        local okRead, read = pcall(Open77.players.get, id)
+        if okRead and type(read) == "table" and read.ready ~= false and resumeDown(id, "restart") then
+            CreateThread(function() holdIfAlive(id) end)
+        end
     end
+    purgeStaleDowns()
 end)
 
 AddEventHandler("onPlayerLifeStateChanged", function(playerId, revision, phase)
@@ -866,7 +1100,7 @@ RegisterCommand("respawn", function(source)
     if not entry then
         return say(source, "You are not down, choom. Nothing to respawn from.")
     end
-    if entry.applying then
+    if entry.applying or (entry.resumed and not entry.held and not Open77.players.isDead(source)) then
         return say(source, "Hold on, the body is still settling. Try again in a second.")
     end
     local left = secondsLeft(entry)
@@ -917,6 +1151,7 @@ local function doRevive(patient, medic)
             down[patient] = entry
             return nil, reason or "revive_failed"
         end
+        forgetDown(entry)
         TriggerClientEvent("rp_trauma:hold", patient, false, 0)
         TriggerClientEvent("rp_trauma:downClear", -1, patient)
         if entry then Svc:onUp(patient, "revived", medic) end
@@ -1519,10 +1754,17 @@ AddEventHandler("onPlayerReady", function(playerId)
     end
     readyAt[id] = nowMono()
     seenAlive[id] = false
+    -- Down when they left: the entry is back, the alive phase of their spawn holds the body at
+    -- the saved spot (the connect "dead" phase is ignored by the grace below).
+    resumeDown(id, "reconnect")
     -- The connect phases have settled by now; a ready player who is not dead was seen alive.
     SetTimeout(CONNECT_GRACE_SECONDS * 1000, function()
         if readyAt[id] and not Open77.players.isDead(id) then
             seenAlive[id] = true
+        end
+        -- Back down but no alive phase came after the entry (it can come first): held now.
+        if readyAt[id] then
+            CreateThread(function() holdIfAlive(id) end)
         end
     end)
     Svc:onReady(id)
@@ -1535,11 +1777,16 @@ AddEventHandler("onPlayerDisconnected", function(playerId)
     end
     seenAlive[id] = nil
     readyAt[id] = nil
-    if down[id] then
+    local entry = down[id]
+    if entry then
         down[id] = nil
+        -- No escape from the down state by leaving: the saved entry stays (written again here, in
+        -- case an earlier write failed) and holds the player down when they are back. The live
+        -- call closes so no medic flies to an empty spot; a new one goes out on their return.
+        saveDown(id, entry)
         TriggerClientEvent("rp_trauma:downClear", -1, id)
         Svc:onUp(id, "left")
-        log("player %d disconnected while down", id)
+        log("player %d disconnected while down%s", id, entry.saved and ": still down when they come back" or "")
     end
     Svc:onDisconnected(id)
     removeAv(id)
@@ -1655,11 +1902,19 @@ AddEventHandler("onResourceStop", function(name)
     if name ~= RESOURCE then
         return
     end
+    -- The resource is going away: nobody stays frozen or posed. A saved body keeps its down
+    -- health (no heal: a restart is no way up) and is held down again by the next start; a body
+    -- that could not be saved is freed at full health, as before.
+    local kept = 0
     for id, entry in pairs(down) do
         if entry.pose then stageRelease(id, entry.pose) end
         Open77.players.setFrozen(id, false)
         Open77.stats.setHealthRegenEnabled(id, true)
-        Open77.stats.restoreHealth(id)
+        if persistEnabled() and entry.saved then
+            kept = kept + 1
+        else
+            Open77.stats.restoreHealth(id)
+        end
         TriggerClientEvent("rp_trauma:hold", id, false, 0)
     end
     down = {}
@@ -1667,7 +1922,7 @@ AddEventHandler("onResourceStop", function(name)
         removeAv(medic)
     end
     Svc:shutdown()
-    log("stopped: every held player freed")
+    log("stopped: every held player unfrozen, %d down state(s) kept for the next start", kept)
 end)
 
 -- ---------------------------------------------------------------------------

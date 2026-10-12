@@ -300,7 +300,8 @@ function S:isMedic(pid)
     return self.P.jobs.onDutyAs(pid, self.cfg.job)
 end
 
--- A player went down (main.lua, once per down episode). Never yields.
+-- A player went down (main.lua, once per down episode), or is still down after a disconnect or a
+-- restart: a patient already stable gets a stable call (the body offers Evacuate). Never yields.
 function S:raiseCall(patient, entry)
     if self.calls[patient] then return self.calls[patient] end
     local cfg, M, now = self.cfg, self.M, self.P.nowMs()
@@ -317,7 +318,7 @@ function S:raiseCall(patient, entry)
         raisedAt = now, tierKey = tierKey, tierLabel = tier and tier.label or nil,
         priority = tier and tier.priority or cfg.calls.uninsuredPriority,
         dispatchAt = now + 1000 * (tier and (tier.dispatchDelaySeconds or 0) or cfg.calls.uninsuredDelaySeconds),
-        state = "open", team = {}, stable = false, announced = false, lastAnnounce = 0,
+        state = "open", team = {}, stable = entry.stable == true, announced = false, lastAnnounce = 0,
         targetId = "tti_patient_" .. tostring(patient),
     }
     call.noTarget = self:callCount() >= cfg.calls.maxCalls

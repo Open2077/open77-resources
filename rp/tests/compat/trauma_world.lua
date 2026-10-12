@@ -429,6 +429,28 @@ function TW.die(pid, opts)
     return TW.entry(pid)
 end
 
+-- A player who comes back after a disconnect: joins at the freeroam spawn point, then the connect
+-- life phases of a real client (a "dead" phase while the pristine template loads, which the connect
+-- grace ignores, then "alive" once spawned). Returns the down entry once held, or nil.
+function TW.rejoin(pid, identifier, name)
+    TW.join(pid, identifier, name, TW.SPAWN)
+    local p = MH.players[pid]
+    p.alive = false
+    MH.shared.trauma.revision = MH.shared.trauma.revision + 1
+    MH.emit("onPlayerLifeStateChanged", pid, MH.shared.trauma.revision, "dead")
+    MH.run(0.5)
+    p.alive = true
+    MH.shared.trauma.revision = MH.shared.trauma.revision + 1
+    MH.emit("onPlayerLifeStateChanged", pid, MH.shared.trauma.revision, "alive")
+    MH.until_(function() local e = TW.entry(pid) return e == nil or e.held end, 15)
+    return TW.entry(pid)
+end
+
+-- rp_trauma's saved down state of a subject (its kvp string, which survives restarts), or nil.
+function TW.saved(subject)
+    return (MH.kvp.rp_trauma or {})["down:" .. subject]
+end
+
 function TW.setup(pid)
     MH.command("tti.setup", 0, { tostring(pid) })
     MH.run(1)

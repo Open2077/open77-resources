@@ -56,6 +56,14 @@ invoice: `/tti pay` (or `/trauma payer`) settles it from the bank, then cash.
 `/respawn` still works after the countdown (at once when no medic is on duty): you wake up at Vik's
 and the bill (500 eddies) follows your plan. It closes your call.
 
+Leaving does not get you up. If you disconnect while down, or the server or `rp_trauma` restarts, you
+are down again when you are back: at the spot where you fell, at the same health (stable if a medic
+had stabilised you), with what your countdown had left. The countdown keeps running while you are
+away, so after a long absence `/respawn` is open at once. You read "You are still down where you
+fell..." once, and a new call goes out to the medics (the old one closed when you left, and its
+responder was told you disconnected). A down state older than 3 hours is forgotten: you come back on
+your feet. Getting up by any path (`/respawn`, a revive, the evacuation, a heal, an operator) forgets it.
+
 ### Trauma Team medics
 
 Get the `trauma` job and clock in with `/service` (rp_jobs). Every call reaches you as a chat line, a
@@ -173,6 +181,11 @@ duty), `hospitalBill`, `healFee`, `reviveFee`, the bars of the older acts, `down
 (0.05), `reviveHealthFraction` (0.5), the hospital point (Vik's clinic, `-1546, 1231, 11.6`), the AV
 (`Vehicle.av_trauma`, pad `-1370, 953, 23.5` r 12) and the staging poses.
 
+| Key (`shared/config.lua`) | Value | Meaning |
+|---|---|---|
+| `downPersist` | true | the down state survives a disconnect and a restart of `rp_trauma` or of the server; `false`: the old rules (leaving frees the body, a restart frees it at full health) |
+| `downPersistMaxSeconds` | 10800 (3 h) | a saved down state whose fall is older than this is dropped, on the player's return or at start |
+
 ### Exports and events
 
 ```lua
@@ -195,7 +208,11 @@ exports.rp_trauma:heal(playerId, byId)    -- true | nil, reason (no fee)
 
 Durable state lives in the coordinator: each holder's file `stash:<subject>:tti` holds the membership
 card (a unique item whose metadata is the plan: tier, end, periods, auto-renewal) and the invoices.
-The medics' counters stay in `Open77.kvp`. Calls, consents and the down state are runtime state.
+The medics' counters stay in `Open77.kvp`, and so does the down state of every player who is down:
+one entry per subject (`down:<subject>`, the subject of the holder's file) with the spot, the heading,
+the fall and the moment `/respawn` opens in unix seconds, stable or not, and the deaths. It is written
+on the fall, a death while down and the stabilisation, and deleted on every way up. Calls and consents
+are runtime state: a call is raised again for a player who is still down.
 
 ## Limits
 
@@ -208,6 +225,13 @@ The medics' counters stay in `Open77.kvp`. Calls, consents and the down state ar
 - The medic kneels where they stand, not turned towards the body.
 - A covered act pays the medic only while the society can afford the bounty; an invoiced amount pays
   the society when the patient settles it, not the medic.
-- A restart forgets the open calls and frees every held player (no bill); plans and invoices stay.
+- While `rp_trauma` is stopped, every held player is unfrozen (at their down health, no bill); the
+  next start holds them down again and raises their calls again, with new numbers. Plans and
+  invoices stay.
+- A player who comes back down is free to move until their client reports alive after the join (the
+  hold then puts them back at the saved spot, at most 15 s after they are in the world); `/respawn`
+  waits for the hold.
+- The saved down state lives in this resource's kvp store on this server: it does not follow a player
+  to another server, and clearing the store (or `downPersist = false`) lets everyone who was down up.
 - `rp_mdt` reads the 1.x tables for contracts and bills: point it at `planOf`, `owed` and `calls`.
 - Stabilise and Evacuate need `open77_actions`; without it only the older acts and `/respawn` remain.

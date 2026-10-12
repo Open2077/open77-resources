@@ -5,6 +5,7 @@
 --   charges    how a fee splits between the plan, the patient's wallets, an invoice, the medic's
 --              cut and the society, and the coordinator lines that move it (one operation)
 --   calls      dispatch order
+--   down       the down state as one kvp string (kvp values are scalars, not tables)
 --   texts      what a player reads for a refusal token
 --
 -- Global: TraumaModel.
@@ -310,6 +311,41 @@ function M.callTag(call)
     if call.state ~= "open" then return ("TAKEN #%d"):format(call.id) end
     if call.tierLabel then return ("%s #%d"):format(call.tierLabel:upper(), call.id) end
     return ("UNINSURED #%d"):format(call.id)
+end
+
+-- ---------------------------------------------------------------------------------------------
+-- The down state on disk: one string per subject in rp_trauma's kvp store,
+--   v=1;x=..;y=..;z=..;h=..;at=<unix of the fall>;until=<unix when /respawn opens>;stable=0|1;sf=..;deaths=n
+-- Times are wall-clock unix seconds: the monotonic clock does not survive a restart.
+-- ---------------------------------------------------------------------------------------------
+-- d = { position = { x, y, z }, heading, at, untilAt, stable, stableFraction, deaths }
+function M.encodeDown(d)
+    return ("v=1;x=%.3f;y=%.3f;z=%.3f;h=%.2f;at=%d;until=%d;stable=%d;sf=%.4f;deaths=%d"):format(
+        d.position.x, d.position.y, d.position.z, tonumber(d.heading) or 0.0, math.floor(d.at),
+        math.floor(d.untilAt), d.stable and 1 or 0, tonumber(d.stableFraction) or 0.0,
+        math.max(1, math.floor(tonumber(d.deaths) or 1)))
+end
+
+-- The record M.encodeDown wrote, or nil when `text` is not one.
+function M.decodeDown(text)
+    if type(text) ~= "string" then return nil end
+    local f = {}
+    for k, v in text:gmatch("([%w_]+)=([^;]*)") do f[k] = v end
+    local function num(k) return tonumber(f[k]) end
+    if f.v ~= "1" or not (num("x") and num("y") and num("z") and num("at") and num("until")) then return nil end
+    local sf = num("sf")
+    return {
+        position = { x = num("x"), y = num("y"), z = num("z") }, heading = num("h") or 0.0,
+        at = math.floor(num("at")), untilAt = math.floor(num("until")), stable = f.stable == "1",
+        stableFraction = (sf and sf > 0) and sf or nil, deaths = math.max(1, math.floor(num("deaths") or 1)),
+    }
+end
+
+-- What is left of a saved down state at `now` (unix seconds): the seconds before /respawn opens
+-- (0: open at once), or nil, "stale" when the fall is more than `maxAge` seconds old.
+function M.downResume(d, now, maxAge)
+    if now - d.at > maxAge then return nil, "stale" end
+    return math.max(0, d.untilAt - now)
 end
 
 -- ---------------------------------------------------------------------------------------------

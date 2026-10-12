@@ -18,6 +18,18 @@ Config.downSeconds = 60
 -- (this eval config). Production: false.
 Config.countdownWithoutMedics = true
 
+-- The down state survives a disconnect and a restart (of this resource or of the server): while
+-- a player is down it is saved in this resource's kvp store under their durable subject. A player
+-- who left while down, or whom a restart let go, is held down again at the same spot when they are
+-- back, with what their countdown had left. The countdown runs on while they are away: once it has
+-- run out, /respawn is open at once. `false`: the old rule, a disconnect or a restart frees the
+-- body (a restart at full health).
+Config.downPersist = true
+
+-- A saved down state older than this many seconds (counted from the fall) is dropped and the
+-- player comes back on their feet. Default 3 hours.
+Config.downPersistMaxSeconds = 3 * 60 * 60
+
 -- What the hospital charges for a /respawn before the patient's plan (bank, then cash,
 -- then an invoice).
 Config.hospitalBill = 500
