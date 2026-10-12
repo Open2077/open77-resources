@@ -18,13 +18,14 @@ Config.downSeconds = 60
 -- (this eval config). Production: false.
 Config.countdownWithoutMedics = true
 
--- What the hospital charges for a /respawn (account -> society, then cash, then an
--- unpaid row in rp_trauma_bills).
+-- What the hospital charges for a /respawn before the patient's plan (bank, then cash,
+-- then an invoice).
 Config.hospitalBill = 500
 
--- Medic fees, charged to the patient and paid into the trauma society.
-Config.healFee = 100    -- Stabilise (ALT+click) / /soin
-Config.reviveFee = 300  -- Revive (ALT+click) / /reanimer; free for contract holders
+-- Medic fees before the patient's plan, charged through the coordinator and paid into the
+-- trauma society (the medic gets a cut, server/config.lua TraumaConfig.medicShare).
+Config.healFee = 100    -- Patch up (ALT+click) / /soin
+Config.reviveFee = 300  -- Revive (ALT+click) / /reanimer
 
 -- Progress bars shown to the medic (milliseconds), staged with Config.Stage below.
 Config.stabiliseMs = 5000
@@ -87,11 +88,8 @@ Config.medicCooldownSeconds = 10
 -- Reminder sent to a down player every N seconds (chat + toast).
 Config.downReminderSeconds = 30
 
--- Trauma Team contract: price per period, period length in minutes of server time,
--- and how many consecutive failed renewals cancel the contract.
-Config.contractPrice = 1000
-Config.contractMinutes = 30
-Config.contractMaxFailures = 2
+-- Trauma Team plans (Silver, Gold, Platinum), their kiosks, the response fees and the
+-- medics' cut live in server/config.lua (TraumaConfig): the server owns every price.
 
 -- "The hospital": where a /respawn puts the body. In the lore you wake up at Vik's, so
 -- it is Viktor Vektor's clinic (Little China, Watson; the rp_zones `viktor_clinic` zone,
