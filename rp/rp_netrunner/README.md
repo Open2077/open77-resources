@@ -21,9 +21,9 @@ are checked on the server for every command and every ALT+click request.
 
 ## Setup
 
-1. Load list (`resources.load`): `open77_contextmenu`, `open77_uikit`, `open77_worldui`
-   (declared dependencies, all ship a client half), **`open77_hacking`** (the platform's hacking
-   presentation package, auto-start system resource: without it the victim cannot be warned and
+1. Load list (`resources.load`): `open77_contextmenu`, `open77_uikit`, `open77_worldui`,
+   `open77_props` (declared dependencies, all ship a client half), **`open77_hacking`** (the
+   platform's hacking presentation package, auto-start system resource: without it the victim cannot be warned and
    every upload fails closed), `open77_cyberware` + `open77_appearance` (the implant framework
    and the character adapter that binds a player to a durable record), a configured database,
    `rp_jobs` v2, `rp_inventory`, `rp_ncpd`, `rp_economy`, `rp_bank`, optionally `rp_identity`
@@ -182,7 +182,7 @@ Every action below plays a pose from the server's `open77_animations` catalogue
 attached to the body (`Open77.props.create` + `attach`, permission `world.props`) where one
 makes sense, and takes its time behind the UI-kit bar (X cancels; the bar keeps the player
 still on the client, the server never freezes anyone). Other players see all of it: poses
-and props are server-driven. Everything is in ``Config.Stage` (`shared/config.lua`)` and follows rp_nomade's carry-pose
+and props are server-driven. Everything is in `Config.Stage` (`shared/config.lua`) and follows rp_nomade's carry-pose
 pattern: `pose.profiles` is a list tried in order through `Open77.animations.get` -- the
 best future name first (the 76-profile catalogue of the pending base PR), then what today's
 18-profile eval catalogue has -- and `prop.models` a list of aliases tried in order. A
@@ -232,10 +232,11 @@ an unknown list `stage <key>: no known profile among [...]`, a refused prop `sta
 ## Manifest
 
 Permissions: `network.events`, `database.access`, `players.hacking.define` / `.read` /
-`.activate`, `players.cyberware.define` / `.read` / `.manage`, `players.life.read`, `world.props`
-(server); `ui.vanilla.map` (client). Dependencies: `open77_uikit` (the bar, server twin
-`progress`), `open77_worldui` (the access point), `open77_contextmenu` (ALT+click) — all ship a
-client half. `rp_jobs`, `rp_inventory`, `rp_ncpd`, `rp_economy`, `rp_bank`, `rp_identity` and
+`.activate`, `players.cyberware.define` / `.read` / `.manage`, `players.life.read`, `world.props`,
+`players.animations.control` (server); `ui.vanilla.map` (client). Dependencies: `open77_uikit`
+(the bar, server twin `progress`), `open77_worldui` (the access point), `open77_contextmenu`
+(ALT+click), `open77_props` (the deck held during a breach) — all ship a client half.
+`rp_jobs`, `rp_inventory`, `rp_ncpd`, `rp_economy`, `rp_bank`, `rp_identity` and
 `open77_doors` are reached through exports and never declared.
 
 ## Test in 2 minutes

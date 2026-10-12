@@ -211,7 +211,7 @@ Every action below plays a pose from the server's `open77_animations` catalogue
 attached to the body (`Open77.props.create` + `attach`, permission `world.props`) where one
 makes sense, and takes its time behind the UI-kit bar (X cancels; the bar keeps the player
 still on the client, the server never freezes anyone). Other players see all of it: poses
-and props are server-driven. Everything is in ``Config.Stage` (`shared/config.lua`)` and follows rp_nomade's carry-pose
+and props are server-driven. Everything is in `Config.Stage` (`shared/config.lua`) and follows rp_nomade's carry-pose
 pattern: `pose.profiles` is a list tried in order through `Open77.animations.get` -- the
 best future name first (the 76-profile catalogue of the pending base PR), then what today's
 18-profile eval catalogue has -- and `prop.models` a list of aliases tried in order. A
@@ -243,9 +243,11 @@ There is no `/tag` action in this resource (the `[GANG]` tag is the nameplate): 
 Permissions: `network.events`, `database.access`, `world.npcs`, `world.props` (the crate beside
 each buyer), `players.animations.read` (the hands-up read; the devkit card lists no permission
 check for `Open77.animations.current`, the guide says it needs this one — declared to be safe),
+`players.animations.control` (the deal hand-over and the frisk poses, `Config.Stage`),
 `ui.nameplates` (client).
-Dependencies: `open77_contextmenu`, `open77_interactions`, `open77_notifications` (all three
-ship a client half). `rp_zones`, `rp_jobs`, `rp_inventory`, `rp_economy`, `rp_ncpd`,
+Dependencies: `open77_contextmenu`, `open77_interactions`, `open77_notifications`, `open77_props`
+(the client projection that draws the pack in the seller's hand). All four ship a client half.
+`rp_zones`, `rp_jobs`, `rp_inventory`, `rp_economy`, `rp_ncpd`,
 `rp_housing`, `rp_identity`, `rp_fixer` and `open77_rp_basics` are server-only and reached
 through `pcall`: each degrades to a chat line or a log line when missing.
 

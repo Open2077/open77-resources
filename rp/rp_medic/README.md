@@ -46,8 +46,9 @@ A player's id is obtained with `/id` (built-in chat command).
   `remove` answers `nil` (`insufficient_funds` or other), the act is free; if `add` fails
   after a successful `remove`, the patient is refunded. Without `rp_economy`, the act is free and
   announced as such.
-- Both resources are declared in `dependencies`: the server refuses to start
-  `rp_medic` if they are not in its `load` list (see the *server-resources* guide). The
+- Both resources are declared in `dependencies`, with `open77_uikit` (the intervention bar) and
+  `open77_props` (the injector in the hand): the server refuses to start
+  `rp_medic` if one of the four is not in its `load` list (see the *server-resources* guide). The
   fallback above covers a missing export or a dependency stopped at run time, not a
   dependency never loaded.
 
@@ -61,7 +62,9 @@ id. An identifier that cannot be found (player gone) simply skips the write.
 
 `players.stats.read` (health read), `players.stats.apply` (`restoreHealth`),
 `players.life.read` (`isDead`), `players.life.revive` (`revive`), `network.events`
-(`RegisterNetEvent("chat:ready")` for the suggestions), `acl.read` (`acl.isAllowed`).
+(`RegisterNetEvent("chat:ready")` for the suggestions), `acl.read` (`acl.isAllowed`),
+`players.animations.control` (the medic's kneel), `world.props` (the injector in the medic's
+hand).
 
 ## Staging: poses, props and durations
 
@@ -70,7 +73,7 @@ Every action below plays a pose from the server's `open77_animations` catalogue
 attached to the body (`Open77.props.create` + `attach`, permission `world.props`) where one
 makes sense, and takes its time behind the UI-kit bar (X cancels; the bar keeps the player
 still on the client, the server never freezes anyone). Other players see all of it: poses
-and props are server-driven. Everything is in ``MEDIC_STAGE` at the top of `server/main.lua` (this resource has no shared config)` and follows rp_nomade's carry-pose
+and props are server-driven. Everything is in `MEDIC_STAGE` at the top of `server/main.lua` (this resource has no shared config) and follows rp_nomade's carry-pose
 pattern: `pose.profiles` is a list tried in order through `Open77.animations.get` -- the
 best future name first (the 76-profile catalogue of the pending base PR), then what today's
 18-profile eval catalogue has -- and `prop.models` a list of aliases tried in order. A
@@ -98,8 +101,9 @@ an unknown list `stage <key>: no known profile among [...]`, a refused prop `sta
 
 ## Test it in 2 minutes
 
-1. Load `rp_economy`, `rp_jobs` and `rp_medic` in `server.jsonc` (`resources.load`) and
-   start the server. The log shows `[rp_medic] started: fees heal=100 revive=300 ...`.
+1. Load `rp_economy`, `rp_jobs`, `open77_uikit`, `open77_props` and `rp_medic` in `server.jsonc`
+   (`resources.load`) and start the server. The log shows
+   `[rp_medic] started: fees heal=100 revive=300 ...`.
 2. Connect two players A and B. Give A the job through `rp_jobs` (for instance `/job medecin`
    with that resource) and B some money through `rp_economy` (`/givemoney`). Note the ids with `/id`.
 3. B types `/911 I got shot`: A receives the "911" alert with the rounded position, B reads

@@ -187,7 +187,7 @@ Every action below plays a pose from the server's `open77_animations` catalogue
 attached to the body (`Open77.props.create` + `attach`, permission `world.props`) where one
 makes sense, and takes its time behind the UI-kit bar (X cancels; the bar keeps the player
 still on the client, the server never freezes anyone). Other players see all of it: poses
-and props are server-driven. Everything is in ``RpCrimeConfig.stage` (`shared/config.lua`)` and follows rp_nomade's carry-pose
+and props are server-driven. Everything is in `RpCrimeConfig.stage` (`shared/config.lua`) and follows rp_nomade's carry-pose
 pattern: `pose.profiles` is a list tried in order through `Open77.animations.get` -- the
 best future name first (the 76-profile catalogue of the pending base PR), then what today's
 18-profile eval catalogue has -- and `prop.models` a list of aliases tried in order. A
@@ -245,14 +245,17 @@ an unknown list `stage <key>: no known profile among [...]`, a refused prop `sta
 Permissions: `network.events` (`chat:ready`, toasts), `database.access`, `world.vehicles`
 (`nearby`, `getPosition`, `isLockedForPlayer`, `setLocked`, `triggerHorn`, `getPlayerSeat`),
 `world.props` (`all`, `get` for the nomad crates; `create`, `remove` for the fence's own two
-crates), `world.npcs` (the fence), `world.environment`
+crates; `create`, `attach`, `remove` for the loot bag, the pack and the parts shown in the hands),
+`players.animations.control` (`Open77.animations.play` / `stop`: the lockpick crouch and the
+hand-overs), `world.npcs` (the fence), `world.environment`
 (`getState`), `players.life.read` (`isDead`), `player.weapons.read` (`weapons.get`),
 `players.interactions.read` / `players.interactions.control` (the deal consent — the guide
 requires them, the cards list no check, declared as rp_ncpd does).
 
 Dependencies: `open77_uikit`, `open77_player_interactions`, `open77_interactions`,
-`open77_notifications` (platform packages driven from the server), and — because this manifest is
-**not** delivered to clients — the RP resources whose exports it calls: `rp_economy`, `rp_inventory`,
+`open77_notifications` (platform packages driven from the server), `open77_props` (the client
+projection that draws the props attached to the hands), and, because this manifest is
+**not** delivered to clients, the RP resources whose exports it calls: `rp_economy`, `rp_inventory`,
 `rp_identity`, `rp_zones`, `rp_ncpd`, `rp_shops`, `rp_garage`, `rp_gangs`, `rp_nomade`. Every export is
 still called inside `pcall` and degrades to a chat line. `rp_config` is optional: every number can
 be overridden through `exports.rp_config:get("rp_crime.<path>")` (e.g. `rp_crime.deal.price`).

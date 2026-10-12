@@ -52,7 +52,8 @@ disconnecting ends the contract.
 | `/garde aide` | anyone | This list. |
 | `/expulser <playerId>` | guard in the zone | Teleports the player 20 m past the ring (`Open77.players.teleport`, `dismount = true`, ground height from `Open77.world.groundZ` when a client can see it). Refused on an **NCPD officer on duty** (`rp_ncpd:isOnDuty`, or `rp_jobs` job `ncpd` on duty), outside your guarded zone, on a player who is not inside it, and on yourself. Logged in the camera log and in the server log. |
 
-`/garde` and `/expulser` refuse the server console (`run it from the game`). Every refusal is
+`/garde` and `/expulser` refuse the server console (`rp_vigile: /garde runs from the game, not the
+console`, and the same line for `/expulser`). Every refusal is
 explained in chat, in English.
 
 **ALT+click** on a player inside the zone you guard shows **Escort out (security)** (within 3 m)
@@ -98,7 +99,9 @@ AddEventHandler("rp_vigile:contract", function(contractId, phase, guardId, clien
 `phase` is `posted` (on the board), `started` (a guard took it), `ended` (an active contract is
 over: completed, ended by a side, guard off duty / gone, client gone, resource stop), `expired`
 (an offer nobody took in time) or `cancelled` (an offer withdrawn). `guardId` is `nil` before
-`started`; `clientId` is `nil` for corpo contracts. The contract's `end_reason` is in the table.
+`started`; for a zone contract `clientId` is the id of the player who posted it, and `nil` for a
+standing contract, one posted from the console, or once that player has left. The contract's
+`end_reason` is in the table.
 
 Consumed: `rp_zones:entered` / `rp_zones:left` (camera log, escort release at the ring),
 `rp_jobs:duty` / `rp_jobs:changed` (a guard who clocks out or changes job loses the contract).
@@ -143,7 +146,7 @@ is made once per boot.
 [rp_vigile] contract 1 posted kind=zone zone=afterlife by=nil payer=society:barman minutes=30
 [rp_vigile] contract 1 started kind=zone zone=afterlife guard=3 client=nil payer=society:barman minutes=30
 [rp_vigile] contract 1 minute 1 paid guard=3 +16 cut=4
-[rp_vigile] contract 1 minute 4 unpaid reason=you were outside Afterlife
+[rp_vigile] contract 1 minute 4 unpaid reason=you were outside The Afterlife
 [rp_vigile] contract 1 guard 3 expelled 4 from afterlife to -1421.8 1035.2 22.7 (settled)
 [rp_vigile] player 4 escorted out of afterlife by 3
 [rp_vigile] contract 1 ended reason=guard_ended paid_minutes=2 earned=32 cut=8
@@ -170,7 +173,7 @@ copied into `VigileConfig.zoneGeometry` for the expulsion point. The three stand
 
 | Zone | Centre | Radius | Client | From spawn |
 |---|---|---|---|---|
-| `afterlife` | -1453, 1017, 16.6 | 50 m (rp_zones; `zoneGeometry.afterlife.radius` still says 25) | `barman` society | 1.0 km south-west (drive; the bar under the ramp) |
+| `afterlife` | -1453, 1017, 16.6 | 50 m | `barman` society | 1.0 km south-west (drive; the bar under the ramp) |
 | `lizzies` | -1188.9, 1566.2, 23.0 | 18 m | `barman` society | 440 m south |
 | `kabuki_market` | -1191.30, 2006.88, 7.82 | 70 m | corpo | 0 m (the market around the spawn) |
 
@@ -205,7 +208,7 @@ also carries `h10`, `viktor_clinic` → `ripper`, `ncpd_hq` → `ncpd`, `junkyar
    The Afterlife (last 3,
    UTC):`, `[hh:mm:ss] <you> (#1) entered`, `... left`, `... entered` (a contract taken while
    already inside the ring starts with `... was inside when the watch began` instead).
-7. Stay outside for 2 minutes: `No pay for the last 2 minute(s): you were outside Afterlife.`
+7. Stay outside for 2 minutes: `No pay for the last 2 minute(s): you were outside The Afterlife.`
 8. `/garde fin` → `Contract #1 over (the guard ended it): 2/30 minute(s) paid, 32 €$ earned.`;
    `/garde` shows the board again. Log `contract 1 ended reason=guard_ended paid_minutes=2 ...`.
 9. `/service` (clock out) while guarding → the contract ends with `the guard clocked out`.
@@ -220,12 +223,10 @@ With a **second player** (`2`, no job, at the spawn):
     nobody guarded. Cash.`
 11. Player 1 guarding Afterlife, both inside the ring: hold **ALT**, click player 2, **Escort out
     (security)** → (with `open77_rp_basics` running and `rp.escort` granted) player 2 walks out
-    tethered and reads `You have been escorted out of Afterlife.` at the ring. Without the kit:
+    tethered and reads `You have been escorted out of The Afterlife.` at the ring. Without the kit:
     `The role-play kit (open77_rp_basics) is not running on this server: no escort, use /expulser.`
 12. `/expulser 2` inside the ring → player 2 lands `zoneGeometry` radius + 20 m from the centre
-    (ground height from `groundZ`; with the stale 25 m copy that is 45 m out, still inside the
-    50 m `afterlife` zone of rp_zones — update `zoneGeometry.afterlife.radius` to 50 to land
-    them on the Afterlife lot) and reads `Security threw you out of The Afterlife. Don't
+    (70 m out for the 50 m `afterlife` zone, ground height from `groundZ`) and reads `Security threw you out of The Afterlife. Don't
     come back, choom.`; `/garde journal` has `... was thrown out by
     security`. Give player 2 `setjob 2 ncpd 0` + `/service` and retry: `That is an NCPD officer on
     duty. Security does not throw out badges.`

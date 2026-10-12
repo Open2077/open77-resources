@@ -29,12 +29,13 @@ Server-authoritative: the client renders (map pins, input block, countdown hint)
 | `client/main.lua` | client | input block + countdown hint while down; medic map pins; ALT+click actions |
 
 Dependencies (all ship a client half): `open77_uikit` (progress bars, `/contrat` menu — server
-twins), `open77_contextmenu` (ALT+click), `open77_notifications` (toasts). `rp_jobs`,
-`rp_zones`, `rp_bank`, `rp_economy`, `rp_identity` are reached through `pcall` and are **not**
+twins), `open77_contextmenu` (ALT+click), `open77_notifications` (toasts), `open77_props` (the
+client projection that draws the injector and the kit while a medic works). `rp_jobs`,
+`rp_bank`, `rp_economy`, `rp_identity` are reached through `pcall` and are **not**
 declared (their READMEs ask a resource with a client script not to; `rp_economy` is server-only).
 Without `rp_jobs` every medic verb refuses with "roster unavailable"; without `rp_bank` /
-`rp_economy` the cash path / the unpaid bill path takes over; without `rp_zones` `/trauma av`
-refuses; without `rp_identity` account names are used.
+`rp_economy` the cash path / the unpaid bill path takes over; without `rp_identity` account
+names are used. `rp_zones` is not called: `/trauma av` only checks the distance to the AV pad.
 
 ## The death flow
 
@@ -74,7 +75,7 @@ respawn removes the down entry **before** acting, so the next `alive` phase is l
 | `/911 <message>` | everyone | The message and the caller's rounded position go to every on-duty medic and NCPD officer (chat + toast) and `rp_ncpd:alert("911", position, message, callerId)` is raised for `rp_ncpd`. |
 | `/medic` | everyone | On-duty medics nearest first with their distance; a medic also sees their counters. |
 | `/trauma` | everyone | Your status: down or not, contract, unpaid bills. An on-duty medic also gets the dispatch list (who is down, where, how far). |
-| `/trauma av` | Trauma Team on duty, **inside the `hospital` zone** | Spawns the Trauma Team AV (`Config.av.record` = `Vehicle.av_trauma`) 8 m in front of the medic and warps them into the driver seat. One AV per medic; calling it again replaces it. `/trauma av off` removes it. |
+| `/trauma av` | Trauma Team on duty, **within 12 m of the AV pad** (`Config.av.pad`; only the distance is checked, no zone) | Spawns the Trauma Team AV (`Config.av.record` = `Vehicle.av_trauma`) 8 m in front of the medic and warps them into the driver seat. One AV per medic; calling it again replaces it. `/trauma av off` removes it. |
 | `/trauma factures` | everyone | Lists your unpaid Trauma Team bills. |
 | `/trauma payer` | everyone | Pays them oldest first, each from the account then from cash; stops at the first one you cannot cover. |
 | `/contrat` | everyone (not while down) | UI-kit menu: **Subscribe** (1 000 €$ per 30 min of server time, charged from the account through `rp_bank:charge(id, 1000, "trauma", "contract")`), or **My contract** / **Cancel my contract** when active. |
@@ -174,7 +175,7 @@ the whole boot.
 | `downHealthFraction` / `reviveHealthFraction` | 0.05 / 0.5 | |
 | `medicCooldownSeconds` / `downReminderSeconds` | 10 s / 30 s | |
 | `hospital.zone` / `hospital.respawn` | `viktor_clinic` / `-1546, 1231, 11.6` (heading 180) | |
-| `av.record` / `av.pad` | `Vehicle.av_trauma` / `-1408, 960, 23.5` r 15 (the Afterlife street) | |
+| `av.record` / `av.pad` | `Vehicle.av_trauma` / `-1370, 953, 23.5` r 12 (the Afterlife street) | |
 | `blip.sprite` / `blip.contractSprite` | `SOSsignalVariant` / `important` | |
 
 **"The hospital" is Vik's.** In the lore you wake up at Viktor Vektor's, so `/respawn` puts the
@@ -183,9 +184,9 @@ centre `-1548, 1230, 11.6`, the AMM chair room), 855 m south-west of the freeroa
 Market Centre `-1191.30, 2006.88, 7.82`); `Config.hospital.respawn` is 2 m off the chair. The
 config keys keep the `hospital` name (rp_config overrides `rp_trauma.hospital.*`); the
 player-facing lines say Vik's. **The AV pad** is not the clinic (an interior cannot take an AV)
-but the real street outside the Afterlife ramp — `Config.av.pad` `-1408, 960, 23.5`, probed
-crosswalk, 15 m radius, 73 m from the Afterlife's bar floor: `/trauma av` needs the medic
-standing on it.
+but the real street outside the Afterlife ramp: `Config.av.pad` `-1370, 953, 23.5`, 12 m radius
+(planar), east of the rp_garage bays so the AV never lands on a parked car, about 105 m from the
+Afterlife's bar floor. `/trauma av` needs the medic standing within 12 m of it.
 
 **The AV.** `Vehicle.av_trauma` is the "AV Trauma" record of the 2.31 catalogue (class `av`,
 4 seats; `open77_data vehicles "av_trauma"`). No AV record has a `_player` variant and the
@@ -204,13 +205,13 @@ proven one: if `Open77.vehicles.create` refuses it (the medic reads `AV request 
 [rp_trauma] player 3 hospital respawn: account=500 cash=0 debt=0
 [rp_trauma] player 3 owes 200 (hospital), total debt 200
 [rp_trauma] player 3 contract signed until 1789000000 account=4000
-[rp_trauma] player 4 spawned AV 12 (Vehicle.av_trauma) at -1408, 968, 25 seat=true
+[rp_trauma] player 4 spawned AV 12 (Vehicle.av_trauma) at -1370, 961, 25 seat=true
 ```
 
 ## Test in 2 minutes (one player, freeroam spawn)
 
-Load `open77_uikit`, `open77_contextmenu`, `open77_notifications`, `rp_economy`, `rp_bank`,
-`rp_jobs`, `rp_zones`, `rp_identity` and `rp_trauma` (and **not** `rp_medic`). Log on start:
+Load `open77_uikit`, `open77_contextmenu`, `open77_notifications`, `open77_props`, `rp_economy`,
+`rp_bank`, `rp_jobs`, `rp_zones`, `rp_identity` and `rp_trauma` (and **not** `rp_medic`). Log on start:
 `[rp_trauma] started: down=60 s ...` then `store=sql ...`.
 
 1. Connect (id `1`), stand at the spawn, Kabuki Market Centre `-1191.30, 2006.88, 7.82`.
@@ -228,17 +229,17 @@ Load `open77_uikit`, `open77_contextmenu`, `open77_notifications`, `rp_economy`,
    the market; toast **Vik's Clinic** from rp_zones), full health, chat `Trauma Team dropped
    you at Vik's clinic. Bill: 500 €$ from your account.` (or `... in cash`, or `... 200 €$ still
    owed (/trauma payer)` when broke). `/solde` shows the debit; `/trauma factures` lists a debt
-   if any; `/trauma payer` settles it once you have money. The `ATM — Vik's Clinic` ring is
+   if any; `/trauma payer` settles it once you have money. The `ATM - Vik's Clinic` ring is
    3 m away at the door.
 5. `/contrat` → menu; **Subscribe** → `Trauma Team contract signed: 1000 €$ charged...`
    (fund the account first: `/bank` at the clinic ATM or console `givemoney 1 2000` then
    deposit). `/contrat` again shows **My contract** / **Cancel my contract**.
 6. Console: `setjob 1 trauma 3`, then in game `/service` → you are an on-duty medic. `/trauma`
-   now adds `Dispatch: nobody is down.` Drive to the street outside the Afterlife ramp
-   (`-1408, 960`, the NCPD outpost ring of rp_ncpd marks the same crosswalk), `/trauma av` →
-   the AV appears in front of you and you are in its seat; `/trauma av off`. Anywhere else the
-   command answers `The AV pad is on the Afterlife street (-1408, 960), N m from you: stand on
-   it first.`
+   now adds `Dispatch: nobody is down.` Drive to the AV pad on the street outside the Afterlife
+   ramp (`-1370, 953`, about 46 m east of the rp_ncpd outpost ring at `-1416, 957`), `/trauma av`
+   → the AV appears in front of you and you are in its seat; `/trauma av off`. More than 12 m
+   from the pad, the command answers `The AV pad is on the Afterlife street (-1370, 953), N m
+   from you: stand on it first.`
 7. `/soin 1` → `You can't treat yourself, choom.`; `/soin 99` → `Player 99 not found`.
 8. **Two players** (second client id `2`, no job): player 2 `/suicide` → player 1 (on duty)
    reads `<name> (id 2) is down at ..., 12 m away. ALT+click the body: Revive.`, gets a toast
@@ -265,7 +266,7 @@ Every action below plays a pose from the server's `open77_animations` catalogue
 attached to the body (`Open77.props.create` + `attach`, permission `world.props`) where one
 makes sense, and takes its time behind the UI-kit bar (X cancels; the bar keeps the player
 still on the client, the server never freezes anyone). Other players see all of it: poses
-and props are server-driven. Everything is in ``Config.Stage` (`shared/config.lua`)` and follows rp_nomade's carry-pose
+and props are server-driven. Everything is in `Config.Stage` (`shared/config.lua`) and follows rp_nomade's carry-pose
 pattern: `pose.profiles` is a list tried in order through `Open77.animations.get` -- the
 best future name first (the 76-profile catalogue of the pending base PR), then what today's
 18-profile eval catalogue has -- and `prop.models` a list of aliases tried in order. A
@@ -305,4 +306,6 @@ sides), `players.life.revive` (`revive`), `players.life.respawn` (`respawn`),
 (`vehicles.create` / `remove` / `warpPlayerIntoVehicle`), `network.events`
 (`RegisterNetEvent`, `TriggerClientEvent`, `Open77.notifications.send`, `TriggerServerEvent`),
 `database.access` (`Open77.database.*`), `input.blockAll` (`Open77.input.blockAll`, client),
-`ui.vanilla.map` (`Open77.blips.*`, client).
+`ui.vanilla.map` (`Open77.blips.*`, client), `players.animations.control`
+(`Open77.animations.play` / `stop`: the medic's kneel, the wounded pose, the `/911` dial),
+`world.props` (`Open77.props.create` / `attach` / `remove`: the injector and the kit).

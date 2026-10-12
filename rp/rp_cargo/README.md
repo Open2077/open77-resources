@@ -11,8 +11,9 @@ Row **A9** of the world-interaction plan: crates and other physical objects carr
 vehicle's bed, held durably by the **plate**, drawn on whichever runtime vehicle currently
 carries that plate. Opt-in (`auto_start false`), server-only.
 
-**Status: offline only.** Everything below was written and tested on the fake host
-(`tests/test_a9_cargo.py`); nothing was deployed, launched or seen in game, and every offset in
+**Status.** Everything below was written and tested on the fake host
+(`tests/test_a9_cargo.py`). One layout was checked in game: the Mackinaw bed
+(`Vehicle.v_standard3_thorton_mackinaw_player`) is `measured: true`. Every other offset in
 `data/layouts.json` is a **starting guess** (`measured: false`). The design notes, the API needs
 from the coordinator and the measurement procedure are in
 [`docs/world-interaction/a9-cargo.md`](../docs/world-interaction/a9-cargo.md).
@@ -40,21 +41,21 @@ around z. A slot holds `maxStack` objects, each layer `stackHeight` metres above
   "label": "Thorton Mackinaw bed",
   "part": "cargo",
   "capacityKg": 300,
-  "measured": false,
+  "measured": true,
   "entityTemplate": "0x8F1579854FD1989D",
   "basis": "where the numbers come from",
   "aliases": [],
   "slots": [
-    { "id": 1, "x": -0.55, "y": -1.5, "z": 0.9, "yaw": 0.0, "stackHeight": 0.55, "maxStack": 2, "measured": false }
+    { "id": 1, "x": -0.55, "y": -1.5, "z": 0.9, "yaw": 0.0, "stackHeight": 0.55, "maxStack": 2, "measured": true }
   ]
 }
 ```
 
-Shipped (all `measured: false`):
+Shipped (only the Mackinaw is `measured: true`, the other three are `measured: false`):
 
 | Record (aliases) | Slots × stack | Basis |
 |---|---|---|
-| `Vehicle.v_standard3_thorton_mackinaw_player` | 4 × 2 | `rp_nomade` bed guesses (`rp_nomade/shared/config.lua:128-141`) |
+| `Vehicle.v_standard3_thorton_mackinaw_player` | 4 × 2 | the `rp_nomade` bed slots (`rp_nomade/shared/config.lua:128-141`), checked in game and set to `measured: true` |
 | `Vehicle.v_standard3_thorton_mackinaw_02_player` (`_ncu_player`) | 4 × 2 | copied; a **different** entity template from the Mackinaw, measure separately |
 | `Vehicle.v_utility4_chevalier_legatus_player` | 4 × 2 | copied; larger body, expect every offset to move |
 | `Vehicle.v_standard25_thorton_colby_pickup_player` (`_pickup_02_player`) | 4 × 2 | guess by analogy, smaller bed |
@@ -145,7 +146,7 @@ load or unload is granted per operation by `rp_inventory:grantPockets`.
 ## Log (grep-able)
 
 ```text
-[rp_cargo] 4 layout(s) from data/layouts.json, 4 not measured yet (starting guesses)
+[rp_cargo] 4 layout(s) from data/layouts.json, 3 not measured yet (starting guesses)
 [rp_cargo] layout refused: Vehicle.x: slot 2: duplicate id 1
 [rp_cargo] player 1 loaded crate-7f3a01 into NC-K7P2 slot 1 layer 1 (op salvage:load:42)
 [rp_cargo] load of crate-7f3a02 into NC-K7P2 in doubt (op ...): slot 2 stays claimed
@@ -161,6 +162,6 @@ load or unload is granted per operation by `rp_inventory:grantPockets`.
 python -m unittest discover -s tests -p "test_a9*.py"
 ```
 
-`tests/test_a9_cargo.py` (13 tests) runs this resource's real server scripts on the B8 fake host
+`tests/test_a9_cargo.py` (14 tests) runs this resource's real server scripts on the B8 fake host
 with a fake coordinator (`tests/compat/fake_tx.lua`) and a stub of `rp_garage`'s A9 exports.
-`tests/test_a9_garage_access.py` (10 tests) runs the real `rp_garage` access matrix.
+`tests/test_a9_garage_access.py` (11 tests) runs the real `rp_garage` access matrix.

@@ -25,17 +25,17 @@ the server, which re-checks the distance after every dialog.
 
 Five real stalls of **Kabuki Market** (Watson), the hub of the server: every ring stands on a
 walked market spot (z exact), the vendor NPC stands 1.2 m behind the ring facing it
-(`vendorPosition`, `yaw`), and one real prop dresses each stall 0.8 m off the ring next to the
+(`vendorPosition`, `yaw`), and one real prop dresses each stall about 2.0 m from the ring next to the
 vendor (`prop.models`, curated prop aliases — see `prop.catalog`; a raw `.mesh` path renders as
 a white slab — tried in order, spawned by the server on start with `Open77.props.create` —
 permission `world.props` — and removed on stop; a refused model only logs). Distances are from Kabuki Market Centre (`-1191.30, 2006.88, 7.82`, the freeroam spawn).
 
 | id | Label | Vendor | Ring (x, y, z) | From the centre | Prop | Sells |
 |---|---|---|---|---|---|---|
-| `supermarket` | Kabuki Market — Noodle Row | Rosa | -1178.66, 2028.45, 7.95 | 25 m NE | market shelf (`market.shelf.chinese`, fallback `light.lantern.chinese`) | water 10, burrito 25, nicola 15, chooh2 60, cigarettes 20 |
-| `pharmacy` | Med-Point — The Stalls | Dr. Osei | -1223.91, 1989.45, 7.98 | 37 m SW | vending machine (`electronics.vending_machine.small`, fallback `electronics.vending_machine`) | bandage 40, maxdoc 120, bounceback 90 — **run by `trauma`**, stock 10 each |
-| `gunshop` | 2nd Amendment — East Row | Wilson | -1160.50, 2019.06, 7.76 | 33 m E | weapon rack (`military.weapon_rack`, fallback `military.case`) | pistol 400 (`Items.Preset_Lexington_Default`, slot 1), rifle 1 200 (`Items.Preset_Copperhead_Default`, slot 2), katana 900 (`Items.Preset_Katana_Default`, slot 3) — **licence required**, 500 €$ once |
-| `clothes` | Jinguji Threads — Vendor Lane | Kimiko | -1212.26, 1978.53, 7.98 | 35 m SW | market stand (`market.stand.small`, fallback `light.spotlight`) | styling session 200 €$ → opens the wardrobe |
+| `supermarket` | Kabuki Market - Noodle Row | Rosa | -1178.66, 2028.45, 7.95 | 25 m NE | market shelf (`market.shelf.chinese`, fallback `light.lantern.chinese`) | water 10, burrito 25, nicola 15, chooh2 60, cigarettes 20 |
+| `pharmacy` | Med-Point - The Stalls | Dr. Osei | -1223.91, 1989.45, 7.98 | 37 m SW | vending machine (`electronics.vending_machine.small`, fallback `electronics.vending_machine`) | bandage 40, maxdoc 120, bounceback 90 — **run by `trauma`**, stock 10 each |
+| `gunshop` | 2nd Amendment - East Row | Wilson | -1160.50, 2019.06, 7.76 | 33 m E | weapon rack (`military.weapon_rack`, fallback `military.case`) | pistol 400 (`M-10AF Lexington (pistol)`, `Items.Preset_Lexington_Default`, slot 1), rifle 1 200 (`Items.Preset_Copperhead_Default`, slot 2), katana 900 (`Items.Preset_Katana_Default`, slot 3) — **licence required**, 500 €$ once |
+| `clothes` | Jinguji Threads - Vendor Lane | Kimiko | -1212.26, 1978.53, 7.98 | 35 m SW | market stand (`market.stand.small`, fallback `light.spotlight`) | styling session 200 €$ → opens the wardrobe |
 | `blackmarket` | Lower Walkway Dealer | Dex | -1201.07, 2035.60, 5.60 | 30 m N, **under the market** (Lower Walkway) | cargo crate (`crate.cargo`, fallback `electronics.monitor.device`) | synthcoke 150, lockpick 80, qh_ping 120 — **22:00–06:00 only**, inside the `kabuki_market` zone |
 
 Every vendor is `Character.Judy` (`RpShopsConfig.vendor.record`, overridable per shop with
@@ -50,11 +50,11 @@ edit its `position` and shift `vendorPosition` and `prop.position` by the same a
 
 | Command | Who | Effect |
 |---|---|---|
-| **E** on a vendor | anyone alive, within 3 m, looking at them | Opens the shop: the vendor's line in chat, then the catalogue (UI kit context menu, one row per item with the price and, for a society shop, the stock). Pick an item → quantity dialog (1–20) → paid → delivered. The menu comes back after each purchase; **Leave** / Escape closes it. |
+| **E** on a vendor | anyone alive, within 3 m, looking at them (the prompt shows within 3 m; the server accepts up to 3.5 m, `reach`) | Opens the shop: the vendor's line in chat, then the catalogue (UI kit context menu, one row per item with the price and, for a society shop, the stock). Pick an item → quantity dialog (1–20) → paid → delivered. The menu comes back after each purchase; **Leave** / Escape closes it. |
 | `/boutiques` | anyone | Every shop with its distance from you, the black market's open/closed state and the owning society. |
 | `/boutiques <shopId>` | anyone | That shop's catalogue in chat (with stock for a society shop, and the licence line for the gun shop). |
 | `/boutiques restock <shopId>` | the society **boss** (`rp_jobs:isBoss` + same job) or the console | Refills every shelf of a society shop to its `restockTo`, paid from the society at 50 % of retail per unit (`restockCostRatio`). Refused when the society is dry, with the cost. |
-| `/acheter <item> [count]` | anyone alive within 3 m of a vendor | Buys without the menu from the nearest vendor. `<item>` is the id (`water`), the label or an unambiguous prefix; `licence` at the gun shop buys the NCPD licence. |
+| `/acheter <item> [count]` | anyone alive within 3.5 m of a stall ring (`reach`) | Buys without the menu from the nearest vendor. `<item>` is the id (`water`), the label or an unambiguous prefix; `licence` at the gun shop buys the NCPD licence. |
 
 Refusals are explained in chat: too far (with the distance), dead, position unknown, sold out
 (with what is left), not enough eddies (with the price), pockets full, unknown item, black
@@ -149,19 +149,20 @@ the log says `store=kvp reason=...`, and there is no sales ledger (sales are sti
 [rp_shops] society trauma +28 (sale:pharmacy:bandage) balance=50028
 [rp_shops] licence issued to player 3 (<identifier>) paid=account
 [rp_shops] sale shop=gunshop weapon=pistol x1 price=400 player 3 (<identifier>) paid=cash
-[rp_shops] Med-Point Pharmacy restocked: 4 units for 130 €$ from the trauma society. (by 2)
+[rp_shops] Med-Point - The Stalls restocked: 4 units for 130 €$ from the trauma society. (by 2)
 [rp_shops] ROBBERY shop=supermarket by player 4 loot=412
 [rp_shops] no clock authority (environment_unavailable): the black market never closes
 ```
 
 ## Staging: poses, props and durations
 
-Every action below plays a pose from the server's `open77_animations` catalogue
-(`Open77.animations.play`, permission `players.animations.control`), shows a curated prop
-attached to the body (`Open77.props.create` + `attach`, permission `world.props`) where one
-makes sense, and takes its time behind the UI-kit bar (X cancels; the bar keeps the player
-still on the client, the server never freezes anyone). Other players see all of it: poses
-and props are server-driven. Everything is in ``RpShopsConfig.Stage` (`shared/config.lua`)` and follows rp_nomade's carry-pose
+Every purchase plays a short gesture on the buyer: a one-shot pose from the server's
+`open77_animations` catalogue (`Open77.animations.play`, permission
+`players.animations.control`) and, where one makes sense, a curated prop attached to the body
+(`Open77.props.create` + `attach`, permission `world.props`). There is no UI-kit bar and
+nothing to cancel: a timer takes the pose and the prop back. Other players see all of it:
+poses and props are server-driven. Everything is in `RpShopsConfig.Stage`
+(`shared/config.lua`) and follows rp_nomade's carry-pose
 pattern: `pose.profiles` is a list tried in order through `Open77.animations.get` -- the
 best future name first (the 76-profile catalogue of the pending base PR), then what today's
 18-profile eval catalogue has -- and `prop.models` a list of aliases tried in order. A
@@ -171,21 +172,20 @@ on 2.31: if a prop sits wrong, move one axis of `offset` / `rotation` at a time.
 
 | Action | Pose today (future name) | Prop | Duration |
 |---|---|---|---|
-| an item bought | `give` one-shot (`carry_putdown`) on the buyer, and the vendor NPC plays `give` too (`Open77.npcs.tasks.workspot`, `Stage.vendorWorkspot`) | `crate.cardboard` bag in the right hand (`shop.bag` once it exists) | 2.5 s |
+| an item bought | `give` one-shot (`carry_putdown`) on the buyer, and the vendor NPC plays `give` too (`Open77.npcs.tasks.workspot`, `Stage.vendorWorkspot`) | `shop.bag` in the right hand (`crate.cardboard` when `shop.bag` is refused) | 2.5 s |
 | a weapon bought | same hand-over | `military.case` in the right hand | 2.5 s, the weapon arrives through the relay |
 | the gun licence | `phone` one-shot | the profile's holo | 3 s |
 | a styling session | none: the wardrobe opens | -- | -- |
 
-Log lines (grep `stage`, `gesture`, `hold`):
+Log lines (grep `stage`, `gesture`):
 
 ```text
-[rp_shops] player 3 gesture purchase: pose=give/stand__2h_on_sides__01__to__stand__rh_item__01__turn0__01 prop=crate.cardboard@RightHand 2500 ms
+[rp_shops] player 3 gesture purchase: pose=give/stand__2h_on_sides__01__to__stand__rh_item__01__turn0__01 prop=shop.bag@RightHand 2500 ms
 [rp_shops] player 3 gesture weapon: pose=give/stand__2h_on_sides__01__to__stand__rh_item__01__turn0__01 prop=military.case@RightHand 2500 ms
 [rp_shops] vendor workspot give refused: <reason> (the vendors stay still)
 ```
 
-`-> ok` means the bar ran to the end; `-> cancelled` the player pressed X;
-`-> failed:<reason>` the bar never showed (a plain wait kept the beat). A refused pose reads
+A refused pose reads
 `stage <key>: pose <profile> refused for player N: <reason> (the action runs without it)`,
 an unknown list `stage <key>: no known profile among [...]`, a refused prop `stage
 <key>.prop: attach of <alias> to player N refused: <reason> (no prop shown)`.
@@ -194,8 +194,10 @@ an unknown list `stage <key>: no known profile among [...]`, a refused prop `sta
 
 Permissions: `network.events` (net events, `TriggerClientEvent`, `Open77.weapons.assign`),
 `database.access`, `world.npcs` (vendors), `players.life.read` (`isDead`),
-`world.environment` (`getState` for the hours), `world.props` (the stall props, removed on stop). Dependencies: `open77_uikit`,
-`open77_worldui`, `open77_weapons` — all ship a client half. `rp_economy`, `rp_bank`,
+`world.environment` (`getState` for the hours), `world.props` (the stall props, removed on stop,
+and the bag handed over), `players.animations.control` (the buyer's hand-over gesture).
+Dependencies: `open77_uikit`, `open77_worldui`, `open77_weapons`, `open77_props`. All ship a
+client half. `rp_economy`, `rp_bank`,
 `rp_inventory`, `rp_jobs`, `rp_ncpd`, `rp_zones`, `rp_identity` are reached through `pcall`
 and degrade to a chat line: no economy = no sale; no bank = cash only, no society share; no
 jobs = nobody is exempt and nobody can restock; no NCPD = no veto; no identity = account names.
@@ -220,13 +222,13 @@ jobs = nobody is exempt and nobody can restock; no NCPD = no veto; no identity =
 
 One client at the freeroam spawn, Kabuki Market Centre `-1191.30, 2006.88, 7.82`, id `1`;
 `rp_economy`, `rp_inventory`, `rp_bank`, `rp_jobs`, `rp_ncpd`, `rp_zones`, `open77_weather`,
-`open77_uikit`, `open77_worldui`, `open77_weapons` running. Start with `rp_shop` unloaded. Log
+`open77_uikit`, `open77_worldui`, `open77_weapons`, `open77_props` running. Start with `rp_shop` unloaded. Log
 on start: `[rp_shops] 5 shops open around -1191, 2007 ...`, `store=sql ...`, five `vendor ...
 spawned` lines and five `prop ... of <shop>` lines (or `prop of <shop> refused (...)`).
 
-1. `/boutiques` → five lines with distances (`Kabuki Market — Noodle Row (supermarket) - 25 m -
+1. `/boutiques` → five lines with distances (`Kabuki Market - Noodle Row (supermarket) - 25 m -
    5 lines`, `Lower Walkway Dealer (blackmarket) - 30 m - 3 lines [closed until 22:00]`,
-   `Med-Point — The Stalls ... [trauma]`). Open the map: five pins on the market.
+   `Med-Point - The Stalls ... [trauma]`). Open the map: five pins on the market.
 2. Walk 25 m north-east to **Noodle Row** (-1178.7, 2028.5): Rosa stands behind the ring, the
    shelf beside her. Press **E** → chat `Rosa: Water, burritos, NiCola...`, the menu opens.
    **Bottle of water** → quantity `2` → **Buy** → `Bought 2 x Bottle of water for 20 €$ (cash).
@@ -234,17 +236,17 @@ spawned` lines and five `prop ... of <shop>` lines (or `prop of <shop> refused (
    water` → `No vendor within 3 m.`
 3. **The Stalls** (-1223.9, 1989.5), the vending cage next to Dr. Osei: **E** → the rows read
    `10 in stock`. Buy a bandage → `9 in stock`, log `society trauma +28`. Console: `setjob 1
-   trauma 3` then `/boutiques restock pharmacy` → `Med-Point — The Stalls restocked: 1 units
+   trauma 3` then `/boutiques restock pharmacy` → `Med-Point - The Stalls restocked: 1 units
    for 20 €$ from the trauma society.` (`setjob` seeded the society). `/boutiques pharmacy` →
    `stock 10` again.
-4. **East Row** (-1160.5, 2019.1), the weapon rack: **E** → the first row is **NCPD gun licence
-   — 500 €$**. Pick **M-10AF Lexington** first → `No NCPD gun licence on file. Buy one here for
+4. **East Row** (-1160.5, 2019.1), the weapon rack: **E** → the first row is **NCPD gun licence**
+   (fee 500 €$). Pick **M-10AF Lexington (pistol)** first → `No NCPD gun licence on file. Buy one here for
    500 €$ (/acheter licence).` Pick the licence → `NCPD gun licence issued for 500 €$ (cash)`.
-   Pick the pistol → `... delivery in progress...` then `Delivered: M-10AF Lexington (slot 1)`;
+   Pick the pistol → `... delivery in progress...` then `Delivered: M-10AF Lexington (pistol) (slot 1).`;
    the gun is in hand. Log: two `sale shop=gunshop` lines with your identifier. With an NCPD
    warrant (`/mandat 1 2 test` from an officer) the same purchase answers `NCPD has a warrant
    on you`.
-5. **Vendor Lane** (-1212.3, 1978.5), the mannequin: **E** → **Styling session** → `Styling fee
+5. **Vendor Lane** (-1212.3, 1978.5), the market stand (a small stall, `market.stand.small`): **E** → **Styling session** → `Styling fee
    200 €$ (cash) paid. The racks are yours...` and the wardrobe opens (or type `/wardrobe`).
 6. **Lower Walkway** (-1201.1, 2035.6, z 5.6 — take the stairs down under the market) by day:
    **E** → `Dex: Not in daylight, choom. Come back after 22:00...`. Console: `weather.time.set

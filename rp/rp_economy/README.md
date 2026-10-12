@@ -23,6 +23,8 @@ Nothing here has been run in game yet: the behaviour below is proven offline onl
   `resources.load`, in **`sql`** store mode on any persistent server. The coordinator must grant
   `rp_economy` the namespaces `cash`, `bank`, `soc`, `sys` and, for `sale`, the item containers
   (`char`, `veh`, `stash`, `world`).
+- Permission `network.events`: `RegisterNetEvent` (the `chat:ready` suggestion hook) and
+  `Open77.notifications.send` (the toast that comes with `/money`).
 - Permission `database.access`: only for the one-shot import of the 1.x tables, the read-only
   archive and the `rp_wallet_migration` state row. Balances are not stored by this resource.
 - `rp_bank` 2.0.0 is the bank facade over this cache (accounts, societies, ATMs).

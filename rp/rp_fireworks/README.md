@@ -7,7 +7,7 @@ Fires synchronized fireworks shows from the server, so everybody on the street s
 - **Needs:** nothing
 - **Runs on:** server
 
-About 200 lines of server Lua and no client code at all — which is the point of
+About 280 lines of server Lua and no client code at all, which is the point of
 the example.
 
 ## Why the server fires it
@@ -62,9 +62,12 @@ Writing the timing as absolute offsets rather than as a pile of sleeps makes a
 preset readable as a score: you can see that the confetti lands a beat before
 the first volley, and two cues can share a beat.
 
-Three ship — `burst` (short and loud: a race finish, midnight), `opening` (the
-ground lights first, then fifteen seconds of sky) and `celebration` (confetti
-and petals only, nothing that explodes or burns, for indoors).
+Four ship: `burst` (short and loud: a race finish, midnight), `opening` (the
+ground lights first, then fifteen seconds of sky), `celebration` (confetti
+and petals only, nothing that explodes or burns, for indoors) and `open77sync`
+(a score of about two minutes, fired together with the `open77` show of
+`rp_drones` and timed against its beats, with a dense finale once the drones go
+dark).
 
 ## Four things measured in game, so you do not have to
 

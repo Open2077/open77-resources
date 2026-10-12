@@ -422,13 +422,13 @@ reached through exports inside `pcall` and are optional at runtime.
    `giveitem 1 synthcoke 2`, `giveitem 1 crate 1`. Player 1 sees the toasts in
    chat; the log shows `player 1 +3 burrito total=3 (giveitem by 0)`.
 3. Player 1: `/inv`. The POCKETS panel opens with the player's name top right,
-   the header bar reading `27.6 / 40 kg` (69%, cyan), four tiles: `Burrito x3`,
+   the header bar reading `26.7 / 40 kg` (67%, cyan), four tiles: `Burrito x3`,
    `Cargo crate x1`, `MaxDoc Mk.1 x1` and `Synthcoke x2` tinted red with an
    `ILLEGAL` tag. Click **Burrito**: the right column shows `x3`, `0.4 kg`,
    `1.2 kg`, a count field and **Use / Give / Drop** (Give reads `nobody within
    3 m` and is greyed while alone). **Use**: the button reads `Working...`, a
    3 s bar, chat `You eat the burrito. Better.` (or the `rp_needs` answer), then
-   the tile reads `x2`, the bar `27.2 / 40 kg` and a toast `Used Burrito.`
+   the tile reads `x2`, the bar `26.3 / 40 kg` and a toast `Used Burrito.`
    Escape (or the `x`) closes the panel and gives the game its cursor back
    (expected: the keyboard stays with the game while browsing, so opening the
    chat closes the panel and push-to-talk still transmits); `/inv` reopens it.
@@ -462,7 +462,7 @@ reached through exports inside `pcall` and are optional at runtime.
    (`rp_inventory_stashes`). Storing the crate into a 50 kg stash that already
    holds 26 kg: `The stash is full.`
 10. Client without a WebUI (or `Open77.webui.create` refused): `/inv` answers
-    in chat `Pockets - 27.6 / 40 kg`, the listing, then
+    in chat `Pockets - 26.7 / 40 kg`, the listing, then
     `Panel unavailable (webui_unavailable); listed in chat. Commands: /use /drop /give.`
 
 ### Transactions backend (test servers only for now)

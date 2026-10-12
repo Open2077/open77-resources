@@ -7,12 +7,12 @@ Puts on a drone light show: real drone bodies hang in the night sky, light up an
 - **Needs:** nothing
 - **Runs on:** server
 
-A drone light show. Two dozen lights hang in the night sky, ignite, and morph
-between a ring, a heart and the **77** — and every player watching sees the
-same shape in the same place at the same instant.
+A drone light show. Eighty-eight drones (`droneCount`) hang in the night sky,
+ignite, and morph between a ring, a heart and the **77** — and every player
+watching sees the same shape in the same place at the same instant.
 
-About 950 lines of server Lua and 430 of commentary, a generated table of points, and no client code
-at all, which is the point of the example.
+About 3,050 lines of server Lua, roughly a third of them commentary, a generated table of points,
+and no client code at all, which is the point of the example.
 
 ## Read this before you fly it
 
@@ -46,10 +46,11 @@ once 512 KB has queued behind the clamp. Forty-eight effect drones at 15 Hz is
 415 KB/s. The link had about eight seconds to live, and that is exactly how long
 it lasted.
 
-So: the drone is now a **VFX**, the stage is **closer**, there are **24** of
-them instead of 48, and the update rate is no longer configured at all — it is
-*derived* from a byte budget, and a show that will not fit is refused before a
-single drone is spawned.
+So: the drone is now a **VFX**, the stage is **closer**, the swarm was cut to
+**24** at the time (the shipped `droneCount` is now 88, see
+[OPEN//77 in the sky](#open77-in-the-sky)), and the update rate is no longer
+configured at all — it is *derived* from a byte budget, and a show that will
+not fit is refused before a single drone is spawned.
 
 ## Why the server flies it
 
@@ -295,7 +296,7 @@ not sixty-four.
 ```
 /droneshow choreo flipbook      redraw between figures
 /droneshow choreo cut           hold, blackout, cut
-/droneshow frame 400            set the frame; refuses under 300 ms
+/droneshow frame 400            set the frame; under 300 ms is raised to 300
 ```
 
 **The driver abandons a movement that finds nothing ready** — four empty frames
@@ -770,7 +771,7 @@ came from:
 
 ```
 [rp_drones] === STYLE: NPC (persisted), sequence driver, sweep guard off, flip-book at 400 ms ===
-[rp_drones] ready -- 8 drones, shows: choreo, cut, heart, open77, rehearsal, salute
+[rp_drones] ready -- 88 drones, shows: cut, heart, open77, parade, playtest, rehearsal, salute, sign, signdraw
 ```
 
 ### The instruments
@@ -955,15 +956,18 @@ A thread cannot be killed from outside, so the stop mechanism is an epoch
 integer the loop reads before every beat and before every hold slice. Whoever
 bumps the epoch owns the removal.
 
-On top of all five, **every drone is spawned with a TTL** of twice the show's
-declared length plus a minute, and the probe with ten minutes. That is the
+On top of all five, **every drone is spawned with a TTL** of three times the
+show's declared length plus two minutes, and the probe with ten minutes. That is the
 dead-man switch: even a Lua runtime error that kills the walking thread outright
 leaves a sky that clears itself.
 
 ## Permissions
 
-`world.effects` for the effect style, `world.props` for the light style.
-Nothing else, and no database.
+`world.effects` for the effect style, `world.props` for the light style (and
+the `Open77.props.clear()` sweep on start), `world.npcs` for the npc style and
+the `npcprobe` / `npcmove` instruments, `world.population` for the vehicle-sweep
+guard (`Open77.world.setPopulation`, npc style only, off by default). Nothing
+else, and no database.
 
 Notably **not** `network.events`: `Open77.chat.send` grants nothing, because the
 facade publishes on the host bus and never reaches a client itself.

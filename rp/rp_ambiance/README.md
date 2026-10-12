@@ -171,7 +171,7 @@ the junkyard 4.5 km south-east in the Badlands. Have `rp_zones`, `open77_notific
 1. Start: the log shows `weather -> <preset>` then `cycle: 3.0 real h ... (rate 8.0)`,
    `figurants: 10/10 spawned in 4 zone(s)`, `started: 8 notice(s) ...`. Everyone gets a
    **Weather** toast top-right.
-2. `/ambiance` (or `ambiance` in the console): four lines — cycle `HH:MM ... rate 8.0 ...`,
+2. `/ambiance` (or `ambiance` in the console): five lines: `Cycle: HH:MM game time ... rate 8.0 ...`,
    `Weather: <preset> now (1 draw(s) so far), next draw in NNmNNs; table: sunny 50, cloudy 25,
    rain 15, sandstorm 5, fog 5`, `Figurants: 10/10 alive (afterlife 3/3, junkyard 2/2,
    kabuki_market 3/3, lizzies 2/2), next sweep in ...`, `Notices: 8 line(s) every 15 min ...`,

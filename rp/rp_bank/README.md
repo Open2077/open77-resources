@@ -118,7 +118,9 @@ TriggerEvent("rp_bank:changed", playerId, identifier, newBalance, delta, kind)
 
 Re-published from `rp_economy:walletChanged` (one tick later than 1.x). `kind` is one of
 `deposit withdraw charge transfer_out transfer_in society_add society_remove`, or `sync` when the
-cache caught up with a change made elsewhere.
+cache caught up with a change made elsewhere. Any other `rp_economy` reason passes through
+unchanged as the `kind` (cut to 32 characters), for example `reverted:<reason>` when a change
+is rolled back.
 
 ## Staging: poses, props and durations
 
@@ -127,7 +129,7 @@ Every action below plays a pose from the server's `open77_animations` catalogue
 attached to the body (`Open77.props.create` + `attach`, permission `world.props`) where one
 makes sense, and takes its time behind the UI-kit bar (X cancels; the bar keeps the player
 still on the client, the server never freezes anyone). Other players see all of it: poses
-and props are server-driven. Everything is in ``Config.Stage` (`config.lua`)` and follows rp_nomade's carry-pose
+and props are server-driven. Everything is in `Config.Stage` (`config.lua`) and follows rp_nomade's carry-pose
 pattern: `pose.profiles` is a list tried in order through `Open77.animations.get` -- the
 best future name first (the 76-profile catalogue of the pending base PR), then what today's
 18-profile eval catalogue has -- and `prop.models` a list of aliases tried in order. A
@@ -176,11 +178,11 @@ measured — three around the freeroam spawn (Kabuki Market Centre
 
 | ATM | Ring (x, y, z) | Terminal | Where |
 |---|---|---|---|
-| `atm_kabuki` — ATM — Kabuki Market | -1188.30, 2006.88, 7.82 | -1187.30, 2007.40 | Market Centre, 3 m east of the spawn |
-| `atm_southgate` — ATM — Kabuki South Gate | -1218.13, 1950.17, 7.98 | -1219.10, 1949.60 | the market's street side, 63 m south-west (pedestrian alley) |
-| `atm_noodle` — ATM — Noodle Row | -1178.66, 2028.45, 7.95 | -1177.70, 2029.10 | 25 m north-east of the spawn |
-| `atm_afterlife` — ATM — The Afterlife | -1447.00, 1022.00, 16.60 | -1446.20, 1022.80 | the bar floor by the entrance stairs, 1.0 km south-west |
-| `atm_viktor` — ATM — Vik's Clinic | -1545.00, 1233.00, 11.60 | -1544.20, 1233.80 | just inside the clinic entrance, 855 m south-west |
+| `atm_kabuki`, `ATM - Kabuki Market` | -1188.30, 2006.88, 7.82 | -1187.30, 2007.40 | Market Centre, 3 m east of the spawn |
+| `atm_southgate`, `ATM - Kabuki South Gate` | -1218.13, 1950.17, 7.98 | -1219.10, 1949.60 | the market's street side, 63 m south-west (pedestrian alley) |
+| `atm_noodle`, `ATM - Noodle Row` | -1178.66, 2028.45, 7.95 | -1177.70, 2029.10 | 25 m north-east of the spawn |
+| `atm_afterlife`, `ATM - The Afterlife` | -1447.00, 1022.00, 16.60 | -1446.20, 1022.80 | the bar floor by the entrance stairs, 1.0 km south-west |
+| `atm_viktor`, `ATM - Vik's Clinic` | -1545.00, 1233.00, 11.60 | -1544.20, 1233.80 | just inside the clinic entrance, 855 m south-west |
 
 The ring `z` is the walked / measured floor (+0.1 m for the two interiors); if a ring is
 invisible, stand on the spot, run `/pos`, and paste the ground height — a ring drawn inside the
@@ -190,7 +192,8 @@ terminal's `yaw` turns the prop towards its ring; the prop's forward axis was no
 if a machine shows its back, add 180 to `prop.yaw`.
 
 Manifest permissions: `database.access` (reads the 1.x ledger archive), `network.events` (`RegisterNetEvent`,
-`TriggerServerEvent`), `ui.vanilla.map` (`Open77.blips.create`), `world.props` (the terminals).
+`TriggerServerEvent`), `ui.vanilla.map` (`Open77.blips.create`), `world.props` (the terminals),
+`players.animations.control` (`Open77.animations.play` / `stop`, the typing pose at the ATM).
 Dependencies: `open77_uikit`, `open77_worldui`. `rp_economy` (2.0.0, which needs the
 `open77_transactions` coordinator) and `rp_jobs` are reached through `pcall` (server-only
 resources).
@@ -205,9 +208,9 @@ resources).
 2. Connect. Chat: `NC Bank: Account balance: 0 €$.` (or the imported 1.x balance). Log:
    `[rp_bank] player <id> loaded <identifier> account=0`.
 3. `/solde` → `Cash: 500 €$ · Account: 0 €$`.
-4. Open the map: five `ATM — ...` pins (three on Kabuki Market, one on the Afterlife, one on
-   Vik's). Walk 3 m east from the spawn to the `ATM — Kabuki Market` ring — a data terminal
-   stands next to it — look at the ring, press **E** (or type `/bank` within 3 m). The
+4. Open the map: five `ATM - ...` pins (three on Kabuki Market, one on the Afterlife, one on
+   Vik's). Walk 3 m east from the spawn to the `ATM - Kabuki Market` ring (a data terminal
+   stands next to it), look at the ring, press **E** (or type `/bank` within 3 m). The
    `Night City Bank` menu opens.
 5. **Deposit eddies** → `300` → chat `Deposited 300 €$. Account: 300 €$.`; `/money` from
    `rp_economy` now says 200. Log: `[rp_bank] player <id> deposit 300 op=…`.

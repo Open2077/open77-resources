@@ -208,7 +208,7 @@ Every action below plays a pose from the server's `open77_animations` catalogue
 attached to the body (`Open77.props.create` + `attach`, permission `world.props`) where one
 makes sense, and takes its time behind the UI-kit bar (X cancels; the bar keeps the player
 still on the client, the server never freezes anyone). Other players see all of it: poses
-and props are server-driven. Everything is in ``Config.Stage` (`shared/config.lua`)` and follows rp_nomade's carry-pose
+and props are server-driven. Everything is in `Config.Stage` (`shared/config.lua`) and follows rp_nomade's carry-pose
 pattern: `pose.profiles` is a list tried in order through `Open77.animations.get` -- the
 best future name first (the 76-profile catalogue of the pending base PR), then what today's
 18-profile eval catalogue has -- and `prop.models` a list of aliases tried in order. A
@@ -241,9 +241,11 @@ an unknown list `stage <key>: no known profile among [...]`, a refused prop `sta
 
 Permissions: `network.events` (net events both sides), `database.access` (SQL),
 `world.npcs` (guards, escorts, targets), `ui.vanilla.map` (client pins and waypoint),
-`world.props` (the booth terminal).
+`world.props` (the booth terminal and the case in the hand), `players.animations.control`
+(`Open77.animations.play` / `stop`, the staged poses).
 Dependencies: `open77_uikit >=1.0.0` (the board and the accept dialog, server twins),
-`open77_worldui >=0.1.0` (rings and prompts). `rp_jobs`, `rp_zones`, `rp_inventory`,
+`open77_worldui >=0.1.0` (rings and prompts), `open77_props >=0.1.0` (the client projection
+that draws the case in the merc's hand). `rp_jobs`, `rp_zones`, `rp_inventory`,
 `rp_economy`, `rp_bank` and `rp_identity` are server-only and reached through `pcall`:
 without `rp_inventory` delivery and retrieval refuse at the pickup and say so; without
 `rp_economy` / `rp_bank` the success is recorded and the player told the eddies did not come

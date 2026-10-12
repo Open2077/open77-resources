@@ -23,7 +23,7 @@ definePurge` plus `Open77.cyberware.define`, exactly as the hacking guide prescr
 1. **The chair.** A purple ring, a map pin and an `E` prompt **Vik's chair** (`open77_worldui`,
    `promptDistance = 4.0`, ring radius 4) at `-1548.0, 1230.0, 11.6` — **Viktor Vektor's real
    chair room**, under the Misty's Esoterica alley in Little China (Watson), inside the `rp_zones`
-   **`viktor_clinic`** zone (centre `-1548, 1230, 11.5`, radius 12). Press **E**: the server checks
+   **`viktor_clinic`** zone (centre `-1548, 1230, 11.6`, radius 12). Press **E**: the server checks
    you stand within 4.5 m and plays the RP `lie` posture on you **at the chair**
    (`Open77.animations.playAt(player, "lie", position, yaw)`, permission
    `players.animations.control` — the server native that places a posture at a pose; its portable
@@ -44,7 +44,7 @@ definePurge` plus `Open77.cyberware.define`, exactly as the hacking guide prescr
    disconnect cancels the whole thing; both players are told why.
 4. **Under the knife.** On acceptance the interaction plays `examine` on the ripper and `lie` on the
    patient, and a UI-kit **progress bar** runs on **both** screens for the configured duration
-   (10–25 s per implant, `grades[].durationMs`). **X** on either side aborts: nothing is charged.
+   (12 to 22 s per implant, `grades[].durationMs`). **X** on either side aborts: nothing is charged.
 5. **The chrome.** When the bar completes the server re-checks duty, the record, the box and the
    money, takes the box (`rp_inventory:remove`), charges the fee — `rp_bank:charge(patient, price,
    "ripper", "implant:<key>")`, cash fallback through `rp_economy:remove` + `rp_bank:societyAdd` —
@@ -70,7 +70,7 @@ ready, provider offline, and every platform reason (`animation_busy`, `player_re
 |---|---|---|
 | Vik's chair (ring + pin + E prompt) | `-1548.0, 1230.0, 11.6`, yaw -89.5 | `RpRipperConfig.chair`; AMM point +0.1 m |
 | Clinic entrance (inside) | `-1545.0, 1233.0, 11.6` | where rp_bank's ATM stands |
-| `viktor_clinic` zone (rp_zones) | centre `-1548, 1230, 11.5`, r 12 | the ripper must stand inside it to operate |
+| `viktor_clinic` zone (rp_zones) | centre `-1548, 1230, 11.6`, r 12 | the ripper must stand inside it to operate |
 
 From the Kabuki Market spawn (`-1191.3, 2006.9, 7.8`) the clinic is about **860 m south-west**
 as the crow flies: down through Little China, into the alley by Misty's, down the stairs.
@@ -161,12 +161,14 @@ half the installed grade's price.
 
 ## Staging: poses, props and durations
 
-Every action below plays a pose from the server's `open77_animations` catalogue
-(`Open77.animations.play`, permission `players.animations.control`), shows a curated prop
-attached to the body (`Open77.props.create` + `attach`, permission `world.props`) where one
-makes sense, and takes its time behind the UI-kit bar (X cancels; the bar keeps the player
-still on the client, the server never freezes anyone). Other players see all of it: poses
-and props are server-driven. Everything is in ``RpRipperConfig.Stage` and `RpRipperConfig.animations` (`shared/config.lua`)` and follows rp_nomade's carry-pose
+The chair and the surgery postures come from the server's `open77_animations` catalogue
+(`Open77.animations.playAt`, and the quote interaction's own postures). During the surgery the
+ripper holds a curated prop attached to the body (`Open77.props.create` + `attach`, permission
+`world.props`) while the UI-kit progress bar runs on both screens (X aborts).
+`/ripper restock` plays a short gesture (`Open77.animations.play`, permission
+`players.animations.control`) with no UI-kit bar. Other players see all of it: poses and props
+are server-driven. Everything is in `RpRipperConfig.Stage` and `RpRipperConfig.animations`
+(`shared/config.lua`) and follows rp_nomade's carry-pose
 pattern: `pose.profiles` is a list tried in order through `Open77.animations.get` -- the
 best future name first (the 76-profile catalogue of the pending base PR), then what today's
 18-profile eval catalogue has -- and `prop.models` a list of aliases tried in order. A
@@ -187,8 +189,7 @@ Log lines (grep `stage`, `gesture`, `hold`):
 [rp_ripperdoc] player 3 gesture restock: pose=phone/stand__2h_phone__03__tap_phone__01 prop=none 3000 ms
 ```
 
-`-> ok` means the bar ran to the end; `-> cancelled` the player pressed X;
-`-> failed:<reason>` the bar never showed (a plain wait kept the beat). A refused pose reads
+A refused pose reads
 `stage <key>: pose <profile> refused for player N: <reason> (the action runs without it)`,
 an unknown list `stage <key>: no known profile among [...]`, a refused prop `stage
 <key>.prop: attach of <alias> to player N refused: <reason> (no prop shown)`.
@@ -196,10 +197,10 @@ an unknown list `stage <key>: no known profile among [...]`, a refused prop `sta
 ## Manifest
 
 Dependencies (all ship a client half): `open77_cyberware`, `open77_player_interactions`,
-`open77_uikit`, `open77_worldui`, `open77_contextmenu`, `open77_notifications`. Permissions:
-`network.events`, `database.access`, `players.cyberware.define/read/manage`,
-`players.hacking.define`, `players.animations.control`, `players.interactions.control/read`,
-`players.screenfx`. `rp_jobs`, `rp_inventory`, `rp_bank`, `rp_economy`, `rp_zones` and
+`open77_uikit`, `open77_worldui`, `open77_contextmenu`, `open77_notifications`, `open77_props`.
+Permissions: `network.events`, `database.access`, `players.cyberware.define/read/manage`,
+`players.hacking.define`, `players.animations.control`, `world.props`,
+`players.interactions.control/read`, `players.screenfx`. `rp_jobs`, `rp_inventory`, `rp_bank`, `rp_economy`, `rp_zones` and
 `rp_identity` are reached through `pcall`'d exports and never declared (their READMEs ask a
 resource with a client script not to): without `rp_jobs` nobody can operate; without
 `rp_inventory` there is no stock and installs are refused; without `rp_bank` the fee comes from
@@ -245,18 +246,19 @@ Two players inside Viktor's clinic (walk from Kabuki Market, ~860 m south-west, 
    ripper(s) on duty can operate. Press E again to get up.` Player 1 reads
    `<name> is lying on the chair. ALT+click them > Operate, or /operer 2.`
 5. Player 1 stands 6 m away, at the clinic entrance: `/operer 2` → `Get within 4 m of the patient
-   (6.0 m).` (From the alley outside the `viktor_clinic` zone: `Operate inside the clinic
-   (viktor_clinic zone).`) Walks next to the chair, holds **ALT**, clicks player 2, picks **Operate** → the menu `Ripperdoc - <name>`:
-   `Gorilla Arms - Street` (1 500 €$, stock `yours x1`, 15 s), `Gorilla Arms - Industrial` greyed
-   (no box), `Reinforced Tendons - ...` greyed, the hacking rows greyed or `Provider offline`.
+   (6.0 m).` Walks next to the chair, holds **ALT**, clicks player 2, picks **Operate** → the menu `Ripperdoc - <name>`:
+   `Gorilla Arms - Street` (1 500 €$, stock `yours x1`, 15 s), `Gorilla Arms - Industrial`
+   (3 200 €$, the same box, 22 s: one box serves every grade of an implant),
+   `Reinforced Tendons - ...` greyed (no box), the hacking rows greyed or `Provider offline`.
    Pick **Gorilla Arms - Street** → player 1 `Quote sent to <name>: install Gorilla Arms [Street]
    for 1 500 €$. Waiting for consent (30 s).`
 6. Player 2 reads `QUOTE from <ripper>: install Gorilla Arms [Street] for 1 500 €$. 15 s under the
    knife. Risk: cyberpsychosis past 4 implants (you carry 0). Answer on screen, or /interaction
    accept | /interaction decline (30 s).` plus a toast. Type `/interaction decline` → both read `No
    procedure: the patient declined the quote.`; player 2 is put back on the chair.
-7. Repeat step 5; player 2 accepts (`/interaction accept` or the on-screen prompt). Both read
-   `... accepted ... Under the knife for 15 s - press X to abort.`; a purple **Installing Gorilla
+7. Repeat step 5; player 2 accepts (`/interaction accept` or the on-screen prompt). Player 2
+   reads `Quote accepted. Under the knife for 15 s - press X to abort.`, player 1
+   `<name> accepted the quote. Operating for 15 s - press X to abort.`; a purple **Installing Gorilla
    Arms** bar runs on both screens, the patient lies, the ripper kneels and examines. Press **X**
    on either side → `No procedure: the ripper stopped.` / `the patient stopped.` Nothing charged.
 8. Repeat and let the bar finish → player 1 `Closing up. Waiting for the chrome to settle...` then
@@ -294,7 +296,8 @@ Two players inside Viktor's clinic (walk from Kabuki Market, ~860 m south-west, 
 - The chair posture is stopped just before the quote is sent: the interaction coordinator refuses
   a participant in another animation (`animation_busy`), and the quote interaction plays the
   surgery postures itself. After any end of the flow the patient is put back on the chair when
-  still next to it (1.5 s later), else told to press **E** again.
+  still next to it (1.5 s later). A patient who walked away gets no message. If the posture is
+  refused, the patient is told to press **E** again.
 - The consent prompt is the platform's (`open77_player_interactions`); the quote text itself is
   this resource's chat line and toast. `/interaction accept` / `/interaction decline` always work.
 - Record fields for the three hacking slots are read as `record.operating_system`, `record.self_ice`,

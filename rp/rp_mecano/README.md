@@ -47,7 +47,7 @@ form: amount + reason, then the same consent flow); on a vehicle **Repair**, **P
 | Garage sign prop | `-1392.4, 966.0, 26.0`, yaw 90 | `sign.street`, pavement side |
 | Tyre blockers (2) | `-1393.2, 963.0` and `-1393.2, 969.0`, z 23.5 | `barrier.tire_blocker` (twice), pavement side |
 | Gas pump prop | `-1392.0, 973.0, 23.5`, yaw 90 | `industrial.gas_pump`, by the pump ring |
-| Impound / tow yard | `junkyard` zone, centre `1370, -1680, 49.3`, r 90 | Rancho Coronado junkyard, ~4.5 km from Kabuki |
+| Impound / tow yard | `junkyard` zone, centre `1374.9, -1674.9, 49.3`, r 90 | Rancho Coronado junkyard, ~4.5 km from Kabuki |
 | Spawn (`Config.spawn`) | `-1191.3, 2006.9, 7.82` | Kabuki Market Centre |
 
 The two rings are bare markers (`open77_worldui`, nothing to press): every command works
@@ -177,7 +177,7 @@ Every action below plays a pose from the server's `open77_animations` catalogue
 attached to the body (`Open77.props.create` + `attach`, permission `world.props`) where one
 makes sense, and takes its time behind the UI-kit bar (X cancels; the bar keeps the player
 still on the client, the server never freezes anyone). Other players see all of it: poses
-and props are server-driven. Everything is in ``Config.Stage` (`shared/config.lua`)` and follows rp_nomade's carry-pose
+and props are server-driven. Everything is in `Config.Stage` (`shared/config.lua`) and follows rp_nomade's carry-pose
 pattern: `pose.profiles` is a list tried in order through `Open77.animations.get` -- the
 best future name first (the 76-profile catalogue of the pending base PR), then what today's
 18-profile eval catalogue has -- and `prop.models` a list of aliases tried in order. A
@@ -215,11 +215,12 @@ A paid paint job: the customer pays first, then the mechanic sprays for the bar'
 
 Permissions `world.vehicles` (every vehicle read and write), `database.access`,
 `network.events` (net events, toasts), `players.interactions.control` / `.read` (the consent
-flow, as the player-interactions guide requires), `world.props` (the street props).
+flow, as the player-interactions guide requires), `world.props` (the street props and the tools
+held while working), `players.animations.control` (the repair, spray, refuel and holo poses).
 Dependencies — all ship a client half — `open77_uikit`, `open77_worldui` (the two rings),
-`open77_contextmenu`, `open77_player_interactions`, `open77_notifications`, `rp_jobs`,
-`rp_inventory`. `rp_economy`, `rp_bank`, `rp_identity` (names) are server-only and
-reached through `pcall`; `rp_zones` and `open77_fuel` are optional (fallbacks above).
+`open77_contextmenu`, `open77_player_interactions`, `open77_notifications`, `open77_props`
+(draws the tools in the mechanic's hands), `rp_jobs`, `rp_inventory`. `rp_economy`, `rp_bank`,
+`rp_identity` (names) are server-only and reached through `pcall`; `rp_zones` and `open77_fuel` are optional (fallbacks above).
 
 ## Log (grep-able)
 
@@ -243,8 +244,8 @@ reached through `pcall`; `rp_zones` and `open77_fuel` are optional (fallbacks ab
 Two players on the Afterlife street (`-1396, 966, 23.5`, the workshop ring — drive there from
 the Kabuki Market spawn, ~1.1 km south, or console `tp <id> -1396 966 23.6`): **1** = mechanic,
 **2** = customer. `rp_jobs`, `rp_inventory`, `rp_economy`, `rp_bank`, `rp_zones`, `open77_uikit`,
-`open77_contextmenu`, `open77_player_interactions`, `open77_notifications` running (and
-`open77_fuel` for step 8). Start log: `[rp_mecano] started: ...`, `store=sql ...`,
+`open77_worldui`, `open77_contextmenu`, `open77_player_interactions`, `open77_notifications`,
+`open77_props` running (and `open77_fuel` for step 8). Start log: `[rp_mecano] started: ...`, `store=sql ...`,
 `items registered: toolkit,paint_can`, `props spawned: 4`. At the street: the workshop ring
 with the garage sign and two tyre blockers on the pavement side, the pump ring 6 m along the
 street with its gas pump.

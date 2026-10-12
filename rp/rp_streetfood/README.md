@@ -12,7 +12,9 @@ market grill, the dish waits on the pass, the cook hands it to a customer who **
 and accepts**, the customer pays in **one** atomic sale (dish + price + tip), then eats standing at
 the counter, on the go, or — optionally — seated on real food-court furniture.
 
-**Status: experimental.** Cook (both rigs), order with a
+**What it needs.** The platform's `open77_actions`, `open77_transactions`,
+`open77_player_interactions` and their sibling libraries (the load list below). They are on this
+repository's `next` branch until the next server release. Cook (both rigs), order with a
 tip, consented serve, sale with the society share, meals at the counter and seated, a declined
 offer, two cooks at one grill and a restart ran in game (crowd pedestrians switched off: they stand
 on the grill spot). The `amb_*` cook animations need the `Open77RP.archive` that ships them (not yet in
@@ -64,7 +66,9 @@ counter at a food court that has a stall.
 | `kabuki` (off) | grill / counter | -1167.426, 2023.262, 7.780, 177 / **arithmetic** counter | spot row 7736; no customer spot stands in front of it |
 
 The food court is the upper floor (z 115) of the pedestrian proof and of the A3/A1
-seat runs. Every point is `measured = false`: anchor data, not walked by this resource. The crowd
+seat runs. The food court's grill and counter are walked points (`measured = true`): the cook
+and the customer stand about 0.5 m from their anchors and the 1 m arrival radius plays the pose
+there. The `kabuki` stall (off) is still anchor data (`measured = false`). The crowd
 can book the grill spot (crowd-spot row 58918) and the seats (`npcSeated`/`npcCrowd`): stop the
 crowd (world suppression) for a test run. Nothing in this resource vetoes an NPC.
 

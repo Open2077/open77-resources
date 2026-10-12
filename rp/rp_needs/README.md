@@ -7,7 +7,7 @@ Gives every player hunger, thirst and fatigue that drop over time and come back 
 - **Needs:** `open77_notifications`, `open77_animations`, `open77_props`
 - **Runs on:** server
 
-Hunger, thirst and fatigue for a Night City RP server. The three values are **satiety** levels (100 = full, 0 = starving / parched / exhausted); the HUD labels them Food / Water / Energy. Below 0 food or water the body loses 1 HP every 10 s down to 10 HP until the player eats or drinks (`/needs`, the kiosks, `/setneeds` for admins). Server-only resource
+Hunger, thirst and fatigue for a Night City RP server. The three values are **satiety** levels (100 = full, 0 = starving / parched / exhausted); the HUD labels them Food / Water / Energy. When food or water reaches 0 the body loses 1 HP every 10 s down to 10 HP until the player eats or drinks (`/needs`, the kiosks, `/setneeds` for admins). Server-only resource
 (no client script): the server owns the three values, persists them, applies
 the effects and pushes warnings to the player's biomonitor.
 
@@ -110,45 +110,45 @@ load or save that took that path. A server without any database logs
 
 ## Staging: poses, props and durations
 
-Every action below plays a pose from the server's `open77_animations` catalogue
-(`Open77.animations.play`, permission `players.animations.control`), shows a curated prop
-attached to the body (`Open77.props.create` + `attach`, permission `world.props`) where one
-makes sense, and takes its time behind the UI-kit bar (X cancels; the bar keeps the player
-still on the client, the server never freezes anyone). Other players see all of it: poses
-and props are server-driven. Everything is in ``NEEDS_STAGE` and the `stage` field of `CONSUMABLES` in `server/main.lua` (this resource has no shared config)` and follows rp_nomade's carry-pose
-pattern: `pose.profiles` is a list tried in order through `Open77.animations.get` -- the
-best future name first (the 76-profile catalogue of the pending base PR), then what today's
-18-profile eval catalogue has -- and `prop.models` a list of aliases tried in order. A
-refusal (unknown profile, `player_in_vehicle`, `animation_owned`, an attach the client
-cannot bind) is logged once and never blocks the action. Hand-slot offsets are not measured
-on 2.31: if a prop sits wrong, move one axis of `offset` / `rotation` at a time.
+Every consumable below plays a one-shot gesture from the server's `open77_animations` catalogue
+(`Open77.animations.play`, permission `players.animations.control`) when `consume` runs, that is
+after rp_inventory's use bar. rp_needs shows no bar of its own and attaches no prop of its own:
+the animation profiles own their hand items (can, bottle, cigarette, takeout box) and the
+platform removes them when the gesture ends. A `prop` field added to a `NEEDS_STAGE` entry would
+be attached through `Open77.props.create` + `attach` (permission `world.props`). Other players
+see all of it: poses are server-driven. Everything is in `NEEDS_STAGE` and the `stage` field of
+`CONSUMABLES` in `server/main.lua` (this resource has no shared config) and follows rp_nomade's
+carry-pose pattern: `pose.profiles` is a list tried in order through `Open77.animations.get`,
+the walkable upper-body profile first, then a stationary fallback. A refusal (unknown profile,
+`player_in_vehicle`, `animation_owned`) is logged once and never blocks the consumable.
 
-| Action | Pose today (future name) | Prop | Duration |
+| Item (`stage` key) | Profiles tried in order (one-shot) | Prop | Duration |
 |---|---|---|---|
-| water, NiCola | `drink` one-shot (`bottle` once it exists) | the profile's own can | 4 s, after rp_inventory's 3 s "Using" bar |
-| burrito | `think` one-shot, hand to the face (`takeout` once it exists -- it ships its own box, drop the `eat.prop` line then) | `food.street_food` in the right hand | 4 s |
-| cigarettes | `smoke` one-shot | the profile's own cigarette | 6 s |
-| synthcoke | `think` one-shot (`rubhands`) | none | 3 s |
+| water (`bottle`) | `bottle_walk`, `bottle`, `drink` | the profile's own bottle or can | 4 s, after rp_inventory's 3 s "Using" bar |
+| NiCola (`drink`) | `drink_walk`, `drink` | the profile's own can | 4 s, after the same bar |
+| burrito (`eat`) | `takeout` (ships its own box), `think` (hand to the face) | none of its own | 4 s |
+| cigarettes (`smoke`) | `smoke_walk`, `smoke` | the profile's own cigarette | 6 s |
+| synthcoke (`snort`) | `rubhands`, `think` | none | 3 s |
 
 Log lines (grep `stage`, `gesture`, `hold`):
 
 ```text
 [rp_needs] player 3 gesture drink: pose=drink/stand__rh_can__01__drink__01 prop=none 4000 ms
-[rp_needs] player 3 gesture eat: pose=think/stand__rh_on_chin__01__rub_chin__01 prop=food.street_food@RightHand 4000 ms
+[rp_needs] player 3 gesture eat: pose=think/stand__rh_on_chin__01__rub_chin__01 prop=none 4000 ms
 [rp_needs] player 3 gesture smoke: pose=smoke/stand__rh_cigarette__01__smoke__01 prop=none 6000 ms
 ```
 
-`-> ok` means the bar ran to the end; `-> cancelled` the player pressed X;
-`-> failed:<reason>` the bar never showed (a plain wait kept the beat). A refused pose reads
+The `pose=` word is the profile and clip the running catalogue resolved, so it changes with
+the catalogue. A refused pose reads
 `stage <key>: pose <profile> refused for player N: <reason> (the action runs without it)`,
-an unknown list `stage <key>: no known profile among [...]`, a refused prop `stage
-<key>.prop: attach of <alias> to player N refused: <reason> (no prop shown)`.
+an unknown list `stage <key>: no known profile among [...]`.
 
 ## Permissions
 
 `network.events` (toasts, `chat:ready`), `database.access`, `players.stats.read`,
-`players.stats.apply`, `players.life.read`, `players.screenfx`. Dependency:
-`open77_notifications`.
+`players.stats.apply`, `players.life.read`, `players.screenfx`,
+`players.animations.control` (the eat / drink / smoke gestures), `world.props` (a prop added to a
+`NEEDS_STAGE` entry). Dependencies: `open77_notifications`, `open77_animations`, `open77_props`.
 
 ## Limits
 
@@ -164,9 +164,9 @@ an unknown list `stage <key>: no known profile among [...]`, a refused prop `sta
 
 ## Test in 2 minutes
 
-1. Start the server with `rp_needs` and `open77_notifications` in the load
-   list; check the log for `[rp_needs] schema ready (rp_needs_state)` (or the
-   KVP fallback line if no database is configured).
+1. Start the server with `open77_notifications`, `open77_animations`, `open77_props` and
+   `rp_needs` in the load list; check the log for `[rp_needs] schema ready (rp_needs_state)`
+   (or the KVP fallback line if no database is configured).
 2. Join. The log prints `player <id> loaded from sql ...` and a first
    `player <id> hunger=100 thirst=100 fatigue=100` line. Type `/needs` in chat:
    the BIOMONITOR line shows the three values.

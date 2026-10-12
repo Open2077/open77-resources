@@ -214,7 +214,7 @@ Every action below plays a pose from the server's `open77_animations` catalogue
 attached to the body (`Open77.props.create` + `attach`, permission `world.props`) where one
 makes sense, and takes its time behind the UI-kit bar (X cancels; the bar keeps the player
 still on the client, the server never freezes anyone). Other players see all of it: poses
-and props are server-driven. Everything is in ``RpBarConfig.Stage` (`shared/config.lua`)` and follows rp_nomade's carry-pose
+and props are server-driven. Everything is in `RpBarConfig.Stage` (`shared/config.lua`) and follows rp_nomade's carry-pose
 pattern: `pose.profiles` is a list tried in order through `Open77.animations.get` -- the
 best future name first (the 76-profile catalogue of the pending base PR), then what today's
 18-profile eval catalogue has -- and `prop.models` a list of aliases tried in order. A
@@ -250,11 +250,12 @@ an unknown list `stage <key>: no known profile among [...]`, a refused prop `sta
 Permissions: `network.events` (net events, toasts, `Open77.sound`), `database.access`,
 `players.animations.control` (`Open77.animations.play`), `players.interactions.control` +
 `players.interactions.read` (`Open77.playerInteractions.request` / `cancel` / `current`),
-`players.screenfx` (`Open77.effects.screen`), `world.props` (`Open77.props.create` / `remove`,
-the neon frame). Dependencies (all ship a client half):
+`players.screenfx` (`Open77.effects.screen`), `world.props` (`Open77.props.create` / `attach` /
+`remove`: the jukebox, and the bottle or keg in the barman's hand). Dependencies (all ship a client half):
 `open77_uikit`, `open77_worldui`, `open77_contextmenu`, `open77_player_interactions`,
-`open77_notifications`, `open77_sound`. `open77_animations` must run on the server for clients to
-render the profiles (the server API accepts without it). Files: `sfx/afterlife_ambience.wav`.
+`open77_notifications`, `open77_animations` (the pose profiles), `open77_sound`, `open77_props`
+(the client projection that draws the bottle or keg in the hand). The server refuses to start
+`rp_bar` when one of them is missing. Files: `sfx/afterlife_ambience.wav`.
 
 ## Log (grep-able)
 
@@ -284,7 +285,7 @@ onto the bar floor), with `rp_jobs`, `rp_bank`, `rp_economy`, `rp_inventory` (an
 2. `/service` → `Clocked in at Bartender...` and `Behind the counter. The ring is at -1452, 1012:
    press E there or /bar.` A pink ring and an `E` prompt **The Afterlife - bar counter** appear
    at the end of the bar counter, a few metres from the entrance stairs (map pin too), with the
-   neon frame on the wall behind it. Walk there: the club ambience fades in around 30 m.
+   jukebox against the wall behind it. Walk there: the club ambience fades in around 30 m.
 3. `/bar` (within 8 m) → `Till: 50 000 €$...`, `Stock: Spirits (bottle) x0, ...`, `Buzz: 0/10
    (sober)`, then the counter menu. Or look at the ring and press **E**.
 4. **Restock** → **Mixer (keg) - 15 €$** → `Restocked 1 x Mixer (keg) for 15 €$. Till: 49 985 €$.

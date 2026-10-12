@@ -30,7 +30,7 @@ are the panel's convenience over `Open77.players.teleport`, kick and ban stay wi
 
 Dependencies (both ship a client half): `open77_uikit` (server twins `context` and `input`),
 `open77_notifications` (toasts). `rp_jobs`, `rp_economy`, `rp_bank`, `rp_identity`, `rp_ncpd`,
-`rp_trauma`, `rp_zones`, `rp_inventory` and `rp_logs` are reached through exports inside `pcall`
+`rp_trauma`, `rp_zones` and `rp_logs` are reached through exports inside `pcall`
 and are **not** declared (this manifest is delivered to clients, and a client-delivered manifest
 cannot depend on a server-only resource). A missing one degrades to a chat line
 (`rp_economy is offline: no wallet to set.`).

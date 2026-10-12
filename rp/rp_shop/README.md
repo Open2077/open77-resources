@@ -50,20 +50,23 @@ model) is ignored and then purged.
 
 - `dependency "rp_economy"` — exports `getBalance`, `add`, `remove`.
 - `dependency "open77_weapons >=0.1.0"` — weapon relay.
+- `dependency "open77_props >=0.1.0"`: the client projection that draws the bag or case in the hand.
 - `network.events` (weapons, `chat:ready`), `world.vehicles`, `players.stats.apply`,
-  `players.life.read`.
+  `players.life.read`, `players.animations.control` (the hand-over gesture), `world.props`
+  (the bag or case in the hand).
 
 If `rp_economy` is not loaded, the shop stays usable read-only
 (`/shop`) and refuses purchases with a clear message.
 
 ## Staging: poses, props and durations
 
-Every action below plays a pose from the server's `open77_animations` catalogue
-(`Open77.animations.play`, permission `players.animations.control`), shows a curated prop
-attached to the body (`Open77.props.create` + `attach`, permission `world.props`) where one
-makes sense, and takes its time behind the UI-kit bar (X cancels; the bar keeps the player
-still on the client, the server never freezes anyone). Other players see all of it: poses
-and props are server-driven. Everything is in ``SHOP_STAGE` at the top of `server/main.lua` (this legacy resource has no shared config)` and follows rp_nomade's carry-pose
+Every purchase plays a short gesture: a one-shot pose from the server's `open77_animations`
+catalogue (`Open77.animations.play`, permission `players.animations.control`) and, where one
+makes sense, a curated prop attached to the body (`Open77.props.create` + `attach`, permission
+`world.props`). There is no UI-kit bar and nothing to cancel: the item is delivered right away
+and a timer takes the pose and the prop back. Other players see all of it: poses and props are
+server-driven. Everything is in `SHOP_STAGE` in `server/main.lua` (this legacy resource has no
+shared config) and follows rp_nomade's carry-pose
 pattern: `pose.profiles` is a list tried in order through `Open77.animations.get` -- the
 best future name first (the 76-profile catalogue of the pending base PR), then what today's
 18-profile eval catalogue has -- and `prop.models` a list of aliases tried in order. A
@@ -73,25 +76,24 @@ on 2.31: if a prop sits wrong, move one axis of `offset` / `rotation` at a time.
 
 | Action | Pose today (future name) | Prop | Duration |
 |---|---|---|---|
-| `/buy soin|stim|armure` | `give` one-shot (`carry_pickup`) | `crate.cardboard` in the right hand | 2.5 s |
+| `/buy soin|stim|armure` | `give` one-shot (`carry_pickup`) | `shop.bag` in the right hand (`crate.cardboard` when `shop.bag` is refused) | 2.5 s |
 | `/buy pistolet|fusil|katana` | same | `military.case` in the right hand | 2.5 s |
 | `/buy hella|quadra` | `phone` one-shot: the keys over the holo (`phonecheck`) | the profile's holo | 3 s |
 
-Log lines (grep `stage`, `gesture`, `hold`):
+Log lines (grep `stage`, `gesture`):
 
 ```text
-[rp_shop] player 3 gesture purchase: pose=give/stand__2h_on_sides__01__to__stand__rh_item__01__turn0__01 prop=crate.cardboard@RightHand 2500 ms
+[rp_shop] player 3 gesture purchase: pose=give/stand__2h_on_sides__01__to__stand__rh_item__01__turn0__01 prop=shop.bag@RightHand 2500 ms
 ```
 
-`-> ok` means the bar ran to the end; `-> cancelled` the player pressed X;
-`-> failed:<reason>` the bar never showed (a plain wait kept the beat). A refused pose reads
+A refused pose reads
 `stage <key>: pose <profile> refused for player N: <reason> (the action runs without it)`,
 an unknown list `stage <key>: no known profile among [...]`, a refused prop `stage
 <key>.prop: attach of <alias> to player N refused: <reason> (no prop shown)`.
 
 ## Test it in 2 minutes
 
-1. Start the server with `rp_economy`, `open77_weapons` and `rp_shop`; connect
+1. Start the server with `rp_economy`, `open77_weapons`, `open77_props` and `rp_shop`; connect
    and be alive.
 2. `/shop` — the catalogue shows up in three families, then your balance.
 3. `/buy soin` — the server log shows `[rp_shop] player <id> bought soin for 50`

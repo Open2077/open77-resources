@@ -159,7 +159,7 @@ Every action below plays a pose from the server's `open77_animations` catalogue
 attached to the body (`Open77.props.create` + `attach`, permission `world.props`) where one
 makes sense, and takes its time behind the UI-kit bar (X cancels; the bar keeps the player
 still on the client, the server never freezes anyone). Other players see all of it: poses
-and props are server-driven. Everything is in ``Config.Stage` (`shared/config.lua`)` and follows rp_nomade's carry-pose
+and props are server-driven. Everything is in `Config.Stage` (`shared/config.lua`) and follows rp_nomade's carry-pose
 pattern: `pose.profiles` is a list tried in order through `Open77.animations.get` -- the
 best future name first (the 76-profile catalogue of the pending base PR), then what today's
 18-profile eval catalogue has -- and `prop.models` a list of aliases tried in order. A
@@ -193,7 +193,8 @@ an unknown list `stage <key>: no known profile among [...]`, a refused prop `sta
 Permissions: `network.events` (net events, toasts), `database.access` (SQL), `world.npcs`
 (the dealer), `players.animations.control` (the kneel), `world.props` (the decoration). Dependencies: `open77_uikit` (server
 twins `progress` and `context`), `open77_worldui` (rings + prompts), `open77_notifications`
-(toasts) — all three ship a client half. `rp_jobs`, `rp_zones`, `rp_inventory`, `rp_economy`
+(toasts), `open77_props` (the client projection that draws the crowbar or the scrap in the
+hand). All four ship a client half. `rp_jobs`, `rp_zones`, `rp_inventory`, `rp_economy`
 and `rp_bank` are server-only and reached through `pcall`'d exports: without `rp_jobs` a
 search is refused (`guild offline`), without `rp_inventory` nothing can be pocketed or sold,
 without `rp_economy` a sale gives the goods back, without `rp_bank` the society's share is only

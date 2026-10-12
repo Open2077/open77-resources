@@ -290,7 +290,7 @@ ends them.
 | `Contract` | pay per crate, convoy bonus / radius / minimum, society share, time limit, unload seconds, history rows |
 | `Truck` | records tried in order, deposit, reach, safety TTL, `bed.slots` / `bed.stackHeight` (where loaded crates sit, vehicle frame) |
 | `Crate` | prop aliases tried in order, pickup distance, prompt distance, ring radius, copy |
-| `Carry` | `mode = "attach"` (prop bound to `bone` with `offset` / `rotation`, root by default) or `"held"` (hidden prop + `Open77.heldItems.hold` item record); `animation` = the carry pose (`profiles` tried in order, `resume`, `resumeAfterMs`, `stillDistance`); `steps` = the one-shot clips and timers around every crate move (`pickup`, `load`, `take`, `carryMs`, `putdown`, `groundTtlMs`, `groundGap`, `groundSpacing`) |
+| `Carry` | `mode = "attach"` (prop bound to `bone` with `offset` / `rotation`; `Chest` in the shipped config, the body root when `bone` is `""`) or `"held"` (hidden prop + `Open77.heldItems.hold` item record); `animation` = the carry pose (`profiles` tried in order, `resume`, `resumeAfterMs`, `stillDistance`); `steps` = the one-shot clips and timers around every crate move (`pickup`, `load`, `take`, `carryMs`, `putdown`, `groundTtlMs`, `groundGap`, `groundSpacing`) |
 | `Navigation` | map pin + GPS route on the destination then the camp: `enabled`, `gpsFrom` (`"loaded"` / `"accepted"`), sprites |
 | `Ambush` | on/off, circle, `minTravel`, count, spawn distance and spread, lifetime, `Character.*` records, `damagePolicy` (numeric, 0 = normal), combat group, announcement |
 | `Items` | `nomad_crate` (25 kg) declared in `rp_inventory` through `define` |
@@ -310,7 +310,7 @@ camp is the **Aldecaldos camp** in the north-eastern Badlands, around V's nomad 
 | Loading points | 1786/1788/1790/1792, 2256..2258.5, 180.3 | 4–6 m north of the board |
 | Ambush circle | 1600, 600, r 60 m | on the road between the camp and the junkyard; planar check, refine the centre with `groundz <playerId> 1600 600` at replay time |
 | Destination: Rancho Coronado junkyard (`junkyard`, r 30 ring / zone r 90) | 1374.9, -1674.9, 49.4 | ~4.0 km south of the camp |
-| Destination: Watson, the Afterlife street (`afterlife_street`, r 25 planar ring) | -1408.0, 960.0, 23.5 | the street outside the Afterlife ramp; ~3.4 km south-west of the camp |
+| Destination: Watson, the Afterlife street (`afterlife_street`, r 25 planar ring) | -1426.0, 974.0, 23.6 | the street outside the Afterlife ramp, 20 m up from the garage lot; ~3.5 km south-west of the camp |
 | Destination: Badlands Drive-In Theater (`drive_in`, r 40, `zone = false`) | -81.2, 1963.3, 100.8 | no rp_zones zone: distance check only; ~1.9 km west of the camp |
 
 Distances are as the crow flies; the runs are real drives. The camp lies in the `badlands`

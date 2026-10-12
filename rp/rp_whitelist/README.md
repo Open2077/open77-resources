@@ -133,7 +133,8 @@ exports.rp_whitelist:isAllowed(identifier)
 -- allowed (it would only wait); the capacity is not part of the answer.
 
 exports.rp_whitelist:ban(identifier | playerId, minutes, reason)
--- true, or nil, reason: "invalid_identifier" | "player_not_found" | "invalid_minutes" | "not_loaded"
+-- true, or nil, reason: "invalid_player_id" | "invalid_identifier" | "player_not_found" | "invalid_minutes" | "not_loaded"
+-- "invalid_player_id": a number that is not a whole id of 1 or more.
 -- 0 minutes = permanent. Does NOT disconnect the player. `by` is the calling resource.
 ```
 

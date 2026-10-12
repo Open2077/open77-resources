@@ -34,8 +34,8 @@ ramp), the dealership in **Westbrook**, the impound at the **Rancho Coronado jun
 
 | POI | Position | Vehicles appear at | Who |
 |---|---|---|---|
-| **Afterlife street lot** (public garage: E prompt, ring, map pin, garage sign prop) | `-1408, 960, 23.5` — the street outside the Afterlife's ramp | bays `-1412 / -1406 / -1400, 968, 23.5`, facing north (yaw 0), 6 m pitch, 3 m clearance | everybody |
-| **Mechanic's garage** (society garage) | `-1396, 966, 23.5` — same street, 12 m east (`rp_mecano`'s workshop street) | `-1380, 953, 23.5` facing north — derived from the street line, not probed | `mecano` employees (`rp_jobs`) |
+| **Afterlife street lot** (public garage: E prompt, ring, map pin, garage sign prop) | `-1408, 960, 23.5` — the street outside the Afterlife's ramp | bays `-1398 / -1392 / -1386, 953, 23.5`, the road lanes east of the crosswalk, yaw 90, 6 m pitch, 3 m clearance | everybody |
+| **Mechanic's garage** (society garage) | `-1396, 966, 23.5` — same street, 12 m east (`rp_mecano`'s workshop street) | `-1380, 953, 23.5`, yaw 90, on the same road further east. Derived from the street line, not probed | `mecano` employees (`rp_jobs`) |
 | **Westbrook Motors** (dealership, neon frame prop) | `-1442.2, 127.4, 18.1` — the Westbrook vehicle dealership | `-1450.2, 119.9, 14.8` — the Westbrook race grid, yaw 0 (its facing was not measured) | everybody |
 | Impound lot (informative) | `1370, -1680, 49.3` — the Rancho Coronado junkyard (`rp_zones` `junkyard`) | — | the fee is paid at any garage |
 
@@ -305,17 +305,17 @@ store has answered, the menus and key commands answer *The garage registry is st
 ## The plate on the vehicle
 
 `Open77.state.entity("vehicle", id):set("plate", plate)` is written on every spawn, so
-`Entity(id).state.plate` reads it on both sides (this is the key `rp_mecano` logs). The
-state-bags guide and the `Open77.state.entity` card say the write needs `state.write`, but
-`open77_permissions` / `open77_validate` on op77.76 refuse that name as a permission the runtime
-does not enforce, so it is **not declared**. If the write is refused at runtime the log says
+`Entity(id).state.plate` reads it on both sides (this is the key `rp_mecano` logs). The write
+needs `state.write`, and the manifest declares it (without it the write answers
+`permission_denied`). If the write is refused at runtime the log says
 `plate state bag refused: <reason>` once and nothing else changes: the plate always lives in SQL
 and in the exports (`plateOf`, `vehiclesOf`), and `/plaque` never depends on the bag.
 
 ## Manifest
 
-Permissions `world.vehicles` (every vehicle read and write), `database.access`, `network.events`
-(net events, toasts), `world.props` (the garage sign and the showroom neon, removed on stop). Dependencies — all ship a client half — `open77_uikit`, `open77_worldui`,
+Permissions `state.write` (the `plate` state-bag key), `world.vehicles` (every vehicle read and
+write), `database.access`, `network.events` (net events, toasts), `world.props` (the garage sign
+and the showroom neon, removed on stop). Dependencies — all ship a client half — `open77_uikit`, `open77_worldui`,
 `open77_contextmenu`, `open77_notifications`. `rp_bank`, `rp_economy`, `rp_identity` are
 server-only and reached through `pcall`; `rp_jobs` (jobs, boss, duty), `rp_mecano` (its event) and
 `open77_fuel` are optional (without the fuel resource the fuel column stays NULL and the tank is
@@ -371,8 +371,8 @@ or drive.
    car vanishes, chat `Archer Hella (plate NC-XXXX) stored at the Afterlife street lot: 100%
    condition, N L.` Log: `player 1 stored ...`. Open the menu again: *Store* is gone, *Take out
    the Archer Hella* is there with its condition.
-5. **Take out** → the car appears in the first free bay (`-1398, 953`, then `-1406`, `-1400`),
-   facing north, locked for the street, same paint, fuel and damage. Chat `Archer Hella (plate
+5. **Take out** → the car appears in the first free bay (`-1398, 953`, then `-1392`, `-1386`),
+   at yaw 90, locked for the street, same paint, fuel and damage. Chat `Archer Hella (plate
    NC-XXXX) is out at the Afterlife street lot bay ...`.
 6. Stand next to it: `/plaque` → the plate line and the distance. Walk 10 m away: `/plaque` →
    `No server vehicle within 8 m ...`.

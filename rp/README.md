@@ -2,10 +2,10 @@
 
 This `rp/` folder of `open77-resources` is the complete Night City roleplay pack. The platform resources it runs on are in [`../system/`](../system/), and your server download already contains them.
 
-Thirty-five gameplay resources and five lab helpers for [Open77](https://open2077.net), the
+Forty gameplay resources and four test helpers for [Open77](https://open2077.net), the
 Cyberpunk 2077 multiplayer platform. Together they run a complete roleplay server: identity,
 money, inventory, twelve jobs with real runs, housing with real apartment doors, shops, a
-bank, garages, gangs, crime, NCPD, a phone, a radio, zones and ambiance — all placed on real
+bank, garages, gangs, crime, NCPD, a phone, a radio, zones and ambiance, all placed on real
 Night City landmarks (Kabuki Market, the Afterlife, Viktor's clinic, Westbrook Motors, the
 Rancho Coronado junkyard, the Aldecaldos camp…).
 
@@ -30,16 +30,16 @@ visuals, holding versus drinking, permissions and current first-person limits.
 
 | Group | Resources |
 |---|---|
-| Core | `rp_config` (live tunables, `/rpconfig`), `rp_identity`, `rp_economy` (SQL wallets, payday), `rp_inventory` (WebUI backpack, stashes), `rp_jobs` (jobs, grades, societies), `rp_hud`, `rp_chat` (`/me`, `/do`, proximity), `rp_logs`, `rp_whitelist`, `rp_admin` |
-| Jobs | `rp_mecano` (repair, paint, refuel, invoices, impound), `rp_ferrailleur` (scrapper) or its successor `rp_salvage` (opt-in pilot C1: wrecks, crates, truck, buyer on the world-interaction libraries; never both), `rp_bar`, `rp_ripperdoc`, `rp_medic`, `rp_trauma` (death, respawn at Vik's, bills), `rp_ncpd` (cuff, search, fines, jail) + `rp_mdt`, `rp_netrunner`, `rp_fixer`, `rp_nomade` (crate convoys: carry animation, cargo in the truck bed, GPS route), `rp_delamain` (taxi) |
-| World | `rp_zones`, `rp_ambiance`, `rp_shops` (kiosks + vendors), `rp_bank` (ATMs), `rp_garage` (plates, keys, job orders, warrants: `canAccess`), `rp_cargo` (opt-in: cargo layouts and slots on the A13 coordinator), `rp_housing` (five real flats, doors found through `open77_doors`), `rp_needs` (hunger/thirst/fatigue), `rp_phone`, `rp_radio`, `rp_vigile` (security), `rp_fireworks` (synchronized shows) |
+| Core | `rp_config` (live tunables, `/config`), `rp_identity`, `rp_economy` (SQL wallets, payday), `rp_inventory` (WebUI backpack, stashes), `rp_jobs` (jobs, grades, societies), `rp_hud`, `rp_chat` (`/me`, `/do`, proximity), `rp_logs`, `rp_whitelist`, `rp_admin` |
+| Jobs | `rp_mecano` (repair, paint, refuel, invoices, impound), `rp_ferrailleur` (scrapper) or its successor `rp_salvage` (opt-in: wrecks, crates, truck, buyer, built on the job libraries; never both), `rp_streetfood` (opt-in: grill, serve, pay, eat seated), `rp_bar`, `rp_ripperdoc`, `rp_medic`, `rp_trauma` (death, respawn at Vik's, bills), `rp_ncpd` (cuff, search, fines, jail) + `rp_mdt`, `rp_netrunner`, `rp_fixer`, `rp_nomade` (crate convoys: carry animation, cargo in the truck bed, GPS route), `rp_delamain` (taxi) |
+| World | `rp_zones`, `rp_ambiance`, `rp_shops` (kiosks + vendors; `rp_shop` is its older chat-command version), `rp_bank` (ATMs), `rp_garage` (plates, keys, job orders, warrants: `canAccess`), `rp_cargo` (opt-in: crates in truck beds, every slot kept in the database), `rp_housing` (five real flats, doors found through `open77_doors`), `rp_needs` (hunger/thirst/fatigue), `rp_phone`, `rp_radio`, `rp_vigile` (security), `rp_fireworks` (synchronized shows) |
 | Crime | `rp_crime` (lockpick, shop robbery, dealer, fence), `rp_gangs` (territories, street market) |
 | Spectacle | `rp_fireworks` (synchronized shows), `rp_drones` (a drone light show: real drone bodies held in the sky, an OPEN//77 sign, cut and flip-book choreography) |
-| Lab helpers | `rp_selftest` (33 checks, console `selftest`), `rp_taxitest` (`groundz`), `rp_worldprobe` (`wprobe`, `vwarp`), `eval_taxi` (the first taxi), [`rp_weapons_effect`](rp_weapons_effect) (English weapon workshop, `/weaponeffects`) |
+| Lab helpers | `rp_selftest` (33 checks, run once at start), `rp_taxitest` (`groundz`), `rp_worldprobe` (`wprobe`, `vwarp`), `eval_taxi` (the first taxi), [`rp_weapons_effect`](rp_weapons_effect) (English weapon workshop, `/weaponeffects`) |
 | Platform (reference) | [`open77_prediction`](../system/open77_prediction/): the bundled prediction operator layer (switches, ping ceiling, telemetry), in the platform's `../system/` folder; already on every server, do not install. [`prediction_policy_example`](prediction_policy_example/): the ~40 lines a gamemode needs to turn on melee, Slam and hack prediction |
 
-**`rp_fireworks` is the short one to read first.** Two hundred lines of server
-Lua, no client code, and it is the example for "everybody sees the same thing at
+**`rp_fireworks` is the short one to read first.** Under three hundred lines of
+server Lua, no client code, and it is the example for "everybody sees the same thing at
 the same moment": every shell is fired by the server through
 `Open77.effects.play`, which broadcasts it to the players in range. A show is a
 list of cues on one clock, other resources start one with
@@ -77,8 +77,9 @@ for supported controls, Lua examples and vehicle physics ownership.
    each `open77.lua`; `rp_config` first, then `rp_identity` / `rp_economy` / `rp_inventory` /
    `rp_jobs`, then the rest.
 3. Tune in `shared/config.lua` per resource (prices, positions, poses, props, durations).
-   `rp_config/shared/defaults.lua` mirrors every tunable key and `/rpconfig` edits them live.
-4. Console: `selftest` runs 33 checks across every phase; `restart <name>` after a config edit.
+   `rp_config/shared/defaults.lua` mirrors every tunable key and `/config` edits them live.
+4. `rp_selftest` runs 33 checks across every phase once, when it starts. Type `restart rp_selftest`
+   in the console to run them again, and `restart <name>` after a config edit.
 
 Player texts are English. No resource holds a secret, a credential or a machine path: the
 database connection string is the server's (`OP77_DATABASE_CONNECTION`).
@@ -94,8 +95,9 @@ database connection string is the server's (`OP77_DATABASE_CONNECTION`).
   `.mesh` path renders as a white slab.
 - **Positions are measured**, not guessed: walked points and the AMM interior table. The
   coordinate map is in `README.fr.md` § *Carte de Night City*. The exception is the cargo beds
-  of `rp_cargo/data/layouts.json`: starting guesses flagged `measured: false` until someone
-  measures them with the lab commands (`cargospawn`, `cargotune`, `cargolayout`).
+  of `rp_cargo/data/layouts.json`: the Thorton Mackinaw bed is measured (`measured: true`), the
+  other beds are starting guesses flagged `measured: false` until someone measures them with the
+  commands `cargospawn`, `cargotune` and `cargolayout`.
 - **Vehicle access has one answer**: `exports.rp_garage:canAccess(playerId, plate, part, action)`
   (owner, key holder, mechanic on a job order, police with a warrant, stranger). An open trunk in
   the world is not authorization, and durable state is keyed by plate, never by a runtime id.

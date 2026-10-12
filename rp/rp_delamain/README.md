@@ -141,7 +141,7 @@ Every action below plays a pose from the server's `open77_animations` catalogue
 attached to the body (`Open77.props.create` + `attach`, permission `world.props`) where one
 makes sense, and takes its time behind the UI-kit bar (X cancels; the bar keeps the player
 still on the client, the server never freezes anyone). Other players see all of it: poses
-and props are server-driven. Everything is in ``RpDelamainConfig.Stage` (`shared/config.lua`)` and follows rp_nomade's carry-pose
+and props are server-driven. Everything is in `RpDelamainConfig.Stage` (`shared/config.lua`) and follows rp_nomade's carry-pose
 pattern: `pose.profiles` is a list tried in order through `Open77.animations.get` -- the
 best future name first (the 76-profile catalogue of the pending base PR), then what today's
 18-profile eval catalogue has -- and `prop.models` a list of aliases tried in order. A
@@ -173,7 +173,10 @@ Permissions: `network.events` (`RegisterNetEvent`, `TriggerClientEvent`,
 `Open77.notifications.send` on the server; `RegisterNetEvent`, `TriggerServerEvent` on the
 client), `database.access` (`Open77.database.*`), `world.vehicles`
 (`Open77.vehicles.getPlayerSeat` / `getPosition`), `ui.vanilla.map` (`Open77.blips.create` /
-`remove` / `setWaypoint` / `clearWaypoint` / `waypoint` on the client). No `dependency` line:
+`remove` / `setWaypoint` / `clearWaypoint` / `waypoint` on the client),
+`players.animations.control` (`Open77.animations.play` / `stop`, the staged poses),
+`world.props` (the shared staging helper references `Open77.props.create` / `attach` /
+`remove`; no prop is configured, but the validator wants the permission). No `dependency` line:
 this manifest is delivered to clients and `rp_jobs`, `rp_economy`, `rp_bank`, `rp_identity` are
 reached through `pcall` (without `rp_jobs` every call answers `Delamain dispatch is offline`;
 without `rp_economy` a ride settles unpaid; without `rp_bank` the commission is logged, not

@@ -21,8 +21,8 @@ officer, blocks the weapon wheel of a prisoner and draws alert pins. Holds are t
 ## Setup
 
 1. Load list (`resources.load`): `open77_contextmenu`, `open77_uikit`, `open77_player_interactions`,
-   `open77_notifications` (declared dependencies, all ship a client half), **`open77_rp_basics`**
-   (the RP kit ships `auto_start false` — add it explicitly, or `ensure open77_rp_basics`),
+   `open77_notifications`, `open77_worldui` (declared dependencies, all ship a client half),
+   **`open77_rp_basics`** (the RP kit ships `auto_start false` — add it explicitly, or `ensure open77_rp_basics`),
    `rp_jobs` v2, `rp_zones`, `rp_inventory`, `rp_bank`, `rp_economy`, `rp_identity` (reached
    through `pcall`, each degrades to a chat line when missing).
 2. **The RP kit's ACL gate.** `open77_rp_basics` answers `not_authorised` unless the officer's
@@ -38,7 +38,8 @@ officer, blocks the weapon wheel of a prisoner and draws alert pins. Holds are t
    where a released prisoner is put (`Config.entrance`) — 4 m north (`-1761.5, -1006.8, 94.3`).
    It is 3.1 km south of the freeroam spawn (Kabuki Market Centre `-1191.30, 2006.88, 7.82`):
    cops drive. A **Kabuki-side patrol outpost** (`Config.outpost`) marks the real street outside
-   the Afterlife ramp (`-1408, 960, 23.6`, probed crosswalk, 1.1 km south-west of the market):
+   the Afterlife ramp (ring at `-1416, 957, 23.6`, near the probed crosswalk `-1408, 960`,
+   1.1 km south-west of the market):
    a ring + floating label on every client and, from the server, a keep-out sign
    (`sign.rect.keep_out`) and a road barrier (`barrier.road`) — curated prop aliases, see
    `prop.catalog` — (`Open77.props.create`, removed on stop) — a radio/status point for patrols, nothing
@@ -144,7 +145,7 @@ Every action below plays a pose from the server's `open77_animations` catalogue
 attached to the body (`Open77.props.create` + `attach`, permission `world.props`) where one
 makes sense, and takes its time behind the UI-kit bar (X cancels; the bar keeps the player
 still on the client, the server never freezes anyone). Other players see all of it: poses
-and props are server-driven. Everything is in ``Config.Stage` (`shared/config.lua`)` and follows rp_nomade's carry-pose
+and props are server-driven. Everything is in `Config.Stage` (`shared/config.lua`) and follows rp_nomade's carry-pose
 pattern: `pose.profiles` is a list tried in order through `Open77.animations.get` -- the
 best future name first (the 76-profile catalogue of the pending base PR), then what today's
 18-profile eval catalogue has -- and `prop.models` a list of aliases tried in order. A
@@ -233,7 +234,7 @@ officer's account holding `rp.cuff` / `rp.escort` / `rp.search` (Setup, step 2).
 10. From another resource: `TriggerEvent("rp_ncpd:alert", "robbery", { x = -1201.1, y = 2035.6, z = 5.6 },
     "Lower Walkway dealer hit", 2)` → player 1 reads `[NCPD DISPATCH] ROBBERY: Lower Walkway
     dealer hit - <name> (30 m)`, a toast, and a `danger` pin under the market on the map for a
-    minute. Drive to the Afterlife street (`-1408, 960`): a blue ring, the floating
-    `NCPD — Afterlife street outpost` label, a keep-out sign and a road barrier mark the patrol
+    minute. Drive to the Afterlife street (`-1416, 957`): a blue ring, the floating
+    `NCPD - Afterlife street outpost` label, a keep-out sign and a road barrier mark the patrol
     point (nothing to press there).
     `/ncpd all units, code 3` → every officer reads `[NCPD RADIO] <name>: all units, code 3`.

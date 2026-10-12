@@ -282,11 +282,11 @@ store=sql table=rp_jobs_employees`.
    boss, player 1 reads `You handed the NCPD boss seat to ... You are now senior.`
    Player 2: `/virer 1` → player 1 reads `... fired you from NCPD. Hand in your badge, choom.`
    and `/service` now answers `No job, no shift. /agence to find one.`
-7. Player 1 walks 83 m north to The Gallery (map pin `Employment agency — Kabuki Gallery`, a
+7. Player 1 walks 83 m north to The Gallery (map pin `Employment agency - Kabuki Gallery`, a
    terminal behind the ring), looks at the ring, presses **E** (or types `/agence` within 12 m):
    from the spawn `/agence` answers `The employment agency is 83 m away (the ring and map pin on
    the Kabuki Gallery walkway). Walk over.` The menu lists Delamain, Mechanic, Nomad, Scrapper,
-   Bartender, Security guard with their pay. Pick **Delamain** → `Signed: you now work for
+   Bartender, Street cook, Security guard with their pay. Pick **Delamain** → `Signed: you now work for
    Delamain as recruit.` `/agence` again: Delamain is greyed out, **Resign from Delamain** is
    offered.
 8. Wait for the payroll tick (10 min, or lower `PayrollIntervalMs` in `shared/config.lua` for the

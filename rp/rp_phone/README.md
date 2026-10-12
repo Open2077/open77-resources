@@ -149,43 +149,37 @@ summaries and 25 messages of the open thread.
 - `rp_delamain:call` refuses with `no_driver` when nobody drives: the phone answers with the
   `/taxi` line of the automated cab, as `rp_delamain` does.
 
-## Staging: poses, props and durations
+## Staging: poses and durations
 
-Every action below plays a pose from the server's `open77_animations` catalogue
-(`Open77.animations.play`, permission `players.animations.control`), shows a curated prop
-attached to the body (`Open77.props.create` + `attach`, permission `world.props`) where one
-makes sense, and takes its time behind the UI-kit bar (X cancels; the bar keeps the player
-still on the client, the server never freezes anyone). Other players see all of it: poses
-and props are server-driven. Everything is in ``RpPhoneConfig.anim` (`shared/config.lua`): two lists resolved through `Open77.animations.get`` and follows rp_nomade's carry-pose
-pattern: `pose.profiles` is a list tried in order through `Open77.animations.get` -- the
-best future name first (the 76-profile catalogue of the pending base PR), then what today's
-18-profile eval catalogue has -- and `prop.models` a list of aliases tried in order. A
-refusal (unknown profile, `player_in_vehicle`, `animation_owned`, an attach the client
-cannot bind) is logged once and never blocks the action. Hand-slot offsets are not measured
-on 2.31: if a prop sits wrong, move one axis of `offset` / `rotation` at a time.
+The phone plays a looped pose from the server's `open77_animations` catalogue
+(`Open77.animations.play`, permission `players.animations.control`) while the panel is open
+or a call is active. It spawns no prop of its own: the hand item is the one the profile
+carries (the platform's native phone). There is no UI-kit bar. Both lists live in
+`RpPhoneConfig.anim` (`shared/config.lua`). Each is tried in order through
+`Open77.animations.get`: the walkable profile first, then stationary fallbacks. The first
+known one is kept. `nil` disables an entry.
 
-| Action | Pose today (future name) | Prop | Duration |
+| Action | Profiles tried in order | Prop | Duration |
 |---|---|---|---|
-| `/tel` open | `phone` looped while the panel is open (`phonecheck` once it exists) | the profile's holo | until the panel closes |
-| a call | `phone` looped while the call is active (`call` once it exists -- the old single name `call` was unknown to the 18-profile catalogue, so calls had no pose) | the profile's holo | until hang-up |
+| `/tel` open | `phone_walk`, `phonecheck`, `phone` (looped) | the profile's own phone | until the panel closes |
+| a call | `call_walk`, `call`, `phone` (looped) | the profile's own phone | until hang-up |
 
-Log lines (grep `stage`, `gesture`, `hold`):
+Log lines:
 
 ```text
-[rp_phone] no known profile among [phonecheck,phone]: the phone is held without a pose
+[rp_phone] no known profile among [phone_walk,phonecheck,phone]: the phone is held without a pose
+[rp_phone] player 1 anim phone_walk refused: <reason>
 ```
 
-`-> ok` means the bar ran to the end; `-> cancelled` the player pressed X;
-`-> failed:<reason>` the bar never showed (a plain wait kept the beat). A refused pose reads
-`stage <key>: pose <profile> refused for player N: <reason> (the action runs without it)`,
-an unknown list `stage <key>: no known profile among [...]`, a refused prop `stage
-<key>.prop: attach of <alias> to player N refused: <reason> (no prop shown)`.
+A refused pose never blocks the phone. `player_in_vehicle` is not logged; other reasons are.
 The platform cancels the pose when the player walks; the next state push replays it, so the holo is back in the hand as soon as they stop.
 
 ## Log (grep-able)
 
+The start line begins with `[rp_phone] started: item=phone` and gives the ring time and the
+ad price. Its `anim=` field prints internal table ids, not profile names.
+
 ```
-[rp_phone] started: item=phone anim=phone/call ring=30s ad=50 eddies/60 min
 [rp_phone] schema ready: rp_phone_lines, rp_phone_contacts, rp_phone_sms, rp_phone_ads
 [rp_phone] NCID registry reachable: 12 citizen record(s) -> numbers are 555-<citizen id>
 [rp_phone] store=sql lines=12 ads=1

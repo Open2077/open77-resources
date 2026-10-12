@@ -106,7 +106,7 @@ la concession ; le NCPD siège dans son vrai bâtiment du centre-ville (les flic
 | `rp_vigile` | `/garde [engager\|fin\|journal] /expulser` + ALT+clic | contrats de zone `afterlife`, `lizzies`, `kabuki_market` ; « Guard The Afterlife » pris, +16 €$/min au vigile, +4 à la société, payé par la société du bar |
 
 Les preuves de la colonne datent de la matinée, sur l'ancien plateau ; après le déménagement de
-l'après-midi, `selftest` (33/33 PASS, toutes phases) et les contrôles console ont été rejoués
+l'après-midi, `rp_selftest` (33/33 PASS, toutes phases) et les contrôles console ont été rejoués
 sur les nouvelles positions — les parcours en jeu ci-dessous sont à rejouer à Night City.
 
 ### Parcours de test phase 2 (15 minutes, un joueur ; « 2 » = second joueur utile)
@@ -466,7 +466,7 @@ avec porte réelle revendiquée via `open77_doors`, `/inv` en panneau WebUI, les
 `rp_economy` en SQL, une revue de code qui a corrigé une trentaine de défauts (acteur console
 id 0 qui plantait, ids de joueur en chaîne venus des événements hôte, `await` de base de données
 manquants, `source` périmé après un `await` UI, balayage des véhicules perdus, blocage de la
-whitelist sur la base, persistance de `/radio off`, TTL du camion nomade…), et `selftest` qui
+whitelist sur la base, persistance de `/radio off`, TTL du camion nomade…), et `rp_selftest` qui
 couvre désormais toutes les phases (33/33 PASS).
 
 **Ce qui reste au owner** : rejouer les parcours en jeu sur les nouvelles positions (les preuves

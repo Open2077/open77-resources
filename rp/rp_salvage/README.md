@@ -12,7 +12,9 @@ drive, unload it at the buyer and sell it. Every step that moves value is one du
 idempotent operation; every prompt, bar, claim and carry comes from a library, not from this
 resource.
 
-**Status: experimental.** The whole loop (works, carry,
+**What it needs.** The platform's `open77_actions`, `open77_containers` and `open77_transactions`
+libraries and their siblings (the load list in section 1). They are on this repository's `next`
+branch until the next server release. The whole loop (works, carry,
 truck, unload, sale), contention, cancellations, restarts, a database outage and authorization have run
 in game with both body rigs, on a SQL server with strict coordinator writers; the yard
 positions were walked in game. The test script is in
@@ -231,7 +233,6 @@ on aiming at a prompt.
 
 ## 5. Limits
 
-- Positions of the foreman, bays and counter are arithmetic, not walked (`measured = false`).
 - `tool.crowbar` does not exist as a prop host: the fire axe stands in while prying.
 - A crate on the ground can be picked up by any on-duty scrapper (`pickupBy = "crew"`); the
   seller is whoever hands it over. `pickupBy = "owner"` restricts lifting to the filler.
