@@ -18,7 +18,10 @@ import contracts  # noqa: E402
 # Cross-resource server exports in use at origin/main 5dcdad2, by provider.
 FROZEN_SURFACE = {
     "rp_inventory": {"add", "count", "define", "has", "list", "openStash", "remove"},
-    "rp_economy": {"add", "getBalance", "remove"},
+    # B3 (rp_economy 2.0.0): add/getBalance/remove are the 1.x surface every caller keeps; the
+    # other five are rp_bank 2.0.0 calling the wallet facade (docs/world-interaction/b3-wallet.md).
+    "rp_economy": {"add", "getBalance", "remove",
+                   "balanceOf", "pay", "societyRead", "walletMove", "walletRead"},
     "rp_bank": {"charge", "deposit", "getAccount", "society", "societyAdd", "societyRemove", "withdraw"},
     "rp_jobs": {"getGrade", "getJob", "hasJob", "isBoss", "listOnDuty", "onDuty", "setJob"},
     "rp_identity": {"fullName", "get", "isRegistered"},
