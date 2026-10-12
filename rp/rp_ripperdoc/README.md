@@ -1,6 +1,6 @@
 # rp_ripperdoc
 
-Adds a ripperdoc job at Viktor's clinic: the ripperdoc quotes a patient, the patient accepts, lies on the operating chair and gets real platform cyberware installed, paid once from a clinic stock the ripperdoc restocks at a chrome dealer or from players.
+Adds a ripperdoc job at Viktor's clinic: the ripperdoc quotes a patient, the patient accepts, sits in the operating chair and gets real platform cyberware installed, paid once from a clinic stock the ripperdoc restocks at a chrome dealer or from players.
 
 - **Docs:** [Build a job: prompts, animations, items and pay](https://open2077.net/docs/world-interaction), [Cyberware](https://open2077.net/docs/cyberware), [Player interactions](https://open2077.net/docs/player-interactions)
 - **Starts:** with `ensure rp_ripperdoc` (it declares `auto_start false`)
@@ -24,7 +24,7 @@ zone `viktor_clinic`.
 2. **Wait for consent.** The patient reads the quote and answers. On accept, the price and the boxed
    implant are put on hold (nothing is paid yet) and the station next to the chair now offers the
    procedure: **E Install Gorilla Arms (Street)**.
-3. **Operate.** Once the patient lies on the chair, stand at the station and press **E** (or
+3. **Operate.** Once the patient sits in the chair, stand at the station and press **E** (or
    `/ripper operate`). The ripperdoc plays the drill workspot at the station and a bar runs on both
    screens (12 to 22 s by grade). **X** stops it: nothing is charged. When the bar ends the implant is
    installed, then the hold is paid: the price to the `ripper` society, the box out of the stock.
@@ -40,16 +40,17 @@ zone `viktor_clinic`.
 **The patient.**
 
 1. Stand next to the ripperdoc in the clinic and ask for a quote. The quote arrives in chat and as a
-   toast (implant, grade, price, time, cyberpsychosis risk) with the platform's invitation: accept on
-   screen or `/interaction accept`, refuse with `/interaction decline` (30 s).
-2. Lie on the operating chair: **E Lie on the operating chair** (or `/ripper lie`). Walk away to get
-   up. A patient already lying when the quote comes is stood up for the answer and laid back down
+   toast (implant, grade, price, time, cyberpsychosis risk), and the platform's offer card opens in the
+   middle of the screen: accept with **Y**, refuse with **N** (30 s; the keys are rebindable, and `/interaction accept` or
+   `decline` also work).
+2. Sit in Vik's operating chair: **E Sit in the operating chair** (or `/ripper lie`). Walk away to get
+   up. A patient already seated when the quote comes is stood up for the answer and seated again
    after accepting.
 3. During the operation a bar shows the time under the knife. **X** stops it: nothing is charged.
 4. Done: chat, toast, `/implants` lists the chrome as the platform reports it. A patient past the
    cyberpsychosis threshold (4 implants) gets a 60 s `drugged` overlay and a warning.
 
-**Everyone nearby** sees the patient lying on the chair and the ripperdoc at work; both postures are
+**Everyone nearby** sees the patient in the chair and the ripperdoc at work; both postures are
 played by the server.
 
 **What ends a procedure and gives everything back** (the hold is released, the box stays in stock,
@@ -108,11 +109,11 @@ Everything is in `shared/config.lua` (`RpRipperConfig`).
 |---|---|---|
 | `job`, `society`, `fixerJob` | `ripper`, `ripper`, `ripperdoc` | the rp_jobs job, the society paid, the job id in `rp:job:completed` |
 | `clinics.viktor.chair.mode` | `placed` | `placed`: the `lie` action at the chair point; `seating`: a real furniture through open77_seating (`chair.furniture`, optional `chair.spot`) |
-| `clinics.viktor.chair.position`, `yaw`, `arrivalRadius` | `-1548.0, 1230.0, 11.6`, `-89.5`, `1.0` | the lying anchor (Vik's chair room) |
-| `clinics.viktor.chair.profiles` | `lie`, `bedsidelie`, `seatedsleep` | lying profiles, the first one the server knows is played |
+| `clinics.viktor.chair.position`, `yaw`, `arrivalRadius` | `-1546.92, 1234.22, 11.6`, `145`, `1.0` | Vik's reclining chair; the body sits on it facing the clinic floor |
+| `clinics.viktor.chair.profiles`, `actionLabel` | `seatedsleep`, `seated`; `Sit in the operating chair` | the patient's posture (the first one the server knows is played) and the prompt; the bed postures `lie` / `bedsidelie` only suit a flat bed |
 | `clinics.viktor.station` | `-1547.991, 1229.0, 11.6`, yaw `0.5` | where the ripperdoc stands to operate |
 | `clinics.viktor.zone`, `stockCapacityG` | `viktor_clinic`, `60000` | the zone to work in, the stash capacity (30 boxes) |
-| `supplier.position`, `yaw` | `-1171.64, 2024.976, 7.761`, `-60` | the chrome dealer, Kabuki Market |
+| `supplier.position`, `yaw` | `-1172.45, 2024.30, 7.764`, `-60` | the chrome dealer, Kabuki Market |
 | `supplier.mode` | `mint` | `components`: each box burns its grade's `components` (a future techie's parts) from `componentsFrom` instead of money |
 | `supplier.payFrom`, `priceFactor`, `maxCount`, `durationMs` | `society, cash`, `0.6`, `5`, `6000` | who pays an order, the wholesale share, boxes per order, the bar |
 | `quote.distance`, `inviteTimeoutMs`, `validMs`, `leashM` | `4.0`, `30000`, `180000`, `25.0` | consent reach and time, how long an accepted quote waits, how far the patient may walk |

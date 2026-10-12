@@ -10,9 +10,9 @@ dofile(COMPAT_DIR .. "/ripperdoc_world.lua")
 local scenarios = {}
 
 local RIP, PAT, SEL = "acct-rip", "acct-pat", "acct-sel"
-local CHAIR = { x = -1548.0, y = 1230.0, z = 11.6 }
-local STATION = { x = -1547.991, y = 1229.0, z = 11.6 }
-local NEAR = { x = -1546.5, y = 1230.5, z = 11.6 }        -- 1.6 m from the chair, inside the clinic
+local CHAIR = { x = -1546.92, y = 1234.22, z = 11.6 }
+local STATION = { x = -1546.40, y = 1233.74, z = 11.6 }
+local NEAR = { x = -1545.5, y = 1233.5, z = 11.6 }        -- 1.6 m from the chair, inside the clinic
 local OUTSIDE = { x = -1530.0, y = 1230.0, z = 11.6 }     -- 18 m away: outside the clinic zone
 local SUPPLIER = { x = -1171.64, y = 2024.976, z = 7.761 }
 local STOCK, THEATRE, SUP, SOC = "stash:rd.viktor:stock", "sys:ripperdoc.theatre", "sys:ripperdoc.supplier", "soc:ripper"
@@ -175,8 +175,8 @@ function scenarios.happy_path()
         event_ref_is_action = e and op and e.ref == op.opId,
         legacy_events = #MH.shared.operations,
         patient_bar = bar and bar.label, patient_bar_done = bar and bar.done == true,
-        ripper_pose = played(1, "amb_6862d5_stand_use_driller", "playAt") ~= nil,
-        patient_pose = played(2, "lie", "playAt") ~= nil,
+        ripper_pose = played(1, "repair", "playAt") ~= nil,
+        patient_pose = played(2, "seatedsleep", "playAt") ~= nil,
         told_done_patient = RDW.told(2, "Done: Gorilla Arms %(Street%) installed%. You paid 1500 eddies %(cash%)"),
         told_done_ripper = RDW.told(1, "Done: Gorilla Arms %(Street%) installed on Jackie%. 1500 eddies to the ripper society"),
         journal_rows = RDW.journalRows(), station_idle = svc().clinics.viktor.stationChoice,
@@ -389,17 +389,17 @@ function scenarios.refusals()
     -- Self-surgery.
     quote(1, 1, "arms", "street")
     out.self = RDW.told(1, "Operating on yourself")
-    -- The idle station: E with no accepted quote.
-    RDW.intent(1, "rp_ripperdoc:operate", STATION_T)
+    -- The idle station: no card at all without an accepted quote; /ripper operate says why.
+    MH.command("ripper", 1, { "operate" })
     MH.run(1)
-    out.idle = RDW.told(1, "No accepted quote here")
+    out.idle = svc().clinics.viktor.stationChoice == false and RDW.told(1, "No accepted quote") ~= nil
     -- An accepted quote, but the patient is not on the chair: the operate prompt refuses.
     RDW.giveMoney("cash:" .. PAT, 5000, "late")
     quote(1, 2, "arms", "street")
     accept(1)
     RDW.intent(1, "rp_ripperdoc:op_arms_street", STATION_T)
     MH.run(1)
-    out.not_on_chair = RDW.told(1, "The patient must lie on the operating chair first")
+    out.not_on_chair = RDW.told(1, "The patient must sit in the operating chair first")
     -- The quote expires (180 s) without an operation.
     local s = lastSurgery()
     MH.run(185)

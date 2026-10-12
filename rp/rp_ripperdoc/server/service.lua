@@ -205,7 +205,7 @@ function S:lieAgain(pid, clinicKey)
         ok, why = self.P.actions.request(pid, "lie_" .. clinic.key, clinic.key .. "_chair")
     end
     if not ok then
-        self:tell(pid, ("Lie back on the operating chair (E): %s"):format(self.M.textFor(why)), "info")
+        self:tell(pid, ("Sit back in the operating chair (E): %s"):format(self.M.textFor(why)), "info")
     end
 end
 
@@ -311,7 +311,9 @@ end
 function S:actionDefinitions()
     local cfg, M = self.cfg, self.M
     local defs, kinds = {}, {}
+    local messages = M.actionMessages()
     local function add(def, kind)
+        def.messages = def.messages or messages      -- open77_actions shows these words, not the codes
         defs[#defs + 1] = def
         kinds[def.id] = kind
     end
@@ -322,7 +324,7 @@ function S:actionDefinitions()
             local profile = self:resolveProfile(chair.profiles, "the lying posture of " .. key)
             self.profiles["lie_" .. key] = profile
             add({
-                id = "lie_" .. key, label = "Lie on the operating chair", durationMs = chair.lieMaxMs or 300000,
+                id = "lie_" .. key, label = chair.actionLabel or "Sit in the operating chair", durationMs = chair.lieMaxMs or 300000,
                 maxDistance = 2.5,
                 animation = profile and { profile = profile, at = "target", arrivalRadius = chair.arrivalRadius } or nil,
                 -- No bar and no movement lock: the patient's screen stays free for the surgery bar,
@@ -339,11 +341,20 @@ function S:actionDefinitions()
     }, { kind = "idle" })
     local opProfile = self:resolveProfile(cfg.operation.profiles, "the operating pose")
     self.profiles.operate = opProfile
+    local entryProfiles = {}
     for _, a in ipairs(M.operateActions(cfg)) do
+        local profile = opProfile
+        if type(a.entry.operateProfiles) == "table" then
+            if entryProfiles[a.entry.key] == nil then
+                entryProfiles[a.entry.key] = self:resolveProfile(a.entry.operateProfiles,
+                    "the operating pose of " .. a.entry.key) or false
+            end
+            profile = entryProfiles[a.entry.key] or opProfile
+        end
         add({
             id = a.id, label = a.label, durationMs = a.durationMs, maxDistance = cfg.operation.maxDistance,
             reserveTimeoutMs = 15000, commitRetries = 1,
-            animation = opProfile and { profile = opProfile, at = "target", required = false } or nil,
+            animation = profile and { profile = profile, at = "target", required = false } or nil,
             progress = { label = a.progress, color = cfg.color },
             claims = { move = true, attack = true },
             eligibility = cfg.eligibility, epochs = cfg.epochs, hooks = HOOKS,
@@ -363,19 +374,48 @@ function S:actionDefinitions()
 end
 
 -- The station offers the accepted procedure, or the idle choice that explains how to get one.
+-- The chair's "Sit" card, shown while the chair is free and taken down while a patient sits in it:
+-- an occupied chair offers nothing (open77_actions would refuse target_claimed), and its card would
+-- sit over the patient on top of the station's card.
+function S:showChair(clinicKey)
+    local clinic = self.clinics[clinicKey]
+    local chair = clinic and clinic.cfg.chair
+    if not chair or chair.mode == "seating" then return nil end
+    local key, why = self.P.actions.target({
+        id = clinicKey .. "_chair", position = chair.position, yaw = chair.yaw, bucket = self.cfg.bucket,
+        label = chair.label or "Operating chair", distance = 1.5, actions = { "lie_" .. clinicKey },
+        arrivalRadius = chair.arrivalRadius, data = { clinic = clinicKey, role = "chair" },
+    })
+    if key then self.targetClinic[key] = clinicKey else self:warn("chair target %s refused: %s", clinicKey, tostring(why)) end
+    return key
+end
+
+function S:hideChair(clinicKey)
+    pcall(self.P.actions.untarget, clinicKey .. "_chair")
+end
+
 function S:refreshStation(clinicKey, force)
     local clinic = self.clinics[clinicKey]
     if not clinic or not clinic.opened then return end
     local s = self.byClinic[clinicKey]
-    local choice = "operate"
+    local choice = false
     if s and (s.state == "reserved" or s.state == "operating" or s.state == "installing") then
         choice = self.M.actionId(s.proc)
     end
     if clinic.stationChoice == choice and not force then return end
-    local st = clinic.cfg.station
+    -- No accepted quote: no station card at all (it would stack over the empty chair's "Sit" card).
+    if not choice then
+        pcall(self.P.actions.untarget, clinicKey .. "_station")
+        clinic.stationChoice = false
+        return
+    end
+    local st, chair = clinic.cfg.station, clinic.cfg.chair
+    -- The card floats over the patient's head, where the ripperdoc looks (their own point is under
+    -- their feet, off screen).
     local key, why = self.P.actions.target({
         id = clinicKey .. "_station", position = st.position, yaw = st.yaw, bucket = self.cfg.bucket,
         label = st.label or "Operating station", distance = 1.5, actions = { choice },
+        promptAt = st.promptAt or chair.position, promptHeight = st.promptHeight or 1.35,
         data = { clinic = clinicKey, role = "station" },
     })
     if key then
@@ -398,20 +438,7 @@ function S:declare()
     for _, key in ipairs(cfg.clinicOrder) do
         local clinic = self.clinics[key]
         if clinic and clinic.opened then
-            local chair = clinic.cfg.chair
-            if chair.mode ~= "seating" then
-                local tkey, why = self.P.actions.target({
-                    id = key .. "_chair", position = chair.position, yaw = chair.yaw, bucket = cfg.bucket,
-                    label = chair.label or "Operating chair", distance = 1.5, actions = { "lie_" .. key },
-                    arrivalRadius = chair.arrivalRadius, data = { clinic = key, role = "chair" },
-                })
-                if tkey then
-                    targets = targets + 1
-                    self.targetClinic[tkey] = key
-                else
-                    self:warn("chair target %s refused: %s", key, tostring(why))
-                end
-            end
+            if clinic.cfg.chair.mode ~= "seating" and self:showChair(key) then targets = targets + 1 end
             clinic.stationChoice = nil
             self:refreshStation(key, true)
             if clinic.stationChoice then targets = targets + 1 end
@@ -552,6 +579,10 @@ function S:requestConsent(actor, target, kind, options)
     local state, why
     for attempt = 1, 6 do
         state, why = self.P.interactions.request(actor, target, kind, options)
+        if not state and why == "invalid_options" and options.label ~= nil then
+            options.label = nil                      -- a server from before offer labels
+            state, why = self.P.interactions.request(actor, target, kind, options)
+        end
         if state or why ~= "animation_busy" or attempt == 6 then break end
         Wait(500)
     end
@@ -594,10 +625,13 @@ function S:quote(ripper, patient, choice)
         return self:refuseTo(ripper, "busy")
     end
     local relie = self:standUp(patient)
+    local verb = p.proc.action == "install" and "install" or "remove"
     local state, ixWhy = self:requestConsent(ripper, patient, "custom", {
         durationMs = cfg.quote.interactionMs, startDistance = cfg.quote.distance,
         breakDistance = math.min(cfg.quote.distance + 3.0, 20.0), inviteTimeoutMs = cfg.quote.inviteTimeoutMs,
         consent = true, actorAnimation = cfg.quote.actorAnimation, targetAnimation = cfg.quote.targetAnimation,
+        -- The patient's offer card (a server without offer labels refuses the field: asked again without it).
+        label = ("%s: %s %s for %s"):format(self:nameOf(ripper), verb, p.label, M.money(p.price)):sub(1, 120),
     })
     if type(state) ~= "table" or not state.id then
         if relie then self:lieAgain(patient, q.clinic.key) end
@@ -616,7 +650,7 @@ function S:quote(ripper, patient, choice)
     self:index(s)
     self.stats.quotes = self.stats.quotes + 1
     local what = p.proc.action == "install" and ("install %s"):format(p.label) or ("remove %s"):format(p.label)
-    self:tell(patient, ("QUOTE from %s: %s for %s, %d s under the knife. Risk: %s. Nothing is paid until the chrome is in. Accept on screen, or /interaction accept | /interaction decline (%d s).")
+    self:tell(patient, ("QUOTE from %s: %s for %s, %d s under the knife. Risk: %s. Nothing is paid until the chrome is in. Answer on the offer card within %d s.")
         :format(s.ripperName, what, M.money(p.price), M.seconds(p.durationMs), riskText(cfg, M, record, p.proc),
         M.seconds(cfg.quote.inviteTimeoutMs)), "info")
     self:tell(ripper, ("Quote sent to %s: %s for %s. Waiting for consent (%d s).")
@@ -688,7 +722,7 @@ function S:accept(s)
     self.stats.accepted = self.stats.accepted + 1
     self:refreshStation(s.clinic)
     local clinic = self.clinics[s.clinic]
-    local how = clinic.cfg.chair.mode == "seating" and "lie on the operating chair" or "lie on the operating chair (E)"
+    local how = clinic.cfg.chair.mode == "seating" and "sit in the operating chair" or "sit in the operating chair (E)"
     self:tell(s.patient, ("Quote accepted: %s and the implant are on hold, nothing is paid yet. Please %s; %s operates from the station.")
         :format(M.money(s.price), how, s.ripperName), "success")
     self:tell(s.ripper, ("%s accepted: %s for %s on hold (%s). Get them on the chair, then E %s at the operating station (or /ripper operate). The quote holds %d s.")
@@ -1174,16 +1208,16 @@ end
 function S:onPatientLay(pid)
     local s = self.byPlayer[pid]
     if s and s.patient == pid and s.state == "reserved" then
-        self:tell(pid, ("You lie on the operating chair. %s can start. Walk away to get up."):format(s.ripperName), "info")
+        self:tell(pid, ("You sit in the operating chair. %s can start. Walk away to get up."):format(s.ripperName), "info")
         self:tellSubject(s.ripperSubject, ("%s is on the chair: E %s at the operating station, or /ripper operate.")
             :format(s.patientName, self:operateLabel(s)), "info", s.ripper)
         return
     end
     local onDuty = #self.P.jobs.listOnDuty(self.cfg.job)
     if onDuty == 0 then
-        self:tell(pid, "You lie on the operating chair. No ripperdoc is on duty right now. Walk away to get up.", "info")
+        self:tell(pid, "You sit in the operating chair. No ripperdoc is on duty right now. Walk away to get up.", "info")
     else
-        self:tell(pid, ("You lie on the operating chair. %d ripperdoc(s) on duty can quote you (they ALT+click you > Quote). Walk away to get up.")
+        self:tell(pid, ("You sit in the operating chair. %d ripperdoc(s) on duty can quote you (they ALT+click you > Quote). Walk away to get up.")
             :format(onDuty), "info")
     end
 end
@@ -1194,9 +1228,10 @@ function S:onPatientLeft(pid, reason)
     if s.state == "operating" then
         -- The cancel hook releases the hold (a commit already in flight re-checks the chair).
         if s.actionOpId then self.P.actions.cancel(s.actionOpId, "patient_left") end
-    elseif s.state == "reserved" then
-        self:tellSubject(s.ripperSubject, ("%s got off the chair (%s). The quote holds until it expires.")
-            :format(s.patientName, tostring(reason)), "info", s.ripper)
+    elseif s.state == "reserved" and reason ~= "dead" and reason ~= "disconnected" then
+        -- (a death or a disconnect ends the whole procedure right after: no "the quote holds" line)
+        self:tellSubject(s.ripperSubject, ("%s got off the chair. The quote holds until it expires.")
+            :format(s.patientName), "info", s.ripper)
     end
 end
 
@@ -1211,11 +1246,13 @@ function S:onTransition(op)
     if kind.kind == "lie" then
         if op.state == "presenting" then
             self.lying[pid] = { opId = op.opId, clinic = kind.clinic }
+            self:hideChair(kind.clinic)
             self:onPatientLay(pid)
         elseif TERMINAL[op.state] then
             local l = self.lying[pid]
             if l and l.opId == op.opId then
                 self.lying[pid] = nil
+                self:showChair(kind.clinic)
                 self:onPatientLeft(pid, op.reason)
             end
         end
@@ -1421,10 +1458,12 @@ function S:offerBuy(ripper, seller, key, gradeId, countArg)
     local pockets = L.account(seller, "char")
     local snap = pockets and L.read(pockets)
     if L.available(snap, grade.item) < count then return nil, "seller_short" end
+    local price = M.buybackPrice(cfg, grade, count)
     local state, why = self:requestConsent(ripper, seller, "give", {
         durationMs = cfg.buyback.durationMs, startDistance = cfg.buyback.distance,
         breakDistance = math.min(cfg.buyback.distance + 2.0, 20.0), inviteTimeoutMs = cfg.buyback.inviteTimeoutMs,
         consent = true,
+        label = ("%s buys %d x %s for %s"):format(self:nameOf(ripper), count, M.label(entry, grade), M.money(price)):sub(1, 120),
     })
     if type(state) ~= "table" or not state.id then return nil, why or "interactions_unavailable" end
     local now = self.P.now()
@@ -1434,7 +1473,7 @@ function S:offerBuy(ripper, seller, key, gradeId, countArg)
         opId = L.newOpId("buy"), epoch = epoch, at = now, lastSeen = now }
     self.buys[o.id] = o
     self.buyOf[ripper] = o.id
-    self:tell(seller, ("%s offers %s for %d x %s. Accept the hand-over to sell (/interaction accept), or decline it.")
+    self:tell(seller, ("%s offers %s for %d x %s. Answer on the offer card to sell, or decline it.")
         :format(self:nameOf(ripper), M.money(o.price), count, o.label), "info")
     self:tell(ripper, ("Offer sent to %s: %s for %d x %s."):format(self:nameOf(seller), M.money(o.price), count, o.label), "info")
     self:log("buy-back offer %s: %s -> %s, %d x %s for %d, op %s", o.id, tostring(o.ripperSubject),

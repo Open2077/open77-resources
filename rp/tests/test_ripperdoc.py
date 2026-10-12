@@ -127,11 +127,11 @@ class RipperdocSources(unittest.TestCase):
                      "## Config", "## Limits"):
             self.assertIn(line, readme)
 
-    def test_new_points_are_marked_unmeasured(self):
+    def test_points_declare_whether_they_were_walked(self):
         config = (RES / "shared" / "config.lua").read_text(encoding="utf-8")
-        self.assertEqual(config.count("measured = true,"), 0)
-        self.assertGreaterEqual(config.count("measured = false,"), 3)      # chair, station, supplier
-        self.assertGreaterEqual(config.count("source = "), 3)
+        flags = config.count("measured = true,") + config.count("measured = false,")
+        self.assertGreaterEqual(flags, 3)                                   # chair, station, supplier
+        self.assertGreaterEqual(config.count("source = "), flags)
 
     def test_item_ids_follow_the_inventory_rules(self):
         config = (RES / "shared" / "config.lua").read_text(encoding="utf-8")
@@ -158,10 +158,10 @@ class RipperdocLoop(unittest.TestCase):
         self.assertEqual(r["ready"], "true")
         self.assertEqual(r["defs"], "5")
         self.assertEqual(r["hacking"], "true")
-        self.assertEqual(r["targets"], "3")                       # chair, station, dealer
+        self.assertEqual(r["targets"], "2")                       # chair, dealer (station: during a surgery)
         self.assertEqual((r["lie_profile"], r["op_profile"], r["restock_profile"]),
-                         ("lie", "amb_6862d5_stand_use_driller", "tablet2"))
-        self.assertEqual(r["station"], "operate")
+                         ("seatedsleep", "repair", "tablet2"))
+        self.assertEqual(r["station"], "false")                     # no station card until a quote is accepted
         self.assertEqual(r["stock_open"], "true")
         self.assertNotEqual(r["printed_ready"], "0")
 
@@ -188,7 +188,7 @@ class RipperdocLoop(unittest.TestCase):
         self.assertEqual((r["patient_bar"], r["patient_bar_done"]), ("Under the knife: Gorilla Arms (Street)", "true"))
         self.assertEqual((r["ripper_pose"], r["patient_pose"]), ("true", "true"))
         self.assertEqual((r["told_done_patient"], r["told_done_ripper"]), ("true", "true"))
-        self.assertEqual((r["journal_rows"], r["station_idle"]), ("0", "operate"))
+        self.assertEqual((r["journal_rows"], r["station_idle"]), ("0", "false"))
         # the 1.x SQL history keeps its rows
         self.assertEqual((r["history_rows"], r["history_paid_via"], r["history_implant"]),
                          ("1", "cash", "rp_ripperdoc.gorilla_arms"))
@@ -213,7 +213,7 @@ class RipperdocLoop(unittest.TestCase):
         self.assertEqual((r["off_state"], r["off_reason"], r["off_surgery"], r["off_told"]),
                          ("cancelled", "patient_left", "cancelled", "true"))
         self.assertEqual((r["cash_same"], r["stock"], r["submits"], r["arms"]), ("true", "3", "0", "nil"))
-        self.assertEqual((r["journal_rows"], r["cancelled"], r["station_idle"]), ("0", "3", "operate"))
+        self.assertEqual((r["journal_rows"], r["cancelled"], r["station_idle"]), ("0", "3", "false"))
         self.assertEqual(r["unbalanced"], "nil")
 
     def test_leaving_refunds(self):

@@ -303,7 +303,7 @@ M.TEXT = {
     quote_pending = "The patient has not answered the quote yet.",
     surgery_busy = "That procedure is already running.",
     wrong_clinic = "That patient's quote is for another clinic.",
-    patient_not_on_chair = "The patient must lie on the operating chair first (E on the chair).",
+    patient_not_on_chair = "The patient must sit in the operating chair first (E on the chair).",
     hold_lost = "The hold on that quote is gone: send a new quote.",
     quote_expired = "The quote expired: send a new one.",
     patient_left = "The patient got off the chair.",
@@ -332,6 +332,22 @@ M.TEXT = {
 
 function M.textFor(reason)
     return M.TEXT[reason] or ("Refused: " .. tostring(reason))
+end
+
+-- What open77_actions shows when one of this resource's actions is refused or stops: the same words
+-- as the toast (a reason token -> text, at most 32 entries of 160 characters), and nothing at all for
+-- the patient's quote stand-up (the consent offer itself says what happens).
+local ACTION_REASONS = {
+    "not_eligible", "outside_clinic", "clinic_busy", "busy", "too_far", "no_quote", "quote_pending",
+    "patient_not_on_chair", "patient_left", "surgery_lost", "out_of_stock", "stale_job_epoch",
+}
+function M.actionMessages()
+    local messages = { quote_offered = false }
+    for _, reason in ipairs(ACTION_REASONS) do
+        local text = M.TEXT[reason]
+        if type(text) == "string" and #text <= 160 then messages[reason] = text end
+    end
+    return messages
 end
 
 -- Why a quote, an offer or a surgery ended, as players read it.

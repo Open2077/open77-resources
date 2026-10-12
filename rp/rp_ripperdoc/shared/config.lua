@@ -40,29 +40,32 @@ C.clinics = {
             -- at the chair point, through open77_actions). "seating": the patient lies on a real
             -- furniture through open77_seating (its own prompt, or /ripper lie), `furniture` below.
             mode = "placed",
-            -- Vik's chair room (AMM point; z is the floor under the chair + 0.1). The anchor of the
-            -- lying posture: the integrator walks it with the posture playing and corrects it.
-            position = { x = -1548.0, y = 1230.0, z = 11.6 },
-            yaw = -89.5,
+            -- Vik's white reclining chair, walked in game with the posture playing: the body sits on
+            -- the seat, back to the backrest, facing the clinic floor (yaw 145). z is the floor.
+            position = { x = -1546.92, y = 1234.22, z = 11.6 },
+            yaw = 145.0,
             arrivalRadius = 1.0,         -- playAt arrives within this radius (the chair pushes back)
-            -- Lying / reclining profiles tried in order through Open77.animations.get (the first one
-            -- the server's catalogue knows is played): rp-animation-catalogue `lie` (bed), `bedsidelie`
-            -- (bed, on the side), `seatedsleep` (doze in a chair, for a reclining chair).
-            profiles = { "lie", "bedsidelie", "seatedsleep" },
+            -- Postures tried in order through Open77.animations.get (the first one the server's
+            -- catalogue knows is played). Vik's chair reclines: `seatedsleep` (dozing in a chair) sits
+            -- on it; the bed postures `lie` / `bedsidelie` lie across it and float, so they only suit
+            -- a clinic whose "chair" is a flat bed.
+            profiles = { "seatedsleep", "seated" },
+            actionLabel = "Sit in the operating chair",
             lieMaxMs = 300000,           -- a patient gets up by themselves after this long
             furniture = nil,             -- seating mode: the open77_furniture id of the chair or bed
             spot = nil,                  -- seating mode: optional pose spot of that furniture
             label = "Operating chair",
-            measured = false,
-            source = "rp_ripperdoc 1.x chair (AMM point of Vik's chair room), rp_zones viktor_clinic centre",
+            measured = true,
+            source = "walked in game: seatedsleep played on Vik's chair, seen from the patient and an observer",
         },
         station = {
-            -- Where the ripperdoc stands to operate: 1.0 m to the side of the chair, facing it.
-            position = { x = -1547.991, y = 1229.0, z = 11.6 },
-            yaw = 0.5,
+            -- Where the ripperdoc stands to operate: on the patient's free left side (the instrument
+            -- cart is on the right), 0.7 m from the seat, facing them: the hands reach the arm.
+            position = { x = -1546.40, y = 1233.74, z = 11.6 },
+            yaw = 55.0,
             label = "Operating station",
-            measured = false,
-            source = "arithmetic: 1.0 m to the right of the chair anchor (yaw -89.5), facing it",
+            measured = true,
+            source = "walked in game: the operating postures played here beside a seated patient",
         },
     },
 }
@@ -78,12 +81,13 @@ C.supplier = {
     label = "Chrome dealer",
     clinic = "viktor",               -- whose stash receives the order
     -- Kabuki Market, the tablet vendor by the market grill (pedestrian spot row 6552,
-    -- amb_659592_stand_tablet at -1170.601, 2025.576, 7.761, yaw 120): the buyer stands 1.2 m in
-    -- front of the vendor, facing them.
-    position = { x = -1171.64, y = 2024.976, z = 7.761 },
+    -- amb_659592_stand_tablet at -1170.601, 2025.576, 7.761, yaw 120): the buyer stands in front of
+    -- the stall's counter, facing the vendor (1.2 m from the vendor is behind the counter: the
+    -- body was placed inside the stall and pushed out).
+    position = { x = -1172.45, y = 2024.30, z = 7.764 },
     yaw = -60.0,
-    measured = false,
-    source = "arithmetic: 1.2 m in front of pedestrian spot row 6552 (amb_659592_stand_tablet, Kabuki Market)",
+    measured = true,
+    source = "walked in game: in front of the counter of pedestrian spot row 6552's stall (Kabuki Market)",
     -- "mint": boxes created out of sys:ripperdoc.supplier (an operator mint rule caps them per hour).
     -- "components": the same, but each box also burns the components its grade lists
     -- (`catalogue[].grades[].components`, e.g. a techie's parts) from `componentsFrom`; nothing is
@@ -100,7 +104,7 @@ C.supplier = {
 
 -- ---------------------------------------------------------------------------------------------
 -- The quote: the ripperdoc ALT+clicks a standing patient (or /ripper quote <id>), picks a procedure
--- in the catalogue, the patient accepts or declines on screen (or /interaction accept | decline).
+-- in the catalogue, the patient accepts or declines on the offer card (Y / N).
 -- Accepting puts the price and the implant on hold in ONE coordinator reservation.
 -- ---------------------------------------------------------------------------------------------
 C.quote = {
@@ -117,9 +121,13 @@ C.quote = {
 
 -- The operation: the ripperdoc's action at the station.
 C.operation = {
-    -- Profiles tried in order: the standing drill workspot (amb_6862d5_stand_use_driller, drill
-    -- checks and inspection), a tablet, the kneeling examination.
-    profiles = { "amb_6862d5_stand_use_driller", "tablet2", "examine" },
+    -- The ripperdoc's posture at the station, the first one the server knows is played: `repair`
+    -- kneels right against the seated patient and works with a screwdriver at their side; `examine`
+    -- (kneeling, no tool) is the fallback. A catalogue entry may ask for its own (`operateProfiles`).
+    -- Not used, measured beside a patient: the table workspots (fryer, grill) hand the ripperdoc a
+    -- kitchen utensil (a workspot keeps its prop), the drill workspot drills at head height and the
+    -- tablet stays away from the body.
+    profiles = { "repair", "examine", "tablet2" },
     maxDistance = 2.5,
     installTimeoutMs = 20000,        -- the cyberware answer after the bar
     holdTtlMs = 600000,              -- the coordinator hold of an accepted quote (10 minutes at most)

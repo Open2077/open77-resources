@@ -395,6 +395,7 @@ function RDW.freshShared()
             client = {}, held = {}, heldSeq = 0, heldLog = {}, ix = {}, ixSeq = 0, ixLog = {}, reserved = {},
             badProfiles = {}, screens = {},
             knownProfiles = { lie = true, bedsidelie = true, seatedsleep = true, amb_6862d5_stand_use_driller = true,
+                amb_2bfab5_stand_table_fryer = true, repair = true, mechanic = true,
                 tablet2 = true, phone = true, examine = true } },
         jobs = { players = {}, seq = 100 },
         cw = { records = {}, defs = {}, staged = {}, pending = {}, seq = 0, delay = 1.0, mode = "ok", held = {},
