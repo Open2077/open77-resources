@@ -777,6 +777,13 @@ now forwards to the wallet scenarios; R1 passes. Two frozen values changed toget
 `societyRead`, `pay`, `balanceOf`), and `schema-snapshot.json` gained `rp_wallet_migration` (the 1.x table bodies are
 unchanged: they are kept, created when missing, as the import source and archive). The whole suite: 24 tests, OK.
 
+**B7 additions (2026-10-12, `docs/world-interaction/b7-ui.md`):** `tests/compat/b7_ui_scenarios.lua`,
+`tests/compat/b7_wallet_scenarios.lua` and `tests/test_b7_ui.py`. Three frozen values changed together with this
+note, all additive consumers: `FROZEN_SURFACE["rp_economy"]` gained `walletStatus` and `pendingPlayers` (new
+read-only HUD exports, consumed by `rp_hud`), `FROZEN_SURFACE["rp_jobs"]` gained `summary` (B4's, now consumed by
+`rp_hud`), and `FROZEN_SURFACE["rp_garage"]` gained `canAccessVehicle` (A9's, consumed by the `rp_inventory`
+panel's read-only cargo view). No schema change.
+
 ### 6.3 Wave-1 suite shape
 
 **Layers.**

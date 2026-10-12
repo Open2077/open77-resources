@@ -1216,8 +1216,15 @@ end
 -- openStash export is the same panel with a second column.
 ---------------------------------------------------------------------------
 
-local panels = {}        -- [playerId] = { stashId = string | nil, name = string }
+-- B7 (docs/world-interaction/b7-ui.md): the panel is PRIVATE. Every state goes to one player
+-- through TriggerClientEvent(..., playerId, ...); nothing of it is ever written to a state bag
+-- or broadcast. It shows only what that player may see: their own pockets, a stash a resource
+-- opened for them (openStash: the caller authorizes), and a read-only vehicle cargo after
+-- rp_garage:canAccessVehicle(..., "cargo", "view") said yes.
+local panels = {}        -- [playerId] = { stashId?, name, seq, anchor?, cargo? = { vehicleId, view } }
 local panelPending = {}  -- [playerId] = { notice = table | nil } while a push is scheduled
+local panelOps = {}      -- [playerId] = { [opId] = op } panel actions answered in_doubt, watched until settled
+local panelBusy = {}     -- [playerId] = action while a page intent runs (one at a time per player)
 
 -- The RP name of a connected player (rp_identity, else the account name). fullName never yields.
 local function nameOf(playerId)
@@ -1226,8 +1233,117 @@ local function nameOf(playerId)
     return Open77.players.name(playerId) or ("player " .. tostring(playerId))
 end
 
+-- Scalar metadata fields only (the B1 schema allows integer, number, string, boolean, enum).
+local function scalarMeta(meta)
+    if type(meta) ~= "table" then return nil end
+    local out, any = {}, false
+    for k, v in pairs(meta) do
+        local t = type(v)
+        if type(k) == "string" and (t == "string" or t == "number" or t == "boolean") then
+            out[k] = v
+            any = true
+        end
+    end
+    return any and out or nil
+end
+
+-- Transactions backend: the entries of a container as the facade sees them (committed plus
+-- pending minus held), with what matters per unit: stack variants (quality...) and unique units
+-- (durability, serial), plus `held` = units leaving in an operation the store has not settled
+-- yet (shown as "in transit", never as gone).
+local function txEntries(c)
+    local view = c.view
+    local stacks, instances = Facade:effective(view)
+    local byItem = {}
+    local function entryOf(itemId)
+        local e = byItem[itemId]
+        if e then return e end
+        local def = itemId and Items[itemId]
+        if not def then return nil end
+        e = {
+            id = itemId, label = def.label, count = 0, weight = def.weight, total = 0,
+            usable = def.usable == true, illegal = def.illegal == true,
+            category = def.category or (def.effect and def.effect.kind) or "misc",
+            unique = def.unique or nil,
+        }
+        byItem[itemId] = e
+        return e
+    end
+    for asset, n in pairs(stacks) do
+        local itemId, meta = Registry:decodeAsset(asset)
+        if not itemId then itemId = Schema.splitAsset(asset) end
+        local e = entryOf(itemId)
+        if e then
+            e.count = e.count + n
+            if Items[itemId].stackFields then
+                e.variants = e.variants or {}
+                e.variants[#e.variants + 1] = { asset = asset, count = n, meta = scalarMeta(meta) }
+            end
+        end
+    end
+    for iid, rec in pairs(instances) do
+        local e = entryOf(rec.item)
+        if e then
+            e.count = e.count + 1
+            e.units = e.units or {}
+            e.units[#e.units + 1] = { id = iid, meta = scalarMeta(rec.meta) }
+        end
+    end
+    for asset, n in pairs(view.held.stacks) do
+        local e = entryOf(Schema.splitAsset(asset))
+        if e then e.held = (e.held or 0) + n end
+    end
+    for iid in pairs(view.held.inst) do
+        local rec = view.committed.instances[iid] or view.pending.add[iid]
+        local e = rec and entryOf(rec.item)
+        if e then e.held = (e.held or 0) + 1 end
+    end
+    local out = {}
+    for _, e in pairs(byItem) do
+        if e.count > 0 or (e.held or 0) > 0 then
+            e.total = e.weight * e.count
+            if e.variants then table.sort(e.variants, function(a, b) return a.asset < b.asset end) end
+            out[#out + 1] = e
+        end
+    end
+    table.sort(out, function(a, b) return a.label < b.label end)
+    -- Bounded payload: at most panelUnitsShown units per item and panelUnitsBudget per container
+    -- (a unit is ~100 bytes of JSON; a state must stay far below the event envelope).
+    local cap, budget = Config.panelUnitsShown or 24, Config.panelUnitsBudget or 64
+    for _, e in ipairs(out) do
+        if e.units then
+            table.sort(e.units, function(a, b)
+                local da = tonumber(a.meta and a.meta.durability) or math.huge
+                local db = tonumber(b.meta and b.meta.durability) or math.huge
+                if da ~= db then return da < db end
+                return a.id < b.id
+            end)
+            local keep = math.max(0, math.min(cap, budget))
+            if #e.units > keep then
+                e.moreUnits = #e.units - keep
+                for i = #e.units, keep + 1, -1 do e.units[i] = nil end
+            end
+            budget = budget - #e.units
+            if #e.units == 0 then e.units = nil end
+        end
+    end
+    return out
+end
+
 local function containerView(c)
-    return { id = c.id, entries = sortedEntries(c), weight = containerWeight(c), capacity = c.capacity }
+    local out = { id = c.id, weight = containerWeight(c), capacity = c.capacity }
+    if c.view then
+        out.entries = txEntries(c)
+        local v = c.view
+        -- saving: write-behind changes not acknowledged yet (already shown); incomingKg: credits
+        -- into this container in flight (not shown until they settle).
+        if #v.queue > 0 or v.inflight > 0 or v.held.weightIn > 0 then
+            out.sync = { saving = #v.queue > 0, inflight = v.inflight, incomingKg = v.held.weightIn / 1000 }
+        end
+    else
+        out.entries = sortedEntries(c)
+    end
+    return out
 end
 
 -- The nearest other player within reach, the one a panel "Give" goes to.
@@ -1237,21 +1353,41 @@ local function nearestPlayer(playerId)
     return { playerId = entry.playerId, name = nameOf(entry.playerId), distance = entry.distance or 0 }
 end
 
+-- The panel actions the store has not settled (answered in_doubt), oldest first.
+local function pendingOpsOf(playerId)
+    local list = {}
+    local now = Open77.time.monotonic()
+    for _, op in pairs(panelOps[playerId] or {}) do
+        list[#list + 1] = { opId = op.opId, action = op.action, item = op.itemId, label = op.label, count = op.count,
+            ageSeconds = math.floor(now - op.since), state = op.state }
+    end
+    table.sort(list, function(a, b)
+        if a.ageSeconds ~= b.ageSeconds then return a.ageSeconds > b.ageSeconds end
+        return a.opId < b.opId
+    end)
+    return #list > 0 and list or nil
+end
+
 -- Everything the page renders, nothing else. nil when the panel is not open.
 local function panelState(playerId, notice)
     local session = panels[playerId]
     local inv = resolvePlayer(playerId)
     if not session or not inv then return nil end
+    session.seq = (session.seq or 0) + 1
     local state = {
         open = true,
+        seq = session.seq,
+        backend = BACKEND,
         playerId = playerId,
         name = session.name,
         pockets = containerView(inv),
         nearest = nearestPlayer(playerId),
+        pending = pendingOpsOf(playerId),
         notice = notice,
     }
     local stash = session.stashId and stashes[session.stashId]
     if stash and stash.loaded then state.stash = containerView(stash) end
+    if session.cargo and session.cargo.view then state.cargo = session.cargo.view end
     return state
 end
 
@@ -1269,6 +1405,7 @@ refreshPanel = function(playerId, notice)
         local p = panelPending[playerId]
         panelPending[playerId] = nil
         local state = panelState(playerId, p and p.notice or nil)
+        -- One player, never -1: the panel is private (B7).
         if state then TriggerClientEvent("rp_inventory:panel", playerId, state) end
     end)
 end
@@ -1339,7 +1476,8 @@ end
 local function openPanel(playerId, stashId, capacity)
     local inv, reason = resolvePlayer(playerId)
     if not inv then tell(playerId, explain(reason)) return end
-    local session = { stashId = nil, name = nameOf(playerId) }
+    -- seq carries over a re-open, so an intent from the previous page is still recognised as stale.
+    local session = { stashId = nil, name = nameOf(playerId), seq = panels[playerId] and panels[playerId].seq or 0 }
     if stashId then
         local stash = loadStash(stashId, capacity)
         if not stash then
@@ -1347,6 +1485,9 @@ local function openPanel(playerId, stashId, capacity)
             return
         end
         session.stashId = stashId
+        -- B7: the panel no longer freezes the player (cursor-only focus), so the stash column is
+        -- tied to where it was opened: walking away closes it (panelStashReach).
+        session.anchor = Open77.players.position(playerId)
     end
     if not inventories[playerId] then return end   -- left while the stash was loading
     panels[playerId] = session
@@ -1414,9 +1555,58 @@ local function storeToStash(playerId, stash, itemId, n, opts)
     return true
 end
 
--- Page intents. Each returns ok, text (the notice the page shows); the state
--- push that follows is scheduled by the mutation itself or by the dispatcher.
+-- Page intents. Each returns ok, text, reason?, info?: the notice the page shows and, when
+-- refused, the refusal token and its info (info.coordinator = the coordinator's own token, such
+-- as capacity_exceeded; info.opId = the operation of an in_doubt answer). The state push that
+-- follows is scheduled by the mutation itself or by the dispatcher.
 local intents = {}
+
+-- What a refusal means on the panel (B7). `kind` drives the colour: ok, refused, retry (nothing
+-- moved, try again), pending (the store has not settled it: never shown as a loss).
+local PANEL_TEXT = {
+    in_doubt = "Pending: the store has not confirmed yet. Nothing is lost; it keeps checking.",
+    store_unavailable = "The inventory service is unavailable. Nothing moved; try again in a minute.",
+    busy = "Still saving your last change. Try again in a second.",
+    busy_intent = "Still working on your last action.",
+    not_authorized = "Not allowed: the owner's rules refused it.",
+    panel_blocked = "Another menu holds the keyboard: close it, then /inv again.",
+    no_vehicle = "No registered vehicle within reach.",
+    no_access = "You have no access to this vehicle's cargo.",
+    action_not_permitted = "Your access to this vehicle does not include its cargo.",
+    impounded = "This vehicle is impounded.",
+    off_duty = "Clock in first: that access needs you on duty.",
+    no_job_order = "No job order from the owner for this vehicle.",
+    warrant_required = "A warrant is required for this vehicle.",
+    vehicle_not_tracked = "This vehicle is not registered: it has no cargo hold.",
+    no_cargo_layout = "This vehicle has no cargo bed.",
+    cargo_unavailable = "The cargo service is not running on this server.",
+    garage_unavailable = "The garage registry is not running on this server.",
+    intent_error = "That did not work (server error). Check your pockets before retrying.",
+}
+local PANEL_KIND = {
+    in_doubt = "pending", store_unavailable = "retry", busy = "retry", busy_intent = "retry",
+    coordinator_unavailable = "retry", cargo_unavailable = "retry", garage_unavailable = "retry",
+}
+
+local function panelText(reason)
+    return PANEL_TEXT[reason] or explain(reason)
+end
+
+local function noticeOf(ok, text, reason, info, stale)
+    local n = { ok = ok == true, text = text }
+    if ok then
+        n.kind = "ok"
+        return n
+    end
+    n.kind = PANEL_KIND[reason] or "refused"
+    n.reason = reason
+    if type(info) == "table" then
+        if type(info.coordinator) == "string" then n.code = info.coordinator end
+        if type(info.opId) == "string" then n.opId = info.opId end
+    end
+    if stale then n.stale = true end
+    return n
+end
 
 local function intentItem(payload)
     local itemId = type(payload.item) == "string" and payload.item or ""
@@ -1424,22 +1614,81 @@ local function intentItem(payload)
     return itemId, math.floor(tonumber(payload.count) or 1)
 end
 
+-- ---------------------------------------------------------------------------
+-- In-doubt panel actions (B7): the units stay "in transit" in the view (the facade keeps its
+-- holds and settles in the background); the panel lists the action as pending and reads the
+-- operation's status (read-only, never `resolve`: the facade owns settlement) until it is
+-- committed or proven not committed. The answer reaches the panel, or the chat once closed.
+-- ---------------------------------------------------------------------------
+local VERBS = { store = "Stored", take = "Took", give = "Handed over", drop = "Dropped" }
+local NOT_COMMITTED_STATES = { aborted = true, failed = true, expired = true, cancelled = true }
+local MAX_WATCHED = 8
+
+local function settleOp(playerId, op, outcome, state)
+    local list = panelOps[playerId]
+    if not list or list[op.opId] ~= op then return end
+    list[op.opId] = nil
+    if next(list) == nil then panelOps[playerId] = nil end
+    local text, notice
+    if outcome == "committed" then
+        text = ("Confirmed: %s %s x%d."):format(VERBS[op.action] or op.action, op.label, op.count)
+        notice = { ok = true, kind = "ok", text = text, opId = op.opId }
+    elseif outcome == "not_committed" then
+        text = ("Not done: %s x%d did not move (%s). Nothing was lost."):format(op.label, op.count, tostring(state))
+        notice = { ok = false, kind = "refused", reason = "not_committed", code = state, text = text, opId = op.opId }
+    else
+        text = ("Still unconfirmed after %d min: tell an admin (operation %s)."):format(
+            math.floor((Config.panelPendingWatchS or 900) / 60), op.opId)
+        notice = { ok = false, kind = "pending", reason = "in_doubt", text = text, opId = op.opId }
+    end
+    log("player %d panel %s %s x%d op %s settled: %s%s", playerId, op.action, op.itemId, op.count, op.opId,
+        outcome, state and (" " .. state) or "")
+    if panels[playerId] then refreshPanel(playerId, notice) else tell(playerId, text) end
+end
+
+local function watchOp(playerId, action, itemId, count, info)
+    if not TX or not itemId or type(info) ~= "table" or type(info.opId) ~= "string" then return end
+    local list = panelOps[playerId] or {}
+    local n = 0
+    for _ in pairs(list) do n = n + 1 end
+    if n >= MAX_WATCHED or list[info.opId] then return end
+    local op = { opId = info.opId, action = action, itemId = itemId, label = Items[itemId].label, count = count,
+        since = Open77.time.monotonic(), state = "in_doubt" }
+    list[info.opId] = op
+    panelOps[playerId] = list
+    CreateThread(function()
+        local delay = 2000
+        local deadline = op.since + (Config.panelPendingWatchS or 900)
+        while true do
+            Wait(delay)
+            if not (panelOps[playerId] and panelOps[playerId][op.opId] == op) then return end
+            local st = txCall("status", op.opId)
+            local state = type(st) == "table" and st.state or nil
+            if state == "committed" then return settleOp(playerId, op, "committed") end
+            if state and NOT_COMMITTED_STATES[state] then return settleOp(playerId, op, "not_committed", state) end
+            if state then op.state = state end
+            if Open77.time.monotonic() >= deadline then return settleOp(playerId, op, "timeout") end
+            delay = math.min(delay * 2, 15000)
+        end
+    end)
+end
+
 intents.refresh = function() return true end
 
 intents.use = function(playerId, session, payload)
     local itemId, err = intentItem(payload)
-    if not itemId then return false, explain(err) end
+    if not itemId then return false, explain(err), err end
     local ok, why = useItem(playerId, itemId)
     if ok then return true, ("Used %s."):format(Items[itemId].label) end
     if why == "cancelled" then return false, nil end
-    return false, explain(why)
+    return false, panelText(why), why
 end
 
 intents.drop = function(playerId, session, payload)
     local itemId, n = intentItem(payload)
-    if not itemId then return false, explain(n) end
-    local ok, why = dropItems(playerId, itemId, n)
-    if not ok then return false, explain(why) end
+    if not itemId then return false, explain(n), n end
+    local ok, why, info = dropItems(playerId, itemId, n)
+    if not ok then return false, panelText(why), why, info end
     local text = ("Dropped %s x%d at your feet."):format(Items[itemId].label, n)
     tell(playerId, text .. " The prompt or /ramasser picks it up.")
     return true, text
@@ -1448,11 +1697,11 @@ end
 -- The server picks the receiver: the nearest other player within 3 m, exactly what /give checks.
 intents.give = function(playerId, session, payload)
     local itemId, n = intentItem(payload)
-    if not itemId then return false, explain(n) end
+    if not itemId then return false, explain(n), n end
     local near = nearestPlayer(playerId)
-    if not near then return false, "Nobody within arm's length to give anything to." end
-    local ok, why = giveItems(playerId, near.playerId, itemId, n)
-    if not ok then return false, explain(why) end
+    if not near then return false, "Nobody within arm's length to give anything to.", "too_far" end
+    local ok, why, info = giveItems(playerId, near.playerId, itemId, n)
+    if not ok then return false, panelText(why), why, info end
     return true, ("Handed %s x%d to %s."):format(Items[itemId].label, n, near.name)
 end
 
@@ -1464,11 +1713,11 @@ end
 
 intents.store = function(playerId, session, payload)
     local itemId, n = intentItem(payload)
-    if not itemId then return false, explain(n) end
+    if not itemId then return false, explain(n), n end
     local stash = openStashOf(session)
-    if not stash then return false, "No stash open." end
-    local ok, why = storeToStash(playerId, stash, itemId, n)
-    if not ok then return false, explain(why) end
+    if not stash then return false, "No stash open.", "no_stash" end
+    local ok, why, info = storeToStash(playerId, stash, itemId, n)
+    if not ok then return false, panelText(why), why, info end
     local text = ("Stored %s x%d."):format(Items[itemId].label, n)
     tell(playerId, text)
     return true, text
@@ -1476,14 +1725,119 @@ end
 
 intents.take = function(playerId, session, payload)
     local itemId, n = intentItem(payload)
-    if not itemId then return false, explain(n) end
+    if not itemId then return false, explain(n), n end
     local stash = openStashOf(session)
-    if not stash then return false, "No stash open." end
-    local ok, why = takeFromStash(playerId, stash, itemId, n)
-    if not ok then return false, explain(why) end
+    if not stash then return false, "No stash open.", "no_stash" end
+    local ok, why, info = takeFromStash(playerId, stash, itemId, n)
+    if not ok then return false, panelText(why), why, info end
     local text = ("Took %s x%d."):format(Items[itemId].label, n)
     tell(playerId, text)
     return true, text
+end
+
+-- ---------------------------------------------------------------------------
+-- The read-only vehicle cargo view (B7 over A9). The SERVER picks the vehicle: the one the
+-- player sits in, else the nearest registered one within panelCargoReach. rp_garage decides the
+-- access (canAccessVehicle(..., "cargo", "view"), asked here and again inside rp_cargo:contents);
+-- an open tailgate on screen is never authorization. Nothing here moves cargo: loading and
+-- unloading belong to the job flows (rp_cargo:load / unload).
+-- ---------------------------------------------------------------------------
+local function cargoVehicle(playerId)
+    local seat = Open77.vehicles.getPlayerSeat(playerId)
+    if type(seat) == "table" and seat.vehicleId ~= nil then return seat.vehicleId end
+    local list = Open77.vehicles.nearby(playerId, Config.panelCargoReach or 5.0, { limit = 4 })
+    for _, entry in ipairs(type(list) == "table" and list or {}) do
+        local ok, plate = callExport("rp_garage", "plateOf", entry.id)
+        if not ok then return nil, "garage_unavailable" end
+        if type(plate) == "string" and plate ~= "" then return entry.id end
+    end
+    return nil, "no_vehicle"
+end
+
+local function cargoInReach(playerId, vehicleId)
+    local seat = Open77.vehicles.getPlayerSeat(playerId)
+    if type(seat) == "table" and seat.vehicleId == vehicleId then return true end
+    local list = Open77.vehicles.nearby(playerId, (Config.panelCargoReach or 5.0) + 1.0, { limit = 8 })
+    for _, entry in ipairs(type(list) == "table" and list or {}) do
+        if entry.id == vehicleId then return true end
+    end
+    return false
+end
+
+-- The cargo of one vehicle as one player may see it. Yields (rp_cargo:contents).
+-- Returns view | nil, reason.
+local function fetchCargo(playerId, vehicleId)
+    local available, allowed, why = callExport("rp_garage", "canAccessVehicle", playerId, vehicleId, "cargo", "view")
+    if not available then return nil, "garage_unavailable" end
+    if allowed ~= true then return nil, type(why) == "string" and why or "no_access" end
+    local pending = Open77.exports.call("rp_cargo", "contents", playerId, vehicleId)
+    if not pending then return nil, "cargo_unavailable" end
+    local c, reason = pending:await()
+    if type(c) ~= "table" then
+        if reason == nil or (type(reason) == "string" and reason:find("^export_")) then return nil, "cargo_unavailable" end
+        return nil, reason
+    end
+    local slots = {}
+    for _, s in ipairs(type(c.slots) == "table" and c.slots or {}) do
+        local objects = {}
+        for _, o in ipairs(type(s.objects) == "table" and s.objects or {}) do
+            local def = Items[o.item]
+            objects[#objects + 1] = { instance = o.instance, item = o.item, label = def and def.label or tostring(o.item),
+                rank = o.rank }
+        end
+        slots[#slots + 1] = { slot = s.slot, maxStack = s.maxStack, objects = objects }
+    end
+    return {
+        vehicleId = vehicleId, plate = c.plate, account = c.account, record = c.record,
+        capacityKg = c.capacityKg, objects = c.objects or 0, free = c.free or 0, slots = slots, readOnly = true,
+    }
+end
+
+intents.cargo = function(playerId, session, payload)
+    if payload.close then
+        session.cargo = nil
+        return true, nil
+    end
+    local vehicleId, why = cargoVehicle(playerId)
+    if not vehicleId then return false, panelText(why), why end
+    local view, reason = fetchCargo(playerId, vehicleId)
+    if panels[playerId] ~= session then return false, nil end
+    if not view then
+        session.cargo = nil
+        return false, panelText(reason), reason
+    end
+    session.cargo = { vehicleId = vehicleId, view = view }
+    return true, ("Cargo of %s: %d object(s), %d free place(s). Read-only."):format(
+        tostring(view.plate), view.objects, view.free)
+end
+
+-- Re-reads one open cargo view (access is asked again every time). Coalesced per session.
+local function refreshCargoOf(playerId, session)
+    local cargo = session.cargo
+    if not cargo then return end
+    if cargo.refreshing then cargo.again = true return end
+    cargo.refreshing = true
+    CreateThread(function()
+        repeat
+            cargo.again = false
+            local view, reason = fetchCargo(playerId, cargo.vehicleId)
+            if panels[playerId] ~= session or session.cargo ~= cargo then return end
+            if not view then
+                session.cargo = nil
+                refreshPanel(playerId, noticeOf(false, "Cargo view closed: " .. panelText(reason), reason))
+                return
+            end
+            cargo.view = view
+            refreshPanel(playerId)
+        until not cargo.again
+        cargo.refreshing = false
+    end)
+end
+
+local function refreshCargoViewers(match)
+    for playerId, session in pairs(panels) do
+        if session.cargo and session.cargo.view and match(session.cargo) then refreshCargoOf(playerId, session) end
+    end
 end
 
 -- Transport: the page -> client -> rp_inventory:intent -> here -> rp_inventory:panel
@@ -1493,9 +1847,17 @@ RegisterNetEvent("rp_inventory:intent", function(payload)
     if type(payload) ~= "table" or type(payload.action) ~= "string" then return end
     local action = payload.action
 
-    -- Escape / the X on the page, or a client that (re)started: nothing to check.
+    -- Escape / the X on the page, focus taken by another menu, or a client that (re)started:
+    -- nothing to check.
     if action == "close" then
         closePanel(playerId, false)
+        return
+    end
+    -- B7: the client refused to take focus over another menu (a dialog, the chat) and gave up.
+    if action == "blocked" then
+        local was = panels[playerId] ~= nil
+        closePanel(playerId, false)
+        if was then tell(playerId, panelText(payload.reason == "dialog_active" and "dialog_active" or "panel_blocked")) end
         return
     end
     -- The client has no WebUI: the chat listing stands in, as rp_mdt's fallback does.
@@ -1519,12 +1881,91 @@ RegisterNetEvent("rp_inventory:intent", function(payload)
     end
     local handler = intents[action]
     if not handler then
-        refreshPanel(playerId, { ok = false, text = "Unknown panel action." })
+        refreshPanel(playerId, noticeOf(false, "Unknown panel action.", "unknown_action"))
         return
     end
-    local ok, text = handler(playerId, session, payload)
+    -- One intent at a time per player: an in_doubt answer can take 20 s, and a second click
+    -- (or a forged burst) must not start a second operation against a view still settling.
+    if panelBusy[playerId] and action ~= "refresh" then
+        refreshPanel(playerId, noticeOf(false, panelText("busy_intent"), "busy_intent"))
+        return
+    end
+    -- The page echoes the seq of the state it showed: an older one means the click was made on a
+    -- stale picture, and a refusal then says so instead of looking like a bug.
+    local stale = type(payload.seq) == "number" and payload.seq < (session.seq or 0)
+    panelBusy[playerId] = action
+    local r = table.pack(pcall(handler, playerId, session, payload))
+    panelBusy[playerId] = nil
+    if not r[1] then
+        log("panel intent %s of player %d raised: %s", action, playerId, tostring(r[2]))
+        r = table.pack(true, false, panelText("intent_error"), "intent_error")
+    end
+    local ok, text, reason, info = r[2], r[3], r[4], r[5]
+    if not ok and reason == "in_doubt" then
+        local itemId, n = intentItem(payload)
+        watchOp(playerId, action, itemId, n, info)
+    end
     if not panels[playerId] then return end   -- closed while the intent ran (a 3 s use, say)
-    refreshPanel(playerId, text and { ok = ok == true, text = text } or nil)
+    if not ok and stale and (reason == "not_enough" or reason == "unknown_item") then
+        text = "That changed meanwhile: here is what you have now."
+    end
+    refreshPanel(playerId, text and noticeOf(ok, text, reason, info, stale) or nil)
+end)
+
+-- Cargo views follow the cargo: a commit on the account they show (any writer), a load or unload
+-- through rp_cargo, an access change in rp_garage (keys, grants, impound) and a despawn.
+AddEventHandler("open77_transactions:committed", function(_, _, accounts)
+    if type(accounts) ~= "table" then return end
+    local touched = {}
+    for _, a in ipairs(accounts) do touched[a] = true end
+    refreshCargoViewers(function(cargo) return touched[cargo.view.account] == true end)
+end)
+AddEventHandler("rp_cargo:changed", function(plate)
+    refreshCargoViewers(function(cargo) return cargo.view.plate == plate end)
+end)
+AddEventHandler("rp_garage:changed", function(_, plate)
+    refreshCargoViewers(function(cargo) return cargo.view.plate == plate end)
+end)
+AddEventHandler("rp_garage:despawned", function(plate)
+    refreshCargoViewers(function(cargo) return cargo.view.plate == plate end)
+end)
+
+-- Every exit closes the panel and (through { open = false }) releases the client's focus. Death:
+-- a panel left over the respawn screen cannot be clicked through.
+AddEventHandler("onPlayerLifeStateChanged", function(playerId, _, phase)
+    playerId = tonumber(playerId)
+    if not playerId or not panels[playerId] then return end
+    if phase ~= "alive" and phase ~= "recovering" then closePanel(playerId, true) end
+end)
+
+-- Reach watch, once a second: the panel does not freeze the player, so a stash column closes when
+-- they walk away from where it opened, and a cargo view when they leave the vehicle's reach.
+local function farFrom(pos, anchor, metres)
+    local dx, dy, dz = pos.x - anchor.x, pos.y - anchor.y, pos.z - anchor.z
+    return dx * dx + dy * dy + dz * dz > metres * metres
+end
+
+CreateThread(function()
+    while true do
+        Wait(1000)
+        local ok, err = pcall(function()
+            for playerId, session in pairs(panels) do
+                if session.stashId and type(session.anchor) == "table" then
+                    local pos = Open77.players.position(playerId)
+                    if type(pos) == "table" and farFrom(pos, session.anchor, Config.panelStashReach or 6.0) then
+                        session.stashId, session.anchor = nil, nil
+                        refreshPanel(playerId, noticeOf(false, "You walked away from the stash: it is closed.", "too_far"))
+                    end
+                end
+                local cargo = session.cargo
+                if cargo and not cargo.refreshing and not cargoInReach(playerId, cargo.vehicleId) then
+                    session.cargo = nil
+                    refreshPanel(playerId, noticeOf(false, "You left the vehicle: cargo view closed.", "too_far"))
+                end
+            end
+        end)
+        if not ok then log("panel reach watch: %s", tostring(err)) end
+    end
 end)
 
 -- openStash(playerId, stashId, capacity) -> true (panel scheduled) | nil, reason
@@ -2284,6 +2725,8 @@ AddEventHandler("onPlayerDisconnected", function(playerId)
     if not playerId then return end
     panels[playerId] = nil
     panelPending[playerId] = nil
+    panelOps[playerId] = nil      -- in-doubt watchers stop; the facade still settles the operation
+    panelBusy[playerId] = nil
     catalogueQuota[playerId] = nil
     local inv = inventories[playerId]
     if inv then

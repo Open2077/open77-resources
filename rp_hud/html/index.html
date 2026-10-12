@@ -46,8 +46,9 @@
     clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
     box-shadow: 0 0 18px rgba(0, 0, 0, 0.45);
     opacity: 1;
+    visibility: visible;
     transform: translateY(0);
-    transition: opacity 180ms ease-out, transform 180ms ease-out;
+    transition: opacity 180ms ease-out, transform 180ms ease-out, visibility 0s linear 0s;
   }
   #panel::after {
     /* a faint scanline texture */
@@ -57,9 +58,13 @@
     background: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 3px);
     pointer-events: none;
   }
+  /* Hidden means gone, blur included: a reloaded or idle surface never leaves a frosted
+     rectangle behind (B7: every page idempotent on reload). */
   body.boot #panel, body.hidden #panel {
     opacity: 0;
+    visibility: hidden;
     transform: translateY(8px);
+    transition: opacity 180ms ease-out, transform 180ms ease-out, visibility 0s linear 180ms;
   }
   .row {
     display: flex;
@@ -98,6 +103,13 @@
   .money div { display: flex; flex-direction: column; min-width: 0; }
   .money .val { font-size: 13px; letter-spacing: 0.02em; }
   .money .val small { font-size: 9px; color: var(--cyan); margin-right: 3px; }
+  /* B7: what the store has not confirmed yet. Amber = pending, never shown as lost money. */
+  .pend { display: block; font-size: 9px; letter-spacing: 0.06em; color: var(--ink-dim); white-space: nowrap; }
+  .pend:empty { display: none; }
+  .pend.doubt { color: var(--amber); }
+  .money .val.offline { color: var(--amber); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; }
+  #jobState { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--amber); }
+  #jobState:empty { display: none; }
 
   /* job + duty */
   #duty {
@@ -171,11 +183,11 @@
     <span id="pid">#--</span>
   </div>
   <div class="row money">
-    <div><span class="lbl">Cash</span><span class="val"><small>€$</small><span id="cash">--</span></span></div>
-    <div><span class="lbl">Account</span><span class="val"><small>€$</small><span id="account">--</span></span></div>
+    <div><span class="lbl">Cash</span><span class="val" id="cashVal"><small>€$</small><span id="cash">--</span></span><span class="pend" id="cashPend"></span></div>
+    <div><span class="lbl">Account</span><span class="val" id="accountVal"><small>€$</small><span id="account">--</span></span><span class="pend" id="accountPend"></span></div>
   </div>
   <div class="row">
-    <span class="ell"><span class="lbl">Job</span>&nbsp; <span id="job" class="val">--</span> <span id="grade" class="dim"></span></span>
+    <span class="ell"><span class="lbl">Job</span>&nbsp; <span id="job" class="val">--</span> <span id="grade" class="dim"></span> <span id="jobState"></span></span>
     <span id="duty"><span class="dot"></span><span id="dutyText">off duty</span></span>
   </div>
   <div class="needs">
@@ -212,6 +224,53 @@
 
   function clamp(n, lo, hi) { return Math.min(hi, Math.max(lo, n)); }
 
+  // ---- B3 wallet: balances, pending operations, unknown state ----
+  var WALLET_STATES = {
+    not_loaded: "loading", store_unavailable: "offline", migration_pending: "import pending",
+    migration_failed: "import failed", migration_version_newer: "blocked", identifier_unavailable: "loading"
+  };
+  var JOB_STATES = {
+    store_unavailable: "records offline", not_loaded: "loading", player_not_found: "loading",
+    subject_unavailable: "file unavailable", invalid_key: "file unavailable"
+  };
+
+  // One wallet line: "+300 incoming" (not in the balance yet), "-120 unconfirmed" (already
+  // subtracted, the store has not confirmed). Amber once the caller was told in_doubt.
+  function pendingText(p) {
+    if (!p) return "";
+    var parts = [];
+    if (p.incoming > 0) parts.push("+" + fmtMoney(p.incoming) + " incoming");
+    if (p.outgoing > 0) parts.push("-" + fmtMoney(p.outgoing) + " unconfirmed");
+    if (p.unconfirmed > 0 && !p.incoming) parts.push("+" + fmtMoney(p.unconfirmed) + " unconfirmed");
+    if (!parts.length) return "";
+    return (p.inDoubt > 0 ? "pending: " : "") + parts.join(" / ");
+  }
+
+  function setMoney(id, value, pending, walletState) {
+    var valNode = el(id + "Val"), pendNode = el(id + "Pend");
+    var known = typeof value === "number" && isFinite(value);
+    if (!known && walletState && walletState !== "ok") {
+      // Unknown is not zero: say why instead of drawing 0.
+      valNode.classList.add("offline");
+      valNode.innerHTML = "";
+      valNode.textContent = WALLET_STATES[walletState] || "unavailable";
+    } else {
+      valNode.classList.remove("offline");
+      if (!el(id)) valNode.innerHTML = '<small>€$</small><span id="' + id + '"></span>';
+      el(id).textContent = fmtMoney(value);
+    }
+    var text = pendingText(pending);
+    if (walletState === "store_unavailable" && known) text = (text ? text + " / " : "") + "offline, last known";
+    pendNode.textContent = text;
+    pendNode.classList.toggle("doubt", !!(pending && pending.inDoubt > 0) || walletState === "store_unavailable");
+  }
+
+  function renderWallet(state) {
+    var w = state.wallet || {};
+    setMoney("cash", state.cash, w.cash, w.state);
+    setMoney("account", state.account, w.account, w.state);
+  }
+
   function setNeed(id, value) {
     var node = el(id);
     var fill = node.querySelector(".fill");
@@ -241,8 +300,7 @@
     el("name").textContent = state.rpName || state.name || "--";
     el("pid").textContent = "#" + (state.id != null ? state.id : "--");
 
-    el("cash").textContent = fmtMoney(state.cash);
-    el("account").textContent = fmtMoney(state.account);
+    renderWallet(state);
 
     var job = state.job;
     var duty = el("duty");
@@ -258,12 +316,19 @@
       el("grade").textContent = grade;
       duty.classList.toggle("on", job.onDuty === true);
       el("dutyText").textContent = job.onDuty === true ? "on duty" : "off duty";
+    } else if (state.jobState && state.jobState !== "ok") {
+      // B4: the file is not available; never claim "unemployed" for that.
+      el("job").textContent = "--";
+      el("grade").textContent = "";
+      duty.classList.remove("on");
+      el("dutyText").textContent = "no shift";
     } else {
       el("job").textContent = "unemployed";
       el("grade").textContent = "";
       duty.classList.remove("on");
       el("dutyText").textContent = "no shift";
     }
+    el("jobState").textContent = JOB_STATES[state.jobState] || (state.jobState && state.jobState !== "ok" ? "job file unavailable" : "");
 
     var needs = state.needs || {};
     setNeed("need-hunger", needs.hunger);

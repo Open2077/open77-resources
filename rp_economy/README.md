@@ -60,6 +60,24 @@ Refusals: the 1.x tokens (`invalid_player_id`, `player_not_found`, `invalid_amou
 
 Use them exactly as before: `add`/`remove` stay safe to call synchronously.
 
+### Read-only HUD exports (row B7, additive)
+
+```lua
+exports.rp_economy:walletStatus(playerId, { minAgeSeconds = 1.5 }?)
+-- { loaded = true, reason? = "store_unavailable",
+--   cash = { balance, incoming, outgoing, unconfirmed, inDoubt, ops, oldestSeconds }, bank = { ... } }
+-- | { loaded = false, reason = "not_loaded" | "store_unavailable" | "migration_pending" | ... }
+-- | nil, "invalid_player_id"
+exports.rp_economy:pendingPlayers({ minAgeSeconds = 1.5 }?)   -- { [playerId] = fingerprint }
+```
+
+Synchronous, never yield, read the cache only, change nothing. `balance` is what `getBalance`
+shows; `incoming` = atomic credits in flight (NOT in the balance yet), `outgoing` = debits in
+flight (already subtracted), `unconfirmed` = write-behind credits not acknowledged (already
+added), `inDoubt` = operations whose caller was told `in_doubt` (or older than
+`asyncWaitSeconds`). `loaded = false` means unknown: never draw it as 0. `rp_hud` is the
+consumer (`docs/world-interaction/b7-ui.md`): it pushes the result to that player only.
+
 ## Atomic API (asynchronous)
 
 Call with `Open77.exports.call("rp_economy", name, spec)` and `:await()` from a thread, a handler

@@ -15,10 +15,11 @@ permissions {
     "network.events",            -- RegisterNetEvent / TriggerServerEvent / TriggerClientEvent
     "database.access",           -- Open77.database / MySQL (rp_inventory_items, rp_inventory_stashes, rp_inventory_migrations)
     "world.loot",                -- Open77.loot.create/get/all/remove + onLootPickup/onLootRemoved
-    "world.vehicles",            -- Open77.vehicles.getPlayerSeat (CHOOH2 can refuels the seated vehicle)
+    "world.vehicles",            -- Open77.vehicles.getPlayerSeat / nearby (CHOOH2 can; the panel's read-only cargo view)
     "players.stats.read",        -- Open77.stats.get (full-health check before a heal)
     "players.stats.apply",       -- Open77.players.heal / restoreStamina
     "players.animations.read",   -- Open77.animations.current (hands-up check for /fouiller)
+    "input.actions",             -- client: Open77.input.isCaptured (the panel never opens over a menu holding the keyboard)
 }
 
 -- open77_transactions (the transactions backend, `rp_inventory_backend transactions`) is

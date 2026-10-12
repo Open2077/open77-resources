@@ -680,7 +680,9 @@ function F:transact(op)
     end
     local accounts, seen = {}, {}
     for _, l in ipairs(op.lines) do
-        for _, a in ipairs({ l.from, l.to, l.at }) do
+        -- pairs, not ipairs: a metadata update line has no `from`, and ipairs stops at that nil,
+        -- which left wearAsync's account out of the holds and its view stale (B7 finding).
+        for _, a in pairs({ l.from, l.to, l.at }) do
             if a and not seen[a] then
                 seen[a] = true
                 local id, why = Accounts.parse(a)

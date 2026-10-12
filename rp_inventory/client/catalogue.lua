@@ -59,3 +59,11 @@ end)
 exports("catalogueVersion", function()
     return catalogue.version, catalogue.hash
 end)
+
+-- B7: the panel script (client/main.lua) reads the verified copy through this global, to show
+-- "durability 12/20" and quality scales next to what the server pushes. nil before the first
+-- complete download; the panel then shows the raw values.
+RpInvClientCatalogue = {
+    item = function(itemId) return catalogue.items[itemId] end,
+    version = function() return catalogue.version, catalogue.hash end,
+}

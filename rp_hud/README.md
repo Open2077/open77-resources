@@ -26,15 +26,22 @@ decided or stored here — **no SQL table, no exports**.
 |---|---|---|
 | Name | `rp_identity:fullName` (falls back to the account name) | account name |
 | `#id` | the session id (`/players`, `/id`) | — |
-| Cash | `rp_economy:getBalance` | `--` |
-| Account | `rp_bank:getAccount().balance` | `--` |
-| Job, grade, duty dot | `rp_jobs:getJob` / `getGrade` / `onDuty` | `unemployed · no shift` |
+| Cash, Account | `rp_economy:walletStatus` (B3 wallets, row B7); without it `rp_economy:getBalance` and `rp_bank:getAccount().balance` | `--`; `loading` / `offline` / `import pending` (amber) when the wallet is not loaded: **unknown is never drawn as 0** |
+| Pending line under Cash / Account | `walletStatus` (operations not settled for 1.5 s) | hidden when nothing is unsettled |
+| Job, grade, duty dot | `rp_jobs:summary` (B4); without it `rp_jobs:getJob` / `getGrade` / `onDuty` | `unemployed · no shift`; `-- records offline` / `loading` when the job file is not available |
 | Hunger / Thirst / Fatigue | `rp_needs:get` | empty bars, `--` |
 | Zone | `rp_zones:zoneOf` (label + kind) | `Open Night City` |
 | Clock + weather | `open77_weather` client export `getState` (read on the client, ticks locally at the server's rate) | `--:--` |
 
 The bars turn red and pulse under **25 %** (`RpHudConfig.needsWarnAt`). The clock turns amber
 when the server froze the time. The duty dot is green while `/service` is on.
+
+**Pending money (row B7, `docs/world-interaction/b7-ui.md`).** An operation the store has not
+settled is shown, not hidden: `+300 incoming` (an atomic credit such as a sale payout: not in
+the balance yet), `-120 unconfirmed` (a debit already subtracted), turning amber with a
+`pending:` prefix once its caller was told `in_doubt`. While the coordinator is unreachable the
+last known balances stay with `offline, last known`. The HUD only reads: it never retries,
+resolves or changes an operation.
 
 ## Command
 
@@ -69,9 +76,14 @@ by itself, panel included.
 ## Events
 
 Consumed on the server (host bus, `AddEventHandler`): `rp_economy:changed`, `rp_bank:changed`
-(ignored when `playerId` is nil: offline recipient or society), `rp_jobs:changed`,
-`rp_jobs:duty`, `rp_needs:changed`, `rp_zones:entered`, `rp_zones:left`, `rp_identity:changed`.
-Each one schedules a fresh snapshot for that player.
+(ignored when `playerId` is nil: offline recipient or society), `rp_economy:walletChanged`
+(cash and bank of a connected player, reverts included), `rp_jobs:changed`, `rp_jobs:duty`,
+`rp_jobs:workEpoch` (every job, grade and duty change), `rp_needs:changed`, `rp_zones:entered`,
+`rp_zones:left`, `rp_identity:changed`. Each one schedules a fresh snapshot for that player.
+
+Pending watch: every `pendingPollMs` = 2 s the server asks `rp_economy:pendingPlayers()` once
+(one export call for the whole server) and re-pushes the players whose unsettled operations
+appeared, changed or settled; an atomic credit in flight raises no event until it settles.
 
 Also on the server: `onPlayerReady` (first snapshot, and a second one `joinRepushMs` = 6 s
 later once the other resources have loaded their rows), `onResourceStart` of any resource in
@@ -82,7 +94,7 @@ Net events (this resource's own transport, not an API):
 
 | Event | Direction | Payload |
 |---|---|---|
-| `rp_hud:state` | server → client | `{ id, at, name, rpName?, cash?, account?, job? = { name, label, grade, gradeLabel, onDuty }, needs? = { hunger, thirst, fatigue }, zone? = { name, label, kind } }` — a field is absent when its resource is not running |
+| `rp_hud:state` | server → client (that player only) | `{ id, at, name, rpName?, cash?, account?, wallet? = { state, cash? = pending, account? = pending }, job? = { name, label, grade, gradeLabel, onDuty }, jobState?, needs? = { hunger, thirst, fatigue }, zone? = { name, label, kind } }` — a field is absent when its resource is not running; `pending = { incoming, outgoing, unconfirmed, inDoubt }`; `wallet.state` / `jobState` are `ok` or the provider's refusal (`not_loaded`, `store_unavailable`, `migration_pending`, ...) |
 | `rp_hud:request` | client → server | none; `source` is the player. Sent when the page is ready and on `/interface refresh` |
 
 **Throttle**: at most one `rp_hud:state` per `minPushIntervalMs` = 250 ms per player (4 per
@@ -124,7 +136,9 @@ retries every 15 s, the cinematic probe every 30 s).
 | `hideWithComponents` | `{ "minimap", "health" }` | client: hide with these vanilla widgets |
 | `needsWarnAt` | 25 | page: red threshold (percent) |
 | `panelWidthPx` | 300 | page: width, clamped to 200..320 |
-| `jobLabels` | twelve jobs + aliases | server: display label per `rp_jobs` name |
+| `jobLabels` | twelve jobs + aliases | server: display label per `rp_jobs` name (B4's `summary` label wins when present) |
+| `pendingShowAfterMs` | 1500 | server: an unsettled wallet operation shows once this old |
+| `pendingPollMs` | 2000 | server: `rp_economy:pendingPlayers` poll (0 = off) |
 
 ## Log lines (grep-able)
 
