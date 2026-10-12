@@ -1,160 +1,65 @@
--- rp_fixer client: presentation only.
+-- rp_fixer client: map presentation only. It never sends anything to the server: the board,
+-- the hand-over and the crate are open77_actions prompts, every decision is the server's.
 --
--- Draws the board ring + E prompt at the fixer's office and, while a gig runs, the
--- current objective: a ring (with an E prompt when the phase needs one), a vanilla map
--- pin and the GPS waypoint. Every press is relayed to the server, which re-measures
--- the distance itself; nothing here grants anything.
+--   rp_fixer:hubs        the fixer points -> one map pin each
+--   rp_fixer:objectives  the runner's objectives -> one map pin each, the GPS routed to the first
 
-local boardPoi = nil
-local boardBlip = nil
+local hubBlips = {}
+local objectiveBlips = {}
+local routed = false
 
-local objective = { key = nil, poi = nil, blip = nil, waypoint = false }
+local function log(fmt, ...) print(("[rp_fixer] " .. fmt):format(...)) end
 
-local function log(fmt, ...)
-    print("[rp_fixer] " .. fmt:format(...))
+local function clear(list)
+    for i = #list, 1, -1 do
+        pcall(Open77.blips.remove, list[i])
+        list[i] = nil
+    end
 end
 
--- Awaits: only from a CreateThread body.
-local function worldui(name, ...)
-    local promise, reason = Open77.exports.call("open77_worldui", name, ...)
-    if not promise then return nil, reason end
-    return promise:await()
+local function pin(position, sprite, title, description)
+    local ok, id, why = pcall(Open77.blips.create, { position = position, sprite = sprite, title = title,
+        description = description })
+    if ok and id then return id end
+    log("map pin %s refused: %s", tostring(title), tostring(ok and why or id))
+    return nil
 end
 
--- Dispatches the removal without waiting for it, so it is safe from any handler.
-local function worlduiRemove(handle)
-    local promise, reason = Open77.exports.call("open77_worldui", "remove", handle)
-    if not promise then log("ring removal refused: %s", tostring(reason)) end
-end
+RegisterNetEvent("rp_fixer:hubs", function(hubs)
+    clear(hubBlips)
+    if type(hubs) ~= "table" then return end
+    for _, h in ipairs(hubs) do
+        if type(h) == "table" and type(h.position) == "table" then
+            local id = pin(h.position, "FixerVariant", tostring(h.label), ("%s. Contracts on the board."):format(tostring(h.fixer)))
+            if id then hubBlips[#hubBlips + 1] = id end
+        end
+    end
+end)
 
--- Never yields.
-local function clearObjective()
-    if objective.poi then
-        worlduiRemove(objective.poi)
-        objective.poi = nil
+RegisterNetEvent("rp_fixer:objectives", function(list)
+    clear(objectiveBlips)
+    if type(list) ~= "table" or #list == 0 then
+        if routed then
+            pcall(Open77.blips.clearWaypoint)
+            routed = false
+        end
+        return
     end
-    if objective.blip then
-        Open77.blips.remove(objective.blip)
-        objective.blip = nil
-    end
-    if objective.waypoint then
-        Open77.blips.clearWaypoint()
-        objective.waypoint = false
-    end
-    objective.key = nil
-end
-
--- o = { key, position, label, prompt (string|false), style, title }
-local function showObjective(o)
-    local definition = {
-        id = "rp_fixer_objective",
-        position = o.position,
-        radius = 1.5,
-        style = o.style or "objective",
-        maxDistance = 150.0,
-        groundOffset = 0.06,
-    }
-    if o.prompt then
-        definition.label = o.prompt
-        definition.description = o.title
-        definition.key = "E"
-        definition.promptDistance = Config.promptDistance
-        definition.event = "rp_fixer:objectivePressed"
-        definition.color = "#22D8E2"
-    end
-    local result, err = worldui("create", definition)
-    if not result or not result.ok then
-        log("objective ring refused: %s", tostring(err or (result and result.error)))
-    else
-        objective.poi = result.handle
-    end
-
-    local blip, reason = Open77.blips.create({
-        position = o.position,
-        sprite = "objective",
-        title = o.title,
-        description = o.label,
-    })
-    if blip then
-        objective.blip = blip
-    else
-        log("objective pin refused: %s", tostring(reason))
-    end
-
-    local ok, why = Open77.blips.setWaypoint(o.position)
-    if ok then
-        objective.waypoint = true
-    else
-        log("waypoint refused: %s", tostring(why))
-    end
-    objective.key = o.key
-end
-
-RegisterNetEvent("rp_fixer:objective", function(o)
-    CreateThread(function()
-        clearObjective()
+    for _, o in ipairs(list) do
         if type(o) == "table" and type(o.position) == "table" then
-            showObjective(o)
+            local id = pin(o.position, o.sprite or "objective", tostring(o.title), tostring(o.label))
+            if id then objectiveBlips[#objectiveBlips + 1] = id end
         end
-    end)
-end)
-
-AddEventHandler("rp_fixer:objectivePressed", function()
-    if objective.key then
-        TriggerServerEvent("rp_fixer:interact", objective.key)
     end
-end)
-
-AddEventHandler("rp_fixer:boardPressed", function()
-    TriggerServerEvent("rp_fixer:board")
-end)
-
-AddEventHandler("onClientResourceStart", function(name)
-    if name ~= GetCurrentResourceName() then return end
-    CreateThread(function()
-        local result, err = worldui("create", {
-            id = "rp_fixer_board",
-            position = Config.office,
-            radius = 1.5,
-            style = "interaction",
-            maxDistance = 120.0,
-            groundOffset = 0.06,
-            label = Config.text.boardLabel,
-            description = Config.text.boardDescription,
-            key = "E",
-            promptDistance = Config.promptDistance,
-            color = "#22D8E2",
-            event = "rp_fixer:boardPressed",
-        })
-        if not result or not result.ok then
-            log("board ring refused: %s", tostring(err or (result and result.error)))
-        else
-            boardPoi = result.handle
-        end
-
-        local blip, reason = Open77.blips.create({
-            position = Config.office,
-            sprite = "fixer",
-            title = Config.text.officeBlip,
-            description = "Gigs on the board. Bring your rep.",
-        })
-        if blip then
-            boardBlip = blip
-        else
-            log("office pin refused: %s", tostring(reason))
-        end
-    end)
+    local first = list[1]
+    if type(first) == "table" and type(first.position) == "table" then
+        local ok, done, why = pcall(Open77.blips.setWaypoint, first.position)
+        if ok and done then routed = true else log("waypoint refused: %s", tostring(ok and why or done)) end
+    end
 end)
 
 AddEventHandler("onClientResourceStop", function(name)
     if name ~= GetCurrentResourceName() then return end
-    clearObjective()
-    if boardPoi then
-        worlduiRemove(boardPoi)
-        boardPoi = nil
-    end
-    if boardBlip then
-        Open77.blips.remove(boardBlip)
-        boardBlip = nil
-    end
+    clear(hubBlips)
+    clear(objectiveBlips)
 end)
