@@ -262,7 +262,7 @@ function Svc:projectLocked(plate, vehicleId, layout, snap)
     local occupants = self:occupants(snap)
     local models = {}
     for _, o in ipairs(occupants) do models[o.instance] = o.model end
-    local placements, hidden = L.placements(layout, occupants)
+    local placements, hidden = L.placements(layout, occupants, self.cfg.stackHeights, self.cfg.seats)
     local proj = self.projections[plate]
     if proj and tostring(proj.vehicleId) ~= tostring(vehicleId) then
         self:clear(plate, "rebind")
@@ -459,7 +459,7 @@ end
 -- The object an unload takes when none is named: the top of the last occupied slot in layout
 -- order (the tailgate end in the shipped layouts).
 local function topOf(layout, occupants)
-    local placements = L.placements(layout, occupants)
+    local placements = L.placements(layout, occupants)   -- slots and ranks only: no heights needed
     local best, bestKey
     for _, o in ipairs(occupants) do
         local p = placements[o.instance]
@@ -543,7 +543,7 @@ end
 
 function Svc:describe(plate, account, layout, snap)
     local occupants = self:occupants(snap)
-    local placements = L.placements(layout, occupants)
+    local placements = L.placements(layout, occupants, self.cfg.stackHeights, self.cfg.seats)
     local slots, used = {}, 0
     for _, s in ipairs(layout.slots) do
         slots[#slots + 1] = { slot = s.id, maxStack = s.maxStack, measured = s.measured, objects = {} }

@@ -1,472 +1,211 @@
 # rp_nomade
 
-Adds the nomad job: take a contract at the Aldecaldos camp, carry crates into a truck, drive them across the Badlands through an ambush, and unload them for pay. It is the reference for carrying an object while walking and for crates attached to a truck bed.
+Adds Aldecaldos smuggling runs for the nomad job: take a run at the camp's board, carry contraband crates into your truck, drive past the NCPD checkpoints into Night City and hand the crates to a fence (or to a player who accepts), paid minus the camp's cut.
 
-- **Docs:** [Animated actions: a pose, a prop in the hands, a real duration](https://open2077.net/docs/animated-actions), [Synchronized attachments](https://open2077.net/docs/attachments)
-- **Starts:** on its own
-- **Needs:** `open77_uikit`, `open77_worldui`, `open77_interactions`, `open77_props`, `open77_animations`, `open77_notifications`
-- **Runs on:** server and client
+- **Docs:** [Build a job: prompts, animations, items and pay](https://open2077.net/docs/world-interaction), [Actions and carrying](https://open2077.net/docs/actions), [Durable transactions](https://open2077.net/docs/transactions), [Player interactions](https://open2077.net/docs/player-interactions)
+- **Starts:** with `ensure rp_nomade` (it declares `auto_start false`)
+- **Needs:** `open77_transactions`, `open77_actions`, `open77_containers`, `open77_player_interactions`, `open77_notifications`, `rp_jobs`, `rp_inventory`, `rp_economy`, `rp_garage`, `rp_cargo`; `rp_ncpd` is optional (records and warrants)
+- **Runs on:** server and client (the client only draws the map pins and the GPS route)
 
-The scripted run of the `nomade` job (rp_jobs v2), replacing the v1 courier mission.
-Use the current base build with its carry layer and matching client assets; the
-historical run below used **2.31.13+op77.76**. Server-authoritative: the client draws rings and prompts and sends
-intents; the server decides the job gate, the money, the truck, the crates, the zones, the
-ambush and the pay.
+## How to play
 
-The run, as one player sees it:
+**The nomad** (job `nomade`, on duty with `/service`):
 
-1. **Contracts board** — a ring, a map pin and an `E` prompt at the Aldecaldos camp
-   (`open77_worldui`, `promptDistance = 3.0`). It opens a UI-kit context menu of contract templates
-   (`shared/config.lua`): crates 2–4, destination zone, pay per crate, time limit.
-2. **Accept** — the truck deposit (**100 €$ cash**) is taken, a **Thorton Mackinaw**
-   (`Vehicle.v_standard3_thorton_mackinaw_player`, a player-spawnable `_player` record) is spawned
-   at the camp's truck spot, and N **crate props** (`crate.small`, `Open77.props`) appear at the
-   loading points. Each crate gets its own ring + `E` prompt **Pick up the crate**.
-3. **Carry** — `E` on a crate: `carry_pickup` plays for 1.4 s, then the crate attaches
-   to `Chest` and the two-hand `carry` upper-body layer loops. You can walk and run
-   while carrying it. One crate at a time. Older catalogues fall back to stationary
-   poses; see [Carrying and the bed](#carrying-and-the-truck-bed-how-to-tune).
-4. **Load** — `E` on the rented truck, within 4 m: **Load the crate**. You lift it in
-   (`Carry.steps.load`, 2 s, profile `give`); when the clip is over the crate leaves your arms and
-   is **attached to the truck** in the next free bed slot (`Truck.bed.slots`, vehicle attachment),
-   so the cargo is visible in the back. Log:
-   `[rp_nomade] player 3 loaded crate 2/3 (load=give/... 2000ms, bed slot 2, attached to truck 17)`.
-5. **Drive** — the destination is pinned on the map from acceptance; once the last crate is in
-   the truck the chat names the destination with its distance and the vanilla **GPS route** is
-   set (`Open77.blips.setWaypoint`). A ring marks the destination. The **first** time the loaded
-   truck crosses the ambush circle on the road, **3 hostile NPCs** spawn 15 m away and attack the
-   driver; they are removed after 3 minutes or when the contract ends.
-6. **Unload** — inside the destination zone (`rp_zones:isIn`; a planar-distance check for a
-   destination rp_zones does not know, `zone = false`), `E` on the truck: **Unload**. A
-   sequence per crate, all animated and server-driven: take it out of the bed (`steps.take`, 2 s,
-   `give`; the crate jumps from the bed to your arms), carry it a moment (`steps.carryMs`, 1.5 s,
-   the carry loop), put it down (`steps.putdown`, 2.4 s, `carry_putdown`; the crate is
-   placed on the ground beside the truck, where it stays 30 s or until the run ends). Walking off
-   between two crates stops the unloading. Then the pay: **150 €$ per crate** in cash, a
-   **25 % convoy bonus** (split between the nomads on duty within 30 m of the truck, driver
-   included, when there are two or more), and **15 %** of the gross credited to the `nomade`
-   society (`rp_bank:societyAdd`, on top of the pay). The contract is written to SQL.
-   Log: `[rp_nomade] player 3 delivered 3 crates pay=450 bonus=0 convoy=1 society=+68`.
-7. **Return** — after the delivery the map pin and GPS route move to the camp. Bring the truck
-   back inside the camp zone, `E` on it: **Return the truck**. The truck is removed and the
-   100 €$ deposit refunded. `/convoi annuler` at any time drops the run (a carried crate is put
-   down first, then truck and crates are removed, deposit kept by the clan).
+1. **Take a run.** At the Aldecaldos camp, the contracts board offers one run per route
+   (**E** *Run to the Afterlife street, 3 crates*, **F** *Run to Lizzie's, Kabuki, 2 crates*).
+   A 4 second bar (*Signing the manifest*). The camp's stash pays the goods: if it is empty the
+   run is refused before the bar (*The camp has nothing to move right now.*). The crates appear
+   at the loading points north of the board, each with an **E** *Pick up nomad crate* prompt.
+   Chat: `Run signed: 3 crates of smuggled goods for Afterlife street, Watson, 25 minutes...`.
+   A pin marks the drop on the map, and every NCPD checkpoint gets a pin too.
+2. **Load.** Lift a crate (**E**), walk it to the convoy truck bay south-east of the board where
+   your truck is parked (a truck you own, hold a key for, or a clan fleet truck), and stand behind
+   its bed: **E** *Load into the truck* is drawn at the tailgate of the truck parked in the bay (at
+   the bay itself while no truck is there). The crate rides in the bed for everyone to see. `/nomad load` loads next to any
+   truck you may use. When the last crate is in, the GPS route to the drop starts.
+3. **Drive.** The run has a deadline. Each NCPD checkpoint on the roads into the city may search
+   the truck: the answer is decided per run and per checkpoint, so the same run always meets the
+   same answer at the same checkpoint. Waved through: *the cops wave you through*. Searched:
+   every crate of the run in the truck is emptied into the NCPD evidence stash, the driver pays
+   a fine (cash, then bank), gets an NCPD wanted level and a criminal record; an unpaid fine
+   becomes a warrant. The run ends there.
+4. **Deliver.** At the drop, park at the unload bay, go behind the bed, **E** *Unload a crate* (or `/nomad unload`):
+   the crate comes out of the bed into your arms. Walk it to the fence and **E** *Hand over to
+   Rook*. The fence pays the crate's price in one operation: the camp keeps its cut, the rest goes
+   to the nomad who took the run. The crate is gone.
+5. **Or sell to a player.** Put a crate down next to a player (**G**) and `/nomad sell <id>
+   <price>`. They see the offer card (*Ada Kovac: a crate of smuggled goods for 500 eddies*) and
+   accept it with **Y** (**N** declines): they pay, the goods land in their pockets, and the price
+   is split the same way.
 
-Time limit: **20 minutes** from acceptance to the last unloaded crate (the return has no clock;
-the vehicle registry removes a forgotten truck after 40 min).
+**What can go wrong.** The deadline passes (the run is off: the fence still pays, but only the
+hot price, and the camp gets nothing; the pin and route turn back to the camp, where **E** *Return
+to the stash* puts the goods back). Somebody outside the crew lifts one of your crates (the run is
+off; they can fence it hot). The truck is wrecked, impounded or lost (the run is off; the crates
+keep their goods in the bed). A disconnect drops a carried crate where you stood; the run goes on
+and the pins come back when you return. When `rp_nomade` restarts, a carried crate is dropped at
+the carrier's feet (`owner_stopped`) and rebuilt on the ground there; crates on the ground and in a
+bed come back where they were. After a server crash, a crate that was being carried comes back at
+its last put-down spot.
 
-## Carrying and the truck bed: how to tune
+**The NCPD officer** (job `ncpd`, on duty): `/nomad search` next to a truck. With a warrant on its
+plate (rp_garage) the search starts at once; otherwise the driver, or the nomad whose run rides
+in it, is asked to consent and must be on foot within 5 m. An 8 second bar (*Searching*); the
+goods of every camp crate in the bed go to the evidence stash in one operation, and the nomad
+gets a record. A crate of the camp left on the ground can be searched without consent.
 
-The current defaults live in `shared/config.lua` and reload with the resource
-(`refresh` then `restart rp_nomade`). The Chest attachment was tuned for
-`crate.small`; check placement again when changing the crate model or rig.
+Commands: `/nomad` (help), `/nomad status`, `/nomad load`, `/nomad unload`, `/nomad sell <id>
+<price>`, `/nomad search`, `/nomad camp`.
 
-**The crate in the hands** (`RpNomadeConfig.Carry`). The binding is the one of
-`wiki/attachments.md`: `Open77.props.attach(propId, { parentType = "player", parentId, bone,
-offset, rotation })`. `bone` is a named slot of the player rig (`RightHand`, `LeftHand`, `Chest`,
-`Head`) or `""` for the body root; `offset` is metres **in that slot's own frame**, `rotation`
-degrees (x roll, y pitch, z yaw). The resource uses **Chest**, keeping the crate
-between the arms while following the torso. Defaults for `crate.small`:
+Refusals reach the player as a chat line and a toast: a run already going, the camp's stash
+empty, no truck you hold a key for, a full bed, a buyer who cannot pay, a declined search, and the
+libraries' own reasons. A refusal at the very start of a prompt (off duty, no job, too far) is the
+prompt library's own notice.
 
-| Key | Default | Effect |
-|---|---|---|
-| `Carry.bone` | `"Chest"` | follows the torso slot |
-| `Carry.offset.y` | `-0.60` | forward in this Chest frame is negative y |
-| `Carry.offset.z` | `0.008` | lateral correction in the Chest frame |
-| `Carry.offset.x` | `-0.135` | height correction in the Chest frame |
-| `Carry.rotation` | `{0,90,0}` | compensates for the crate mesh's orientation in this slot |
+## Setup
 
-Use `carrytune <player> Chest ox oy oz rx ry rz` to measure a different model.
-Offsets for the body root cannot be reused as Chest offsets.
+1. `resources.load`, in this order of dependencies:
+   `open77_transactions`, `open77_props`, `open77_animations`, `open77_interactions`, `open77_uikit`,
+   `open77_notifications`, `open77_player_interactions`, `open77_actions`, `open77_containers`,
+   `rp_jobs`, `rp_inventory`, `rp_economy`, `rp_garage`, `rp_cargo`, `rp_ncpd`, `rp_nomade`.
+2. Convar `rp_inventory_backend transactions` (a buyer's pockets are coordinator accounts).
+3. Coordinator tunables (add these entries to the lists your other jobs already use):
 
-**The crate in first person** (`Carry.firstPerson`). The binding above is measured on the
-third-person rig (the F7 body, everyone else's proxy). In first person the carrier's own client
-parents the crate to V's own `Chest`, which sits right under the camera: with the same numbers
-the crate's lid covers the whole screen. `firstPerson` is the placement that
-client uses instead -- only that client; other players keep `offset` / `rotation`. In the Chest
-frame +x is up and -y forward, so the default is the third-person spot 0.35 m lower and 0.15 m
-further out (crate low in the view, top edge under the crosshair). Tune it live with
-`carrytune <player> fpp x y z [rx ry rz]` (prints the numbers to copy into the config), `carrytune
-<player> fpp hide` draws no crate at all in first person, `carrytune <player> fpp off` reverts to
-the third-person numbers. A platform older than the option refuses the key once and the resource
-re-attaches without it.
-
-**The carry pose** (`RpNomadeConfig.Carry.animation`). A synchronized RP animation
-(`Open77.animations.play(playerId, profile, { clip, loop = true })`, permission
-`players.animations.control`), looped while the crate is held and stopped on load, drop (downed),
-cancel, disconnect and death. `profiles` are tried in order at start; the first
-one in the running server's catalogue is used:
-
-| Profile | Catalogue | Clip | Why |
-|---|---|---|---|
-| `carry` | current platform | profile default | upper-body carry layer; legs retain locomotion |
-| `tablet2` | 76-profile (`Work on tablet`) | default `stand__2h_tablet__02__use_tablet__01` | two hands holding a tablet at chest height, the closest two-hand hold |
-| `phone` | 18-profile (`Use a phone`, the one deployed) | `stand__2h_phone__03__shuffle__01` | both hands in front of the chest, idle shuffle (no tapping) |
-
-`carry` keeps playing while walking or running. The older `tablet2` and `phone`
-fallbacks are workspots: movement beyond 0.5 m cancels those poses. After an
-interruption, the job can restart its carry pose once the player stands still
-for `resumeAfterMs` (1500 ms; `stillDistance` = 0.15 m between ticks).
-`resume = false` disables that restart; `enabled = false` carries the crate alone.
-A refused pose is logged once per crate and never blocks the run.
-
-The job owns each crate across pickup, player attachment, truck attachment and
-ground placement. It therefore uses `Open77.props` independently of the animation.
-The new native `item` / `itemContact` options concern hand-held consumption items;
-mouth fitting does not resize or reposition a two-hand crate. See the public
-[action/item examples](../docs/held-actions.md) for inventory consumption and
-hold → drink → hold. The five new FPS consumption arm profiles do not add FPS
-crate-carry arms; `Carry.firstPerson` controls the crate's presentation separately.
-
-**The steps** (`RpNomadeConfig.Carry.steps`). Nothing moves instantly any more: every crate move
-is a one-shot clip (`Open77.animations.play(playerId, profile, { loop = false, durationMs = ms })`)
-and the prop move (attach / detach / place) happens **when the step timer ends**. The timer is
-the resource's own: `durationMs` schedules the step, and `ms` also determines when
-the job moves the crate. While a step runs (`busy` in the snapshot) the
-truck prompts are hidden and every intent answers `Finish what you are doing first.`
-
-| Step | When | Profiles tried (first known wins) | Default `ms` | At the end of the timer |
-|---|---|---|---|---|
-| `pickup` | E on a crate | `carry_pickup`, then `scavenge`, `examine` | 1400 | crate attached to the player, carry loop starts |
-| `load` | E Load on the truck | `give` (arms extend to hand an item over) | 2000 | crate detached from the player, attached to the bed slot |
-| `take` | each crate at unloading | `give` | 2000 | crate detached from the bed, attached to the player, carry loop |
-| `carryMs` | between take and put-down | the carry loop | 1500 | put-down starts |
-| `putdown` | unloading, `/convoi annuler` while carrying, downed while carrying | `carry_putdown`, then `scavenge`, `examine` | 2400 | crate placed on the ground (`groundGap` 1.2 m from the truck on the driver side, `groundSpacing` 0.9 m, rows of two) for `groundTtlMs` (30 s), or back at the loading bay when downed |
-
-`carry_pickup` and `carry_putdown` use the platform's carry layer transitions;
-`give` remains the load/take gesture. A step whose profiles are all unknown, or
-whose `ms` is under 1000 (this script's threshold), still waits `ms` without a clip.
-
-**The truck bed** (`RpNomadeConfig.Truck.bed`). A loaded crate is
-`Open77.props.attach(propId, { parentType = "vehicle", parentId = truckId, bone = "", offset,
-rotation })`: offsets are metres in the **vehicle frame** (+x right, +y towards the cab, -y behind
-it, +z up), `yaw` turns the crate around z. Crate n takes `slots[((n - 1) % #slots) + 1]`; with
-more crates than slots the next layer sits `stackHeight` (0.55 m) higher. Four slots ship for the
-Mackinaw (templates go up to four crates):
-
-```lua
-slots = {
-    { x = -0.55, y = -1.5, z = 0.9, yaw = 0.0 },   -- front left, behind the cab
-    { x =  0.55, y = -1.5, z = 0.9, yaw = 0.0 },   -- front right
-    { x = -0.55, y = -2.4, z = 0.9, yaw = 0.0 },   -- rear left
-    { x =  0.55, y = -2.4, z = 0.9, yaw = 0.0 },   -- rear right
-},
+```text
+tunable.set open77_transactions writers rp_nomade:world+stash+char, rp_cargo:veh/cargo, rp_economy:cash+bank+soc, rp_inventory, open77_containers:world
+tunable.set open77_transactions mint1 rp_nomade sys:nomad nomad_crate 500; rp_nomade sys:nomad.supplier nomad_contraband 2000; rp_economy sys:* money 2000000
+ensure open77_transactions
+ensure open77_actions
+ensure open77_containers
+ensure rp_cargo
+ensure rp_nomade
 ```
 
-Tune with a loaded truck in front of you: a crate that sinks into the bed floor → raise `z`; one
-that hangs off the tailgate → move `y` towards -1.0; one inside the cab → move `y` towards -2.6.
-Attached props are visual-only (no collision) so nothing here can push the truck. If the vehicle
-attachment is refused the prop is removed and the crate is still counted (log:
-`attach of crate ... to truck ... refused: <reason> (prop removed, crate still counted)`).
-Bed crates are removed one by one at unloading and all at once by every path that ends the
-contract (cancel, return, expiry, lost truck, `onVehicleRemoved`, disconnect, resource stop) —
-the platform detaches them when the truck vanishes, the resource then removes the props.
+`open77_transactions`, `open77_actions`, `open77_containers` and `rp_cargo` all declare
+`auto_start false`: each needs its `ensure` before `rp_nomade`.
 
-**Navigation** (`RpNomadeConfig.Navigation`, client, permission `ui.vanilla.map`). A map pin
-(`Open77.blips.create`, sprite `destinationSprite` = `objective`) on the destination from
-acceptance, the vanilla GPS route (`Open77.blips.setWaypoint`, a routable custom-position pin the
-minimap draws a road path to) once every crate is loaded (`gpsFrom = "accepted"` to route from
-acceptance), then a pin (`campSprite` = `quest`) + route on the camp once everything is delivered.
-Pin and route are removed on unload, cancel, return, disconnect and resource stop. The chat line
-at the last load names the destination and its planar distance and bearing
-(`The Rancho Coronado junkyard is 4012 m south from here: the GPS route is on your map.`).
+- `rp_nomade:world+stash+char`: the crates, the camp's stash and the evidence stash, and the one
+  operation grants it gives rp_cargo (a crate into a bed) and rp_economy (a sale out of a crate,
+  into a buyer's pockets).
+- `open77_containers:world`: it opens the crates' world rows.
+- The two mint rules: one token per crate, and the camp's supplier. rp_nomade is already on
+  rp_economy's money allowlist (`EconomyConfig.mint.callers`): the fence's eddies are created there.
 
-## Commands
+Expected start lines:
 
-| Command | Who | Effect |
-|---|---|---|
-| `/convoi` | anyone | Status of your contract: template and destination, crates loaded / delivered / carried, time left, the truck, the current convoy (nomads on duty within 30 m), whether the Wraiths already hit you. |
-| `/convoi annuler` | driver | Drops the contract: crates and truck removed, ambush cleared, the deposit is **not** refunded. |
-| `/convois` | nomad **boss** (`rp_jobs:isBoss` + job `nomade`) | The last 10 contracts from SQL: who, template, destination, crates delivered, pay, bonus, society cut, convoy size, status, duration, when. |
-| `/camp` | anyone | The camp's coordinates and how far / which way it is from you. |
-
-`/contrat` from the plan sheet was **renamed `/convoi`**: `contrat` is already registered by
-`rp_trauma` (Trauma Team contracts) and a second registrant is served silently. From the server
-console, `/convoi` `/convois` answer `run this from the game`; `/camp` prints the coordinates.
-
-Every refusal is explained in chat (`Convoys` author, sand colour): not a nomad, off duty, too
-far from the board / crate / truck (with the distance), hands full, wrong truck, not at the
-warehouse, cargo still in the back, not inside the camp, wallet short, wallet or bank offline.
-
-## Prompts (client) and intents (server)
-
-| Where | Prompt | Client event → server event | Server re-checks |
-|---|---|---|---|
-| Camp, `Config.Camp.board` | **Contracts board** (`open77_worldui`) | `rp_nomade:ui:board` → `rp_nomade:board` | within `board.reach` (5 m), job `nomade` + on duty, no contract running |
-| Each crate on the ground | **Pick up the crate** (`open77_worldui`, one POI per crate) | `rp_nomade:ui:crate<i>` → `rp_nomade:pickup (i)` | contract active, crate `i` on the ground, hands empty, within 3.5 m |
-| Rented truck | **Load the crate** (`open77_interactions` globalVehicle, `canInteract = "canLoad"`) | `rp_nomade:ui:load` → `rp_nomade:load (vehicleId)` | it is *your* truck, within 4 m, carrying a crate |
-| Rented truck, in the destination zone | **Unload** (`canInteract = "canUnload"`) | `rp_nomade:ui:unload` → `rp_nomade:unload (vehicleId)` | your truck, within 4 m, `rp_zones:isIn(destination)`, crates in the back |
-| Rented truck, in the camp zone | **Return the truck** (`canInteract = "canReturn"`) | `rp_nomade:ui:return` → `rp_nomade:return (vehicleId)` | your truck, within 4 m, `rp_zones:isIn(nomad_camp)`, nothing carried, nothing left in the back |
-
-The three truck prompts are one `globalVehicle` target each; their `canInteract` exports read
-only the last snapshot the server pushed (`rp_nomade:state`), so a prompt never shows on somebody
-else's Mackinaw and the player is never asked to press something the server would refuse. The
-snapshot also rebuilds the crate POIs and the destination ring after a client reload
-(`rp_nomade:clientReady`).
-
-## Exports (server, synchronous — never yield)
-
-```lua
-exports.rp_nomade:activeContract(playerId)
--- { id, template, label, destination, crates, loaded, delivered, carrying, status, truckId, ambushed } | nil
-exports.rp_nomade:hasContract(playerId)   -- boolean
+```text
+[rp_nomade] coordinator ready (store=sql)
+[rp_nomade] items defined through rp_inventory: 2
+[rp_nomade] crates rebuilt: 0 (ground 0, in a bed 0, empty 0, sold 0, orphans closed 0); 0 run(s) going
+[rp_nomade] ready: 2 route(s), 2 checkpoint(s), board, truck bay, stash (job nomade)
+[rp_nomade] camp supply: +24 goods (stash had 0)
 ```
 
-`status` is `active` (running) or `delivered` (paid, waiting for the truck to come back). Call
-them inside `pcall`: this resource ships a client script, so a resource **with** a client script
-must not declare `dependency "rp_nomade"`.
+Without `stash` in its writers the boot waits (`still waiting for the camp's stashes`).
 
-## Events
+### Operator console (restricted: console or ACL `command.nomad.*`)
 
-None of its own on the host bus. It **consumes** `rp_zones:entered` / `rp_zones:left` (the
-destination and camp flags that reveal the Unload / Return prompts), `onPlayerDisconnected`
-(contract abandoned, everything removed), `onPlayerLifeStateChanged` (down while carrying: the
-crate goes back to its loading point), `onVehicleRemoved` (truck lost: the run ends) and
-`open77:helditem:completed` (log only, `held` carry mode) and `onPlayerAnimationChanged` (the
-carry pose was interrupted: the tick can replay it once they stand still).
-
-Internal net events (`rp_nomade:state`, `rp_nomade:clientReady`, `rp_nomade:board`,
-`rp_nomade:pickup`, `rp_nomade:load`, `rp_nomade:unload`, `rp_nomade:return`) are this
-resource's client/server transport, not an API.
-
-## Money and pay (all through pcall'd exports)
-
-| Movement | Call |
+| Command | Does |
 |---|---|
-| Deposit at acceptance | `rp_economy:remove(driver, 100, "nomade:rental")` — refused → no truck |
-| Deposit back at the return | `rp_economy:add(driver, 100, "nomade:rental_refund")` |
-| Pay per delivered crate | `rp_economy:add(driver, crates × 150, "nomade:delivery")` |
-| Convoy bonus | 25 % of the gross, `floor(bonus / members)` to each member, `"nomade:convoy"` — only when ≥ 2 nomads on duty (driver included) are within 30 m of the truck at the moment of payment |
-| Society | `rp_bank:societyAdd("nomade", 15 % of the gross, "nomade:contract:<id>")` — on top of the pay, not deducted |
+| `nomad.status` | stash, runs, crates per state, counters |
+| `nomad.stock <count>` | goods into the camp's stash (the supplier mint rule caps it) |
+| `nomad.op.setup <id> [nomade\|ncpd]` | job grade 0 and duty |
+| `nomad.op.truck <id> [plate]` | with a plate: that owned truck next to the player; without: rp_garage's issue export (a server with `rp_garage_lab 1`) |
+| `nomad.op.take <id> [route]` | the board prompt |
+| `nomad.op.pickup <id>` | lifts the nearest camp crate within 3 m |
+| `nomad.op.load <id>` / `nomad.op.unload <id>` | the carried crate onto the nearest truck / the top crate out of it |
+| `nomad.op.deliver <id> [route]` | the carried crate to that route's fence |
+| `nomad.op.checkpoint <id> <checkpoint> [search\|pass]` | the player's truck enters that checkpoint now; without the last word the run's own answer decides |
+| `nomad.op.expire <id>` | the player's run is past its deadline now (until the next restart) |
+| `nomad.op.search <id>` / `nomad.op.sell <seller> <buyer> <price>` | `/nomad search` / `/nomad sell` for that player |
 
-`RpNomadeConfig.Contract` holds every number. A wallet or bank that refuses is logged and the
-player told; the contract row keeps what was actually paid.
+### For the fixer board
 
-## Persistence
+Every committed step fires a server event:
 
-Created inside `Open77.database.ready(...)` with `CREATE TABLE IF NOT EXISTS`, permission
-`database.access`:
-
-```sql
-rp_nomade_contracts (
-    id          INT AUTO_INCREMENT PRIMARY KEY,
-    identifier  VARCHAR(64)  NOT NULL,      -- Open77.players.identifier of the driver, never the session id
-    player_name VARCHAR(80)  NOT NULL DEFAULT '',
-    template    VARCHAR(32)  NOT NULL,      -- template id (scav_parts, ...)
-    destination VARCHAR(32)  NOT NULL,      -- rp_zones name
-    crates      TINYINT      NOT NULL DEFAULT 0,
-    delivered   TINYINT      NOT NULL DEFAULT 0,
-    pay         INT          NOT NULL DEFAULT 0,   -- cash actually paid to the driver
-    bonus       INT          NOT NULL DEFAULT 0,   -- convoy bonus, total
-    society_cut INT          NOT NULL DEFAULT 0,   -- credited to the nomade society
-    convoy      TINYINT      NOT NULL DEFAULT 1,   -- largest convoy seen at a payment
-    status      VARCHAR(16)  NOT NULL DEFAULT 'active',
-                -- active, delivered, returned (truck back before any delivery), cancelled,
-                -- expired, abandoned (disconnect), truck_lost, resource_stopped
-    started_at  BIGINT       NOT NULL DEFAULT 0,   -- unix seconds
-    ended_at    BIGINT       NOT NULL DEFAULT 0,
-    INDEX idx_rp_nomade_identifier (identifier)
-)
+```lua
+AddEventHandler("rp:job:completed", function(ev)
+    -- ev = { job = "nomad", kind = "pickup" | "checkpoint_passed" | "confiscated" | "deliver",
+    --        playerId = <the run's nomad>, ref = <operation id>, data = { run, route, ... } }
+end)
 ```
 
-A row is inserted at acceptance and updated at the end (callback forms; nothing yields on an
-export). **No database** (`ready` answers `database_unavailable`, or the database still is not
-answering 15 s after start): finished contracts go to the resource's `Open77.kvp` store (key
-`history`, last 50, JSON) and the log says `[rp_nomade] store=kvp reason=...`. `/convois` reads
-whichever store is in use and says so. Running contracts are in memory only: a server restart
-ends them.
+`ref` is the coordinator operation (`nmd.run:...`, `nmd.ck:<run>:<checkpoint>`, `nmd.seize:...`,
+`nmd.sale:...`): stable across retries, so a listener counts each step once. `deliver` carries
+`crate`, `of`, `pay`, `cut`, `buyer` (`fence` or `player`) and `complete`; `confiscated` carries
+`by` (`checkpoint` or `officer`) and `crates`. Hot sales fire nothing.
 
-## Configuration (`shared/config.lua`)
+### Exports (server, synchronous)
+
+```lua
+exports.rp_nomade:activeRun(playerId)  -- { run, route, crates, deadline, failed, left, where = {...}, ... } | nil
+exports.rp_nomade:hasRun(playerId)     -- boolean: a live run
+```
+
+## Config
+
+Everything is in `server/config.lua`:
 
 | Key | What |
 |---|---|
-| `Camp.position`, `Camp.zone` | camp centre (`/camp`), rp_zones name for the return |
-| `Camp.board` | board position, ring radius, `promptDistance`, server `reach`, copy |
-| `Camp.truckSpawn` | where the truck appears (x, y, z, yaw) |
-| `Camp.loadingPoints` | one crate per point, in order (4 shipped: templates up to 4 crates) |
-| `Camp.props` | decoration spawned by the server at start and removed at stop (`world.props`) |
-| `Destinations[name]` | label, ring position, radius — keyed by rp_zones name; `zone = false` for a place rp_zones does not know (distance check only) |
-| `Templates` | id, label, description, crates, destination |
-| `Contract` | pay per crate, convoy bonus / radius / minimum, society share, time limit, unload seconds, history rows |
-| `Truck` | records tried in order, deposit, reach, safety TTL, `bed.slots` / `bed.stackHeight` (where loaded crates sit, vehicle frame) |
-| `Crate` | prop aliases tried in order, pickup distance, prompt distance, ring radius, copy |
-| `Carry` | `mode = "attach"` (prop bound to `bone` with `offset` / `rotation`; `Chest` in the shipped config, the body root when `bone` is `""`) or `"held"` (hidden prop + `Open77.heldItems.hold` item record); `animation` = the carry pose (`profiles` tried in order, `resume`, `resumeAfterMs`, `stillDistance`); `steps` = the one-shot clips and timers around every crate move (`pickup`, `load`, `take`, `carryMs`, `putdown`, `groundTtlMs`, `groundGap`, `groundSpacing`) |
-| `Navigation` | map pin + GPS route on the destination then the camp: `enabled`, `gpsFrom` (`"loaded"` / `"accepted"`), sprites |
-| `Ambush` | on/off, circle, `minTravel`, count, spawn distance and spread, lifetime, `Character.*` records, `damagePolicy` (numeric, 0 = normal), combat group, announcement |
-| `Items` | `nomad_crate` (25 kg) declared in `rp_inventory` through `define` |
-| `Ui` | tick, colour, chat prefix |
+| `job`, `society`, `fixerJob`, `policeJob` | rp_jobs job (`nomade`), the camp's society, the fixer's job id (`nomad`), the police job |
+| `items` | `nomad_contraband` (2.5 kg, illegal) and `nomad_crate` (the crate's token, unique) |
+| `accounts` | the camp's stash, the evidence stash, the token and supplier `sys:` accounts |
+| `restock` | the camp's supplier: every 10 min, +24 goods while the stash holds fewer than 24 |
+| `camp` | board, loading points, truck bay, stash drop point, and `decor`: the props that dress the camp (a table under the board, loaded pallets; the vanilla camp is quest content the multiplayer world does not stream) |
+| `bayPrompt` | `followTruck` (the load and unload prompts follow the truck parked in their bay) and `behindBedM` (how far past the bed's last slot the prompt is drawn) |
+| `routes` | per route: crates, goods per crate, price per crate, deadline, unload bay, fence |
+| `campCut`, `hotRatio` | the camp's share of a live sale (20 %); what the fence pays for hot goods (50 %, 0 refuses) |
+| `checkpoints` | each zone (an `Open77.zones` definition checked against the truck) and its `searchChance` |
+| `search` | the fine, the wanted level, the warrant when the fine is unpaid |
+| `officer` | reach, consent distance, the search bar |
+| `crate` | the carried model and binding, `pickupBy` (`anyone` or `crew`) |
+| `playerSale` | price limits and the hand-over distances |
+| `navigation` | pins, sprites, when the GPS route starts |
 
-## Where things are
+Where things are. The Afterlife drop (unload bay and fence) is `measured = true`. The camp's
+points (the board, the loading points, the truck bay with its tailgate prompt, the stash) were
+used in live runs and keep `measured = false` until someone confirms each with `/pos`; the Kabuki
+drop and the checkpoints have not been walked:
 
-Real places (world metres; AMM points carry +0.1 m for the rings, walked points are exact). The
-camp is the **Aldecaldos camp** in the north-eastern Badlands, around V's nomad tent.
-
-| Point | Coordinates | Notes |
+| Point | Position | Landmark |
 |---|---|---|
-| Camp centre (`nomad_camp`, r 120) | 1792.9, 2248.9, 180.2 | V's tent (AMM); what `/camp` reports |
-| Contracts board | 1790.0, 2252.0, 180.3 | ring r 1, E prompt **Aldecaldos contracts board** |
-| Cargo crate props (2) | 1788.2, 2253.6 and 1791.8, 2253.8 | `Camp.props`, 1.2 m off the board ring |
-| Truck bay | 1800.0, 2240.0, 180.2 (yaw 58.6) | 12 m south-east of the board; yaw = the tent's heading, the road's was not measured (`/pos` in the truck facing the road) |
-| Loading points | 1786/1788/1790/1792, 2256..2258.5, 180.3 | 4–6 m north of the board |
-| Ambush circle | 1600, 600, r 60 m | on the road between the camp and the junkyard; planar check, refine the centre with `groundz <playerId> 1600 600` at replay time |
-| Destination: Rancho Coronado junkyard (`junkyard`, r 30 ring / zone r 90) | 1374.9, -1674.9, 49.4 | ~4.0 km south of the camp |
-| Destination: Watson, the Afterlife street (`afterlife_street`, r 25 planar ring) | -1426.0, 974.0, 23.6 | the street outside the Afterlife ramp, 20 m up from the garage lot; ~3.5 km south-west of the camp |
-| Destination: Badlands Drive-In Theater (`drive_in`, r 40, `zone = false`) | -81.2, 1963.3, 100.8 | no rp_zones zone: distance check only; ~1.9 km west of the camp |
+| Contracts board | 1790.0, 2252.0, 180.3 | Aldecaldos camp, 4 m north-west of V's tent |
+| Loading points 1 to 4 | 1786 / 1788 / 1790 / 1792, 2256 to 2258.5, 180.3 | north of the board |
+| Convoy truck bay | 1800.0, 2240.0, 180.2 | 12 m south-east of the board |
+| Camp stash | 1788.2, 2253.6, 180.3 | beside the board |
+| Afterlife drop: unload bay / fence | -1422.5, 975.0, 23.35 / -1417.5, 975.5, 24.25 | the street outside the Afterlife's ramp, Watson: the lane against the east curb, the fence on the sidewalk (walked) |
+| Kabuki drop: unload bay / fence | -1188.9, 1566.2, 22.9 / -1186.4, 1567.5, 22.9 | the street outside Lizzie's Bar, Kabuki |
+| Checkpoint `badlands_toll` | 900, 1900 (r 120 m) | on the camp to city corridor where the Badlands end |
+| Checkpoint `watson_ramp` | -500, 1700 (r 120 m) | on the corridor where it enters Watson |
 
-Distances are as the crow flies; the runs are real drives. The camp lies in the `badlands`
-zone (no NCPD coverage) and outside every safe zone, so the ambushers' hits land. **Every `z`
-is the AMM ground + 0.1:** the camp and the junkyard are not flat — if a ring is not visible,
-stand on the spot, `/pos`, and paste the ground height into the config.
+The checkpoint centres are placed on the straight line from the camp to Watson, not on a road:
+drive the GPS route and move each one onto the road where it really crosses into the city
+(`/pos` in the truck).
 
-**Props.** At start the server spawns `Camp.props` through `Open77.props.create` (permission
-`world.props`, curated prop aliases (see `prop.catalog`) — a raw `.mesh` path renders as a white
-slab) and removes them at stop: two cargo crates (`crate.cargo`) by the board. A refused prop is logged (`camp prop N (...) not
-spawned: <reason>`); the board works without it. The contract crates are separate props at the
-loading points.
+## Limits
 
-## Log (grep-able)
+- One run per nomad at a time; a failed run does not block the next one.
+- A searched crate stays in the bed, empty, until it is unloaded (then thrown away). A crate in a
+  bed is never reclaimed by the camp; one left on the ground two hours past its run's end is.
+- The truck is any rp_garage vehicle with an rp_cargo bed layout. rp_garage has no export to take
+  a clan fleet truck out of storage or to list a society's fleet: a nomad brings their own (or
+  one they hold a key for).
+- The checkpoint search reads the truck's position once a second: a truck crossing a zone in
+  under a second at full speed can slip through. The zones are 120 m wide for that reason.
+- The NCPD wanted level and the police it sends are the driver's own game (per-client heat).
+- The officer's search knows only the camp's crates: a truck carrying none is reported clean.
+- The ambush of rp_nomade 1.0 is gone; the risk on the road is the NCPD.
+- The Kabuki drop, the checkpoints and the bed slots of other trucks than the Mackinaw are not
+  measured in game. The carried crate's binding was measured in both views.
 
-Historical output from the earlier fallback-catalogue run is retained below.
-On current defaults, expect `bone=Chest`, `pose=carry/...`,
-`pickup=carry_pickup/1400ms` and `putdown=carry_putdown/2400ms` instead.
+## Tests
 
 ```text
-[rp_nomade] camp props spawned: 2
-[rp_nomade] started: 3 templates, camp at 1792.9 2248.9 180.2, board at 1790.0 2252.0, ambush on at 1600.0 600.0 r=60, carry=attach bone=root pose=phone/stand__2h_phone__03__shuffle__01, bed slots=4
-[rp_nomade] store=sql table=rp_nomade_contracts
-[rp_nomade] rp_inventory items defined: registered=1 rejected=0
-[rp_nomade] player 3 accepted contract 'scav_parts' crates=3 dest=junkyard truck=17 record=Vehicle.v_standard3_thorton_mackinaw_player deposit=100
-[rp_nomade] crate steps: pickup=examine/2500ms load=give/2000ms take=give/2000ms putdown=examine/2500ms
-[rp_nomade] player 3 picked up crate 1/3 (pickup=examine/kneel__rk_on_ground__01__inspect_ground__01 2500ms, attached:root pose=phone/stand__2h_phone__03__shuffle__01)
-[rp_nomade] player 3 loaded crate 1/3 (load=give/stand__2h_on_sides__01__to__stand__rh_item__01__turn0__01 2000ms, bed slot 1, attached to truck 17)
-[rp_nomade] player 3 loaded crate 2/3 (load=give/stand__2h_on_sides__01__to__stand__rh_item__01__turn0__01 2000ms, bed slot 2, attached to truck 17)
-[rp_nomade] player 3 loaded crate 3/3 (load=give/stand__2h_on_sides__01__to__stand__rh_item__01__turn0__01 2000ms, bed slot 3, attached to truck 17)
-[rp_nomade] player 3 ambushed at 1612.4 587.9: 3/3 npcs record=Character.cpz_maelstrom_grunt1_ranged1_lexington_wa
-[rp_nomade] player 3 took crate 1/3 out of the bed (take=give/stand__2h_on_sides__01__to__stand__rh_item__01__turn0__01 2000ms, slot 1, attached:root)
-[rp_nomade] player 3 delivered crate 1/3 (putdown 2500ms, on the ground at 1376.2 -1672.1, bed slot 1 cleared)
-[rp_nomade] player 3 took crate 2/3 out of the bed (take=give/... 2000ms, slot 2, attached:root)
-[rp_nomade] player 3 delivered crate 2/3 (putdown 2500ms, on the ground at 1375.3 -1672.1, bed slot 2 cleared)
-[rp_nomade] player 3 took crate 3/3 out of the bed (take=give/... 2000ms, slot 3, attached:root)
-[rp_nomade] player 3 delivered crate 3/3 (putdown 2500ms, on the ground at 1377.1 -1671.2, bed slot 3 cleared)
-[rp_nomade] player 3 delivered 3 crates pay=450 bonus=0 convoy=1 society=+68
-[rp_nomade] player 3 ambush cleared: 3/3 npcs removed (delivered)
-[rp_nomade] player 3 contract #12 scav_parts delivered: crates=3 pay=450 bonus=0 society=68 convoy=1
-[rp_nomade] player 3 returned the truck, deposit refunded
-[rp_nomade] player 3 contract #12 scav_parts ended: delivered crates=3/3 pay=450 bonus=0 society=68
-[rp_nomade] player 3 dropped crate 2/3 (life phase downed), back at the loading bay
-[rp_nomade] player 3 put crate 2/3 down (cancel, putdown 2500ms)
-[rp_nomade] player 3 contract #13 chooh2_barrels ended: cancelled crates=0/2 pay=0 bonus=0 society=0
+python -m unittest discover -s tests -p "test_w3_nomad*.py"
 ```
 
-A pickup whose pose could not start reads `(attached:root pose=phone/... not playing)` and is
-preceded by `carry pose phone refused for player 3: <reason> (the crate is carried without it)`;
-a server without the RP animation service logs `carry pose off: animations_api_unavailable` (or
-`no_known_profile`) at start and `pose=none` from then on.
-
-Refusals from the platform are logged with their reason (`truck record ... refused: ...`,
-`crate model ... refused: ...`, `attach ... refused: ... (falling back to a hidden prop)`,
-`attach of crate ... to truck ... refused: ... (prop removed, crate still counted)`,
-`carry pose ... refused ...`, `ambush record ... refused: ...`,
-`society nomade credit ... refused: ...`). Client side: `navigation pin refused: ...` /
-`GPS route refused: ...`.
-
-## Manifest
-
-Permissions: `network.events`, `database.access`, `world.vehicles`, `world.props`, `world.npcs`,
-`players.animations.control` (the carry pose), `ui.vanilla.map` (client: pins + GPS route).
-Dependencies (all ship a client half): `open77_uikit` (menu + progress, server twins),
-`open77_worldui` (board, crates, destination ring), `open77_interactions` (truck prompts),
-`open77_props` (the crate projection, the carry and bed attachments), `open77_notifications`
-(payout toasts), and `open77_animations` (synchronized animation presentation).
-`rp_jobs`, `rp_zones`, `rp_inventory`, `rp_economy`, `rp_bank`, `rp_identity` are
-reached through `pcall`'d exports: without `rp_jobs` the board answers "the clan roster is
-offline"; without `rp_zones` the destination and camp checks fall back to a planar distance
-against `Destinations[...].radius` / 9 m; without `rp_economy` no deposit can be taken, so no
-truck; without `rp_bank` the society cut is logged as refused; without `rp_identity` account
-names are used; without `rp_inventory` the `nomad_crate` item is simply not declared.
-
-`Carry.mode = "held"` additionally needs the bundled `open77_helditems` client (not declared as
-a dependency, so a server without it still starts this resource; the hold then times out and
-the crate is carried as a hidden prop).
-
-## Test in 2 minutes (one player)
-
-Prerequisites: `rp_jobs`, `rp_zones`, `rp_economy`, `rp_bank`, `rp_inventory` running; you are
-player `1` at the Aldecaldos camp (drive out from Kabuki, or console `tp 1 1790 2252 180.3`
-onto the board) with the default 500 €$ cash. Log on start: `[rp_nomade] camp props spawned:
-2`, `started: 3 templates, ...` then `store=sql table=rp_nomade_contracts`. The run itself is a
-real Badlands drive: allow the 20 minutes.
-
-1. **Console:** `setjob 1 nomade 3` (boss, so `/convois` works too). In game: `/service` →
-   clocked in at Nomad.
-2. `/camp` → `Nomad camp: 1793, 2249 (z 180), 5 m south-east of you...`. The small ring with
-   the `Aldecaldos contracts board` pin sits between two cargo crates, 4 m north-west of V's
-   tent. Look at it, press **E**. Before clocking in, the same prompt answers `Clock in first
-   (/service)...`; 10 m away it answers `Get closer to the contracts board (10 m).`
-3. Pick **Scav parts run** (3 crates → Rancho Coronado junkyard, 450 €$, 20 min). Chat:
-   `Contract signed: Scav parts run. 3 crates to the Rancho Coronado junkyard, 150 €$ per crate,
-   20 minutes. Deposit 100 €$ taken for the truck.` `/money` → 400 €$. A Mackinaw stands at the
-   truck bay (12 m south-east), three crates with rings at the loading points (north of the
-   board), a ring on the map at the junkyard. Log: `player 1 accepted contract 'scav_parts'
-   crates=3 dest=junkyard ...`.
-4. `/convoi` → `Crates: 0/3 loaded, 0/3 delivered.`, `Time left: 20 min`, `Convoy: none...`.
-5. Walk to crate 1, look at it, **E** → its ring goes, pickup plays for 1.4 s, then
-   `Crate 1/3 in your arms...`: the crate hangs in front of your chest, both hands come up to hold
-   it in third person. Walk and run: the upper-body carry pose and crate remain.
-   **E** on another crate → `Your hands are full, choom.` Older catalogues may
-   instead use the stationary fallback described above.
-6. Walk to the truck (within 4 m), look at it: **Load the crate** — **E** → arms extend for 2 s
-   (the prompt is gone meanwhile), then `Crate 1/3 loaded. 2 to go.`; the crate now sits in the
-   bed behind the cab. Log `player 1 loaded crate 1/3 (load=give/... 2000ms, bed slot 1, attached
-   to truck ...)`. Repeat for crates 2 and 3 → `All 3 crates loaded. The Rancho
-   Coronado junkyard is 4012 m south from here: the GPS route is on your map...`; the minimap
-   draws the road route, the map shows the objective pin (there since acceptance).
-7. Get in the truck and drive south on the Badlands road towards the junkyard (~4 km). Where
-   the road passes the ambush circle (around `1600, 600`) the log shows `player 1 ambushed at
-   ...` and chat `Wraiths on the road!`: three gangers spawn 15 m ahead and open fire — it hurts,
-   the Badlands are no safe zone. (If the road never comes within 60 m of the point, refine
-   `Ambush.center` from `/pos` on the road.)
-8. Stop inside the junkyard ring (toast `Junkyard` from rp_zones, chat `You made it. Park, get
-   out and press E on the truck to unload.`). Get out, look at the truck: **Unload** — **E**.
-   Per crate (`Unloading crate 1/3...`): 2 s arms out, the crate jumps from the bed to your arms,
-   1.5 s carry loop, 2.4 s put-down, the crate is on the ground beside the truck (5.9 s per crate;
-   walk more than 6 m from the truck between two crates to stop and keep the rest in the bed).
-   The three crates stay on the ground 30 s.
-   Then: `Delivered 3 crates: +450 €$ cash. Wallet: 850 €$.`, toast `Delivery paid`, `Run
-   complete. Bring the truck back...`. Log `player 1 delivered 3 crates pay=450 bonus=0
-   convoy=1 society=+68`, then `ambush cleared`. `/societe` (rp_bank, job nomade) → 68 €$.
-9. `/convois` → `Last 1 convoys (sql):` and `#1 <name>: scav_parts -> junkyard, 3/3 crates, 450
-   €$ +0 €$ bonus, society +68 €$, convoy 1, delivered in 9 min, 9 min ago.`
-10. The pin and GPS route are now on the camp. Drive back into the camp zone (120 m around V's
-    tent), get out, look at the truck: **Return the truck** — **E** →
-    `Truck returned. Deposit 100 €$ refunded. Wallet: 950 €$.` The truck vanishes. `/convoi` →
-    `No contract running...`. Outside the camp ring the prompt is not offered (a forged intent is
-    answered `Bring the truck inside the camp ring to return it.`).
-11. Take a second contract, pick up a crate, `/convoi annuler` → `Contract ... dropped...`; crate,
-    rings and truck are gone, `/money` is 100 €$ lighter (deposit kept). **Militech salvage**
-    goes to the Drive-In Theater, which has no rp_zones zone: the `Unload` prompt appears from
-    the 1 s tick once the truck is within 40 m of the screen (no `Drive-In` toast).
-12. **Convoy (optional, two players):** second player `setjob 2 nomade 0`, `/service`, stands
-    within 30 m of the truck at unload time → driver `+450 €$` and both `Convoy bonus: +56 €$ (2
-    nomads rode together).` (25 % of 450 = 113, split in two); log `... bonus=113 convoy=2`.
-
-## Known limits
-
-- One truck spot: two nomads accepting at the same second get two Mackinaws on one spot. Add a
-  second `truckSpawn` policy if the clan grows.
-- The ambush uses the platform's validated ranged combatant record (`Character.cpz_maelstrom_grunt1_ranged1_lexington_wa`,
-  the `hostile_female_ranged_lab` alias); the devkit's NPC catalogue does not expose `Character.*`
-  ids for the Wraiths, so pick one from the npc-catalogue browser and put it first in
-  `Ambush.records` once it is proven on your build.
-- `crate.small` is the only crate alias the devkit documents; the family has seven, `prop.catalog`
-  in game lists them. A raw `.mesh` path works for the standing crate but cannot be attached
-  to the hand (the carry then hides the prop).
-- Running contracts do not survive a server restart (props, NPCs and non-persistent vehicles do
-  not either); the SQL row is left `active` and shows as such in `/convois`.
-- Older catalogues use stationary `tablet2` / `phone` fallbacks; current `carry`
-  uses an upper-body layer and retains locomotion.
-- The crate attachment was tuned for `crate.small`; other models, garments and
-  rigs still need placement checks. FPS crate placement is separate from FPS arms.
-- `give` and older step fallbacks are workspots: moving can cancel their clip,
-  while the job's timer still completes the prop move. The upper-body pickup and
-  put-down profiles retain locomotion, but their timers still belong to the job.
+They run the real open77_transactions, open77_actions, open77_containers, rp_economy, rp_cargo
+and rp_nomade offline: the full run, checkpoint searches, the officer (warrant, consent,
+refusal), the player sale, deadline, theft, a wrecked and an impounded truck, disconnect and
+restart, refusals, replays and a crash between a sale and the crate's retirement.

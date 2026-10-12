@@ -262,6 +262,35 @@ function scenarios.job_order()
 end
 
 -- ---------------------------------------------------------------------------------------------
+-- A nomad run order: rp_nomade fires `deliver` per crate, `data.complete = true` on the last one.
+-- Only the run brought home counts (template `match = { complete = true }`), not its first crate.
+-- ---------------------------------------------------------------------------------------------
+function scenarios.smuggle_order()
+    FXW.boot()
+    local AFTER = FXW.hub("afterlife")
+    FXW.setRep(B, 3)
+    FXW.join(2, B, "Runner Ben", near(AFTER, -0.6))
+    local c = npcPost("afterlife_smuggle", "afterlife", 2000)
+    cmd(2, "take", tostring(c.seq))
+    local taken = c.state
+    local function deliver(ref, i, complete)
+        emitJob({ job = "nomad", kind = "deliver", playerId = 2, ref = ref,
+                  data = { run = "r1", route = "afterlife", crate = i, of = 3, buyer = "fence", complete = complete } })
+    end
+    deliver("nmd.sale:1", 1, false)
+    deliver("nmd.sale:2", 2, false)
+    local afterTwo, progressTwo = c.state, c.order.progress
+    deliver("nmd.sale:3", 3, true)
+    FXW.until_(c, "completed", 40)
+    MH.run(1)
+    return FXW.result({
+        taken = taken, after_two = afterTwo, progress_two = progressTwo, state = c.state,
+        progress_end = c.order.progress, escrow_agrees = FXW.escrowAgrees(),
+        unbalanced = tostring(SFW.unbalanced()),
+    })
+end
+
+-- ---------------------------------------------------------------------------------------------
 -- Cyberpsycho bounties: an open bounty paid to whoever kills it; a claimed bounty spoiled by a
 -- kill of someone else (refund); a claimed bounty whose foreign kill respawns the target, then
 -- the runner's kill credited by the last hit and the health backstop.

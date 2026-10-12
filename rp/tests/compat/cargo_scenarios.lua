@@ -208,6 +208,19 @@ function scenarios.layouts()
     r.v_measured = problems({ capacityKg = 10, measured = true, slots = { { id = 1, x = 0, y = 0, z = 0 } } })
     r.v_capacity = problems({ slots = { { id = 1, x = 0, y = 0, z = 0 } } })
     r.v_stack = problems({ capacityKg = 10, slots = { { id = 1, x = 0, y = 0, z = 0, maxStack = 0 } } })
+    -- A stack rises by the height of the boxes under it (Config.stackHeights), the slot's
+    -- stackHeight for a model without one.
+    local two = L.normalize("Vehicle.stack_player", { capacityKg = 10, slots = { { id = 1, x = 0, y = -1, z = 0.9,
+        stackHeight = 0.55, maxStack = 3 } } }, { stackHeight = 0.5, maxStack = 2 })
+    local occ = { { instance = "a", slot = 1, model = "crate.ammo_box" }, { instance = "b", slot = 1, model = "crate.ammo_box" },
+        { instance = "c", slot = 1, model = "crate.small" } }
+    local p = L.placements(two, occ, { ["crate.ammo_box"] = 0.32 })
+    r.stack_z = ("%.2f/%.2f/%.2f"):format(p.a.offset.z, p.b.offset.z, p.c.offset.z)
+    local q = L.placements(two, occ)
+    r.stack_z_default = ("%.2f/%.2f/%.2f"):format(q.a.offset.z, q.b.offset.z, q.c.offset.z)
+    -- A model seated lower than crate.small rests on the floor; what stacks on it rises from there.
+    local s = L.placements(two, occ, { ["crate.ammo_box"] = 0.32 }, { ["crate.ammo_box"] = -0.40 })
+    r.stack_z_seated = ("%.2f/%.2f/%.2f"):format(s.a.offset.z, s.b.offset.z, s.c.offset.z)
     return r
 end
 

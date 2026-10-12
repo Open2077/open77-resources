@@ -127,7 +127,7 @@ local function packDefinitions()
     defs.rp_gangs = definerItems("rp_gangs", "shared/config.lua", function(e) return e.RpGangsConfig.items end)
     defs.rp_mecano = definerItems("rp_mecano", "shared/items.lua", function(e) return e.RpMecanoItems end)
     defs.rp_netrunner = definerItems("rp_netrunner", "shared/config.lua", function(e) return e.Config.items end)
-    defs.rp_nomade = definerItems("rp_nomade", "shared/config.lua", function(e) return e.RpNomadeConfig.Items end)
+    defs.rp_nomade = definerItems("rp_nomade", "server/config.lua", function(e) return e.NomadConfig.items end)
     defs.rp_ripperdoc = definerItems("rp_ripperdoc", "shared/config.lua", function(e) return e.RpRipperConfig.items end)
     defs.rp_ferrailleur = definerItems("rp_ferrailleur", "shared/config.lua", function(e)
         local c = e.RpFerrailleurConfig.crowbar
