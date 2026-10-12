@@ -91,7 +91,8 @@ C.hubs = {
         -- -1234.111, 1983.707, 7.973, yaw -116.22), inside the market's safe zone.
         position = { x = -1232.77, y = 1983.04, z = 7.97 }, yaw = 63.8, measured = false,
         contact = { position = { x = -1231.6, y = 1984.3, z = 7.97 }, yaw = 63.8 },
-        offers = { "regina_psycho_kabuki", "regina_psycho_northside", "regina_noodle_drop", "regina_chooh2" },
+        offers = { "regina_psycho_kabuki", "regina_psycho_northside", "regina_noodle_drop", "regina_chooh2",
+                   "regina_patch_up" },
         keepOpen = 2,
     },
 }
@@ -255,6 +256,12 @@ C.templates = {
         brief = "Regina's driver is dry. Two CHOOH2 fuel cans, at her corner.",
         item = "chooh2", count = 2, drop = "regina", reward = { min = 500, max = 750 }, hours = 4, minRep = 0, repGain = 1,
     },
+    regina_patch_up = {
+        kind = "job", title = "Keep them breathing", posters = { npc = true, player = true },
+        brief = "The psychos leave bodies. Regina pays for every one a medic brings back: stabilise or revive two.",
+        job = "trauma", kinds = { "stabilise", "revive" }, count = 2, reward = { min = 800, max = 1200 }, hours = 6,
+        minRep = 0, repGain = 1,
+    },
     junkyard_psycho = {
         kind = "bounty", title = "Cyberpsycho at the junkyard", posters = { player = true },
         brief = "Scrappers saw a psycho at the Rancho Coronado junkyard.",
@@ -266,7 +273,7 @@ C.templates = {
 C.templateOrder = {
     "afterlife_meds_run", "regina_noodle_drop", "wakako_ripper_run",
     "afterlife_chips", "wakako_components", "regina_chooh2", "afterlife_box",
-    "wakako_hardware", "afterlife_breach", "afterlife_implant", "wakako_chooh2",
+    "wakako_hardware", "regina_patch_up", "afterlife_breach", "afterlife_implant", "wakako_chooh2",
     "regina_psycho_kabuki", "regina_psycho_northside", "junkyard_psycho",
 }
 

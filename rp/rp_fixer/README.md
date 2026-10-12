@@ -42,7 +42,7 @@ where to go next.
 |---|---|---|
 | Delivery | A sealed crate appears at the pickup point (Vik's clinic, Noodle Row, the Japantown ripperdoc). Walk to it, **E Pick up**. Carry it on foot to the drop (a fixer point) and press **E Deliver the crate** there. Only you can lift it. A car, a drawn weapon or a fall drops it where you stand: pick it up again. | the crate touches the drop |
 | Retrieval | Bring the named goods (3 data chips, 4 components, 2 CHOOH2 cans, a boxed set of Gorilla Arms from the ripperdocs' stock) to the fixer point named in the contract and press **F Hand over the goods**. Without them nothing starts and you are told what is missing. | the hand-over bar ends |
-| Job order | Do the other job: refine CHOOH2 at the plant, breach a terminal, install an implant as a ripperdoc, assemble weapons at a techie bench. Each step that job reports for you counts once; `/contract` shows `4 / 10`. | the count is reached |
+| Job order | Do the other job: refine CHOOH2 at the plant, breach a terminal, install an implant as a ripperdoc, assemble weapons at a techie bench, stabilise or revive patients. Each step that job reports for you counts once; `/contract` shows `4 / 10`. | the count is reached |
 | Bounty | A cyberpsycho waits at the sighting (Kabuki north-west of the market, Northside industrial, the Rancho Coronado junkyard). Kill it. | the kill is credited to you |
 
 Paid means: the contract's net reward lands in your cash in one operation, the fixers' cut goes to
@@ -113,7 +113,7 @@ Expected start lines:
 
 ```text
 [rp_fixer] loaded 0 live contracts (), next number 1
-[rp_fixer] ready: 3 fixer points, 14 templates, escrow society fixer_escrow, cut society fixer
+[rp_fixer] ready: 3 fixer points, 15 templates, escrow society fixer_escrow, cut society fixer
 [rp_fixer] contract srv.fx1 open: delivery afterlife_meds_run reward=700 net=595 cut=105 by npc Rogue at afterlife expires in 1 h 59 min
 [rp_fixer] contract srv.fx5 cyberpsycho 4100 at kabuki_alley
 ```
@@ -155,7 +155,7 @@ Everything is in `server/config.lua`.
 | `sightings` | 3 | where a bounty's cyberpsycho spawns |
 | `psycho` | Maelstrom combat record, 400 health | record, health, leash, engage distance, credit window, respawn, body removal, the clear radius (never spawned within 4 m of a player) |
 | `contactNpc` | the passive alias `civilian_female_relaxed_01` | the NPC standing at each board; puppet records of Rogue, Wakako and Regina are listed to try |
-| `templates`, `templateOrder` | 14 | the contract types (fields documented in the file) |
+| `templates`, `templateOrder` | 15 | the contract types (fields documented in the file) |
 
 ### Places to walk
 
@@ -206,6 +206,7 @@ the contract is taken. The shipped job orders read:
 | `afterlife_breach` | `netrunner` | `breach_success` | 1 |
 | `afterlife_implant` | `ripperdoc` | `operation` with `data.action = "install"` | 1 |
 | `wakako_hardware` | `techie` | `assemble` | 2 |
+| `regina_patch_up` | `trauma` | `stabilise` or `revive` | 2 |
 
 ## Limits
 

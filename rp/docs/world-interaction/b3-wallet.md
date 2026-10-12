@@ -193,12 +193,15 @@ survey's own assumptions; order of magnitude, **not** measured).
 | `rp_mecano` | impound fee to the society with no payer (`:1242`) | ~12 000 | 20 000 |
 | `rp_vigile` | corpo guard contracts (`:375-387`) | ~1 200 per zone | 20 000 |
 | `rp_garage`, `rp_ripperdoc` | refunds after burns, impound release | ~0 net | 20 000 |
-| `rp_bar`, `rp_delamain`, `rp_trauma` | transfers; refunds | ~0 net | 10 000 |
+| `rp_bar`, `rp_delamain` | transfers; refunds | ~0 net | 10 000 |
 | `rp_medic`, `rp_ncpd` | transfers; refunds | ~0 net | 5 000 |
 | `rp_selftest` | +100 / −100 on society `selftest` per boot | 0 net | 1 000 |
 | `rp_phone`, `rp_chat`, `rp_hud`, `rp_logs` | burn or read only | 0 | not listed |
 
 `rp_bank` itself mints nothing (deposit/withdraw are cash ↔ bank, fees are burns).
+`rp_trauma` 2.0 left the list (it had 10 000 for refunds): its plans, fees and invoices move money
+between wallets and `soc:trauma` through the coordinator and never call rp_economy, so it creates
+none.
 The import (`sys:rp_economy:migration`) is uncapped and only reachable through `economy_migrate`.
 
 Value leaks found by the survey (**facts from source, not fixed here**; they now hit the caps
