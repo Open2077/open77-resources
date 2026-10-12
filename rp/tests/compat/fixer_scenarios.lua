@@ -649,9 +649,15 @@ end
 -- The NPC fixers stock their boards; players who could take a contract are told.
 -- ---------------------------------------------------------------------------------------------
 function scenarios.npc_board()
-    FXW.boot({ npcBoard = true })
+    -- rp_ripperdoc is not running: its Gorilla Arms box is not an item here.
+    local items = {}
+    for id, def in pairs(FXW.ITEMS) do if id ~= "implant_box_arms" then items[id] = def end end
+    FXW.boot({ npcBoard = true, items = items })
+    FXW.cfg().hubs.afterlife.offers = { "afterlife_box", "afterlife_chips", "afterlife_meds_run" }
     FXW.join(2, B, "Runner Ben", near(FXW.hub("regina"), -0.6))
     MH.run(40)
+    local boxPosted = false
+    for _, c in pairs(svc().contracts) do if c.template == "afterlife_box" then boxPosted = true end end
     local perHub, minted = {}, -SFW.journal("^sys:rp_fixer:board$", "money")
     local total = 0
     for _, c in pairs(svc().contracts) do
@@ -666,6 +672,7 @@ function scenarios.npc_board()
         afterlife = perHub.afterlife or 0, wakako = perHub.wakako or 0, regina = perHub.regina or 0, total = total,
         minted_is_escrow = minted == FXW.balance("soc:fixer_escrow"), escrow_agrees = FXW.escrowAgrees(),
         contacts = contacts, told = FXW.told(2, "New contract at"), unbalanced = tostring(SFW.unbalanced()),
+        box_posted = boxPosted, box_skipped = FXW.printed("Rogue skips afterlife_box: its item is not defined"),
     })
 end
 

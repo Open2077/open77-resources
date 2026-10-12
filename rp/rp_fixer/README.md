@@ -41,7 +41,7 @@ where to go next.
 | Kind | What you do | When you are paid |
 |---|---|---|
 | Delivery | A sealed crate appears at the pickup point (Vik's clinic, Noodle Row, the Japantown ripperdoc). Walk to it, **E Pick up**. Carry it on foot to the drop (a fixer point) and press **E Deliver the crate** there. Only you can lift it. A car, a drawn weapon or a fall drops it where you stand: pick it up again. | the crate touches the drop |
-| Retrieval | Bring the named goods (3 data chips, 4 components, 2 CHOOH2 cans, an implant box) to the fixer point named in the contract and press **F Hand over the goods**. Without them nothing starts and you are told what is missing. | the hand-over bar ends |
+| Retrieval | Bring the named goods (3 data chips, 4 components, 2 CHOOH2 cans, a boxed set of Gorilla Arms from the ripperdocs' stock) to the fixer point named in the contract and press **F Hand over the goods**. Without them nothing starts and you are told what is missing. | the hand-over bar ends |
 | Job order | Do the other job: refine CHOOH2 at the plant, breach a terminal, install an implant as a ripperdoc, assemble weapons at a techie bench, stabilise or revive patients, bring a nomad run home. Each step that job reports for you counts once; `/contract` shows `4 / 10`. | the count is reached |
 | Bounty | A cyberpsycho waits at the sighting (Kabuki south of the market, Northside industrial, the Rancho Coronado junkyard). Kill it. | the kill is credited to you |
 
@@ -203,7 +203,7 @@ the contract is taken. The shipped job orders read:
 | Template | `job` | `kind` | Counted |
 |---|---|---|---|
 | `wakako_chooh2` | `chooh2` | `refine` | `data.canisters`, up to 10 |
-| `afterlife_breach` | `netrunner` | `breach` | 1 |
+| `afterlife_breach` | `netrunner` | `breach_success` | 1 |
 | `afterlife_implant` | `ripperdoc` | `operation` with `data.action = "install"` | 1 |
 | `wakako_hardware` | `techie` | `assemble` | 2 |
 | `regina_patch_up` | `trauma` | `stabilise` or `revive` | 2 |
@@ -223,6 +223,10 @@ the contract is taken. The shipped job orders read:
 - `rp:job:completed` for `contract_completed` is fired once, after the payout is saved; a crash in
   that instant loses the event, never the payment.
 - Contracts live in SQL. Without a database the board stays closed (`no database` in the log).
+- A retrieval of another job's item (the Gorilla Arms box is rp_ripperdoc's) is posted only while
+  that item is defined: without rp_ripperdoc the NPC fixer skips it and posts its other offers.
+- Job orders count the events the other jobs fire with the names in the table above; a job that
+  renames a `kind` or a `data` field needs the template changed with it.
 - The NPC fixers' rewards are new money (rp_economy's allowlist, 200 000 an hour for rp_fixer). A
   refund gives the allowance back.
 - 48 live contracts on the server, 2 per runner, 4 per player fixer; the board shows 56 rows.

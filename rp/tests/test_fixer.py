@@ -343,6 +343,9 @@ class FixerLoop(unittest.TestCase):
         r = self.run_ok("npc_board")
         self.assertEqual((r["afterlife"], r["wakako"], r["regina"], r["total"]), ("2", "2", "2", "6"))
         self.assertEqual((r["minted_is_escrow"], r["escrow_agrees"], r["contacts"], r["told"]), ("true", "true", "3", "true"))
+        # A retrieval of an item no running resource defines is skipped, the other offers are posted.
+        self.assertEqual(r["box_posted"], "false")
+        self.assertNotEqual(r["box_skipped"], "0")
 
 
 if __name__ == "__main__":

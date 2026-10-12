@@ -1536,6 +1536,10 @@ function S:refill()
             local c, why = self:post({ template = pick, hub = key, kind = "npc" })
             if c or why == "escrow_pending" then
                 open = open + 1
+            elseif why == "unknown_item" then
+                -- The item belongs to a job resource that is not running (an rp_ripperdoc box):
+                -- this template waits, the others are posted. Nothing was written.
+                self:log("%s skips %s: its item is not defined on this server", hub.fixer, pick)
             else
                 -- A refusal that will not fix itself (a missing mint rule, a writers list): back
                 -- off for half an hour instead of writing a void contract every refill.

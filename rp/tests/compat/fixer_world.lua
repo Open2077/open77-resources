@@ -296,7 +296,7 @@ FXW.ITEMS = {
     chip = { label = "Data chip", weight = 0.05 },
     component = { label = "Component", weight = 0.5 },
     chooh2 = { label = "CHOOH2 fuel can", weight = 5.0 },
-    implant_box = { label = "Implant box", weight = 2.0 },
+    implant_box_arms = { label = "Implant box: Gorilla Arms (Street)", weight = 2.0 },
 }
 
 -- The UI answers: a queue per player of { kind, value } / { kind, fn = function(def) -> answer }.
@@ -376,7 +376,7 @@ function FXW.boot(opts)
     SFW.startEconomy()
     FXW.watch()
     MH.run(1)
-    SFW.sync("fx_probe", "rp_inventory", "define", FXW.ITEMS)
+    SFW.sync("fx_probe", "rp_inventory", "define", opts.items or FXW.ITEMS)
     FXW.startFixer()
     MH.until_(function() return FXW.svc() and FXW.svc().ready end, 60)
     -- Most scenarios want a quiet board: the NPC fixers post only when a scenario asks them to.

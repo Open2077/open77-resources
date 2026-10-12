@@ -190,8 +190,8 @@ C.templates = {
     },
     afterlife_breach = {
         kind = "job", title = "Breach a terminal", posters = { npc = true, player = true },
-        brief = "A client needs a terminal cracked. Any breach counts, the log is the proof.",
-        job = "netrunner", kinds = { "breach" }, count = 1, reward = { min = 900, max = 1400 }, hours = 4,
+        brief = "A client needs a terminal cracked. Any successful breach counts, the log is the proof.",
+        job = "netrunner", kinds = { "breach_success" }, count = 1, reward = { min = 900, max = 1400 }, hours = 4,
         minRep = 3, repGain = 2,
     },
     afterlife_implant = {
@@ -206,10 +206,12 @@ C.templates = {
         job = "nomad", kinds = { "deliver" }, count = 1, reward = { min = 1500, max = 2500 }, hours = 8,
         minRep = 3, repGain = 2,
     },
+    -- The box is rp_ripperdoc's graded item (Gorilla Arms, Street grade): without rp_ripperdoc
+    -- running, the item is unknown and this contract is not posted.
     afterlife_box = {
-        kind = "retrieval", title = "Implant box", posters = { npc = true, player = true },
-        brief = "An unregistered implant box, no serials. Rogue pays well and forgets fast.",
-        item = "implant_box", count = 1, drop = "afterlife", reward = { min = 2500, max = 3500 }, hours = 6,
+        kind = "retrieval", title = "Gorilla Arms in a box", posters = { npc = true, player = true },
+        brief = "A boxed set of Gorilla Arms, no serials. Rogue pays well and forgets fast.",
+        item = "implant_box_arms", count = 1, drop = "afterlife", reward = { min = 2500, max = 3500 }, hours = 6,
         minRep = 8, repGain = 3,
     },
     -- Wakako's
