@@ -342,6 +342,7 @@ function S:declare()
     end
     local kind, kwhy = A.carryDefine({
         id = KIND_CRATE, model = cfg.crate.model, label = cfg.crate.label, reach = cfg.crate.reach,
+        dropMessage = false,     -- crateDropped tells the runner, with the contract
         hooks = { validate = "fxCrateValidate", pickup = "fxCratePickup", putdown = "fxCratePutdown",
                   dropped = "fxCrateDropped" },
     })
@@ -974,8 +975,8 @@ function S:crateDropped(ctx)
         end)
     end)
     self:sendObjectives(c.runner.subject)
-    self:tellSubject(c.runner.subject, ("You dropped the crate of %s (%s). Pick it up again."):format(self.M.code(c),
-        tostring(ctx.reason)), "warning")
+    self:tellSubject(c.runner.subject, ("The crate of %s fell from your hands, at your feet. Pick it up again."):format(
+        self.M.code(c)), "warning")
 end
 
 -- The open77_actions:carry event of one of our crates: where a put-down landed.
