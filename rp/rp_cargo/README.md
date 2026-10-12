@@ -97,7 +97,7 @@ exports.rp_cargo:projection(plate)   -- synchronous: { vehicleId, props = { { in
 Refusals (`nil, reason, info`): `invalid_player_id`, `invalid_vehicle_id`, `invalid_instance`,
 `invalid_op_id`, `invalid_source`, `invalid_destination`, `vehicle_not_found`,
 `vehicle_not_tracked` (no plate: no durable container), `no_cargo_layout`, `player_not_found`,
-`wrong_bucket`, `too_far` (`Config.reach` 5 m), `vehicle_moving`, every `rp_garage:canAccess`
+`wrong_bucket`, `too_far` (`Config.reach` 6 m), `vehicle_moving`, every `rp_garage:canAccess`
 reason (`no_access`, `impounded`, `warrant_required`, ...), `garage_unavailable`,
 `cargo_full`, `slot_full`, `invalid_slot`, `cargo_empty`, `not_in_cargo`, `busy`, and the
 coordinator's own (`capacity_exceeded`, `instance_unavailable`, `op_id_conflict`,

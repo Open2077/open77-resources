@@ -6,7 +6,9 @@ Config = {}
 Config.layoutsFile = "layouts.json"
 
 -- Physical checks of load / unload (the server's; a prompt or an open tailgate decides nothing).
-Config.reach = 5.0               -- metres between the player and the vehicle origin
+-- 6 m: a player standing at a tailgate prompt is up to ~5.9 m from a Mackinaw's origin (bed 2.4 m
+-- behind it, prompt 1 m past the bed, reached from 2.5 m); 5 m refused them (measured live).
+Config.reach = 6.0               -- metres between the player and the vehicle origin
 Config.maxVehicleSpeed = 1.0     -- m/s: nobody loads or unloads a moving vehicle
 
 -- One operation per plate at a time; a second one waits at most this long, then answers `busy`.
