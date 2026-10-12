@@ -22,7 +22,8 @@ FROZEN_SURFACE = {
     "rp_bank": {"charge", "deposit", "getAccount", "society", "societyAdd", "societyRemove", "withdraw"},
     "rp_jobs": {"getGrade", "getJob", "hasJob", "isBoss", "listOnDuty", "onDuty", "setJob"},
     "rp_identity": {"fullName", "get", "isRegistered"},
-    "rp_garage": {"hasKey", "ownerOf", "plateOf", "setWanted", "vehiclesOf"},
+    # A9 (wave 1): rp_cargo consumes canAccess and describe (docs/world-interaction/a9-cargo.md).
+    "rp_garage": {"canAccess", "describe", "hasKey", "ownerOf", "plateOf", "setWanted", "vehiclesOf"},
     "rp_housing": {"homeOf"},
     "rp_config": {"get"},
     "rp_nomade": {"activeContract"},

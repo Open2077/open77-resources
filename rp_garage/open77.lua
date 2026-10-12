@@ -37,4 +37,5 @@ dependency "open77_notifications"
 
 shared_script "shared/config.lua"
 client_script "client/main.lua"
+server_script "server/access.lua"   -- A9: the pure access policy (RpGarageAccess), before main
 server_script "server/main.lua"
