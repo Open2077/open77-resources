@@ -219,6 +219,9 @@ Open77.tunables = {
         local values = {}
         for key, decl in pairs(declaration) do values[key] = decl.value end
         for key, value in pairs((HOST.shared.tunables or {})[NAME] or {}) do values[key] = value end
+        -- Kept so a test can change a live tunable (SW.setTunable).
+        HOST.shared.liveTunables = HOST.shared.liveTunables or {}
+        HOST.shared.liveTunables[NAME] = values
         return values
     end,
 }
@@ -424,7 +427,9 @@ end)
 -- ---------------------------------------------------------------------------------------------
 -- Boot
 -- ---------------------------------------------------------------------------------------------
-SW.WRITERS_STRICT = "rp_salvage:world+char, rp_cargo:veh/cargo, rp_economy:cash+bank+soc, rp_inventory"
+-- open77_containers mints the wreck nodes' (zero-capacity) world rows itself: it needs `world`.
+SW.WRITERS_STRICT = "rp_salvage:world+char, rp_cargo:veh/cargo, rp_economy:cash+bank+soc, rp_inventory, " ..
+    "open77_containers:world"
 SW.MINT_RULES = "rp_salvage sys:salvage * 100000; rp_inventory sys:* * 100000; rp_economy sys:* money 100000000"
 
 local function readFile(path)
@@ -525,6 +530,13 @@ function SW.crash(mode)
     local store = MH.shared.txStore
     if mode == "detached" then store:runDetached() else store:discard() end
     return SW.keep()
+end
+
+-- An operator changing a live tunable (`apply = "live"`): the value, then onTunableChanged.
+function SW.setTunable(resource, key, value)
+    MH.shared.liveTunables[resource][key] = value
+    MH.shared.tunables[resource][key] = value
+    MH.emit("onTunableChanged", key)
 end
 
 function SW.until_(predicate, seconds) return MH.until_(predicate, seconds) end

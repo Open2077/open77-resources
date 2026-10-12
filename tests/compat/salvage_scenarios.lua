@@ -72,8 +72,26 @@ end
 -- Happy path: clock in, cut twice and pry once into one crate, carry, load (strict writers: the
 -- two-party grants carry rp_cargo and rp_economy into the hold), drive, unload, sell.
 -- ---------------------------------------------------------------------------------------------
+-- The five start lines of rp_salvage/README.md section 1, counted from log line `from` on.
+local function bootLines(created, from)
+    local out = {}
+    for _, pattern in ipairs({ "coordinator ready %(store=", "items defined through rp_inventory: 5",
+        "7 wreck node%(s%) ready %(" .. created .. " created%)", "crates rebuilt from the coordinator: ",
+        "ready: 7 wreck nodes, foreman, loading bay, unloading bay, buyer counter %(job ferrailleur%)" }) do
+        local n = 0
+        for index = (from or 1), #MH.logs do
+            local line = MH.logs[index]
+            if line:find("^%[rp_salvage%]") and line:find(pattern) then n = n + 1 end
+        end
+        out[#out + 1] = tostring(n)
+    end
+    return table.concat(out, "/")
+end
+
 function scenarios.happy_path()
     SW.boot({ writers = SW.WRITERS_STRICT })
+    local startLines = bootLines(7)
+    local nodeWarnings = SW.printed("unavailable") + SW.printed("not created")
     SW.watch()
     SW.join(1, A, "Vik", AT_FOREMAN)
     SW.sync("salvage_probe", "rp_jobs", "setJob", 1, "ferrailleur", 0)
@@ -131,6 +149,7 @@ function scenarios.happy_path()
     local society = math.floor(expected * 0.10)
     local ok, detail = materialsConserved()
     return SW.result({
+        boot_lines = startLines, node_warnings = nodeWarnings,
         clock = clock and clock.state, tools = tostring(tools and "ok") .. "/" .. tostring(tools2 and "ok"),
         w1 = w1 and w1.state, w2 = w2 and w2.state, w3 = w3 and w3.state,
         crate_hold = hold ~= nil, token_home = tokenHome == hold,
@@ -188,6 +207,8 @@ function scenarios.lab_console()
     SW.command("salvage.lab.state", { "1" })
     MH.run(3)
     SW.command("salvage.status", {})
+    local nodeBefore = svc().nodes.thorton.id
+    local chargesBefore = (SW.sync("salvage_probe", "open77_containers", "summary", nodeBefore) or {}).charges
     SW.command("salvage.lab.reset", { "thorton" })
     MH.run(3)
     SW.command("salvage.lab.truck", { "1" })
@@ -198,7 +219,9 @@ function scenarios.lab_console()
         sale = sale and sale.state,
         state_tool = SW.printed("tool welder .* durability=29"), state_cash = SW.printed("cash=%d+ society ferrailleur=%d+"),
         state_receipt = SW.printed("receipt sale slv%.sale:"), status = SW.printed("ready=true crates:"),
-        reset = SW.printed("node thorton: reset as world:"),
+        -- refill in place (A6-2): same node id, back to 3/3 from the 2 the work left
+        reset = SW.printed("node thorton: refilled world:%S+ to 3/3"), charges_before_reset = chargesBefore,
+        same_node = svc().nodes.thorton.id == nodeBefore,
         charges = (SW.sync("salvage_probe", "open77_containers", "summary", svc().nodes.thorton.id) or {}).charges,
         truck_hint = SW.printed("no lab issue export yet"), clock = SW.printed("duty 1 off: true"),
     })
@@ -377,6 +400,20 @@ local function workWithCrash(pid, mode)
     return op
 end
 
+-- The coordinator is gone BEFORE the commit is submitted (stopped while the bar runs): every
+-- attempt is refused at dispatch, so nothing can have landed. open77_actions retries with the same
+-- op id, then the action FAILS with `coordinator_unavailable` (B5-3), never in doubt.
+local function workCoordinatorGone(pid)
+    local mark = SW.mark()
+    SW.intent(pid, "rp_salvage:cut", NODE_T)
+    waitState(pid, "cut", mark, "presenting", 15)
+    MH.stop("open77_transactions")
+    local op = SW.finish(pid, "cut", 40, mark)
+    SW.startCoordinator()
+    MH.run(12)
+    return op
+end
+
 local function tally()
     local inHolds, minted = 0, 0
     for _, hold in ipairs(SW.holdsOf(A)) do
@@ -415,6 +452,10 @@ function scenarios.crash_windows()
     local spent3 = t3.spent
     local o4 = workWithCrash(1, "discard")
     local t4 = tally()
+    -- 5. The coordinator is unreachable before the commit: failed, nothing granted, player told.
+    local works4 = committedWorks()
+    local o5 = workCoordinatorGone(1)
+    local t5 = tally()
     local crate = crateOf(A)
     return SW.result({
         o1 = o1 and o1.state, o1_reason = o1 and o1.reason, t1_works = t1.works, t1_agree = agree(t1),
@@ -422,6 +463,10 @@ function scenarios.crash_windows()
         o3 = o3 and o3.state, t3_works = t3.works, t3_agree = agree(t3), doubts_left = doubtsLeft,
         o4 = o4 and o4.state, t4_works = t4.works, works_unchanged_4 = t4.works == works3,
         t4_agree = agree(t4), t4_wear_unchanged = t4.wear == wear3, t4_spent_unchanged = t4.spent == spent3,
+        o5 = o5 and o5.state, o5_reason = o5 and o5.reason, works_unchanged_5 = t5.works == works4,
+        t5_agree = agree(t5), t5_wear_unchanged = t5.wear == t4.wear, t5_spent_unchanged = t5.spent == t4.spent,
+        doubts_after_5 = (function() local n = 0 for _ in pairs(svc().doubts) do n = n + 1 end return n end)(),
+        told_offline = SW.told(1, "ledger is offline"),
         crate_placed = crate ~= nil and crate.itemId ~= nil, items = SW.items(),
         unbalanced = tostring(SW.unbalanced()),
     })
@@ -604,6 +649,100 @@ function scenarios.stranger_load()
         civilian_carrying = SW.carrying(3) ~= nil, civilian_refused = table.concat(SW.refusals(3), ","),
         with_key = granted and granted.state, told_no_key = SW.told(2, "no key"),
         token_in_bed = (SW.store().instances[crateB.iid] or {}).container == "veh:" .. PLATE .. ":cargo",
+    })
+end
+
+-- ---------------------------------------------------------------------------------------------
+-- open77_containers restarts under a running yard: the nodes come back with the same ids (keyed,
+-- durable); a charge spent while it was stopped, then while it was booting (it answers
+-- `unknown_container` until its boot join, here held by an absent coordinator), is kept and spent
+-- once it is ready again; rp_salvage's own restart finds the seven nodes and creates none.
+-- ---------------------------------------------------------------------------------------------
+function scenarios.containers_restart()
+    SW.boot()
+    SW.watch()
+    setup(1, A, AT_NODE)
+    local ids, keys = {}, {}
+    for key, node in pairs(svc().nodes) do ids[key] = node.id end
+    for key in pairs(ids) do
+        local projection = SW.sync("salvage_probe", "open77_containers", "projection", ids[key])
+        keys[#keys + 1] = type(projection) == "table" and projection.key == "node." .. key and "ok" or key
+    end
+    local w1 = work(1, "cut")
+    MH.stop("open77_containers")
+    local w2 = work(1, "cut")
+    local function pending() local n = 0 for _ in pairs(svc().pendingConsume) do n = n + 1 end return n end
+    local pendingStopped = pending()
+    MH.stop("open77_transactions")
+    SW.startContainers()
+    MH.run(12)                         -- two rp_salvage sweeps meet `unknown_container`
+    local pendingBooting = pending()
+    local createdBefore = SW.printed("7 wreck node%(s%) ready %(0 created%)")
+    SW.startCoordinator()
+    MH.until_(function() return pending() == 0 end, 30)
+    MH.run(2)
+    local same = true
+    for key, node in pairs(svc().nodes) do if node.id ~= ids[key] then same = false end end
+    local refound = SW.printed("7 wreck node%(s%) ready %(0 created%)") - createdBefore
+    local chargesAfter = charges("thorton")
+    local logMark = #MH.logs + 1
+    MH.stop("rp_salvage")
+    MH.run(1)
+    SW.startSalvage()
+    MH.until_(function() return SW.salvage() and SW.salvage().ready end, 30)
+    MH.run(1)
+    local sameAfterSalvage = true
+    for key, node in pairs(svc().nodes) do if node.id ~= ids[key] then sameAfterSalvage = false end end
+    local nodeRows = 0
+    for id, c in pairs(SW.store().containers) do
+        if id:match("^world:") and type(c.meta) == "table" and c.meta.by == "open77_containers" then
+            nodeRows = nodeRows + 1
+        end
+    end
+    -- An operator closes a node at the console: its prompt goes, its key is spent for good.
+    local closedId = svc().nodes.thorton.id
+    local targetBefore = SW.engine().engine.targets["rp_salvage:node_thorton"] ~= nil
+    SW.command("containers.remove", { "node.thorton" })
+    MH.run(40)                         -- includes the 30 s retry of missing nodes
+    local closedTarget = SW.engine().engine.targets["rp_salvage:node_thorton"] ~= nil
+    return SW.result({
+        closed_id_dropped = closedId ~= nil and svc().nodes.thorton.id == nil,
+        closed_target = tostring(targetBefore) .. "/" .. tostring(closedTarget),
+        closed_warned = SW.printed("node thorton %(node%.thorton%) was closed in open77_containers %(console%)"),
+        key_spent = SW.printed("node thorton %(node%.thorton%) unavailable: container_closed"),
+        others_kept = svc().nodes.quadra.id == ids.quadra,
+        w1 = w1 and w1.state, w2 = w2 and w2.state, keys = table.concat(keys, ","),
+        pending_stopped = pendingStopped, pending_booting = pendingBooting, pending_after = pending(),
+        same_ids = same, refound = refound, charges = chargesAfter, works = committedWorks(),
+        same_after_salvage_restart = sameAfterSalvage,
+        salvage_boot_lines = bootLines(0, logMark), node_rows = nodeRows,
+    })
+end
+
+-- ---------------------------------------------------------------------------------------------
+-- Strict writers WITHOUT open77_containers: it cannot mint the nodes' world rows. rp_salvage boots
+-- anyway (crates, bays and buyer work), says which nodes are unavailable and why, refuses work on
+-- them; once the operator adds `open77_containers:world` live, the sweep brings the nodes back.
+-- ---------------------------------------------------------------------------------------------
+function scenarios.writers_missing()
+    local without = "rp_salvage:world+char, rp_cargo:veh/cargo, rp_economy:cash+bank+soc, rp_inventory"
+    SW.boot({ writers = without })
+    SW.watch()
+    setup(1, A, AT_NODE)
+    local missing = 0
+    for _, node in pairs(svc().nodes) do if not node.id then missing = missing + 1 end end
+    local refused = work(1, "cut")     -- no node id, no wreck target: nothing to choose
+    SW.setTunable("open77_transactions", "writers", without .. ", open77_containers:world")
+    MH.run(40)                         -- the 30 s retry of missing nodes
+    local back = 0
+    for _, node in pairs(svc().nodes) do if node.id then back = back + 1 end end
+    local w = work(1, "cut")
+    return SW.result({
+        ready = svc().ready, missing = missing, warned = SW.printed("node thorton %(node%.thorton%) unavailable: namespace_denied"),
+        summary_line = SW.printed("WARNING: 7 of 7 wreck nodes unavailable"),
+        no_prompt = refused == nil, back = back, ready_line = SW.printed("ready: 0 of 7 wreck nodes, foreman"),
+        nodes_line = SW.printed("7 wreck node%(s%) ready %(7 created%)"), w = w and w.state,
+        charges = charges("thorton"),
     })
 end
 

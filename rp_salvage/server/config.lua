@@ -59,7 +59,10 @@ C.foreman = {
 }
 
 -- Wreck nodes: rp_ferrailleur's seven measured wreck points, now durable open77_containers nodes
--- (one charge spent per completed work, one charge back every regrowMs, across restarts).
+-- named by the key `node.<key>` (one charge spent per completed work, one charge back every
+-- regrowMs, across restarts). Charges and regrowMs apply when a node is first created; an existing
+-- node keeps its own (salvage.lab.reset refills it to its maximum). A node closed in
+-- open77_containers keeps its key spent for good: give it `containerKey = "node.<key>.2"` here.
 -- `yaw` is the heading the welder kneels with (playAt); unmeasured, 0 = facing +y.
 C.nodeDefaults = { charges = 3, regrowMs = 5 * 60 * 1000 }
 C.nodes = {

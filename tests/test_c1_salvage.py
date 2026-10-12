@@ -106,6 +106,9 @@ class SalvageLoop(unittest.TestCase):
 
     def test_happy_path_end_to_end(self):
         r = self.run_ok("happy_path")
+        # README section 1 start lines, once each (a first boot creates the seven nodes)
+        self.assertEqual(r["boot_lines"], "1/1/1/1/1")
+        self.assertEqual(r["node_warnings"], "0")
         self.assertEqual(r["clock"], "committed")
         self.assertEqual(r["tools"], "ok/ok")
         self.assertEqual((r["w1"], r["w2"], r["w3"]), ("committed", "committed", "committed"))
@@ -149,6 +152,8 @@ class SalvageLoop(unittest.TestCase):
         self.assertEqual(r["sale"], "committed")
         for key in ("state_tool", "state_cash", "state_receipt", "status", "reset", "truck_hint", "clock"):
             self.assertEqual(r[key], "1", key)
+        self.assertEqual(r["charges_before_reset"], "2")
+        self.assertEqual(r["same_node"], "true")             # refill in place, not close + re-create
         self.assertEqual(r["charges"], "3")
 
     def test_contention_one_winner_each(self):
@@ -180,7 +185,8 @@ class SalvageLoop(unittest.TestCase):
         self.assertEqual(r["told_full"], "true")
 
     def test_crash_windows_conserve(self):
-        """Work commit: never received / ack lost / coordinator dies (detached, discarded)."""
+        """Work commit: never received / ack lost / coordinator dies (detached, discarded) /
+        coordinator gone before the commit was submitted."""
         r = self.run_ok("crash_windows")
         self.assertEqual((r["o1"], r["o1_reason"]), ("failed", "store_unavailable"))
         self.assertEqual((r["t1_works"], r["t1_agree"]), ("0", "true"))
@@ -190,6 +196,12 @@ class SalvageLoop(unittest.TestCase):
         self.assertEqual(r["o4"], "in_doubt")
         self.assertEqual((r["works_unchanged_4"], r["t4_agree"]), ("true", "true"))
         self.assertEqual((r["t4_wear_unchanged"], r["t4_spent_unchanged"]), ("true", "true"))
+        # 5: nothing was submitted, so nothing can have landed: failed with the reason, not in doubt
+        self.assertEqual((r["o5"], r["o5_reason"]), ("failed", "coordinator_unavailable"))
+        self.assertEqual((r["works_unchanged_5"], r["t5_agree"]), ("true", "true"))
+        self.assertEqual((r["t5_wear_unchanged"], r["t5_spent_unchanged"]), ("true", "true"))
+        self.assertEqual(r["doubts_after_5"], "0")
+        self.assertEqual(r["told_offline"], "true")
         self.assertEqual(r["crate_placed"], "true")
         self.assertEqual(r["items"], "1")
         self.assertEqual(r["unbalanced"], "nil")
@@ -242,6 +254,35 @@ class SalvageLoop(unittest.TestCase):
         self.assertEqual(r["civilian_refused"], "no_job")
         self.assertEqual(r["with_key"], "committed")
         self.assertEqual(r["token_in_bed"], "true")
+
+    def test_containers_restart_keeps_nodes_and_charges(self):
+        """open77_containers 0.2.0 restarts (stopped, then booting without the coordinator): same
+        keyed node ids, the charge spent meanwhile kept and applied once it is ready; rp_salvage
+        restarts and finds the nodes without creating any."""
+        r = self.run_ok("containers_restart")
+        self.assertEqual((r["w1"], r["w2"]), ("committed", "committed"))
+        self.assertEqual(r["keys"], ",".join(["ok"] * 7))    # every node keyed node.<key>
+        self.assertEqual((r["pending_stopped"], r["pending_booting"], r["pending_after"]), ("1", "1", "0"))
+        self.assertEqual(r["same_ids"], "true")
+        self.assertEqual(r["refound"], "1")                  # re-run on open77_containers:ready
+        self.assertEqual((r["charges"], r["works"]), ("1", "2"))
+        self.assertEqual(r["same_after_salvage_restart"], "true")
+        self.assertEqual(r["salvage_boot_lines"], "1/1/1/1/1")  # its restart: "(0 created)"
+        self.assertEqual(r["node_rows"], "7")                # zero-capacity world rows, one per node
+        # an operator closes a node: prompt withdrawn, key spent (said once), the others untouched
+        self.assertEqual((r["closed_id_dropped"], r["closed_target"]), ("true", "true/false"))
+        self.assertEqual((r["closed_warned"], r["key_spent"], r["others_kept"]), ("1", "1", "true"))
+
+    def test_writers_without_containers_leave_nodes_out_until_fixed(self):
+        """open77_containers must be a `world` writer: without it the nodes are refused
+        (namespace_denied), the yard still boots without wreck prompts and says so; fixed live,
+        the sweep restores them."""
+        r = self.run_ok("writers_missing")
+        self.assertEqual((r["ready"], r["missing"]), ("true", "7"))
+        self.assertEqual((r["warned"], r["summary_line"]), ("1", "1"))
+        self.assertEqual((r["no_prompt"], r["ready_line"]), ("true", "1"))   # no wreck target declared
+        self.assertEqual((r["back"], r["nodes_line"]), ("7", "1"))
+        self.assertEqual((r["w"], r["charges"]), ("committed", "2"))
 
     def test_cancellations_release_and_conserve(self):
         r = self.run_ok("cancellations")

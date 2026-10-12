@@ -291,6 +291,8 @@ M.TEXT = {
     -- coordinator (A13) and wallet (B3)
     capacity_exceeded = "Not enough room for that.",
     store_unavailable = "The yard's ledger is offline: nothing was taken or paid.",
+    coordinator_unavailable = "The yard's ledger is offline: nothing was taken or paid.",
+    conflict = "The yard's ledger was busy: nothing was taken. Try again.",
     insufficient_items = "Those goods are not there any more.",
     mint_denied = "The yard is not configured to pay for scrap. Tell an admin.",
     mint_cap = "The buyer is out of cash for this hour.",

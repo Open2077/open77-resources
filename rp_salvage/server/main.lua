@@ -59,19 +59,26 @@ local function boot()
         end
     end
     Svc:defineItems()
-    -- open77_containers answers `not_ready` until its registry is loaded: retry until every node has an id.
-    for _ = 1, 60 do
-        Svc:loadNodes()
-        local missing = 0
-        for _, node in pairs(Svc.nodes) do if not node.id then missing = missing + 1 end end
-        if missing == 0 then break end
-        Wait(1000)
+    -- open77_containers answers `not_ready` until its boot join is done (it waits for the
+    -- coordinator too). Wait for it: the create of each keyed node is the probe, as its
+    -- `open77_containers:ready` is missed when it was up first. A lasting refusal (a missing
+    -- `writers` entry, a node closed by an operator) is logged and retried by the sweep instead.
+    waitFor("open77_containers (ready)", function()
+        local done, why = Svc:loadNodes()
+        return done or not Svc:nodesTransient(why)
+    end)
+    local missing = 0
+    for _, node in pairs(Svc.nodes) do if not node.id then missing = missing + 1 end end
+    if missing > 0 then
+        log(("WARNING: %d of %d wreck nodes unavailable (reasons above); asked for again every 30 s")
+            :format(missing, #cfg.nodes))
     end
     Svc:declare()
     Svc:loadCrates()
     Svc:spawnBuyer()
     Svc.ready = true
-    log(("ready: %d wreck nodes, foreman, loading bay, unloading bay, buyer counter (job %s)"):format(#cfg.nodes, cfg.job))
+    local nodes = missing == 0 and tostring(#cfg.nodes) or ("%d of %d"):format(#cfg.nodes - missing, #cfg.nodes)
+    log(("ready: %s wreck nodes, foreman, loading bay, unloading bay, buyer counter (job %s)"):format(nodes, cfg.job))
 end
 
 CreateThread(function()
@@ -105,11 +112,16 @@ AddEventHandler("open77_actions:transition", function(op)
     CreateThread(function() Svc:onTransition(op) end)
 end)
 
+-- open77_containers finished a boot join (first start, or after a restart): its node ids are
+-- durable (keyed), so this finds the same ones again; then the prompts and any charge kept back.
 AddEventHandler("open77_containers:ready", function()
-    if not Svc.ready then return end
+    Svc.containersUp = true
+    if not Svc.ready then return end    -- the boot is still loading the nodes itself
     CreateThread(function()
-        Svc:loadNodes()
+        local done, why = Svc:loadNodes()
+        if not done then log(("open77_containers is back, nodes not all found yet (%s)"):format(tostring(why))) end
         for _, node in pairs(Svc.nodes) do Svc:refreshNodeTarget(node, true) end
+        for ref, nodeId in pairs(Svc.pendingConsume) do Svc:consumeNode(nodeId, ref) end
     end)
 end)
 
@@ -119,6 +131,9 @@ local function nodeEvent(id)
 end
 AddEventHandler("open77_containers:depleted", nodeEvent)
 AddEventHandler("open77_containers:regrown", nodeEvent)
+AddEventHandler("open77_containers:closed", function(id, reason, owner)
+    if owner == RESOURCE then Svc:onContainerClosed(id, reason) end
+end)
 
 AddEventHandler("onResourceStart", function(name)
     if name == "rp_inventory" and Svc.ready then
@@ -127,7 +142,11 @@ AddEventHandler("onResourceStart", function(name)
 end)
 
 AddEventHandler("onResourceStop", function(name)
-    if name == RESOURCE then Svc:shutdown() end
+    if name == RESOURCE then
+        Svc:shutdown()
+    elseif name == "open77_containers" then
+        Svc:containersStopped()
+    end
 end)
 
 -- ---------------------------------------------------------------------------------------------
@@ -253,12 +272,19 @@ RegisterCommand("salvage.lab.truck", function(source, args)
             or ("spawnOwned refused: %s"):format(tostring(why)))
         return
     end
-    local res, why = P.garage.labIssue({ owner = pid, record = "Vehicle.v_standard3_thorton_mackinaw_player", near = pid })
+    local res, why = P.garage.labIssue(pid, "Vehicle.v_standard3_thorton_mackinaw_player", { label = "Yard truck" })
     if type(res) == "table" then
         reply(source, ("issued plate %s vehicle %s to player %d"):format(tostring(res.plate), tostring(res.vehicleId), pid))
+        return
+    end
+    local manual = ("Give the player the money (/givemoney %d 30000), buy a Thorton Mackinaw at the dealership, " ..
+        "then: salvage.lab.truck %d <plate>"):format(pid, pid)
+    if why == "lab_disabled" then
+        reply(source, "rp_garage refuses labIssue without the convar rp_garage_lab 1 (lab servers only). " .. manual)
+    elseif why == "rp_garage_unavailable" then
+        reply(source, ("rp_garage has no lab issue export yet (%s). "):format(tostring(why)) .. manual)
     else
-        reply(source, ("rp_garage has no lab issue export yet (%s). Give the player the money (/givemoney %d 30000), " ..
-            "buy a Thorton Mackinaw at the dealership, then: salvage.lab.truck %d <plate>"):format(tostring(why), pid, pid))
+        reply(source, ("labIssue refused: %s. "):format(tostring(why)) .. manual)
     end
 end, true)
 
@@ -333,14 +359,15 @@ RegisterCommand("salvage.lab.drop", function(source, args)
     reply(source, ok and "dropped" or ("drop refused: " .. tostring(why)))
 end, true)
 
--- salvage.lab.reset [node|all]: wreck nodes back to full charges.
+-- salvage.lab.reset [node|all]: wreck nodes back to full charges, in place (same node id).
 RegisterCommand("salvage.lab.reset", function(source, args)
     local which = args[1] or "all"
     CreateThread(function()
-        for key in pairs(Svc.nodes) do
+        for key, node in pairs(Svc.nodes) do
             if which == "all" or which == key then
-                local summary, why = Svc:resetNode(key)
-                reply(source, ("node %s: %s"):format(key, summary and ("reset as " .. tostring(summary.id)) or tostring(why)))
+                local state, why = Svc:resetNode(key)
+                reply(source, ("node %s: %s"):format(key, state and ("refilled %s to %s/%s"):format(tostring(node.id),
+                    tostring(state.charges), tostring(state.maxCharges)) or ("reset refused: " .. tostring(why))))
             end
         end
     end)

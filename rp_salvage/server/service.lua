@@ -15,7 +15,8 @@
 --                   cash + society share, one operation, receipt), then the empty crate is retired
 --
 -- Durable state lives in the coordinator (holds, tokens, tools, money) and in open77_containers
--- (node charges). This file keeps caches it can rebuild at boot (`loadCrates`, `loadNodes`).
+-- (node charges; each node also has a zero-capacity world row it minted, which holds nothing).
+-- This file keeps caches it can rebuild at boot (`loadCrates`, `loadNodes`).
 --
 -- Global: SalvageService.
 
@@ -26,6 +27,8 @@ S.__index = S
 local ACTIONS = "open77_actions"
 local OWN = "rp_salvage"
 local KIND_CRATE = "crate"
+-- The coordinator's refusals that mean "nothing was applied, try again" (contract 7.2).
+local TRANSIENT_REFUSAL = { coordinator_unavailable = true, store_unavailable = true, conflict = true }
 
 function SalvageService.new(deps)
     local self = setmetatable({
@@ -42,6 +45,8 @@ function SalvageService.new(deps)
         notified = {},       -- [playerId] = ms of the last refusal toast
         handProps = {},      -- [actions opId] = prop id
         ready = false, declared = false, npcId = nil,
+        containersUp = false,  -- open77_containers answered as ready since its last stop
+        loadingNodes = false, nodesRetryAt = 0,
         stats = { works = 0, loads = 0, unloads = 0, sales = 0, retired = 0, refusals = 0, doubts = 0 },
     }, S)
     return self
@@ -203,60 +208,109 @@ function S:refreshNodeTarget(node, force)
 end
 
 -- ---------------------------------------------------------------------------------------------
--- Nodes (open77_containers kind "node": no coordinator account, durable charges + regrowth)
+-- Nodes: open77_containers (0.2.0) containers of kind "node", named by the key `node.<key>`.
+-- Each is a zero-capacity coordinator world row minted by open77_containers (its id; the row
+-- carries the placement and can hold nothing, so no value and no mint) plus, in
+-- open77_containers' registry, the durable charges, consume refs and lazy regrowth. The
+-- container's placement is informational: the prompt is this resource's open77_actions target at
+-- the configured position, and reach is off.
 -- ---------------------------------------------------------------------------------------------
+local CONTAINERS_TRANSIENT = { not_ready = true, busy = true, open77_containers_unavailable = true }
+
+-- A refusal that says "not now" (open77_containers booting, restarting or busy), not "never".
+function S:nodesTransient(why, info)
+    if CONTAINERS_TRANSIENT[why] or (type(info) == "table" and info.retryable == true) then return true end
+    return type(why) == "string" and why:sub(1, 7) == "export_"
+end
+
+-- The node's durable name in open77_containers. A closed key is never reused there, so a node an
+-- operator closed (`containers.remove`) comes back only under a new `containerKey` in config.
+function S:nodeKey(nodeCfg) return nodeCfg.containerKey or ("node." .. nodeCfg.key) end
+
 function S:nodeSpec(nodeCfg)
     local d = self.cfg.nodeDefaults
     return {
-        kind = "node", model = false, position = nodeCfg.position, yaw = nodeCfg.yaw or 0.0, bucket = self.cfg.bucket,
-        label = nodeCfg.label, public = { node = nodeCfg.key, job = self.cfg.job },
+        key = self:nodeKey(nodeCfg), kind = "node", model = false, position = nodeCfg.position,
+        yaw = nodeCfg.yaw or 0.0, bucket = self.cfg.bucket, label = nodeCfg.label,
+        public = { node = nodeCfg.key, job = self.cfg.job },
         node = { charges = nodeCfg.charges or d.charges, regrowMs = nodeCfg.regrowMs or d.regrowMs },
         reachM = 0,
     }
 end
 
+-- Finds every node by its key, creating the missing ones (a keyed create is idempotent: the same
+-- key and spec answer the existing container). open77_containers answers `not_ready` until its
+-- boot join is done, and its `open77_containers:ready` is missed when it was up first, so the
+-- create itself is the probe. Returns true when every node has an id; otherwise false and the
+-- first reason (transient ones first: the caller waits on them, and logs the others).
 function S:loadNodes()
-    local existing = {}
-    local list = self.P.containers.list({ owner = self.resource, kind = "node" })
-    for _, summary in ipairs(type(list) == "table" and list or {}) do
-        local key = type(summary.public) == "table" and summary.public.node or nil
-        if key then existing[key] = summary.id end
+    if self.loadingNodes then return false, "busy" end
+    self.loadingNodes = true
+    local ok, done, why, created = pcall(self._loadNodes, self)
+    self.loadingNodes = false
+    if not ok then
+        self:warn("node load raised: %s", tostring(done))
+        return false, "raised"
     end
-    local created = 0
-    for _, nodeCfg in ipairs(self.cfg.nodes) do
-        local node = self.nodes[nodeCfg.key] or { key = nodeCfg.key }
-        node.cfg = nodeCfg
-        node.id = existing[nodeCfg.key]
-        if not node.id then
-            local summary, why = self.P.containers.create(self:nodeSpec(nodeCfg))
-            if summary then
-                node.id = summary.id
-                created = created + 1
-            else
-                self:warn("node %s not created: %s", nodeCfg.key, tostring(why))
-            end
-        end
-        self.nodes[nodeCfg.key] = node
-        if node.id then self.nodeById[node.id] = nodeCfg.key end
+    if done or not self:nodesTransient(why) then self.containersUp = true end
+    -- Counted across the passes of one wait, so a boot that met `not_ready` still says how many
+    -- nodes it created in all.
+    self.nodesCreated = (self.nodesCreated or 0) + (created or 0)
+    if done then
+        self:log("%d wreck node(s) ready (%d created)", #self.cfg.nodes, self.nodesCreated)
+        self.nodesCreated = 0
     end
-    self:log("%d wreck node(s) ready (%d created)", #self.cfg.nodes, created)
-    return true
+    return done, why
 end
 
--- Lab: back to full charges. A closed container id is a tombstone, so the node gets a new id.
+function S:_loadNodes()
+    local created, waiting, failed = 0, nil, nil
+    for _, nodeCfg in ipairs(self.cfg.nodes) do
+        if waiting then break end    -- open77_containers is not ready: the next pass asks again
+        local node = self.nodes[nodeCfg.key] or { key = nodeCfg.key }
+        node.cfg = nodeCfg
+        self.nodes[nodeCfg.key] = node
+        local found = self.P.containers.find(self:nodeKey(nodeCfg))
+        local id = type(found) == "table" and found.id or nil
+        if not id then
+            local summary, why, info = self.P.containers.create(self:nodeSpec(nodeCfg))
+            if type(summary) == "table" and summary.id then
+                id = summary.id
+                if not (type(info) == "table" and info.existing) then created = created + 1 end
+            elseif self:nodesTransient(why, info) then
+                waiting = waiting or why
+                id = node.id    -- ids are durable: keep the one we knew while it restarts
+            else
+                failed = failed or why
+                if node.warned ~= why then
+                    node.warned = why
+                    -- `container_closed`: an operator closed this node, and a closed key is never
+                    -- reused. The node stays unavailable (prompts refuse `unknown_node`).
+                    self:warn("node %s (%s) unavailable: %s", nodeCfg.key, self:nodeKey(nodeCfg), tostring(why))
+                end
+            end
+        end
+        if node.id and node.id ~= id then self.nodeById[node.id] = nil end
+        node.id = id
+        if id then
+            node.warned = nil
+            self.nodeById[id] = nodeCfg.key
+        end
+    end
+    if waiting or failed then return false, waiting or failed, created end
+    return true, nil, created
+end
+
+-- Lab: back to full charges, in place (open77_containers `refill`, owner only). The node keeps
+-- its id and its consume refs, so a retried charge of an earlier work still replays.
 function S:resetNode(key)
     local node = self.nodes[key]
     if not node then return nil, "unknown_node" end
-    if node.id then
-        self.P.containers.close(node.id, { force = true, reason = "lab_reset" })
-        self.nodeById[node.id] = nil
-    end
-    local summary, why = self.P.containers.create(self:nodeSpec(node.cfg))
-    if not summary then return nil, why end
-    node.id = summary.id
-    self.nodeById[node.id] = key
+    if not node.id then return nil, "unknown_node" end
+    local state, why = self.P.containers.refill(node.id)
+    if type(state) ~= "table" then return nil, why end
     self:refreshNodeTarget(node, true)
-    return summary
+    return state
 end
 
 function S:consumeNode(nodeId, ref)
@@ -268,7 +322,9 @@ function S:consumeNode(nodeId, ref)
         if key and state.depleted then self:refreshNodeTarget(self.nodes[key]) end
         return true
     end
-    if why == "depleted" or why == "unknown_container" or why == "container_closed" then
+    -- While open77_containers restarts it knows no container yet: keep the charge for later.
+    local gone = (why == "unknown_container" or why == "container_closed") and self.containersUp
+    if why == "depleted" or gone then
         -- A lease budget, not value (A13 6.1): nothing to conserve. Logged, never retried.
         self.pendingConsume[ref] = nil
         self:log("node %s charge for %s not spent: %s", tostring(nodeId), ref, tostring(why))
@@ -276,6 +332,34 @@ function S:consumeNode(nodeId, ref)
     end
     self.pendingConsume[ref] = nodeId
     return false
+end
+
+-- open77_containers stopped: until its next `ready`, it answers `not_ready` / `unknown_container`.
+function S:containersStopped() self.containersUp = false end
+
+-- `open77_containers:closed(id, reason, owner)`: one of our nodes was closed (an operator's
+-- `containers.remove`, or its world row closed outside). Its prompt goes; its key is spent.
+function S:onContainerClosed(id, reason)
+    local key = self.nodeById[id]
+    local node = key and self.nodes[key]
+    if not node then return end
+    self.nodeById[id] = nil
+    node.id, node.depleted = nil, nil
+    self.P.actions.untarget("node_" .. key)
+    self:warn("node %s (%s) was closed in open77_containers (%s): its wreck offers nothing until it gets a new " ..
+        "containerKey in config", key, self:nodeKey(node.cfg), tostring(reason))
+end
+
+-- A node refused for a lasting reason (a `writers` entry missing, say) is asked for again every
+-- 30 s, so fixing the configuration live brings it back without restarting this resource.
+function S:retryMissingNodes()
+    local missing = false
+    for _, node in pairs(self.nodes) do if not node.id then missing = true end end
+    if not missing or self.P.now() < self.nodesRetryAt then return end
+    self.nodesRetryAt = self.P.now() + 30000
+    if self:loadNodes() then
+        for _, node in pairs(self.nodes) do self:refreshNodeTarget(node, true) end
+    end
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -531,9 +615,16 @@ function S:commitWork(ctx)
     local lines = self:workLines(r)
     local receipt, why = self.L.commit(r.txOpId, { lines = lines })
     if not receipt then
-        -- A reservation exists: a coordinator that went away mid-flight leaves the outcome unknown.
-        if why == "coordinator_unavailable" then why = "in_doubt" end
-        if why == "in_doubt" or why == "busy" then self.doubts[r.txOpId] = r end
+        if why == "in_doubt" or why == "busy" then
+            -- This submission may have landed (the ledger maps a lost answer to in_doubt).
+            self.doubts[r.txOpId] = r
+        elseif TRANSIENT_REFUSAL[why] and self.doubts[r.txOpId] then
+            -- Nothing was applied by THIS attempt, but an earlier one of the same op may have
+            -- landed: the outcome is still unknown, never "failed".
+            why = "in_doubt"
+        end
+        -- Otherwise a transient refusal means nothing was applied: open77_actions retries it with
+        -- the same op id, then fails the action with that reason (B5-3); cancelWork releases.
         return nil, why
     end
     local ok, err = pcall(self.afterWork, self, r, receipt)
@@ -1055,6 +1146,7 @@ function S:sweep()
         if not self.done[r.txOpId] then self:settleWork(r) end
     end
     for ref, nodeId in pairs(self.pendingConsume) do self:consumeNode(nodeId, ref) end
+    self:retryMissingNodes()
     local list = {}
     for _, crate in pairs(self.crates) do list[#list + 1] = crate end
     for _, crate in ipairs(list) do

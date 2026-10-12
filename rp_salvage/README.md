@@ -24,12 +24,17 @@ economies, plan decision 5; both also define the item `crowbar`). It never start
    `rp_inventory`, `rp_economy`, `rp_garage`, `rp_cargo`, `rp_salvage`.
 2. Convar `rp_inventory_backend transactions` (tools must live in coordinator pockets).
 3. `open77_transactions` tunables (contract §7.2 / §13): `writers` either `*` or at least
-   `rp_salvage:world+char, rp_cargo:veh/cargo, rp_economy:cash+bank+soc, rp_inventory`, and a mint
-   rule `rp_salvage sys:salvage * 2000` (materials and crate tokens; size the hourly cap to your
-   population) plus the wallet's `rp_economy sys:* money <cap>`.
+   `rp_salvage:world+char, rp_cargo:veh/cargo, rp_economy:cash+bank+soc, rp_inventory,
+   open77_containers:world`, and a mint rule `rp_salvage sys:salvage * 2000` (materials and crate
+   tokens; size the hourly cap to your population) plus the wallet's `rp_economy sys:* money <cap>`.
+   `open77_containers:world` is new with open77_containers 0.2.0: it mints the seven wreck nodes'
+   world rows itself (zero capacity: they carry the placement and hold nothing, so it needs no mint
+   rule for them). Without it every node is refused `namespace_denied`: the yard starts without
+   wreck prompts and says so (see the lines below); adding it live brings them back within 30 s.
 4. `rp_economy` must list `rp_salvage` in `EconomyConfig.mint.callers` (the buyer's money is
-   created on `rp_salvage`'s behalf). **This entry is not in rp_economy yet**: see c1-salvage.md
-   §7 (requested change B3-1). Without it every sale answers `mint_denied`.
+   created on `rp_salvage`'s behalf). The entry (B3-1, c1-salvage.md §7) ships with rp_economy from
+   the `wi/reconcile-a13` merge (`wi/integration` ff0d303); an older rp_economy needs it added by
+   hand, or every sale answers `mint_denied`.
 5. Lab without a database: `open77_transactions` store `lab_kvp` (+ `open77_transactions_lab 1`,
    unmastered host) and `open77_containers_store lab_kvp` + `open77_containers_lab 1`. A server
    with a database needs neither.
@@ -42,6 +47,18 @@ Expected start lines:
 [rp_salvage] 7 wreck node(s) ready (7 created)        -- "(0 created)" on later boots
 [rp_salvage] crates rebuilt from the coordinator: N (ground g, in a bed b, sold s, new n, orphans closed o)
 [rp_salvage] ready: 7 wreck nodes, foreman, loading bay, unloading bay, buyer counter (job ferrailleur)
+```
+
+The nodes are open77_containers 0.2.0 containers keyed `node.<key>` (`node.thorton`...): a later
+boot, or a restart of open77_containers, finds the same ids. rp_salvage waits for open77_containers'
+boot join (it answers `not_ready` until then, and waits for the coordinator itself); after 30 s
+it says `still waiting for open77_containers (ready)`. A lasting refusal is said once per node,
+then the start goes on without those wrecks:
+
+```text
+[rp_salvage] WRN node thorton (node.thorton) unavailable: namespace_denied      -- writers, step 3
+[rp_salvage] WARNING: 7 of 7 wreck nodes unavailable (reasons above); asked for again every 30 s
+[rp_salvage] ready: 0 of 7 wreck nodes, foreman, loading bay, unloading bay, buyer counter (job ferrailleur)
 ```
 
 ## 2. Play it
@@ -98,9 +115,13 @@ rp_cargo's. Both are rebuilt from the coordinator at boot.
 -- Definitions: through rp_inventory (the single definer toward the coordinator, B2 §7.10).
 exports.rp_inventory:define(SalvageConfig.items)
 
--- Nodes: open77_containers point nodes (no prop, no account): durable charges + regrowth.
-Open77.exports.call("open77_containers", "create", { kind = "node", model = false, position = ...,
-    node = { charges = 3, regrowMs = 300000 }, public = { node = "thorton" } }):await()
+-- Nodes: open77_containers point nodes (no prop; a zero-capacity world row that open77_containers
+-- mints and that holds nothing): durable charges + regrowth. Found by key, created once (a keyed
+-- create is idempotent); `not_ready` until open77_containers has finished its boot join.
+local node = exports.open77_containers:find("node.thorton")
+    or Open77.exports.call("open77_containers", "create", { key = "node.thorton", kind = "node",
+        model = false, position = ..., node = { charges = 3, regrowMs = 300000 },
+        public = { node = "thorton" } }):await()
 
 -- Actions: hooks are EXPORT NAMES of this resource; each checks GetInvokingResource().
 exports.open77_actions:define({ id = "cut", durationMs = 8000,
@@ -126,8 +147,12 @@ A full crate is `capacity_exceeded` here (shown as "Your crate here is full"): n
 **Commit** (`slvCommit`, async, at the server's clock): the roll is drawn from the coordinator
 op id (a retried commit sends identical lines), plus the token when the crate is new, plus the
 same wear line; ONE `commit`. Then the wreck's charge: `consume(node, { ref = op id })`
-(idempotent; a lease budget, not value). `in_doubt`/`busy` go back to open77_actions, which
-retries with the same context; an unreachable coordinator mid-commit is reported `in_doubt` too.
+(idempotent; a lease budget, not value; kept and spent later while open77_containers restarts).
+`in_doubt`/`busy` go back to open77_actions, which retries with the same context. A transient
+refusal (`coordinator_unavailable`, `store_unavailable`, `conflict`) means nothing was applied:
+open77_actions retries it with the same op id, then fails the action with that reason ("nothing
+was taken") and the reservation is released. Only after an attempt that may have landed
+(`in_doubt`, `busy`) is a later transient refusal still reported `in_doubt`.
 
 **Cancel** (`slvCancel`): `cancel` the reservation and close an empty new crate — except on
 `in_doubt`, where it settles with `status(op, { resolve = true })` and grants exactly what was
@@ -184,14 +209,14 @@ on aiming at a prompt.
 | `salvage.status` | crates per state, counters, each wreck's charges |
 | `salvage.lab.setup <pid> [crowbar\|welder\|both]` | job `ferrailleur` grade 0, duty on, tool instance(s) through `rp_inventory:addAsync` |
 | `salvage.lab.clock <pid> on\|off` | duty |
-| `salvage.lab.truck <pid> [plate]` | with a plate: `rp_garage:spawnOwned` next to the player; without: the requested `rp_garage:labIssue` (absent today: prints the manual way) |
+| `salvage.lab.truck <pid> [plate]` | with a plate: `rp_garage:spawnOwned` next to the player; without: `rp_garage:labIssue(pid, record)` (A9-1; needs an rp_garage that has it and the convar `rp_garage_lab 1`; otherwise prints the manual way) |
 | `salvage.lab.work <pid> <node> [cut\|pry\|inspect]` | the prompt's request |
 | `salvage.lab.pickup <pid> [crateKey]` | lifts the nearest ground crate (3 m) or that one |
 | `salvage.lab.load <pid> [vehicleId]` | puts the carried crate on that truck / the nearest accessible one |
 | `salvage.lab.unload <pid> [vehicleId]` | unloads a yard crate into the player's hands |
 | `salvage.lab.sell <pid>` | puts the carried crate on the counter (stand at the counter) |
 | `salvage.lab.drop <pid>` | forces a drop, as a death would |
-| `salvage.lab.reset [node\|all]` | wrecks back to full charges (a new node id: closed ids are tombstones) |
+| `salvage.lab.reset [node\|all]` | wrecks back to full charges in place (open77_containers `refill`: same node id, consume refs kept) |
 | `salvage.lab.state <pid>` | the player's crates (state, token, placement, contents), tools, cash, society, receipts |
 
 ## 5. Limits
@@ -203,3 +228,7 @@ on aiming at a prompt.
 - The bed counts the token's 2 kg, not the contents (they stay in the hold).
 - A restart during a carry puts the crate back where it was last put down (custody never left).
 - Ground crates are open77_actions items: at most 128 per owner (`maxOpen` 48 here).
+- Never close a wreck node with `containers.remove`: open77_containers never reuses a closed key,
+  so the wreck goes dark (its prompt is withdrawn, a WRN says so). To bring it back, give that node
+  a `containerKey` (e.g. `"node.thorton.2"`) in `server/config.lua`. `salvage.lab.reset` refills
+  in place instead.

@@ -49,14 +49,16 @@ P.actions = {
 }
 
 -- ---------------------------------------------------------------------------------------------
--- open77_containers (A6): the wreck nodes. Mutations yield.
+-- open77_containers (A6, 0.2.0): the wreck nodes. Mutations wait for its stores (asynchronous
+-- form; the synchronous sugar answers `export_yielded`); reads are synchronous. Before its boot
+-- join (`open77_containers:ready`) `create` answers `not_ready` and every read is empty.
 -- ---------------------------------------------------------------------------------------------
 local CONTAINERS = "open77_containers"
 P.containers = {
     create = function(spec) return async(CONTAINERS, "create", spec) end,
     consume = function(id, options) return async(CONTAINERS, "consume", id, options) end,
-    close = function(id, options) return async(CONTAINERS, "close", id, options) end,
-    list = function(filter) return sync(CONTAINERS, "list", filter) end,
+    refill = function(id, options) return async(CONTAINERS, "refill", id, options) end,
+    find = function(key) return sync(CONTAINERS, "find", key) end,
     summary = function(id) return sync(CONTAINERS, "summary", id) end,
 }
 
@@ -96,8 +98,10 @@ P.garage = {
     describe = function(plate) return sync("rp_garage", "describe", plate) end,
     canAccess = function(pid, plate, part, action) return sync("rp_garage", "canAccess", pid, plate, part, action) end,
     spawnOwned = function(pid, plate) return sync("rp_garage", "spawnOwned", pid, plate) end,
-    -- Requested from A9 (c1-salvage.md "Library changes"): absent today, answers *_unavailable.
-    labIssue = function(spec) return sync("rp_garage", "labIssue", spec) end,
+    -- A9-1 (c1-salvage.md section 7): labIssue(playerId, record, opts?) -> { plate, owner, state,
+    -- vehicleId? }, behind the convar rp_garage_lab 1 (`lab_disabled` otherwise). An rp_garage
+    -- without it answers rp_garage_unavailable.
+    labIssue = function(pid, record, opts) return sync("rp_garage", "labIssue", pid, record, opts) end,
 }
 P.cargo = {
     load = function(pid, vehicleId, iid, opts) return async("rp_cargo", "load", pid, vehicleId, iid, opts) end,

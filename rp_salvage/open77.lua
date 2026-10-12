@@ -6,7 +6,7 @@
 -- (truck access and bed slots) and rp_economy (one atomic sale with the society share).
 -- Design: docs/world-interaction/c1-salvage.md. Status: built offline, NOT proven in game.
 resource "rp_salvage"
-version "0.1.0"
+version "0.1.1"
 open77_version "*"
 
 -- Operator-chosen: a server runs EITHER rp_salvage OR rp_ferrailleur, never both (two scrap
@@ -30,7 +30,7 @@ permissions { "world.props", "world.vehicles", "world.npcs", "network.events" }
 -- packages. Every one of them is part of the loop; a missing one would leave it half-working.
 dependency "open77_transactions >=0.1.0"   -- custody, receipts (A13)
 dependency "open77_actions >=0.1.0"        -- actions, claims, carry (B5/A5)
-dependency "open77_containers >=0.1.0"     -- wreck nodes: charges + regrowth (A6)
+dependency "open77_containers >=0.2.0"     -- wreck nodes: keyed, charges + regrowth + refill (A6)
 dependency "open77_notifications"          -- toasts (client package; chat works without it)
 dependency "rp_jobs >=2.1.0"               -- duty, eligibility, work epoch (B4)
 dependency "rp_inventory >=1.1.0"          -- definitions, tool instances (B1/B2, transactions backend)
