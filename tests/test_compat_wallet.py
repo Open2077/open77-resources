@@ -14,6 +14,7 @@ What this cannot show: SQL semantics on MariaDB (A13 I1-I3), live latency, anyth
 """
 import hashlib
 import os
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -45,14 +46,19 @@ def scenario(name):
 
 
 class VendoredCoordinator(unittest.TestCase):
-    def test_vendored_prototype_is_unmodified(self):
-        """The copy matches the git blob ids recorded in SOURCE.txt (LF content)."""
+    def test_vendored_coordinator_is_unmodified(self):
+        """The copy is the final coordinator of Open77 697e9e2f: the manifest and every server
+        script it lists match the git blob ids recorded in SOURCE.txt (LF content)."""
+        source = (VENDOR / "SOURCE.txt").read_text(encoding="utf-8")
+        self.assertIn("697e9e2f0045587e21907c95716a38cc5089a8a1", source)
         recorded = {}
-        for line in (VENDOR / "SOURCE.txt").read_text(encoding="utf-8").splitlines():
+        for line in source.splitlines():
             parts = line.split()
             if len(parts) == 2 and len(parts[0]) == 40 and parts[1].endswith(".lua"):
                 recorded[parts[1]] = parts[0]
-        self.assertEqual(len(recorded), 3)
+        manifest = (VENDOR / "open77.lua").read_text(encoding="utf-8")
+        listed = {"open77.lua"} | set(re.findall(r'^server_script "([^"]+)"', manifest, re.M))
+        self.assertEqual(set(recorded), listed)
         for rel, blob in recorded.items():
             data = (VENDOR / rel).read_bytes().replace(b"\r\n", b"\n")
             actual = hashlib.sha1(b"blob %d\0" % len(data) + data).hexdigest()
@@ -249,6 +255,36 @@ class WalletFacade(unittest.TestCase):
         self.assertEqual(r["state"], "complete")
         self.assertEqual(r["subjects_imported"], "10050")
         self.assertEqual(r["cash_total"], r["expected_total"])
+
+    def test_final_coordinator_api(self):
+        """Open77 697e9e2f as the wallet adapters use it (contract 7.2, 12.5, 12.6, 13.5)."""
+        r = self.run_ok("final_api")
+        # Mint rules: one sys: segment per rule, so `sys:rp_economy:start` cannot be named (logged
+        # and ignored); without a rule a legacy credit is refused at once (allowed), an atomic
+        # one by the coordinator, and burns go through. The reason reaches the journal.
+        self.assertEqual(r["rule_ignored"], "1")
+        self.assertEqual(r["start_grant"], "200")             # seeded; the 500 grant was refused
+        self.assertEqual(r["add_without_rule"], "nil/mint_denied")
+        self.assertEqual(r["burn_without_rule"], "150/nil")
+        self.assertEqual(r["pay_without_rule"], "mint_denied")
+        self.assertEqual(r["durable"], "150")
+        self.assertEqual(r["net_minted_after_refusals"], "-50")   # budgets given back
+        self.assertEqual(r["journal_reasons"], "fine")
+        self.assertEqual(r["pending_changed"], "7")           # rp_economy:pendingChanged (B7)
+        # Strict writers: a sale out of the pockets asks rp_inventory for a one-operation grant
+        # (grantPockets); without rp_inventory it is refused before anything is attempted.
+        self.assertEqual(r["sale_without_grant"], "namespace_denied")
+        self.assertEqual(r["grant"], "1")
+        self.assertEqual(r["sale_with_grant"], "ok")
+        self.assertEqual(r["after_grant"], "0/270/30")
+        # A unique unit sold out of a truck bed (C1): one instance line.
+        self.assertEqual(r["instance_sale"], "ok:sys:rp_salvage:buyer:100/20")
+        self.assertEqual(r["instance_invalid"], "invalid_instance")
+        self.assertEqual(r["salvage_minted"], "120")          # rp_salvage is on the allowlist
+        # A character provider keys wallets, online and offline; the 1.x key stays the identifier.
+        self.assertEqual(r["provider_cash"], "cash:acct-a~1")
+        self.assertEqual(r["provider_start"], "500/0")
+        self.assertEqual(r["provider_offline"], "ok:25")
 
 
 if __name__ == "__main__":

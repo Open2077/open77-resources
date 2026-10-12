@@ -9,13 +9,16 @@
 --      become coordinator lines from `sys:migration`, committed under DETERMINISTIC opIds
 --      `mig1:<account>:c<k>`: a crash or a retry replays the same receipt (status first, so a
 --      restarted coordinator never re-applies), and changed rows under the same opId are an
---      `op_id_conflict`, not a second import.
+--      `op_id_conflict`, not a second import. The coordinator must allow the mint
+--      (`rp_inventory sys:migration * <cap>` in its mint rules), else `mint_denied` before any
+--      chunk.
 --   3. Then the marker row. The legacy rows are never modified or deleted: they stay the
 --      rollback source. If they change after the import (the legacy backend ran again), the
 --      next load refuses with `legacy_diverged` until an operator accepts one side.
 --
 -- Refused without importing: unknown item ids (unless importUnknown), a legacy schema that is
--- not the 5dcdad2 one, a coordinator whose store is not durable SQL, an invalid durable key.
+-- not the 5dcdad2 one, a coordinator whose store is not durable SQL (info().store), no mint rule
+-- for sys:migration (allowed()), an invalid durable key.
 -- KVP data is never read here (A13 3.1.1: only through an explicit admin step).
 --
 -- Dependencies are injected: db(method, sql, params) -> value, reason (yields);
@@ -57,7 +60,6 @@ function RpInvMigration.new(deps)
         importUnknown = deps.importUnknown == true,
         requireStoreInfo = deps.requireStoreInfo ~= false,
         sourceChecked = nil,   -- nil | { ok, absent = { [table] = true }, reason }
-        storeChecked = nil,
         tableReady = false,
     }, Mig)
 end
@@ -104,17 +106,16 @@ function Mig:checkSource()
 end
 
 -- The coordinator must persist to SQL: importing into a disposable store and stamping the
--- marker would lose the subject once the lab store is wiped.
+-- marker would lose the subject once the lab store is wiped. Asked at every import (the
+-- coordinator may have restarted in another mode); info() never yields.
 function Mig:checkStore()
-    if self.storeChecked then return true end
     local info, reason = self.call("info")
     if type(info) == "table" then
         if info.store ~= "sql" then return nil, "store_not_durable" end
-        self.storeChecked = true
+        if info.ready ~= true then return nil, "store_unavailable" end
         return true
     end
     if self.requireStoreInfo then return nil, "coordinator_info_unavailable", reason end
-    self.storeChecked = true
     return true
 end
 
@@ -169,47 +170,65 @@ local function chunk(lines)
     return chunks
 end
 
+-- An opId takes [A-Za-z0-9_.:@-] (no `~`, which a later character's subject may carry) and at
+-- most 96 bytes; anything else is named by the hash of the account.
 local function opIdFor(account, k)
     local id = "mig" .. RpInvMigration.VERSION .. ":" .. account .. ":c" .. k
-    if #id > 96 then id = "mig" .. RpInvMigration.VERSION .. ":h" .. RpItemSchema.fnv1a64(account) .. ":c" .. k end
+    if #id > 96 or not id:match("^[A-Za-z0-9_.:@%-]+$") then
+        id = "mig" .. RpInvMigration.VERSION .. ":h" .. RpItemSchema.fnv1a64(account) .. ":c" .. k
+    end
     return id
 end
 
 -- Commits one chunk, or finds it already committed. Returns receipt | nil, reason.
 --
--- A fenced opId (`aborted`) can never commit (A13 4.4), and the coordinator also remembers a
--- failed attempt under its opId. So each chunk walks a DETERMINISTIC attempt sequence
--- `<base>`, `<base>.a2`, `<base>.a3`... An attempt is only made once every earlier one is proven
--- not committed (aborted, failed, expired, cancelled), so at most one attempt of a chunk can ever
--- commit, and a rerun -- on any VM -- finds it by walking the same sequence.
-local NOT_COMMITTED = { aborted = true, failed = true, expired = true, cancelled = true }
-local MAX_ATTEMPTS = 8
+-- The final coordinator's rule (contract 13.5): a FAILED attempt (refused, conflict, a store that
+-- answered no, expired, cancelled) left nothing and no row, so the SAME opId is a fresh attempt;
+-- a FENCED one (`aborted`) is a tombstone and can never commit. So each chunk walks a
+-- DETERMINISTIC sequence `<base>`, `<base>.a2`, `<base>.a3`... and moves to the next id only once
+-- the current one is fenced: at most one id of a chunk can ever commit, and a rerun -- on any VM
+-- -- finds it by walking the same sequence (status of each, in order).
+local MAX_ATTEMPTS = 8   -- fenced ids per chunk
+local MAX_RETRIES = 3    -- fresh attempts of one id within one run
 
 function Mig:commitChunk(baseOpId, lines)
-    for attempt = 1, MAX_ATTEMPTS do
+    local attempt, retries = 1, 0
+    while attempt <= MAX_ATTEMPTS do
         local opId = attempt == 1 and baseOpId or (baseOpId .. ".a" .. attempt)
         local st, sreason = self.call("status", opId)
         if type(st) ~= "table" then return nil, sreason or "store_unavailable" end
-        if st.state == "committed" then return st.receipt or { opId = opId, replay = true } end
-        if st.state == "in_doubt" or st.state == "committing" or st.state == "reserved" then
-            local settled, state = self.facade:settle(opId, 30000)
+        local state = st.state
+        if state == "committed" then return st.receipt or { opId = opId, replay = true } end
+        if state == "in_doubt" or state == "committing" or state == "reserved" then
+            local settled, settledState = self.facade:settle(opId, 30000)
             if settled then return settled end
-            if not NOT_COMMITTED[state] then return nil, "in_doubt" end
-        elseif st.state == "unknown" then
+            if settledState == "busy" then return nil, "in_doubt" end
+            state = settledState
+        end
+        if state == "aborted" then
+            attempt, retries = attempt + 1, 0
+        else
+            -- unknown / failed / expired / cancelled: nothing committed under this id; try it.
             local receipt, reason, info = self.call("transfer", { opId = opId, kind = "migrate", lines = lines })
             if type(receipt) == "table" then return receipt end
             if reason == "in_doubt" or reason == "busy" or (info and info.ambiguous) then
-                -- May commit: settle THIS attempt, never start the next one before knowing.
-                local settled, state = self.facade:settle(opId, 30000)
+                -- May commit: settle THIS id, never start the next one before knowing.
+                local settled, settledState = self.facade:settle(opId, 30000)
                 if settled then return settled end
-                if not NOT_COMMITTED[state] then return nil, "in_doubt" end
+                if settledState == "busy" then return nil, "in_doubt" end
+                if settledState == "aborted" then attempt, retries = attempt + 1, 0 else retries = retries + 1 end
+            elseif reason == "aborted" or (info and info.state == "aborted") then
+                attempt, retries = attempt + 1, 0            -- fenced: never this id again
             elseif reason == "coordinator_unavailable" then
-                return nil, "store_unavailable"   -- never dispatched: the rerun retries this attempt
-            elseif reason ~= "store_unavailable" and reason ~= "conflict" and reason ~= "aborted" then
-                return nil, reason                -- definitive: op_id_conflict, capacity_exceeded, store_failed...
+                return nil, "store_unavailable"              -- never dispatched: the rerun tries this id
+            elseif reason == "store_unavailable" or reason == "conflict" then
+                retries = retries + 1                        -- not committed, not fenced: same id again
+                if retries > MAX_RETRIES then return nil, reason end
+            else
+                return nil, reason   -- definitive: op_id_conflict, capacity_exceeded, store_failed, mint_*...
             end
         end
-        -- this attempt is proven not committed: the next one in the sequence may run
+        if retries > MAX_RETRIES then return nil, "store_unavailable" end
     end
     return nil, "store_unavailable"
 end
@@ -291,6 +310,10 @@ function Mig:ensure(account, kind, key, capacityG)
 
     ok, why = self:checkStore()
     if not ok then return nil, why end
+    -- The import creates value out of sys:migration: the operator's mint rules must allow it,
+    -- checked before any chunk so a refusal never leaves a half-imported subject.
+    local mint, mintWhy = self.facade:mayMint("sys:migration", nil)
+    if not mint then return nil, mintWhy, { account = account, needs = "mint rule: rp_inventory sys:migration *" } end
     if next(placeholders) then
         local registered = self.call("define", placeholders)
         if type(registered) ~= "number" then return nil, "store_unavailable" end

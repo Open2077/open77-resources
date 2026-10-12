@@ -7,8 +7,9 @@
 -- plan. No Open77 native is touched here, so the offline suites load it in a
 -- bare Lua 5.4 state.
 --
--- Status: OFFLINE PROTOTYPE (wave 0). Not wired to the runtime, not proven in
--- game. Global table: Open77TxModel.
+-- Loaded by server/main.lua (the manifest lists it as a server script, so it is
+-- never shipped to clients) and by the offline suites. Not proven in game.
+-- Global table: Open77TxModel.
 -- =============================================================================
 
 Open77TxModel = {}
@@ -26,7 +27,8 @@ M.LIMITS = {
     maxMoney = 1000000000000,    -- 1e12, same ceiling as rp_economy
     maxWeightG = 100000000,
     maxMetaBytes = 2048,
-    journalRowsPerStatement = 12, -- 12 rows x 5 parameters = 60 <= 64
+    journalRowsPerStatement = 9,  -- 9 rows x 7 parameters = 63 <= 64
+    maxReasonBytes = 64,          -- free-text reason on a line or an operation
 }
 
 -- Namespace -> account kind. `sys` accounts are unlimited sources/sinks that
@@ -42,9 +44,11 @@ local function toInteger(n)
     return math.tointeger(n)
 end
 
--- Account id: <ns>:<key>[:<part>], ASCII [A-Za-z0-9_.:@-], at most 96 bytes.
+-- Account id: <ns>:<key>[:<part>], ASCII [A-Za-z0-9_.:@~-], at most 96 bytes.
+-- `~` is allowed for later characters, `char:<accountId>~<n>` (contract
+-- section 12, decision 8).
 function M.parseAccount(id)
-    if type(id) ~= "string" or #id < 3 or #id > 96 or not id:match("^[A-Za-z0-9_.:@%-]+$") then
+    if type(id) ~= "string" or #id < 3 or #id > 96 or not id:match("^[A-Za-z0-9_.:@~%-]+$") then
         return nil, "invalid_account"
     end
     local ns, rest = id:match("^([a-z]+):(.+)$")
@@ -194,8 +198,21 @@ local function validMeta(meta)
     return ok and #encoded <= M.LIMITS.maxMetaBytes
 end
 
+-- A free-text reason: 1..64 bytes, no control characters. nil is fine.
+function M.validReason(reason)
+    return reason == nil or (type(reason) == "string" and #reason >= 1 and #reason <= M.LIMITS.maxReasonBytes
+        and not reason:find("%c"))
+end
+
 function M.normalizeLine(line)
     if type(line) ~= "table" then return nil, "invalid_spec" end
+    if not M.validReason(line.reason) then return nil, "invalid_spec" end
+    local out, why = M._normalizeLine(line)
+    if out then out.reason = line.reason end
+    return out, why
+end
+
+function M._normalizeLine(line)
     if line.item ~= nil and line.instance == nil then
         if not M.validItemId(line.item) then return nil, "unknown_item" end
         local n = toInteger(line.count)
@@ -217,20 +234,33 @@ function M.normalizeLine(line)
         end
         return { kind = "capacity", capacityG = n, from = line.from, to = line.to }
     elseif line.instance ~= nil and line.at ~= nil then
+        -- In-place metadata update: `meta` replaces, `metaPatch` merges
+        -- (shallow) into the current metadata. Exactly one of the two.
         if not M.validInstanceId(line.instance) then return nil, "invalid_spec" end
         if M.accountKind(line.at) ~= "container" then return nil, "invalid_account" end
-        if not validMeta(line.meta) then return nil, "invalid_spec" end
-        return { kind = "meta", instance = line.instance, at = line.at, meta = M.deepCopy(line.meta) }
+        if (line.meta == nil) == (line.metaPatch == nil) then return nil, "invalid_spec" end
+        if line.meta ~= nil and not validMeta(line.meta) then return nil, "invalid_spec" end
+        if line.metaPatch ~= nil and not validMeta(line.metaPatch) then return nil, "invalid_spec" end
+        return { kind = "meta", instance = line.instance, at = line.at, meta = M.deepCopy(line.meta),
+            metaPatch = M.deepCopy(line.metaPatch) }
     elseif line.instance ~= nil then
         if not M.validInstanceId(line.instance) then return nil, "invalid_spec" end
         local ok, reason = checkPair(line.from, line.to, "container")
         if not ok then return nil, reason end
+        if line.meta ~= nil and line.metaPatch ~= nil then return nil, "invalid_spec" end
+        if line.meta ~= nil and not validMeta(line.meta) then return nil, "invalid_spec" end
+        if line.metaPatch ~= nil and not validMeta(line.metaPatch) then return nil, "invalid_spec" end
         local out = { kind = "instance", instance = line.instance, from = line.from, to = line.to }
         if M.accountKind(line.from) == "system" then
             if not M.validItemId(line.item) then return nil, "unknown_item" end
-            if line.meta ~= nil and not validMeta(line.meta) then return nil, "invalid_spec" end
             out.item = line.item
-            out.meta = M.deepCopy(line.meta or {})
+            out.meta = M.deepCopy(line.meta or line.metaPatch or {})
+        else
+            -- A move may carry its metadata with it (for example the cargo
+            -- bed slot): `meta` replaces, `metaPatch` merges, both under the
+            -- same version compare-and-set as the move itself.
+            out.meta = M.deepCopy(line.meta)
+            out.metaPatch = M.deepCopy(line.metaPatch)
         end
         return out
     end
@@ -252,6 +282,28 @@ function M.hashLines(kind, lines)
     return M.fnv1a64(M.encode({ kind = kind or "", lines = lines }))
 end
 
+-- Lines that CREATE value: anything moving out of a `sys:` account into a real
+-- account. Burning (into `sys:`) is never a mint. Capacity envelopes are
+-- reported with asset = nil (the items are only known at commit).
+-- Returns an array of { from, to, asset, amount }.
+function M.mintsOf(lines)
+    local out = {}
+    for _, l in ipairs(lines) do
+        if l.from and M.accountKind(l.from) == "system" then
+            if l.kind == "item" then
+                out[#out + 1] = { from = l.from, to = l.to, asset = l.item, amount = l.count }
+            elseif l.kind == "money" then
+                out[#out + 1] = { from = l.from, to = l.to, asset = "money", amount = l.amount }
+            elseif l.kind == "instance" then
+                out[#out + 1] = { from = l.from, to = l.to, asset = l.item, amount = 1 }
+            elseif l.kind == "capacity" then
+                out[#out + 1] = { from = l.from, to = l.to, asset = nil, amount = 0, envelope = true }
+            end
+        end
+    end
+    return out
+end
+
 function M.clampTtl(ttlMs)
     if ttlMs == nil then return M.LIMITS.defaultTtlMs end
     local n = toInteger(ttlMs)
@@ -266,6 +318,18 @@ end
 -- instances: function(instanceId) -> { item, version, container } | nil  (mirror)
 -- expect:    { [account] = version } optional optimistic checks
 -- ---------------------------------------------------------------------------
+-- The metadata an instance line writes: nil (unchanged), `meta` (replace) or
+-- the current metadata with `metaPatch` merged in (shallow). The result is
+-- bounded like any metadata.
+function M.resolveMeta(current, meta, patch)
+    if meta ~= nil then return M.deepCopy(meta) end
+    if patch == nil then return nil end
+    local merged = M.deepCopy(current or {})
+    for k, v in pairs(patch) do merged[k] = M.deepCopy(v) end
+    if #M.encode(merged) > M.LIMITS.maxMetaBytes then return nil, "invalid_spec" end
+    return merged
+end
+
 local function sortedKeys(t)
     local keys = {}
     for k in pairs(t) do keys[#keys + 1] = k end
@@ -293,12 +357,14 @@ function M.buildPlan(args)
         if not w then w = { id = id, delta = 0 }; wallets[id] = w end
         w.delta = w.delta + delta
     end
+    local reason
     local function journalPair(from, to, asset, n)
-        journal[#journal + 1] = { account = from, asset = asset, delta = -n }
-        journal[#journal + 1] = { account = to, asset = asset, delta = n }
+        journal[#journal + 1] = { account = from, asset = asset, delta = -n, reason = reason }
+        journal[#journal + 1] = { account = to, asset = asset, delta = n, reason = reason }
     end
 
     for _, line in ipairs(lines) do
+        reason = line.reason or args.reason
         if line.kind == "item" then
             local grams = weights(line.item)
             if grams == nil then return nil, "unknown_item" end
@@ -325,9 +391,17 @@ function M.buildPlan(args)
             local grams = weights(item)
             if grams == nil then return nil, "unknown_item" end
             if insts[line.instance] then return nil, "invalid_spec" end
+            local meta
+            if created then
+                meta = line.meta or {}
+            else
+                local merged, why = M.resolveMeta(current.meta, line.meta, line.metaPatch)
+                if why then return nil, why end
+                meta = merged
+            end
             insts[line.instance] = {
                 id = line.instance, item = item, from = line.from, to = line.to,
-                create = created or nil, meta = created and (line.meta or {}) or nil,
+                create = created or nil, meta = meta,
                 expectVersion = (not created) and current.version or nil,
             }
             if not created then container(line.from).weightDelta = container(line.from).weightDelta - grams end
@@ -339,12 +413,14 @@ function M.buildPlan(args)
             local current = instanceOf(line.instance)
             if current == nil or current.container ~= line.at then return nil, "instance_unavailable" end
             if insts[line.instance] then return nil, "invalid_spec" end
+            local meta, why = M.resolveMeta(current.meta, line.meta, line.metaPatch)
+            if why then return nil, why end
             insts[line.instance] = {
                 id = line.instance, item = current.item, from = line.at, to = line.at,
-                meta = line.meta, expectVersion = current.version,
+                meta = meta, expectVersion = current.version,
             }
             container(line.at)
-            journal[#journal + 1] = { account = line.at, asset = "inst:" .. line.instance, delta = 0 }
+            journal[#journal + 1] = { account = line.at, asset = "inst:" .. line.instance, delta = 0, reason = reason }
         elseif line.kind == "capacity" then
             return nil, "invalid_spec" -- envelopes never reach a commit
         end

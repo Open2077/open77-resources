@@ -287,8 +287,17 @@ function Migrate.run(trigger)
     for _, identifier in ipairs(names) do
         local s = subjects[identifier]
         local lines = {}
-        if s.cash > 0 then lines[#lines + 1] = { money = s.cash, from = "sys:rp_economy:migration", to = "cash:" .. identifier } end
-        if s.bank > 0 then lines[#lines + 1] = { money = s.bank, from = "sys:rp_economy:migration", to = "bank:" .. identifier } end
+        -- The wallets of an identifier are the provider's subject's (the identifier itself by
+        -- default; a character override provider's key otherwise). The operation id stays named
+        -- after the 1.x row, so a re-run under another provider is op_id_conflict, never a
+        -- second import.
+        local subject, subjectWhy = Tx.subjectOf({ identifier = identifier })
+        if not subject or not Wallets.validSubject(subject) then
+            skip("subject", identifier, tostring(subject and "invalid_subject" or subjectWhy))
+            s = { cash = 0, bank = 0 }
+        end
+        if s.cash > 0 then lines[#lines + 1] = { money = s.cash, from = "sys:rp_economy:migration", to = "cash:" .. subject } end
+        if s.bank > 0 then lines[#lines + 1] = { money = s.bank, from = "sys:rp_economy:migration", to = "bank:" .. subject } end
         if #lines == 0 then
             empty = empty + 1
         else
@@ -381,7 +390,8 @@ function Migrate.archivedSocieties()
     return names
 end
 
--- true: the subject had a 1.x wallet or bank row (no starting balance); false: new; nil, err.
+-- true: the account identifier had a 1.x wallet or bank row (no starting balance); false: new;
+-- nil, err. The 1.x tables are keyed by identifier, never by a provider's subject.
 function Migrate.isLegacySubject(subject)
     local ready, why = Open77.database.isReady()
     if not ready then
@@ -412,7 +422,7 @@ function Migrate.kvpReport()
         local archived = row and toInt(row.balance) or nil
         local current
         if Wallets.validSubject(identifier) then
-            local snap = Tx.call("open", "cash:" .. identifier)
+            local snap = Tx.read("cash:" .. identifier)
             current = type(snap) == "table" and toInt(snap.balance) or nil
         end
         local same = kvp ~= nil and kvp == archived

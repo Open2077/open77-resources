@@ -4,7 +4,9 @@
 --   * the cargo of a vehicle is the container account "veh:<plate>:<part>" (plate = durable key);
 --   * every object that takes a slot is an item INSTANCE in that account, and its slot is the
 --     instance metadata `meta.cargo = { slot, layer, model }`, written by the same operation that
---     moves the instance in (a metaPatch on the move line) and cleared by the one that moves it out;
+--     moves the instance in (a metaPatch on the move line) and cleared by the one that moves it out
+--     (`metaPatch = { cargo = false }`: the coordinator merges one level and deletes nothing, so
+--     the key stays as `false`, which reads as "no slot"; other metadata keys are kept);
 --   * what players see is a PROJECTION: one prop per instance, created by this resource and
 --     attached to the vehicle's current runtime id (Open77.props.attach, parentType "vehicle", root
 --     binding). It is rebuilt from the coordinator whenever the vehicle (re)appears, changes bucket,
@@ -45,7 +47,10 @@ RpCargoService.accountOf = accountOf
 --   config   = Config (reach, maxVehicleSpeed, lockTimeoutMs, models, ...)
 --   registry = RpCargoLayout registry (mutable: the lab tunes it)
 --   tx(name, ...)                         -> coordinator export result(s); may yield
---   subjectOf(playerId)                   -> durable subject key | nil
+--   subjectOf(playerId)                   -> durable subject key | nil, reason
+--   mayWrite(account, opId, playerId)     -> true | nil, reason, info: this resource may write the
+--                                            account in that operation (the coordinator's writers,
+--                                            or a one-operation pocket grant); optional
 --   garage = { plateOf(vehicleId), describe(plate), canAccess(playerId, plate, part, action) }
 --   vehicles = { get(id), all() }
 --   players  = { position(playerId) }
@@ -128,12 +133,13 @@ function Svc:withPlate(plate, fn)
     return table.unpack(results, 2, results.n)
 end
 
--- The coordinator's snapshot of a cargo account. `create`: open it (capacity from the layout)
--- when it does not exist yet; otherwise an unknown account reads as empty.
+-- The coordinator's snapshot of a cargo account. Its read loads on demand and never creates (a
+-- never-opened account answers unknown_account). `create`: open it (capacity from the layout)
+-- then; otherwise an unknown account reads as empty, and nothing is created by looking.
 function Svc:read(account, layout, create)
     local snap, why, info = self.deps.tx("read", account)
     if snap then return snap end
-    if why == "not_loaded" or (why == "unknown_account" and create) then
+    if why == "unknown_account" and create then
         snap, why, info = self.deps.tx("open", account, { capacityG = math.floor(layout.capacityKg * 1000 + 0.5) })
         if snap then return snap end
     end
@@ -359,8 +365,8 @@ function Svc:prepare(playerId, vehicleId, action, physical)
     if not pid then return nil, "invalid_player_id" end
     local v, why = self:resolve(vehicleId)
     if not v then return nil, why end
-    local subject = self.deps.subjectOf(pid)
-    if not subject then return nil, "player_not_found" end
+    local subject, subjectWhy = self.deps.subjectOf(pid)
+    if not subject then return nil, subjectWhy or "player_not_found" end
     if physical then
         local ok, reason = self:near(pid, v.car)
         if not ok then return nil, reason end
@@ -411,6 +417,10 @@ function Svc:load(playerId, vehicleId, instanceId, opts)
             local slot, layer = L.allocate(v.layout, claims, opts.slot)
             if not slot then return self:refuse(layer) end
             local model = opts.model or self.cfg.models[opts.item or ""] or v.layout.model
+            if self.deps.mayWrite then
+                local may, mayWhy, mayInfo = self.deps.mayWrite(from, opId, v.playerId)
+                if not may then return self:refuse(mayWhy, mayInfo) end
+            end
             -- Marked before the call: the committed event can arrive before the export's answer.
             self.ownOps[opId] = true
             local receipt, reason, rinfo = self.deps.tx("transfer", {
@@ -490,6 +500,10 @@ function Svc:unload(playerId, vehicleId, instanceId, opts)
             else
                 target = topOf(v.layout, occupants)
                 if not target then return self:refuse("cargo_empty") end
+            end
+            if self.deps.mayWrite then
+                local may, mayWhy, mayInfo = self.deps.mayWrite(to, opId, v.playerId)
+                if not may then return self:refuse(mayWhy, mayInfo) end
             end
             self.ownOps[opId] = true
             local receipt, reason, rinfo = self.deps.tx("transfer", {

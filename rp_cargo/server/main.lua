@@ -39,17 +39,29 @@ local function tx(name, ...)
     return table.unpack(r, 1, r.n)
 end
 
--- The durable subject of a player: the coordinator's provider (A13 decision 5), else the account
--- identifier, which is the provider's documented default.
-local subjectFallbackLogged = false
+-- The durable subject of a player: the coordinator's provider (A13 decision 5; non-yielding, so
+-- asked inline). A refusal is passed through, never replaced by the account identifier: that
+-- would key a character's cargo moves by the wrong pockets.
 local function subjectOf(playerId)
-    local s = tx("subjectOf", playerId)
+    local ok, s, why = pcall(Open77.exports.callSync, TX, "subjectOf", playerId)
+    if not ok then return nil, "coordinator_unavailable" end
     if type(s) == "string" and s ~= "" then return s end
-    if not subjectFallbackLogged then
-        subjectFallbackLogged = true
-        log("the coordinator answers no subjectOf: using Open77.players.identifier (the A13 default subject)")
+    return nil, why or "subject_unavailable"
+end
+
+-- May this resource write `account` in operation `opId`? The coordinator's writers decide
+-- (allowed, non-yielding): with the per-part list `rp_cargo:veh/cargo` the cargo bed is ours but
+-- the pockets are rp_inventory's, which grants them for this one operation (grantPockets).
+local RESOURCE = GetCurrentResourceName()
+local function mayWrite(account, opId, playerId)
+    local ok, allowed, why = pcall(Open77.exports.callSync, TX, "allowed", RESOURCE, account)
+    if not ok or allowed == nil or allowed == true then return true end
+    if account:match("^char:") then
+        local granted, grant, gwhy = pcall(function() return exports.rp_inventory:grantPockets(opId, playerId) end)
+        if granted and grant == true then return true end
+        return nil, "namespace_denied", { account = account, detail = granted and tostring(gwhy) or "rp_inventory_unavailable" }
     end
-    return Open77.players.identifier(playerId)
+    return nil, why or "namespace_denied", { account = account }
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -100,6 +112,7 @@ local service = RpCargoService.new({
     registry = loadLayouts(),
     tx = tx,
     subjectOf = subjectOf,
+    mayWrite = mayWrite,
     garage = Garage,
     vehicles = {
         get = function(id)

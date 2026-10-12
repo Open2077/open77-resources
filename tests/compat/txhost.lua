@@ -2,13 +2,14 @@
 --
 -- Loaded AFTER fakehost.lua, never instead of it: it only adds what rp_inventory's
 -- transactions backend touches (promise, cross-resource exports, loot, positions, convars, an
--- inventory SQL interpreter with error injection) and wires the REAL open77_transactions
--- prototype (A13: shared/model.lua, server/memory_store.lua, server/coordinator.lua, read from
--- TX_ROOT) behind the export surface of the A13 contract, section 7.2. The coordinator and its
--- store survive H.boot, so a test can restart rp_inventory under a running coordinator, or
--- restart the coordinator over the same store.
+-- inventory SQL interpreter with error injection) and runs the REAL, final open77_transactions
+-- resource (the vendored copy of Open77 697e9e2f, server/main.lua included: its exports, gate,
+-- work queue, policy, subject provider and events) on the coordinator sandbox (txsandbox.lua).
+-- The coordinator and its store survive H.boot, so a test can restart rp_inventory under a
+-- running coordinator, or restart the coordinator over the same store.
 --
--- Globals expected from the runner: REPO (pack root), TX_ROOT (open77_transactions directory).
+-- Globals expected from the runner: REPO (pack root), HARNESS (this folder), TX_DIR (the
+-- open77_transactions folder: tests/compat/vendor/open77_transactions, or OP77_TX_DIR).
 
 local realBoot = H.boot
 
@@ -166,6 +167,7 @@ Open77.exports.callSync = function(resource, name, ...)
     if H.down[resource] then error("export_resource_unavailable", 0) end
     local r = H.resources[resource]
     local fn = r and r[name]
+    if type(fn) == "table" and fn.sync then return fn.sync(...) end
     if type(fn) ~= "function" then error(r and "export_not_found" or "export_resource_unavailable", 0) end
     return fn(...)
 end
@@ -301,61 +303,60 @@ function H.inventorySql(sql, p)
 end
 
 -- ---------------------------------------------------------------------------
--- open77_transactions: the A13 prototype behind the section 7.2 export surface
+-- open77_transactions: the FINAL coordinator (vendored, txsandbox.lua), its real exports
 -- ---------------------------------------------------------------------------
-TX = TX or {}
-local function loadPrototype()
-    if Open77TxCoordinator then return end
-    dofile(TX_ROOT .. "/shared/model.lua")
-    dofile(TX_ROOT .. "/server/memory_store.lua")
-    dofile(TX_ROOT .. "/server/coordinator.lua")
-end
+dofile(HARNESS .. "/txsandbox.lua")
 
--- (Re)creates the coordinator VM. `keepStore` models a coordinator restart over the same store.
-function TX.start(options)
-    loadPrototype()
-    options = options or {}
-    if not options.keepStore or not TX.store then
-        TX.store = Open77TxMemoryStore.new({ deferred = false })
-    end
-    TX.storeMode = options.storeMode or TX.storeMode or "sql"
-    TX.events = TX.events or {}
-    TX.bootMs = (TX.bootMs or 1700000000000) + 1000
-    TX.co = Open77TxCoordinator.new({
-        store = TX.store,
-        now = function() return math.floor(H.now * 1000) end,
-        serverTag = "lab",
-        onCommitted = function(receipt, accounts)
-            TX.events[#TX.events + 1] = { opId = receipt.opId, kind = receipt.kind }
-            -- The platform bus is queued and drained at the next tick boundary.
-            SetTimeout(0, function()
-                TriggerEvent("open77_transactions:committed", receipt.opId, receipt.kind, accounts)
-            end)
+TX = TX or {}
+-- Operator settings of the test server (the coordinator's tunables). Nothing mints by default
+-- (contract section 12.6): rp_inventory mints and burns on behalf of legacy callers through
+-- sys:<caller> accounts, the migration from sys:migration, and the scenarios' foreign writers
+-- seed from sys:seed. Writers: every resource (the default, `*`).
+TX.TUNABLES = {
+    serverTag = "lab", writers = "*",
+    mint1 = "rp_inventory sys:* * 100000000; rp_inventory sys:* money 1000000000000",
+    mint2 = "compat_seed sys:* * 100000000; rp_other sys:* * 100000000",
+}
+
+local function caller() return H.resource or "rp_inventory" end
+
+-- H.resources entry for the coordinator: each export is { cps, sync } over the sandbox, so
+-- Open77.exports.call dispatches a coordinator task and callSync runs it inline.
+local exportsTable = setmetatable({}, { __index = function(_, name)
+    if not TXS.running or not TXS.exports[name] then return nil end
+    return {
+        cps = function(done, ...)
+            local ok, why = TXS.call(caller(), name, function(okRun, ...)
+                if okRun then done(...) else done(nil, "export_raised " .. tostring((...))) end
+            end, ...)
+            if not ok then done(nil, why) end
         end,
-    })
-    TX.co.bootMs = TX.bootMs
-    H.down.open77_transactions = nil
-    local co = TX.co
-    local function caller() return H.resource or "rp_inventory" end
-    H.resources.open77_transactions = {
-        newOpId = function() return co:newOpId() end,
-        info = function() return { store = TX.storeMode, schemaVersion = 1 } end,
-        define = function(items) return co:define(items, caller()) end,
-        open = { cps = function(done, id, props) co:open(id, props, done) end },
-        read = { cps = function(done, id)
-            co:_ensureLoaded({ id }, function(ok, why)
-                if not ok then return done(nil, why) end
-                done(co:read(id))
-            end)
-        end },
-        reserve = { cps = function(done, spec) co:reserve(spec, caller(), done) end },
-        commit = { cps = function(done, opId, final) co:commit(opId, final, caller(), done) end },
-        cancel = function(opId, reason) return co:cancel(opId, reason, caller()) end,
-        transfer = { cps = function(done, spec) co:transfer(spec, caller(), done) end },
-        -- The real resource ticks on its own (expiry, fence retries); here every status call does.
-        status = { cps = function(done, opId, opts) co:tick(); co:status(opId, opts, done) end },
+        sync = function(...) return TXS.callSync(caller(), name, ...) end,
     }
-    return co
+end })
+
+-- (Re)starts the coordinator resource. keepStore: a restart over the same store (the database
+-- survives); storeMode "lab_kvp" boots it in its lab store (both switches set); tunables merge.
+-- The boot (schema, self-test, ready) runs at once on the coordinator's own scheduler.
+function TX.start(options)
+    options = options or {}
+    TX.storeMode = options.storeMode or "sql"
+    local tunables = { store = TX.storeMode == "lab_kvp" and "lab_kvp" or "sql" }
+    -- Every start begins from the test server's settings (a scenario's overrides do not leak).
+    TXS.tunables = {}
+    for k, v in pairs(TX.TUNABLES) do tunables[k] = v end
+    for k, v in pairs(options.tunables or {}) do tunables[k] = v end
+    local convars = { open77_transactions_lab = TX.storeMode == "lab_kvp" and "1" or "0",
+        sv_masterServerEnabled = TX.storeMode == "lab_kvp" and "false" or "true" }
+    TXS.start({ keepStore = options.keepStore, tunables = tunables, convars = convars, dbMode = options.dbMode or "sql" })
+    TX.store, TX.co = TXS.store, TXS.co
+    H.down.open77_transactions = nil
+    H.resources.open77_transactions = exportsTable
+    for _ = 1, 64 do
+        if TXS.ready() then break end
+        TXS.step()
+    end
+    return TX.co
 end
 
 -- The coordinator resource stops: its exports vanish and every pending call is rejected the way
@@ -364,6 +365,7 @@ function TX.stop()
     H.down.open77_transactions = true
     for p in pairs(H.pendingExports.open77_transactions or {}) do p:reject("export_resource_stopped") end
     H.pendingExports.open77_transactions = {}
+    TXS.stop()
 end
 
 -- A coordinator crash: requests already sent to the database still execute (runDetached, A13 D6),
@@ -371,7 +373,7 @@ end
 function TX.crash()
     TX.stop()
     TX.store:runDetached()
-    TX.start({ keepStore = true })
+    TX.start({ keepStore = true, storeMode = TX.storeMode })
 end
 
 -- Totals across every container of the store, for conservation checks.
@@ -388,9 +390,12 @@ function TX.instancesOf(item)
     return n
 end
 function TX.count(account, item) return TX.store:count(account, item) end
+-- Committed business operations (a kind, or all but the coordinator's own `reweigh`).
 function TX.ops(kind)
     local n = 0
-    for _, op in pairs(TX.store.ops) do if op.state == "committed" and (not kind or op.kind == kind) then n = n + 1 end end
+    for _, op in pairs(TX.store.ops) do
+        if op.state == "committed" and ((kind and op.kind == kind) or (not kind and op.kind ~= "reweigh")) then n = n + 1 end
+    end
     return n
 end
 

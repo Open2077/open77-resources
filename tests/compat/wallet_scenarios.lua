@@ -261,7 +261,7 @@ local function crashSale(mode)
         MH.stop("open77_transactions")
         MH.run(3)
         MH.shared.txPaused = false
-        MH.start("open77_transactions", WW.txScripts(), { host = true })
+        WW.startCoordinator()
         MH.until_(function() return box.done end, 40)
     end
     WW.settle(60)
@@ -715,6 +715,117 @@ function scenarios.migration_truncation()
 end
 
 WALLET_SCENARIOS = scenarios
+
+-- ---------------------------------------------------------------------------------------------
+-- The final coordinator's API (Open77 697e9e2f) as the wallet adapters use it.
+
+-- A character layer's provider: every subject is the account identifier plus `~1`.
+local PROVIDER = WW.shim("rp_identity_test", [[
+exports("subjectFor", function(who)
+    if type(who) == "string" then return who .. "~1" end
+    local identifier = Open77.players.identifier(who)
+    if not identifier then return nil, "no_character" end
+    return identifier .. "~1"
+end)
+AddEventHandler("onResourceStart", function(name)
+    if name ~= GetCurrentResourceName() then return end
+    Open77.exports.callSync("open77_transactions", "registerSubjectProvider", "subjectFor")
+end)
+]])
+
+-- The writer of the pockets: rp_inventory's grantPockets(opId, playerId) as rp_economy calls it
+-- (open77_transactions authorize for that one operation); `grant` is the same for a test caller.
+local GRANTER = WW.shim("rp_inventory", [[
+GRANTS = 0
+exports("grantPockets", function(opId, playerId)
+    if GetInvokingResource() ~= "rp_economy" then return nil, "caller_not_allowed" end
+    GRANTS = GRANTS + 1
+    local account = "char:" .. tostring(Open77.players.identifier(playerId))
+    return Open77.exports.callSync("open77_transactions", "authorize", opId, "rp_economy", { account }, 30000)
+end)
+]])
+
+function scenarios.final_api()
+    local out = {}
+    -- 1. No coordinator mint rule for rp_economy: a legacy credit is refused at once (allowed), an
+    --    atomic one by the coordinator; burns are never restricted. The rule grammar names one
+    --    sys: segment (`sys:<name>` or `sys:*`): a rule for `sys:rp_economy:start` is ignored.
+    local HUD = WW.shim("hud_shim", [[
+SEEN = {}
+AddEventHandler("rp_economy:pendingChanged", function(playerId) SEEN[#SEEN + 1] = tostring(playerId) end)
+]])
+    WW.boot({ shims = { WW.shim("rp_jobs"), HUD }, tunables = { mint1 = "rp_economy sys:rp_economy:start money 100000" } })
+    MH.shared.txStore:seedWallet("cash:" .. A, 200)
+    WW.join(7, A, "V")
+    out.rule_ignored = tostring(#MH.grep("mint rules: ignored entry 'rp_economy sys:rp_economy:start money 100000'"))
+    out.start_grant = WW.balance("cash:" .. A)
+    local v, why = WW.sync("rp_jobs", "rp_economy", "add", 7, 100, "salary")
+    out.add_without_rule = tostring(v) .. "/" .. tostring(why)
+    v, why = WW.sync("rp_jobs", "rp_economy", "remove", 7, 50, "fine")
+    out.burn_without_rule = tostring(v) .. "/" .. tostring(why)
+    local r, rwhy = WW.async("rp_jobs", "rp_economy", "pay", { opId = "jobs:pay:final:0001", from = { sys = "payroll" },
+        to = { player = 7 }, amount = 10, reason = "payroll" })
+    out.pay_without_rule = outcome(r, rwhy)
+    WW.settle()
+    out.pending_changed = table.concat(MH.resources.hud_shim.env.SEEN, ",")
+    out.durable = WW.balance("cash:" .. A)
+    out.net_minted_after_refusals = WW.economy().Mint.net("rp_jobs")
+    -- the business reason reached the journal (contract 7.2 `reason`)
+    local reasons = {}
+    for _, e in ipairs(MH.shared.txStore.journal) do
+        if e.account == "cash:" .. A then reasons[#reasons + 1] = tostring(e.reason) end
+    end
+    out.journal_reasons = table.concat(reasons, ",")
+
+    -- 2. Strict writers: rp_economy writes wallets only. A sale out of the pockets is refused
+    --    until the pockets' writer authorizes that one operation; then it commits whole.
+    WW.boot({ shims = { WW.DEFINER, WW.shim("rp_ferrailleur") },
+        tunables = { writers = "rp_economy:cash+bank+soc, rp_inventory:char, inventory_shim" } })
+    seedPockets(A, { scrap = 4, component = 2 })
+    WW.join(7, A, "V")
+    local denied, deniedWhy = WW.async("rp_ferrailleur", "rp_economy", "sale", saleSpec("ferrailleur:sale:acct-a:g1"))
+    out.sale_without_grant = outcome(denied, deniedWhy)
+    MH.start(GRANTER.name, { { source = GRANTER.source, name = "shim_rp_inventory.lua" } })
+    local sold, soldWhy = WW.async("rp_ferrailleur", "rp_economy", "sale", saleSpec("ferrailleur:sale:acct-a:g2"))
+    WW.settle()
+    out.grant = tostring(MH.resources.rp_inventory.env.GRANTS)
+    out.sale_with_grant = outcome(sold, soldWhy)
+    out.after_grant = WW.count("char:" .. A, "scrap") .. "/" .. (WW.balance("cash:" .. A) - 500) .. "/" .. WW.balance("soc:ferrailleur")
+
+    -- 2b. A unique unit sold out of a truck bed (C1 salvage crate): an instance line, its
+    --     metadata with it, destroyed into the NPC buyer's sys account; one operation.
+    WW.boot({ shims = { WW.DEFINER, WW.shim("rp_salvage") } })
+    local store = MH.shared.txStore
+    store:seedContainer("veh:NC-1:cargo", 300000, {}, WW.WEIGHTS)
+    store:seedInstance("crate-0001", "crowbar", "veh:NC-1:cargo", { cargo = { slot = 1 } })
+    store.containers["veh:NC-1:cargo"].weightG = WW.WEIGHTS.crowbar
+    WW.join(7, A, "V")
+    local crate, crateWhy = WW.async("rp_salvage", "rp_economy", "sale", {
+        opId = "salvage:sale:acct-a:crate-0001", seller = { player = 7 },
+        items = { { instance = "crate-0001", from = "veh:NC-1:cargo" } }, buyer = { sys = "buyer" }, total = 120,
+        payees = { { player = 7, amount = 100 }, { society = "salvage", amount = 20 } }, reason = "salvage:crate" })
+    local badInstance, badWhy = WW.async("rp_salvage", "rp_economy", "sale", {
+        opId = "salvage:sale:acct-a:bad-0001", seller = { player = 7 },
+        items = { { instance = "x" } }, buyer = { sys = "buyer" }, total = 1 })
+    WW.settle()
+    out.instance_sale = outcome(crate, crateWhy) .. ":" .. tostring(store.instances["crate-0001"].container)
+        .. ":" .. (WW.balance("cash:" .. A) - 500) .. "/" .. WW.balance("soc:salvage")
+    out.instance_invalid = outcome(badInstance, badWhy)
+    out.salvage_minted = WW.economy().Mint.net("rp_salvage")
+
+    -- 3. A character layer's provider: wallets follow its subject, for connected players and for
+    --    offline identifiers alike; the 1.x tables stay keyed by the identifier.
+    WW.boot({ shims = { PROVIDER, WW.shim("rp_nomade") } })
+    WW.join(7, A, "V")
+    local p = WW.economy().Wallets.byPlayer[7]
+    out.provider_cash = tostring(p and p.cash)
+    out.provider_start = WW.balance("cash:" .. A .. "~1") .. "/" .. WW.balance("cash:" .. A)
+    local paid, paidWhy = WW.async("rp_nomade", "rp_economy", "pay", { opId = "nomade:pay:final:0001", from = { sys = "client" },
+        to = { identifier = "acct-away" }, amount = 25, reason = "nomade:delivery" })
+    WW.settle()
+    out.provider_offline = outcome(paid, paidWhy) .. ":" .. WW.balance("cash:acct-away~1")
+    return WW.result(out)
+end
 
 function RUN_SCENARIO(name)
     local scenario = assert(scenarios[name], "unknown scenario " .. tostring(name))

@@ -9,8 +9,9 @@
 --   legacy        the original store: the in-memory cache is the truth for a connected player
 --                 and every change is written straight through to SQL (or the kvp store when
 --                 no database answers). Kept verbatim as the rollback path.
---   transactions  a facade over open77_transactions (world-interaction B2, A13 contract):
---                 char:<identifier> pockets, stash:<id>, veh:<plate>:<part>, world:<id>;
+--   transactions  a facade over open77_transactions (world-interaction B2, A13 contract; the
+--                 final coordinator, Open77 697e9e2f): char:<subject> pockets (subjectOf),
+--                 stash:<id>, veh:<plate>:<part>, world:<id> (minted by openWorld);
 --                 synchronous exports are write-behind, the *Async exports are one atomic
 --                 operation with a receipt; never a KVP fallback; legacy rows are imported
 --                 once per subject (server/migration.lua).
@@ -327,6 +328,24 @@ local function txCall(name, ...)
     return table.unpack(r, 1, r.n)
 end
 
+-- One NON-yielding open77_transactions export, inline (subjectOf, allowed, info): its values, or
+-- nil, "coordinator_unavailable" when the coordinator is not running or the call raised.
+local function txSync(name, ...)
+    local res = table.pack(pcall(Open77.exports.callSync, "open77_transactions", name, ...))
+    if not res[1] then return nil, "coordinator_unavailable", { detail = tostring(res[2]) } end
+    return table.unpack(res, 2, res.n)
+end
+
+-- The durable subject of a connected player: the coordinator's subject provider (contract 12.5:
+-- the account identifier by default; a character override provider's key when one registered).
+-- A refusal is passed through, never replaced by the account identifier (that would fork a
+-- character's pockets).
+local function subjectOf(playerId)
+    local subject, why = txSync("subjectOf", playerId)
+    if type(subject) == "string" and subject ~= "" then return subject end
+    return nil, why or "subject_unavailable"
+end
+
 -- One database call (callback form) with a deadline: value | nil, reason. Yields.
 local function dbCall(method, sql, params)
     local p = promise.new()
@@ -379,12 +398,44 @@ local function onViewChanged(view, changes)
     end
 end
 
+local reprojectDrops -- forward: world: drop containers re-projected after a (re)start
+
+-- Async operations that answered in_doubt settle in the background (the facade polls the
+-- coordinator's status with resolve, which fences an unknown outcome): every settlement raises
+-- rp_inventory:settled(opId, state) -- "committed" or the not-committed state -- and runs the
+-- continuation a flow registered for that opId (a drop or a pickup decides its projection then).
+local doubtContinuations = {}   -- [opId] = function(state, receipt)
+local settledRecently = {}      -- [opId] = { state, receipt } (a settlement before registration)
+
+local function onSettled(opId, state, receipt)
+    TriggerEvent("rp_inventory:settled", opId, state)
+    local fn = doubtContinuations[opId]
+    if fn then
+        doubtContinuations[opId] = nil
+        fn(state, receipt)
+    else
+        settledRecently[opId] = { state = state, receipt = receipt }
+        SetTimeout(60000, function() settledRecently[opId] = nil end)
+    end
+end
+
+local function afterDoubt(opId, fn)
+    local done = settledRecently[opId]
+    if done then
+        settledRecently[opId] = nil
+        return fn(done.state, done.receipt)
+    end
+    doubtContinuations[opId] = fn
+end
+
 if TX then
     Facade = RpInvFacade.new({
-        call = txCall, spawn = CreateThread, wait = Wait,
+        call = txCall, callSync = txSync, spawn = CreateThread, wait = Wait,
         now = function() return Open77.time.monotonic() * 1000 end,
         log = function(fmt, ...) print(("[rp_inventory] " .. fmt):format(...)) end,
         registry = Registry, resource = RESOURCE, onView = onViewChanged,
+        onReady = function() if reprojectDrops then CreateThread(reprojectDrops) end end,
+        onSettled = onSettled,
     })
     Migration = RpInvMigration.new({
         db = dbCall, call = txCall, registry = Registry, facade = Facade,
@@ -455,20 +506,24 @@ end
 -- Player containers
 ---------------------------------------------------------------------------
 
--- Transactions backend: import the legacy rows once, then open char:<identifier>.
+-- Transactions backend: import the legacy rows (keyed by the account identifier) once, then open
+-- char:<subject>, the subject being the coordinator's (subjectOf).
 local function loadPlayerTx(playerId, inv)
-    local account, why = Accounts.char(inv.identifier)
-    if not account then
-        inv.error = why
-        log("player %d inventory not loaded: %s", playerId, tostring(why))
-        return nil
-    end
-    inv.account = account
     if not Facade:awaitReady(15000) then
         inv.error = "store_unavailable"
         tell(playerId, explain("store_unavailable"))
         return nil
     end
+    if inventories[playerId] ~= inv then return nil end
+    local subject, swhy = subjectOf(playerId)
+    local account, why = nil, swhy
+    if subject then account, why = Accounts.char(subject) end
+    if not account then
+        inv.error = why
+        log("player %d inventory not loaded: %s", playerId, tostring(why))
+        return nil
+    end
+    inv.subject, inv.account = subject, account
     local capacityG = math.floor(Config.maxCarryWeight * 1000 + 0.5)
     local ok, reason = ensureMigrated(account, "char", inv.identifier, capacityG)
     if inventories[playerId] ~= inv then return nil end
@@ -821,7 +876,7 @@ end
 -- Drop / pick up through the loot API
 ---------------------------------------------------------------------------
 
-local function createDrop(def, itemId, count, pos)
+local function createDrop(def, itemId, count, pos, ttlMs)
     return Open77.loot.create({
         item = def.record or Config.lootRecord,
         quantity = count,
@@ -830,36 +885,92 @@ local function createDrop(def, itemId, count, pos)
         radius = 2.0,
         label = def.label,
         visualItem = def.visual or Config.lootVisual,
-        ttlMs = Config.dropTtlMs,
+        ttlMs = ttlMs or Config.dropTtlMs,
     })
 end
 
+local function nowMs() return math.floor(Open77.time.unix() * 1000) end
+
 -- Transactions backend: a drop is a world:<id> container that holds the goods; the native loot
--- is only its projection (A13 6.1, option b). The pickup credit is conditional on the picker's
--- capacity, and a refused pickup re-projects the drop where it lay, not at the picker's feet.
--- The projection does not survive an rp_inventory restart (the loot registry is in memory, A13
--- F4): the goods then stay, conserved and journaled, in their world: container until a
--- projection owner (A6) re-creates it. A restart no longer destroys them.
+-- is only its projection (A13 6.1, option b). The coordinator mints the container (openWorld)
+-- and keeps its metadata, { owner = "rp_inventory", kind = "drop", item, count, x, y, z,
+-- bucket }, and its expiry. The pickup credit is conditional on the picker's capacity, a refused
+-- pickup re-projects the drop where it lay, not at the picker's feet, and an emptied container is
+-- closed. The loot does not survive an rp_inventory restart (the loot registry is in memory, A13
+-- F4); the goods do, and the next start re-projects every drop of this resource from the
+-- coordinator's listing (reprojectDrops below).
+local dropsByWorld = {}   -- [world account] = true while a loot projects it
+
+local function dropMeta(itemId, count, pos)
+    return { owner = RESOURCE, kind = "drop", item = itemId, count = count,
+        x = pos.x, y = pos.y, z = pos.z, bucket = pos.bucket or 0 }
+end
+
+local function closeIfEmpty(account)
+    local ok, reason = Facade:closeWorld(account)
+    if ok then
+        dropsByWorld[account] = nil
+    elseif reason ~= "container_not_empty" and reason ~= "busy" then
+        log("%s not closed (%s): it stays listed until it is emptied", account, tostring(reason))
+    end
+    return ok, reason
+end
+
+-- Closes an emptied world: container once no operation of this inventory holds it any more.
+local function closeWhenIdle(account)
+    for _ = 1, 20 do
+        local ok, reason = closeIfEmpty(account)
+        if ok or reason ~= "busy" then return end
+        Wait(500)
+    end
+end
+
 local function dropItemsTx(inv, playerId, def, itemId, count, pos)
-    local account, why = Accounts.world(Facade:mintWorldId())
-    if not account then return nil, why end
-    local view, vreason = Facade:load(account, math.max(1, def.weightG * count))
+    local picks, pwhy = Facade:pick(inv.view, itemId, count)
+    if not picks then return nil, pwhy end
+    local view, vreason = Facade:openWorld({
+        capacityG = math.max(1, def.weightG * count),
+        meta = dropMeta(itemId, count, pos),
+        expiresAt = nowMs() + Config.dropTtlMs,
+    })
     if not view then return nil, vreason end
+    local account = view.account
     local lines, preason = Facade:planMove(inv.view, account, itemId, count)
-    if not lines then Facade:release(account); return nil, preason end
+    if not lines then closeIfEmpty(account); return nil, preason end
     local dropId, lreason = createDrop(def, itemId, count, pos)
-    if not dropId then Facade:release(account); return nil, lreason or "loot_unavailable" end
+    if not dropId then closeIfEmpty(account); return nil, lreason or "loot_unavailable" end
     local key = tostring(dropId)
     local place = { x = pos.x, y = pos.y, z = pos.z, bucket = pos.bucket }
     drops[key] = { itemId = itemId, count = count, world = account, pos = place }
-    local receipt, reason = Facade:transact({
+    dropsByWorld[account] = true
+    local receipt, reason, info = Facade:transact({
         kind = "inv.drop", actor = inv.account, lines = lines, capacityReason = { [account] = "stash_full" },
     })
     if not receipt then
         drops[key] = nil
         Open77.loot.remove(dropId)
-        Facade:release(account)
-        return nil, reason
+        if reason == "in_doubt" and info and info.opId then
+            -- The goods may be on the ground already: no projection until the outcome is known,
+            -- then a commit is projected where it was dropped and a fence closes the empty box.
+            dropsByWorld[account] = true
+            afterDoubt(info.opId, function(state)
+                dropsByWorld[account] = nil
+                if state == "committed" then
+                    local newId = createDrop(def, itemId, count, place)
+                    if newId then
+                        drops[tostring(newId)] = { itemId = itemId, count = count, world = account, pos = place }
+                        dropsByWorld[account] = true
+                    end
+                    log("drop %s by player %d settled committed: projected as loot %s", account, playerId, tostring(newId))
+                else
+                    closeWhenIdle(account)
+                    log("drop %s by player %d settled %s: nothing left the pockets", account, playerId, tostring(state))
+                end
+            end)
+            return nil, reason, info
+        end
+        closeIfEmpty(account)
+        return nil, reason, info
     end
     log("player %d dropped %s x%d into %s (loot %s, op %s)", playerId, itemId, count, account, key, tostring(receipt.opId))
     return true, dropId
@@ -870,13 +981,13 @@ end
 local function pickupTx(playerId, key, drop, how)
     local def = Items[drop.itemId]
     local inv, reason = resolvePlayer(playerId)
-    local receipt
+    local receipt, info
     if inv then
         local wview, wreason = Facade:load(drop.world)
         if wview then
             local lines, preason = Facade:planMove(wview, inv.account, drop.itemId, drop.count)
             if lines then
-                receipt, reason = Facade:transact({
+                receipt, reason, info = Facade:transact({
                     kind = "inv.pickup", actor = inv.account, lines = lines,
                     capacityReason = { [inv.account] = "too_heavy" },
                 })
@@ -888,11 +999,27 @@ local function pickupTx(playerId, key, drop, how)
         end
     end
     if receipt then
-        Facade:release(drop.world)
+        closeIfEmpty(drop.world)
         log("player %d picked up %s x%d from %s (loot %s%s, op %s)", playerId, drop.itemId, drop.count, drop.world,
             key, how, tostring(receipt.opId))
         if def then tell(playerId, ("Picked up %s x%d."):format(def.label, drop.count)) end
         return true
+    end
+    if reason == "in_doubt" and info and info.opId then
+        -- The goods may be in the picker's pockets already: re-project only if nothing moved.
+        if inv then tell(playerId, explain("in_doubt")) end
+        afterDoubt(info.opId, function(state)
+            if state == "committed" then
+                closeWhenIdle(drop.world)
+                log("pickup of %s by player %s settled committed", key, tostring(playerId))
+            else
+                local newId = def and drop.pos and createDrop(def, drop.itemId, drop.count, drop.pos) or nil
+                if newId then drops[tostring(newId)] = drop end
+                log("pickup of %s by player %s settled %s: re-projected as loot %s", key, tostring(playerId),
+                    tostring(state), tostring(newId))
+            end
+        end)
+        return nil, reason, info
     end
     local newId = def and drop.pos and createDrop(def, drop.itemId, drop.count, drop.pos) or nil
     if newId then drops[tostring(newId)] = drop end
@@ -902,18 +1029,77 @@ local function pickupTx(playerId, key, drop, how)
     return nil, reason
 end
 
--- A drop's TTL ran out: the goods evaporate, as before, but through a journaled operation.
+-- A drop's TTL ran out: the goods evaporate, as before, but through a journaled operation, and
+-- the emptied container is closed. itemId / count nil: everything the container holds.
+local function expireWorld(account, itemId, count)
+    local wview, why = Facade:load(account)
+    if not wview then return nil, why end
+    local lines = {}
+    if itemId then
+        local part, pwhy = Facade:planMove(wview, "sys:expired", itemId, count)
+        if not part then return nil, pwhy end
+        lines = part
+    else
+        for id, n in pairs(Facade:counts(wview)) do
+            for _, l in ipairs(Facade:planMove(wview, "sys:expired", id, n) or {}) do lines[#lines + 1] = l end
+        end
+    end
+    local receipt, reason = nil, "empty"
+    if #lines > 0 then receipt, reason = Facade:transact({ kind = "inv.expire", lines = lines }) end
+    if receipt or reason == "empty" then closeIfEmpty(account) end
+    return receipt, reason
+end
+
 local function expireTx(key, drop)
-    local wview = Facade:load(drop.world)
-    local lines = wview and Facade:planMove(wview, "sys:expired", drop.itemId, drop.count)
-    local receipt, reason = nil, "store_unavailable"
-    if lines then receipt, reason = Facade:transact({ kind = "inv.expire", lines = lines }) end
+    local receipt, reason = expireWorld(drop.world, drop.itemId, drop.count)
     if receipt then
-        Facade:release(drop.world)
         log("drop %s (%s x%d) evaporated from %s (op %s)", key, drop.itemId, drop.count, drop.world, tostring(receipt.opId))
     else
         log("drop %s expired but %s keeps its goods (%s)", key, drop.world, tostring(reason))
     end
+end
+
+-- After a start (or a coordinator restart): every world: container this resource dropped that no
+-- loot projects is listed from the coordinator (keyset pages) and projected again from its
+-- metadata, where it lay, for the rest of its time; an expired one evaporates, an empty one is
+-- closed. Bounded: Config.reprojectLimit containers per start.
+reprojectDrops = function()
+    local after, seen, projected = "", 0, 0
+    local limit = Config.reprojectLimit or 500
+    while seen < limit do
+        local page, why = txCall("listWorld", after, math.min(100, limit - seen))
+        if type(page) ~= "table" then
+            log("drops not re-projected: listWorld %s", tostring(why))
+            return
+        end
+        for _, row in ipairs(page) do
+            after, seen = row.id, seen + 1
+            local m = row.meta
+            if type(m) == "table" and m.owner == RESOURCE and m.kind == "drop" and not dropsByWorld[row.id] then
+                if (tonumber(row.weightG) or 0) == 0 then
+                    closeIfEmpty(row.id)
+                elseif row.expiresAt and row.expiresAt <= nowMs() then
+                    expireWorld(row.id)
+                else
+                    local wview = Facade:load(row.id)
+                    local pos = { x = tonumber(m.x) or 0, y = tonumber(m.y) or 0, z = tonumber(m.z) or 0,
+                        bucket = tonumber(m.bucket) or 0 }
+                    local ttl = row.expiresAt and math.max(1000, row.expiresAt - nowMs()) or nil
+                    for itemId, n in pairs(wview and Facade:counts(wview) or {}) do
+                        local def = Items[itemId]
+                        local dropId = def and createDrop(def, itemId, n, pos, ttl)
+                        if dropId then
+                            drops[tostring(dropId)] = { itemId = itemId, count = n, world = row.id, pos = pos }
+                            dropsByWorld[row.id] = true
+                            projected = projected + 1
+                        end
+                    end
+                end
+            end
+        end
+        if #page < 100 then break end
+    end
+    if projected > 0 then log("re-projected %d drop(s) from open77_transactions", projected) end
 end
 
 local function dropItems(playerId, itemId, count)
@@ -1579,7 +1765,10 @@ exports("accountOf", function(playerId)
     if inv and inv.account then return inv.account end
     local identifier = Open77.players.identifier(playerId)
     if not identifier then return nil, "player_not_found" end
-    return Accounts.char(identifier)
+    if not TX then return Accounts.char(identifier) end
+    local subject, why = subjectOf(playerId)
+    if not subject then return nil, why end
+    return Accounts.char(subject)
 end)
 exports("stashAccount", function(stashId) return Accounts.stash(stashId) end)
 exports("vehicleAccount", function(plate, part) return Accounts.vehicle(plate, part) end)
@@ -1623,6 +1812,27 @@ local function countArg(count)
     if not isCount(n) then return nil end
     return math.tointeger(n)
 end
+
+-- grantPockets(opId, playerId, ttlMs?) -> true | nil, reason
+-- A one-operation grant (open77_transactions authorize, contract 7.2): the CALLING resource may
+-- touch this player's pockets (char:<subject>) in the coordinator operation `opId` only, for
+-- ttlMs (default 30 s; spent when that operation commits or is fenced). For a job that commits
+-- its own operation into or out of the pockets (C1: a salvage credit out of sys:salvage, a sale
+-- through rp_economy) while the server's `writers` keeps `char` to rp_inventory. Callers:
+-- Config.pocketGrantees (caller_not_allowed otherwise); the player must be loaded here. The
+-- pockets' view follows through open77_transactions:committed.
+exports("grantPockets", function(opId, playerId, ttlMs)
+    local ok, why = requireTx()
+    if not ok then return nil, why end
+    local caller = GetInvokingResource()
+    if not caller or not (Config.pocketGrantees or {})[caller] then return nil, "caller_not_allowed" end
+    local inv, reason = loadedPlayer(playerId)
+    if not inv then return nil, reason end
+    local granted, gwhy = txSync("authorize", opId, caller, { inv.account }, ttlMs)
+    if granted ~= true then return nil, gwhy or "store_unavailable" end
+    log("pockets of player %d granted to %s for operation %s", inv.id, caller, tostring(opId))
+    return true
+end)
 
 -- giveAsync(fromPlayerId, toPlayerId, itemId, count, opts?) -> receipt | nil, reason, info
 -- opts: { opId, meta, instances, maxDistance }. Both players loaded; no reach rule unless
@@ -1684,8 +1894,10 @@ end)
 -- sale = { items = { { item, count, meta? }... }, buyer = "dealer" (a sys: name), payouts =
 -- { { to = "cash" | "bank" | "soc:<name>", amount }... }, opId?, kind? }. Goods leave the
 -- pockets and every payout lands in ONE operation (A13 6.1 sale). Requires
--- Config.coordinatorWallets: until B3 moves the wallets onto open77_transactions, a coordinator
--- cash credit would be invisible to rp_economy (a fork), so it refuses wallet_not_coordinated.
+-- Config.coordinatorWallets (else wallet_not_coordinated): rp_economy 2.0 keeps the wallets on the
+-- coordinator and re-reads them on open77_transactions:committed. rp_economy:sale is the usual
+-- path (it applies its money allowlist per original caller); this one mints from sys:<buyer> as
+-- rp_inventory, so it also needs a coordinator mint rule `rp_inventory sys:<buyer> money <cap>`.
 exports("sellAsync", function(playerId, sale)
     local ok, why = requireTx()
     if not ok then return nil, why end
@@ -1710,7 +1922,7 @@ exports("sellAsync", function(playerId, sale)
         if not amount or amount < 1 then return nil, "invalid_sale" end
         local to
         if payout.to == "cash" or payout.to == "bank" then
-            to = payout.to .. ":" .. inv.identifier
+            to = payout.to .. ":" .. inv.subject
         elseif type(payout.to) == "string" and payout.to:match("^soc:[%w_%-]+$") then
             to = payout.to
         end
@@ -1752,8 +1964,10 @@ local function vehicleMove(action, playerId, plate, part, itemId, count, opts)
     local allowed, deny, dinfo = authorize("veh", { playerId = inv.id, subject = inv.account, account = account,
         plate = Accounts.plate(plate), part = part, action = action, item = itemId, count = n }, true)
     if not allowed then return nil, deny, dinfo end
+    -- A part that was never opened (openVehicle) has no row: the coordinator's lazy read answers
+    -- unknown_account and creates nothing.
     local view, vreason = Facade:load(account)
-    if not view then return nil, vreason end
+    if not view then return nil, vreason == "unknown_account" and "vehicle_not_tracked" or vreason end
     if not view.committed.exists then return nil, "vehicle_not_tracked" end
     local fromView, to, capacityReason = inv.view, account, { [account] = "stash_full" }
     if action == "take" then fromView, to, capacityReason = view, inv.account, { [inv.account] = "too_heavy" } end
@@ -1777,19 +1991,22 @@ exports("vehicleTakeAsync", function(playerId, plate, part, itemId, count, opts)
 end)
 
 -- createWorld(capacityKg, opts?) -> { account, worldId } | nil, reason
--- A new, empty world:<id> container (a crate, a pile). Its prop and prompt are the projection
--- owner's (A6); this inventory only holds what is inside.
+-- A new, empty world:<id> container (a crate, a pile), minted by the coordinator (openWorld): its
+-- id is never chosen by a caller (opts.worldId is refused, invalid_world_id). opts.meta (<= 2 KiB,
+-- what the projection is rebuilt from) and opts.expiresAt (ms) are stored with it and listed by
+-- open77_transactions:listWorld. Its prop and prompt are the projection owner's (A6); this
+-- inventory only holds what is inside.
 exports("createWorld", function(capacityKg, opts)
     local ok, why = requireTx()
     if not ok then return nil, why end
     local cap = tonumber(capacityKg)
     if not cap or cap <= 0 or cap > 100000 then return nil, "invalid_capacity" end
-    local worldId = type(opts) == "table" and opts.worldId or Facade:mintWorldId()
-    local account, aw = Accounts.world(worldId)
-    if not account then return nil, aw end
-    local view, vreason = Facade:load(account, math.floor(cap * 1000 + 0.5))
+    opts = type(opts) == "table" and opts or {}
+    if opts.worldId ~= nil then return nil, "invalid_world_id", { detail = "minted_by_coordinator" } end
+    local view, vreason = Facade:openWorld({ capacityG = math.floor(cap * 1000 + 0.5), meta = opts.meta,
+        expiresAt = opts.expiresAt })
     if not view then return nil, vreason end
-    return { account = account, worldId = worldId }
+    return { account = view.account, worldId = view.account:sub(7) }
 end)
 
 local function worldMove(action, playerId, worldId, itemId, count, opts)
@@ -1807,7 +2024,7 @@ local function worldMove(action, playerId, worldId, itemId, count, opts)
         worldId = worldId, action = action, item = itemId, count = n }, false)
     if not allowed then return nil, deny, dinfo end
     local view, vreason = Facade:load(account)
-    if not view then return nil, vreason end
+    if not view then return nil, vreason == "unknown_account" and "unknown_container" or vreason end
     if not view.committed.exists then return nil, "unknown_container" end
     local fromView, to, capacityReason = inv.view, account, { [account] = "stash_full" }
     if action == "take" then fromView, to, capacityReason = view, inv.account, { [inv.account] = "too_heavy" } end
@@ -1926,6 +2143,11 @@ exports("read", function(account)
     if not ok then return nil, why end
     local view, reason = Facade:view(account), nil
     if not view then view, reason = Facade:load(account) end
+    if not view and reason == "unknown_account" then
+        -- Never opened: the coordinator's read creates nothing; the answer keeps its shape.
+        return { account = account, items = {}, stacks = {}, instances = {}, weightKg = 0, capacityKg = 0,
+            exists = false }
+    end
     if not view then return nil, reason end
     local stacks, instances = Facade:effective(view)
     return {

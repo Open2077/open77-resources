@@ -318,6 +318,38 @@ function scenarios.commands()
     return r
 end
 
+-- The lab issue (C1 two-client runs): a plated vehicle owned by the player, out next to them,
+-- only with the convar rp_garage_lab 1.
+function scenarios.lab_issue()
+    seedWorld()
+    local convars = {}
+    GetConvar = function(name, default)
+        local v = convars[name]
+        if v == nil then return default end
+        return v
+    end
+    local ex = boot()
+    local r = {}
+    r.disabled = word(ex.labIssue(1, MACKINAW))
+    convars.rp_garage_lab = "1"
+    local issued, why = ex.labIssue(2, MACKINAW, { label = "Lab truck" })
+    r.issued = type(issued) == "table" and (issued.state .. ":" .. tostring(issued.plate:match("^NC%-") ~= nil)
+        .. ":" .. tostring(type(issued.vehicleId) == "number")) or word(issued, why)
+    local plate = type(issued) == "table" and issued.plate
+    r.owner = plate and tostring(ex.describe(plate).owner) or "none"
+    r.owner_cargo = plate and word(ex.canAccess(2, plate, "cargo", "put")) or "none"
+    r.stranger_cargo = plate and word(ex.canAccess(5, plate, "cargo", "put")) or "none"
+    r.account = plate and tostring(ex.accountOf(plate, "cargo")) == ("veh:" .. plate .. ":cargo") and "ok" or "none"
+    r.persisted = plate and tostring(db().vehicles[plate] ~= nil) or "none"
+    r.stored_only = (function()
+        local s = ex.labIssue(2, MACKINAW, { spawn = false })
+        return type(s) == "table" and s.state or "none"
+    end)()
+    r.bad_record = word(ex.labIssue(2, "not a record"))
+    r.bad_player = word(ex.labIssue(999, MACKINAW))
+    return r
+end
+
 function RUN_SCENARIO(name)
     SCRIPTS = { GARAGE_DIR .. "/shared/config.lua", GARAGE_DIR .. "/server/access.lua", GARAGE_DIR .. "/server/main.lua" }
     local scenario = assert(scenarios[name], "unknown scenario " .. tostring(name))
