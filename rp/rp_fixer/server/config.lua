@@ -138,10 +138,11 @@ C.drops = {}
 -- Cyberpsycho sightings: where a bounty's target spawns. All outside safe zones.
 -- ---------------------------------------------------------------------------------------------
 C.sightings = {
-    -- Kabuki, south of the market (catalogue row 15215, wat_kab_ripperdoc_03 spot), 79 m from
-    -- the market centre: outside the `kabuki_market` safe zone (r 70).
-    kabuki_south = { label = "Kabuki, south of the market", position = { x = -1241.865, y = 1945.981, z = 8.054 },
-                     yaw = 65.7, measured = false },
+    -- Kabuki, the burrito-machine alcove north-west of the market (walked 2026-10-12: a street
+    -- corner by the crowd spots 6087/34829), 96 m from the market centre: outside the
+    -- `kabuki_market` safe zone (r 70). The old catalogue spot 15215 stood behind a closed shutter.
+    kabuki_alley = { label = "Kabuki, north-west of the market", position = { x = -1265.0, y = 2062.91, z = 11.98 },
+                     yaw = 0.0, measured = true },
     -- Northside industrial district (catalogue row 8055, wat_nid_foodshop_01 spot).
     northside = { label = "Northside industrial", position = { x = -1914.454, y = 2739.485, z = 10.899 },
                   yaw = -47.0, measured = false },
@@ -162,6 +163,8 @@ C.psycho = {
     group = "rp_fixer_psychos",
     creditWindowMs = 30000,    -- a death with no player source credits the last player hit this recent
     respawnMs = 60000,         -- a lost body, or one nobody killed, comes back after this
+    clearRadius = 4.0,         -- never spawned with a player this close to the sighting (0 = off)
+    clearRetryMs = 5000,       -- how soon a spawn held back by a player on the spot is tried again
     corpseMs = 30000,          -- a dead cyberpsycho's body is removed after this
 }
 
@@ -240,8 +243,8 @@ C.templates = {
     -- Regina's corner
     regina_psycho_kabuki = {
         kind = "bounty", title = "Cyberpsycho in Kabuki", posters = { npc = true, player = true },
-        brief = "A psycho is tearing up the street south of the market. Whoever puts them down gets paid.",
-        sighting = "kabuki_south", mode = "open", reward = { min = 2000, max = 3000 }, hours = 2,
+        brief = "A psycho is tearing up the street north-west of the market. Whoever puts them down gets paid.",
+        sighting = "kabuki_alley", mode = "open", reward = { min = 2000, max = 3000 }, hours = 2,
         minRep = 3, repGain = 3,
     },
     regina_psycho_northside = {

@@ -277,11 +277,16 @@ function scenarios.bounty()
     FXW.give(1, 10000)
     local cashC0, cashB0, cashA0 = FXW.balance("cash:" .. C), FXW.balance("cash:" .. B), FXW.balance("cash:" .. A)
 
-    -- 1. Open bounty: spawned at post, hostile, platform-priced, leashed; engages the nearest player.
+    -- 1. Open bounty: held back while a player stands on the sighting, spawned once the spot is
+    -- clear; hostile, platform-priced, leashed; engages the nearest player.
+    SFW.move(3, near(FXW.sighting("kabuki_alley"), 1))
     local c1 = npcPost("regina_psycho_kabuki", "regina", 2000)
+    local heldOnPlayer = FXW.npcOf(c1) == nil
+    SFW.move(3, near(FXW.sighting("kabuki_alley"), 10))
+    MH.run(12)
     local npc1 = FXW.npcOf(c1)
     local n1 = npc1 and FXW.npc(npc1)
-    SFW.move(3, near(FXW.sighting("kabuki_south"), 10))
+    SFW.move(3, near(FXW.sighting("kabuki_alley"), 10))
     MH.run(3)
     local engaged = n1 and n1.attacking
     local openTake = (function() cmd(2, "take", tostring(c1.seq)) return FXW.told(2, "Open bounty") end)()
@@ -320,7 +325,7 @@ function scenarios.bounty()
     FXW.until_(c3, "completed", 40)
     MH.run(1)
     return FXW.result({
-        c1 = c1.state, npc1 = npc1 ~= nil, record = n1 and n1.record, hit_pricing = n1 and n1.behavior and n1.behavior.hitPricing,
+        c1 = c1.state, npc1 = npc1 ~= nil, held_on_player = heldOnPlayer, record = n1 and n1.record, hit_pricing = n1 and n1.behavior and n1.behavior.hitPricing,
         damage_policy = n1 and n1.damagePolicy, attitude = n1 and n1.attitude, leash = n1 and n1.tasks[1] and n1.tasks[1].type,
         engaged = engaged, open_take_refused = openTake, c1_payee = c1.payee and c1.payee.subject, c1_paid = c1Paid,
         c1_net = c1.net, rep_c = repOf(C),
@@ -858,6 +863,9 @@ function scenarios.model()
         bad_templates = #bad == 0 and "none" or table.concat(bad, ","), bad_offers = #offers == 0 and "none" or table.concat(offers, ","),
         unmarked = #unmarked == 0 and "none" or table.concat(unmarked, ","), non_ascii = #nonAscii == 0 and "none" or table.concat(nonAscii, ","),
         player_order_complete = inPlayerOrder == playerTemplates,
+        -- a saved bounty naming a sighting the config no longer has falls back to its template's
+        sighting_renamed = select(2, Mo.sighting({ template = "regina_psycho_kabuki", target = { sighting = "gone" } }, Cf)),
+        sighting_lost = tostring(Mo.sighting({ template = "nope", target = { sighting = "gone" } }, Cf)),
         split = net .. "/" .. cut, split_small = net2 .. "/" .. cut2,
         reward_snap = tostring(Mo.chooseReward(tpl, 512, 50)), reward_low = select(2, Mo.chooseReward(tpl, 100, 50)),
         reward_nan = select(2, Mo.chooseReward(tpl, "abc", 50)), npc_rewards_ok = sum == 100,

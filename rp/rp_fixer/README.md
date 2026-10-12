@@ -43,7 +43,7 @@ where to go next.
 | Delivery | A sealed crate appears at the pickup point (Vik's clinic, Noodle Row, the Japantown ripperdoc). Walk to it, **E Pick up**. Carry it on foot to the drop (a fixer point) and press **E Deliver the crate** there. Only you can lift it. A car, a drawn weapon or a fall drops it where you stand: pick it up again. | the crate touches the drop |
 | Retrieval | Bring the named goods (3 data chips, 4 components, 2 CHOOH2 cans, a boxed set of Gorilla Arms from the ripperdocs' stock) to the fixer point named in the contract and press **F Hand over the goods**. Without them nothing starts and you are told what is missing. | the hand-over bar ends |
 | Job order | Do the other job: refine CHOOH2 at the plant, breach a terminal, install an implant as a ripperdoc, assemble weapons at a techie bench, stabilise or revive patients, bring a nomad run home. Each step that job reports for you counts once; `/contract` shows `4 / 10`. | the count is reached |
-| Bounty | A cyberpsycho waits at the sighting (Kabuki south of the market, Northside industrial, the Rancho Coronado junkyard). Kill it. | the kill is credited to you |
+| Bounty | A cyberpsycho waits at the sighting (Kabuki north-west of the market, Northside industrial, the Rancho Coronado junkyard). Kill it. | the kill is credited to you |
 
 Paid means: the contract's net reward lands in your cash in one operation, the fixers' cut goes to
 the `fixer` society, your reputation rises (1 to 4 points by contract) and the poster is told.
@@ -115,7 +115,7 @@ Expected start lines:
 [rp_fixer] loaded 0 live contracts (), next number 1
 [rp_fixer] ready: 3 fixer points, 16 templates, escrow society fixer_escrow, cut society fixer
 [rp_fixer] contract srv.fx1 open: delivery afterlife_meds_run reward=700 net=595 cut=105 by npc Rogue at afterlife expires in 1 h 59 min
-[rp_fixer] contract srv.fx5 cyberpsycho 4100 at kabuki_south
+[rp_fixer] contract srv.fx5 cyberpsycho 4100 at kabuki_alley
 ```
 
 Console commands (restricted: console or ACL `command.fixer.*`):
@@ -153,13 +153,13 @@ Everything is in `server/config.lua`.
 | `hubs` | Afterlife, Wakako's, Regina's corner | position, contact NPC, `offers`, `keepOpen` |
 | `points`, `drops` | 3 pickup points, no extra drop | delivery pickups; every fixer point is a drop |
 | `sightings` | 3 | where a bounty's cyberpsycho spawns |
-| `psycho` | Maelstrom combat record, 400 health | record, health, leash, engage distance, credit window, respawn, body removal |
+| `psycho` | Maelstrom combat record, 400 health | record, health, leash, engage distance, credit window, respawn, body removal, the clear radius (never spawned within 4 m of a player) |
 | `contactNpc` | the passive alias `civilian_female_relaxed_01` | the NPC standing at each board; puppet records of Rogue, Wakako and Regina are listed to try |
 | `templates`, `templateOrder` | 16 | the contract types (fields documented in the file) |
 
 ### Places to walk
 
-Every point below is marked `measured = false`: stand on it, read `/pos`, correct it.
+Every point below is marked `measured = false` unless the table says walked: stand on it, read `/pos`, correct it.
 
 | Key | Position | Landmark | Source |
 |---|---|---|---|
@@ -169,7 +169,7 @@ Every point below is marked `measured = false`: stand on it, read `/pos`, correc
 | `kabuki_noodle_row` (pickup) | -1178.66, 2028.45, 7.95 | Kabuki market, Noodle Row | rp_fixer 1.0 |
 | `vik_clinic` (pickup) | -1548.0, 1230.0, 11.6 | Viktor's clinic door, Little China | rp_zones `viktor_clinic` |
 | `japantown_ripperdoc` (pickup) | -713.95, 870.25, 11.99 | Japantown ripperdoc | 1.5 m in front of catalogue spot 37085 |
-| `kabuki_south` (sighting) | -1241.865, 1945.981, 8.054 | Kabuki, south of the market | catalogue spot 15215 |
+| `kabuki_alley` (sighting) | -1265.0, 2062.91, 11.98 | Kabuki, the burrito-machine alcove north-west of the market | walked in game (`measured = true`) |
 | `northside` (sighting) | -1914.454, 2739.485, 10.899 | Northside industrial district | catalogue spot 8055 |
 | `junkyard` (sighting) | 1374.5, -1681.0, 49.3 | Rancho Coronado junkyard lane | rp_salvage's yard |
 

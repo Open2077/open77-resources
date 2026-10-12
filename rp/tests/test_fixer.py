@@ -163,7 +163,7 @@ class FixerSources(unittest.TestCase):
             return tuple(float(v) for v in m.groups())
 
         for key, row, front in (("wakako", 15042, True), ("regina", 29556, True), ("japantown_ripperdoc", 37085, True),
-                                ("kabuki_south", 15215, False), ("northside", 8055, False)):
+                                ("northside", 8055, False)):
             want = in_front(rows[row]) if front else rows[row][:3]
             got = configured(key)
             for axis in range(3):
@@ -172,7 +172,7 @@ class FixerSources(unittest.TestCase):
     def test_measured_false_points_are_listed_in_readme(self):
         text = (FIXER / "README.md").read_text(encoding="utf-8")
         for name in ("afterlife", "wakako", "regina", "kabuki_noodle_row", "vik_clinic", "japantown_ripperdoc",
-                     "kabuki_south", "northside", "junkyard"):
+                     "kabuki_alley", "northside", "junkyard"):
             self.assertIn(f"`{name}`", text, name)
 
 
@@ -183,6 +183,7 @@ class FixerRules(unittest.TestCase):
         self.assertEqual(r.get("errors"), "0", r.get("first_error"))
         self.assertEqual((r["bad_templates"], r["bad_offers"], r["unmarked"], r["non_ascii"]), ("none",) * 4)
         self.assertEqual(r["player_order_complete"], "true")
+        self.assertEqual((r["sighting_renamed"], r["sighting_lost"]), ("kabuki_alley", "nil"))
         self.assertEqual((r["split"], r["split_small"]), ("510/90", "1/0"))
         self.assertEqual((r["reward_snap"], r["reward_low"], r["reward_nan"]), ("500", "reward_out_of_range", "invalid_reward"))
         self.assertEqual(r["npc_rewards_ok"], "true")
@@ -258,6 +259,8 @@ class FixerLoop(unittest.TestCase):
         self.assertEqual((r["npc1"], r["record"], r["hit_pricing"], r["damage_policy"], r["attitude"], r["leash"]),
                          ("true", "Character.cpz_maelstrom_grunt1_ranged1_lexington_wa", "platform", "0", "hostile", "guard"))
         self.assertEqual(r["engaged"], "3")
+        # Never spawned on top of a player: held while one stands on the sighting.
+        self.assertEqual(r["held_on_player"], "true")
         # Open bounty: nobody takes it, whoever kills it is paid.
         self.assertEqual((r["open_take_refused"], r["c1"], r["c1_payee"], r["c1_paid"], r["c1_net"], r["rep_c"]),
                          ("true", "completed", "acct-c", "1700", "1700", "3"))

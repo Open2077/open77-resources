@@ -415,8 +415,31 @@ end
 function S:spawnPsycho(c)
     local rt = self:runtime(c.id)
     if rt.npc then return true end
-    local spot = self.cfg.sightings[c.target.sighting]
+    local spot, sighting = self.M.sighting(c, self.cfg)
     local p = self.cfg.psycho
+    if not spot then
+        -- A saved bounty whose sighting is gone from the config: nothing to spawn. It stays on
+        -- the board and runs out (refunded) unless the sighting comes back.
+        if not rt.noSighting then
+            self:warn("contract %s: sighting %s is not configured; no cyberpsycho", c.id, tostring(c.target.sighting))
+            rt.noSighting = true
+        end
+        rt.respawnAt = self.P.now() + p.respawnMs
+        return false
+    end
+    rt.noSighting = nil
+    -- Never on top of someone: a body spawned inside a player has been credited to that player
+    -- as hits nobody fired. Asked again by the sweep once the spot is clear.
+    local clear = p.clearRadius or 0
+    if clear > 0 then
+        for _, pos in pairs(self.P.players.positions() or {}) do
+            local d = type(pos) == "table" and (pos.bucket or 0) == self.cfg.bucket and self.M.distance(pos, spot.position)
+            if d and d <= clear then
+                rt.respawnAt = self.P.now() + (p.clearRetryMs or 5000)
+                return false
+            end
+        end
+    end
     local def = {
         record = p.record, position = spot.position, yaw = spot.yaw or 0.0, bucket = self.cfg.bucket,
         health = p.health, maxHealth = p.health, damagePolicy = self.P.npcs.mortal(),
@@ -444,7 +467,7 @@ function S:spawnPsycho(c)
     if not okAtt then self:warn("contract %s psycho attitude refused: %s", c.id, tostring(whyAtt)) end
     local task, whyTask = self.P.npcs.guard(id, spot.position, p.leash)
     if not task then self:warn("contract %s psycho leash refused: %s", c.id, tostring(whyTask)) end
-    self:log("contract %s cyberpsycho %s at %s", c.id, tostring(id), c.target.sighting)
+    self:log("contract %s cyberpsycho %s at %s", c.id, tostring(id), sighting)
     return true
 end
 
@@ -1209,9 +1232,10 @@ function S:engage()
         local c = self.contracts[id]
         local rt = c and self.rt[id]
         if rt and rt.npc then
-            local spot = self.cfg.sightings[c.target.sighting].position
+            local sighting = self.M.sighting(c, self.cfg)
+            local spot = sighting and sighting.position
             local best, bestD
-            for pid, pos in pairs(positions) do
+            for pid, pos in pairs(spot and positions or {}) do
                 pid = self.M.playerId(pid)
                 if pid and type(pos) == "table" and (pos.bucket or 0) == self.cfg.bucket then
                     local d = self.M.distance(pos, spot)
@@ -1378,7 +1402,8 @@ function S:contractDialog(pid, id, hubKey)
         lines[#lines + 1] = ("Job order: %d x %s (%s). Progress %d / %d."):format(c.order.count,
             table.concat(c.order.kinds, "/"), c.order.job, c.order.progress or 0, c.order.count)
     elseif c.kind == "bounty" then
-        lines[#lines + 1] = ("Sighting: %s. %s"):format(cfg.sightings[c.target.sighting].label,
+        local sighting = M.sighting(c, cfg)
+        lines[#lines + 1] = ("Sighting: %s. %s"):format(sighting and sighting.label or "unknown",
             c.mode == "open" and "Open bounty: whoever kills it is paid." or "Claimed bounty: only the runner who took it is paid.")
     end
     local message = table.concat(lines, "\n")

@@ -291,9 +291,21 @@ function M.objectiveOf(c, cfg)
         local hub = cfg.hubs[c.want.drop]
         return hub and { label = "Hand over at " .. hub.label, position = M.copy(hub.position), sprite = "objective" }
     elseif c.kind == "bounty" then
-        local s = cfg.sightings[c.target.sighting]
+        local s = M.sighting(c, cfg)
         return s and { label = "Cyberpsycho: " .. s.label, position = M.copy(s.position), sprite = "BountyHuntVariant" }
     end
+    return nil
+end
+
+-- The sighting of a bounty: the one it was posted with, or its template's current one when an
+-- operator renamed the sighting since (a saved contract keeps the old key); nil when neither is
+-- configured.
+function M.sighting(c, cfg)
+    local key = c.target and c.target.sighting
+    if key and cfg.sightings[key] then return cfg.sightings[key], key end
+    local t = cfg.templates[c.template or ""]
+    key = t and t.sighting
+    if key and cfg.sightings[key] then return cfg.sightings[key], key end
     return nil
 end
 
@@ -311,7 +323,8 @@ function M.progressLine(c, cfg, now)
     elseif c.kind == "job" then
         return ("%s %s: %d / %d done, %s left."):format(M.code(c), c.title, c.order.progress or 0, c.order.count, left)
     elseif c.kind == "bounty" then
-        return ("%s %s: %s, %s left."):format(M.code(c), c.title, cfg.sightings[c.target.sighting].label, left)
+        local s = M.sighting(c, cfg)
+        return ("%s %s: %s, %s left."):format(M.code(c), c.title, s and s.label or "sighting unknown", left)
     end
     return ("%s %s"):format(M.code(c), c.title)
 end
