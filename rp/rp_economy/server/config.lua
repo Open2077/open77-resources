@@ -70,6 +70,7 @@ EconomyConfig.mint = {
         rp_medic = 5000,           -- refunds
         rp_ncpd = 5000,            -- refunds
         rp_netrunner = 30000,      -- breach bounties
+        rp_chooh2 = 30000,         -- CHOOH2 canister sales at the depot
         rp_nomade = 100000,        -- crate delivery pay, convoy bonus, society share
         rp_ripperdoc = 20000,      -- refunds
         rp_salvage = 30000,        -- C1 salvage: scrap and crate sales to the NPC buyer (sale), society share
