@@ -12,4 +12,4 @@ Small resources that each show one feature. Read them, copy what you need.
 | [`open77_pointing`](open77_pointing/) | Lets players point with a finger in the direction their camera faces: hold B, or type `/pointing on` and `/pointing off`. | [Role-play animations](https://open2077.net/docs/rp-animations) |
 | [`open77_seat_switch`](open77_seat_switch/) | Adds a `/seats` chat command that moves you to another seat of the car you are in, with the seat-change animation, and turns automatic seat switching on or off for you. | [Changing seats inside a vehicle](https://open2077.net/docs/vehicle-seat-switching) |
 
-Exported from the Open77 platform repository, commit `a4f33027c247`.
+Exported from the Open77 platform repository; `EXPORT.json` names the commit.
