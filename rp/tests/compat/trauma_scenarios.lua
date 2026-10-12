@@ -991,6 +991,31 @@ function scenarios.down_resource_restart()
     })
 end
 
+-- A held body that fell through a floor that had not streamed in (2000 m below its spot) is put
+-- back on the spot within the down loop's next pass, at most every 5 s, and left alone once there.
+function scenarios.down_body_fell_through()
+    TW.boot()
+    TW.join(1, MEDIC, "Medic", NEAR)
+    TW.join(2, PAT, "Patient", DEATH)
+    TW.setup(1)
+    TW.settle()
+    TW.die(2)
+    MH.run(2)
+    local before = #MH.shared.trauma.teleports
+    TW.move(2, { x = DEATH.x, y = DEATH.y, z = DEATH.z - 2000.0 })
+    MH.run(2)
+    local after = #MH.shared.trauma.teleports
+    local back = lastTeleport(2)
+    TW.move(2, DEATH)     -- the fake teleport records; the body is where it was sent
+    MH.run(12)
+    local quiet = #MH.shared.trauma.teleports
+    return TW.result({
+        put_back = after - before, back_at_death = back ~= nil and near(back, DEATH) and math.abs(back.z - DEATH.z) < 0.01,
+        logged = TW.printed("held body [%d%.]+ m from its spot") >= 1, again = quiet - after,
+        still_held = (TW.entry(2) or {}).held == true,
+    })
+end
+
 -- The countdown ran out while the player was away: they are still down when they come back, and
 -- /respawn is open at once (even with a medic on duty). Before the body is held, /respawn waits.
 -- This join reports no alive phase after the entry is back: the connect grace holds the body.

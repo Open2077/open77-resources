@@ -264,7 +264,7 @@ function S:targetPatient(call)
     local ok, why = self.P.actions.target({
         id = call.targetId, position = call.position, yaw = 0.0, bucket = call.bucket or 0,
         label = ("Trauma Team patient #%d"):format(call.id), distance = t.distance, promptHeight = t.promptHeight,
-        markerDistance = t.markerDistance, color = "#FF3B3B",
+        markerDistance = t.markerDistance, color = "#FF3B3B", keepCrowdOff = t.keepCrowdOff,
         actions = { call.stable and a.evacuate.id or a.stabilise.id },
         data = { patient = call.patient, episode = call.episode, call = call.id },
     })

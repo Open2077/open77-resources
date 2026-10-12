@@ -953,13 +953,18 @@ AddEventHandler("onResourceStart", function(name)
             -- The coordinator may not answer subjectOf yet while the resources restart (measured
             -- live: a stable patient was not held again and healed back to full): retried for 30 s.
             CreateThread(function()
-                for _ = 1, 30 do
+                for attempt = 1, 30 do
                     if down[id] or not Open77.players.get(id) then break end
                     if resumeDown(id, "restart") then
                         holdIfAlive(id)
                         break
                     end
-                    if subjectFor(id) then break end   -- a subject and nothing saved: not down
+                    local subject = subjectFor(id)
+                    if subject then   -- a subject and nothing saved: not down
+                        if attempt > 1 then log("player %d: subject read after %d s, nothing saved", id, attempt - 1) end
+                        break
+                    end
+                    if attempt == 30 then log("player %d: no durable subject 30 s after the start, not resumed", id) end
                     Wait(1000)
                 end
             end)
@@ -1020,14 +1025,45 @@ end
 local function keepDownPose(id, entry)
     if not entry.held or entry.applying or (entry.poseRetryAt or 0) > nowMono() then return end
     if not stageAnimationsApi() or type(Open77.animations.current) ~= "function" then return end
-    local ok, current = pcall(Open77.animations.current, id)
+    local ok, current, why = pcall(Open77.animations.current, id)
     if not ok then return end
     local playbackId = entry.pose and entry.pose.playbackId
     if type(current) == "table" and playbackId and current.playbackId == playbackId then return end
     entry.poseRetryAt = nowMono() + 3
     if entry.pose then stageRelease(id, entry.pose); entry.pose = nil end
     entry.pose = stageHold(id, "down")
-    log("player %d: wounded pose played again (%s)", id, playbackId and "it had ended" or "it had been refused")
+    log("player %d: wounded pose played again (%s; current=%s)", id, playbackId and "it had ended" or "it had been refused",
+        type(current) == "table" and tostring(current.playbackId) .. "/" .. tostring(current.active) or tostring(why))
+end
+
+-- A held body away from its spot: put back on it, every 5 s at most, only while alive. Measured
+-- live: the respawn placed a patient 800 m away, the travel back settled before the Kabuki market
+-- floor had streamed in and the held body fell through the world (z -2000). Returns true when the
+-- body is being moved (its pose is played again once it is back).
+local function keepOnSpot(id, entry)
+    if not entry.held or entry.applying or not entry.position then return false end
+    if (entry.spotRetryAt or 0) > nowMono() then return true end
+    local ok, pos = pcall(Open77.players.position, id)
+    if not ok or type(pos) ~= "table" or type(pos.x) ~= "number" or type(pos.z) ~= "number" then return false end
+    local dx, dy, dz = pos.x - entry.position.x, pos.y - entry.position.y, pos.z - entry.position.z
+    if dx * dx + dy * dy <= Config.downSpotRadius * Config.downSpotRadius and dz > -Config.downSpotRadius then
+        return false
+    end
+    if lifePhase(id) ~= "alive" then return false end
+    entry.spotRetryAt = nowMono() + 5
+    log("player %d: held body %.1f m from its spot (z %.1f), put back on it", id, math.sqrt(dx * dx + dy * dy + dz * dz), pos.z)
+    CreateThread(function()
+        local pending, why = Open77.players.teleport(id, entry.position, { heading = entry.heading, dismount = true })
+        local landed, err = nil, why
+        if pending then landed, err = pending:await() end
+        if landed then
+            entry.spotRetryAt = nowMono() + 1   -- the pose is played again at the next pass
+        else
+            log("player %d: back on the spot refused: %s", id, tostring(err))
+        end
+        entry.poseRetryAt = 0
+    end)
+    return true
 end
 
 -- Countdown reminders for down players.
@@ -1036,7 +1072,7 @@ CreateThread(function()
         Wait(1000)
         for id, entry in pairs(down) do
           if not healedElsewhere(id, entry) then
-            keepDownPose(id, entry)
+            if not keepOnSpot(id, entry) then keepDownPose(id, entry) end
             local left = secondsLeft(entry)
             if left == 0 and not entry.announcedOpen then
                 entry.announcedOpen = true

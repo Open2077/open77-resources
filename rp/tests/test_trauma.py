@@ -379,6 +379,11 @@ class TraumaService(unittest.TestCase):
         self.assertEqual((r["ev"], r["released"], r["at_clinic"], r["saved_gone"], r["stab_ops"]),
                          ("committed", "true", "true", "true", "1"))
 
+    def test_a_held_body_that_fell_through_is_put_back(self):
+        r = self.run_ok("down_body_fell_through")
+        self.assertEqual((r["put_back"], r["back_at_death"], r["logged"], r["again"], r["still_held"]),
+                         ("1", "true", "true", "0", "true"))
+
     def test_down_survives_a_resource_restart(self):
         r = self.run_ok("down_resource_restart")
         # the stop unfreezes and releases the client hold, without healing or regenerating; the

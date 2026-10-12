@@ -136,7 +136,9 @@ C.actions = {
     },
 }
 -- The prompt card over a patient: reach and height above the body.
-C.patientTarget = { distance = 2.0, promptHeight = 0.6, markerDistance = 25.0 }
+-- keepCrowdOff: the crowd's pedestrians are kept off the body (an open77_pedestrians hold, 0.3-1.5 m).
+-- Measured live in the Kabuki market: two standing NPCs stood on a downed patient's legs.
+C.patientTarget = { distance = 2.0, promptHeight = 0.6, markerDistance = 25.0, keepCrowdOff = 1.5 }
 
 -- Where an evacuated patient wakes up: nil = shared Config.hospital.respawn (Vik's clinic).
 C.evacuation = { drop = nil, heading = nil, label = "Vik's clinic" }

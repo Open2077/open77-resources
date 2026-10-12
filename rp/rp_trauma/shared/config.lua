@@ -29,6 +29,9 @@ Config.downPersist = true
 -- A saved down state older than this many seconds (counted from the fall) is dropped and the
 -- player comes back on their feet. Default 3 hours.
 Config.downPersistMaxSeconds = 3 * 60 * 60
+-- A held body found farther than this from its spot (metres, or as far below it: a floor that had
+-- not streamed in) is put back on it.
+Config.downSpotRadius = 3.0
 
 -- What the hospital charges for a /respawn before the patient's plan (bank, then cash,
 -- then an invoice).
