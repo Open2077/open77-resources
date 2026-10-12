@@ -272,6 +272,7 @@ M.TEXT = {
     in_combat = "Not while fighting.",
     player_reserved = "One of you is busy with something else.",
     destination_too_far = "Get closer to the truck's bed.",
+    weapon_drawn = "Put your weapon away first: you need both hands for the crate.",
     destination_invalid = "You cannot put it down there.",
     vehicle_unavailable = "That truck is not here any more.",
     wrong_bucket = "That is not here.",
