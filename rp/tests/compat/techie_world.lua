@@ -250,8 +250,9 @@ function TW.boot(opts)
     SFW.shim("rp_ripperdoc", TW.RIPPERDOC)
     SFW.startActions()
     SFW.startEconomy()
-    -- The shared change the README asks for: an rp_economy mint budget for rp_techie's shop sales.
-    if not opts.noEconomyBudget then MH.resources.rp_economy.env.EconomyConfig.mint.callers.rp_techie = 30000 end
+    -- rp_economy's own config grants rp_techie a mint budget for shop sales; noEconomyBudget removes
+    -- it to prove the refusal path (an operator who dropped the line).
+    MH.resources.rp_economy.env.EconomyConfig.mint.callers.rp_techie = (not opts.noEconomyBudget) and 30000 or nil
     TW.startTechie()
     TW.watch()
     MH.until_(function() return TW.svc() and TW.svc().ready end, 90)
