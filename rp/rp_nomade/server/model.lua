@@ -178,20 +178,22 @@ function M.offsetPoint(origin, yaw, ahead)
 end
 
 -- The spot behind a truck's bed where a player stands to load or unload: centred on the bed,
--- `behind` metres past its rearmost slot, at the bed's height. `layout` is rp_cargo's (vehicle frame:
--- x right, y forward, z up); `car` carries x, y, z, yaw. nil without slots.
+-- `behind` metres past its rearmost slot, at the truck's own height (where the player's feet are:
+-- the prompt's reach is measured from them; the card is lifted by the target's prompt height).
+-- `layout` is rp_cargo's (vehicle frame: x right, y forward, z up); `car` carries x, y, z, yaw. nil
+-- without slots.
 function M.tailgate(car, layout, behind)
     local slots = type(layout) == "table" and layout.slots
     if type(car) ~= "table" or type(slots) ~= "table" or #slots == 0 then return nil end
-    local rear, height
+    local rear
     for _, s in ipairs(slots) do
         local y = tonumber(s.y)
-        if y and (rear == nil or y < rear) then rear, height = y, tonumber(s.z) end
+        if y and (rear == nil or y < rear) then rear = y end
     end
     if rear == nil then return nil end
     local ly = rear - (tonumber(behind) or 1.0)
     local r = math.rad(tonumber(car.yaw) or 0.0)
-    return { x = car.x - math.sin(r) * ly, y = car.y + math.cos(r) * ly, z = car.z + (height or 0.9) }
+    return { x = car.x - math.sin(r) * ly, y = car.y + math.cos(r) * ly, z = car.z }
 end
 
 function M.compass(from, to)

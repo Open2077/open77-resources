@@ -144,7 +144,7 @@ Everything is in `server/config.lua`:
 | `items` | `nomad_contraband` (2.5 kg, illegal) and `nomad_crate` (the crate's token, unique) |
 | `accounts` | the camp's stash, the evidence stash, the token and supplier `sys:` accounts |
 | `restock` | the camp's supplier: every 10 min, +24 goods while the stash holds fewer than 24 |
-| `camp` | board, loading points, truck bay, stash drop point, and `decor`: the props that dress the camp (a table under the board, loaded pallets, a generator; the vanilla camp is quest content the multiplayer world does not stream) |
+| `camp` | board, loading points, truck bay, stash drop point, and `decor`: the props that dress the camp (a table under the board, loaded pallets; the vanilla camp is quest content the multiplayer world does not stream) |
 | `bayPrompt` | `followTruck` (the load and unload prompts follow the truck parked in their bay) and `behindBedM` (how far past the bed's last slot the prompt is drawn) |
 | `routes` | per route: crates, goods per crate, price per crate, deadline, unload bay, fence |
 | `campCut`, `hotRatio` | the camp's share of a live sale (20 %); what the fence pays for hot goods (50 %, 0 refuses) |

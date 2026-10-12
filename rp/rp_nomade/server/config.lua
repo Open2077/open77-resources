@@ -89,13 +89,12 @@ C.camp = {
                   label = "Camp stash" },
     -- Set dressing (open77_props aliases, server props seen by everyone): the vanilla camp is quest
     -- content the multiplayer world never streams, so without it the board's card floats over bare
-    -- desert. A table under the board, loaded pallets beside the loading points and the stash, a
-    -- generator by the bay. {} for none.
+    -- desert. A table under the board, loaded pallets beside the loading points and the stash (none
+    -- near the truck bay: a parked truck needs the room). {} for none.
     decor = {
         { model = "furniture.table.outdoor", position = { x = 1790.0, y = 2252.4, z = 180.25 }, yaw = 0.0 },
         { model = "pallet.wood.loaded", position = { x = 1783.9, y = 2257.0, z = 180.25 }, yaw = 30.0 },
         { model = "pallet.stack", position = { x = 1786.4, y = 2252.8, z = 180.25 }, yaw = 58.6 },
-        { model = "industrial.generator", position = { x = 1796.2, y = 2242.6, z = 180.2 }, yaw = 45.0 },
     },
 }
 
