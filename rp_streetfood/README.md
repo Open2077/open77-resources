@@ -5,9 +5,11 @@ market grill, the dish waits on the pass, the cook hands it to a customer who **
 and accepts**, the customer pays in **one** atomic sale (dish + price + tip), then eats standing at
 the counter, on the go, or — optionally — seated on real food-court furniture.
 
-**Status: built and tested offline only (2026-10-12).** Nothing here was deployed or run in game.
-Every sentence about poses, props or prompts describes what the server *asks for*, not what
-renders. The two-client test script is in
+**Status: experimental; proven live on two clients (2026-10-12).** Cook (both rigs), order with a
+tip, consented serve, sale with the society share, meals at the counter and seated, a declined
+offer, two cooks at one grill and a restart ran in game (crowd pedestrians switched off: they stand
+on the grill spot). The `amb_*` cook animations need the `Open77RP.archive` that ships them (not in
+the release archives as of 2026-10-12). The two-client test script is in
 [`docs/world-interaction/c4-streetfood.md`](../docs/world-interaction/c4-streetfood.md) §6.
 
 ## Enable it on a server
