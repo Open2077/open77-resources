@@ -198,6 +198,7 @@ class Hud(unittest.TestCase):
         self.assertEqual(r["p1_cash_after"], "1500 pending=nil")
         self.assertEqual(r["p2_untouched"], "0")
         self.assertEqual(r["epoch_push"], "1")
+        self.assertEqual(r["health_push"], "1,1")          # store down: both panels redrawn now
         self.assertEqual(r["broadcast"], "false")
 
     def test_falls_back_to_the_1x_exports(self):
