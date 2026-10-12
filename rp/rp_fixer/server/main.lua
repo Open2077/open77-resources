@@ -247,12 +247,12 @@ local function listMine(pid)
     Svc:tell(pid, ("Reputation %d (%s)."):format(v.score, tier.name), "info")
     for _, c in ipairs(Svc:held(v.subject)) do
         n = n + 1
-        Svc:tell(pid, "Yours: " .. M.progressLine(c, cfg, now), "info")
+        Svc:tell(pid, "Yours: " .. M.progressLine(c, cfg, now), "chat")
     end
     for _, c in ipairs(Svc:postedBy(v.subject)) do
         n = n + 1
         Svc:tell(pid, ("Posted: %s %s, %s%s."):format(M.code(c), c.title, c.state,
-            c.runner and (" by " .. c.runner.name) or ""), "info")
+            c.runner and (" by " .. c.runner.name) or ""), "chat")
     end
     if n == 0 then Svc:tell(pid, "No contract. /contracts at a fixer point.", "info") end
 end

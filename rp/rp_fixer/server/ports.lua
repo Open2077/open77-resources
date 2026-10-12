@@ -141,9 +141,10 @@ P.npcs = {
 }
 
 -- One chat line (always) and a toast (network.events; drawn by open77_notifications).
+-- kind "chat": a line of a listing, chat only (a toast per line buried the HUD).
 P.tell = function(pid, text, kind)
     pcall(Open77.chat.send, pid, { author = "FIXER", text = text, color = { 0, 229, 255 } })
-    if Open77.notifications and Open77.notifications.send then
+    if kind ~= "chat" and Open77.notifications and Open77.notifications.send then
         pcall(Open77.notifications.send, pid, { type = kind or "info", title = "Fixer", message = text, durationMs = 6000 })
     end
 end

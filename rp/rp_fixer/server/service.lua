@@ -1531,10 +1531,10 @@ function S:chatBoard(pid)
         if n > 12 then break end
         self:tell(pid, ("%s %s at %s: pays %s, %s left%s%s"):format(M.code(c), c.title, self.cfg.hubs[c.hub].label,
             M.money(c.net), M.duration(c.expiresAt - now), c.mode == "open" and ", open bounty" or "",
-            v.score < (c.minRep or 0) and (", rep " .. c.minRep .. "+") or ""), "info")
+            v.score < (c.minRep or 0) and (", rep " .. c.minRep .. "+") or ""), "chat")
     end
     if n == 0 then self:tell(pid, "No contract on the board right now.", "info") end
-    self:tell(pid, "/contract take <number> at a fixer point. /contract for yours.", "info")
+    self:tell(pid, "/contract take <number> at a fixer point. /contract for yours.", "chat")
 end
 
 -- ---------------------------------------------------------------------------------------------
