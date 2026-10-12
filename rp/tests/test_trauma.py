@@ -119,11 +119,12 @@ class TraumaSources(unittest.TestCase):
         for legacy in ("rp_bank:charge", "rp_economy:remove", "rp_economy:add", "societyAdd"):
             self.assertNotIn(legacy, main)
 
-    def test_new_points_are_marked_unmeasured(self):
+    def test_kiosks_say_whether_they_were_walked(self):
         config = (RES / "server" / "config.lua").read_text(encoding="utf-8")
         kiosks = re.findall(r"id = \"(tti_kiosk_\w+)\".*?measured = (\w+)", config, re.S)
         self.assertEqual([k for k, _ in kiosks], ["tti_kiosk_pad", "tti_kiosk_market"])
-        self.assertTrue(all(m == "false" for _, m in kiosks))
+        self.assertTrue(all(m in ("true", "false") for _, m in kiosks))
+        self.assertEqual(dict(kiosks)["tti_kiosk_market"], "true")
 
     def test_prompt_labels_are_plain_ascii(self):
         config = (RES / "server" / "config.lua").read_text(encoding="utf-8")
@@ -190,6 +191,8 @@ class TraumaService(unittest.TestCase):
         r = self.run_ok("gold_response")
         # the down state: held back at the death spot, frozen
         self.assertEqual((r["sub"], r["held"], r["frozen"], r["back_at_death"]), ("committed", "true", "true", "true"))
+        # told once, although the respawn reported a second alive phase that held again
+        self.assertEqual(r["down_told"], "1")
         # the call: priority 2, dispatched at once to the on-duty medic (chat, pin), the patient told
         self.assertEqual((r["call_id"], r["call_priority"], r["call_tier"]), ("1", "2", "gold"))
         self.assertEqual((r["told_medic"], r["pin_tag"], r["told_patient"]), ("true", "GOLD #1", "true"))

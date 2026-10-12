@@ -63,9 +63,10 @@ C.kiosks = {
         landmark = "Afterlife street, 6.5 m west of the Trauma Team AV pad centre (-1370, 953, 23.5)",
     },
     {
-        id = "tti_kiosk_market", label = "Trauma Team kiosk", enabled = true, measured = false,
-        position = { x = -1186.5, y = 2010.5, z = 7.82 }, yaw = 0.0,
-        landmark = "Kabuki Market, 6 m north-east of the market centre (-1191.30, 2006.88, 7.82)",
+        id = "tti_kiosk_market", label = "Trauma Team kiosk", enabled = true, measured = true,
+        position = { x = -1223.91, y = 1989.45, z = 7.98 }, yaw = -14.7,
+        landmark = "Kabuki Market, The Stalls: the medical vending machine beside Dr. Osei's Med-Point " ..
+            "(walked; the old point 6 m from the market centre was a cafe table against a wall)",
     },
 }
 

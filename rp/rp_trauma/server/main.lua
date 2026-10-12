@@ -33,7 +33,7 @@ TraumaRuntime = { service = Svc }
 -- ---------------------------------------------------------------------------
 
 -- [playerId] = { position, heading, since, deadline, deaths, held, applying, reminderAt,
---               announcedOpen, episode, stable, stableFraction, pose }
+--               announcedOpen, announced, episode, stable, stableFraction, pose }
 -- A player with an entry here is down: the next "alive" life phase re-applies the hold.
 -- Removing the entry is what frees them.
 local down = {}
@@ -564,8 +564,13 @@ local function applyHold(playerId)
     if entry.pose then stageRelease(playerId, entry.pose); entry.pose = nil end
     entry.pose = stageHold(playerId, "down")
     TriggerClientEvent("rp_trauma:hold", playerId, true, secondsLeft(entry), entry.stable == true)
-    say(playerId, downMessage(entry, playerId))
-    toast(playerId, "error", "You are down", entry.stable and "Stable. Evacuation coming." or "Trauma Team has been notified.", 8000)
+    -- Said once per state: the second alive phase of the same respawn holds again in silence.
+    local state = entry.stable and "stable" or "down"
+    if entry.announced ~= state then
+        entry.announced = state
+        say(playerId, downMessage(entry, playerId))
+        toast(playerId, "error", "You are down", entry.stable and "Stable. Evacuation coming." or "Trauma Team has been notified.", 8000)
+    end
     log("player %d held down at %s, %d s left%s", playerId, fmtPos(entry.position), secondsLeft(entry),
         entry.stable and " (stable)" or "")
 end
@@ -688,6 +693,7 @@ local function onDeath(playerId)
         applying = false,
         reminderAt = nowMono() + Config.downReminderSeconds,
         announcedOpen = false,
+        announced = "down",      -- the state the player was last told about (down, stable)
         episode = Svc:newEpisode(),
     }
     down[playerId] = entry

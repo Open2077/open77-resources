@@ -10,7 +10,7 @@ dofile(COMPAT_DIR .. "/trauma_world.lua")
 local scenarios = {}
 
 local MEDIC, PAT, MEDIC2, PAT2, PAT3 = "acct-medic", "acct-pat", "acct-medic2", "acct-pat2", "acct-pat3"
-local KIOSK = { x = -1186.5, y = 2010.5, z = 7.82 }            -- tti_kiosk_market (server/config.lua)
+local KIOSK = { x = -1223.91, y = 1989.45, z = 7.98 }          -- tti_kiosk_market (server/config.lua)
 local DEATH = { x = -1195.0, y = 2001.0, z = 7.82 }            -- Kabuki Market, where the patient falls
 local NEAR = { x = -1194.0, y = 2001.6, z = 7.82 }             -- 1.17 m from the body
 local NEAR2 = { x = -1195.8, y = 2001.9, z = 7.82 }            -- a second medic, 1.2 m from the body
@@ -194,6 +194,11 @@ function scenarios.gold_response()
     local held = entry and entry.held
     local frozen = MH.players[2].frozen
     local backAtDeath = near(MH.players[2].position, DEATH)
+    -- The platform reports two alive phases per respawn: the second holds again, in silence.
+    MH.shared.trauma.revision = MH.shared.trauma.revision + 1
+    MH.emit("onPlayerLifeStateChanged", 2, MH.shared.trauma.revision, "alive")
+    MH.run(2)
+    local downTold = TW.toldCount(2, "^You are down%. Trauma Team")
     local toldMedic = TW.told(1, "%[GOLD #1%] Patient %(id 2%) is down")
     local pins = TW.clientEvents(1, "rp_trauma:downBlip")
     local pinTag = pins[1] and pins[1][4] or ""
@@ -222,7 +227,7 @@ function scenarios.gold_response()
     local revived = MH.shared.trauma.revived[1] or {}
     return TW.result({
         sub = opState(sub), held = tostring(held), frozen = tostring(frozen), back_at_death = backAtDeath,
-        call_id = call.id, call_priority = call.priority, call_tier = call.tierKey, told_medic = toldMedic,
+        call_id = call.id, call_priority = call.priority, call_tier = call.tierKey, told_medic = toldMedic, down_told = downTold,
         pin_tag = pinTag, told_patient = toldPatient, target1 = target1, taken = taken, responder = call.responder,
         told_responding = toldResponding,
         st = opState(st), kneel = kneel, stable = tostring(stable), health_stable = healthStable, still_down = stillDown,

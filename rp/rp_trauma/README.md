@@ -160,12 +160,12 @@ them, so a second import moves nothing. The two tables keep their schema (create
 | `accounts` | `sys:trauma.plans`, `sys:trauma.billing`, file part `tti` | coordinator accounts |
 | `legacy` | on, contracts become `gold` | the 1.x import |
 
-Kiosks (open77_actions targets; estimates near measured points, to be walked):
+Kiosks (open77_actions targets; `measured = false` marks an estimate still to be walked):
 
 | Id | Position | Landmark |
 |---|---|---|
 | `tti_kiosk_pad` | -1376.0, 950.5, 23.5 | Afterlife street, 6.5 m west of the Trauma Team AV pad centre |
-| `tti_kiosk_market` | -1186.5, 2010.5, 7.82 | Kabuki Market, 6 m north-east of the market centre |
+| `tti_kiosk_market` | -1223.91, 1989.45, 7.98 | Kabuki Market, The Stalls: the medical vending machine beside Dr. Osei's Med-Point (walked) |
 
 `shared/config.lua` (`Config`, both sides) keeps the down state: `downSeconds` (60; 600 for a live
 server), `countdownWithoutMedics` (true; false for a live server: `/respawn` at once with nobody on
