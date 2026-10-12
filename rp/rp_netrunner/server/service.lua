@@ -262,6 +262,8 @@ function S:declare()
             label = site.label, description = site.area, distance = cfg.promptDistance,
             actions = { { action = "breach_" .. key, label = "Breach the terminal" } },
             arrivalRadius = cfg.poses[site.pose].arrivalRadius, data = { site = key }, color = "#00E5FF",
+            -- The terminals are game work spots: keep the server crowd's office workers off them.
+            keepCrowdOff = site.keepCrowdOff ~= false,
         })
         if ok then targets = targets + 1 else self:warn("site target %s refused: %s", key, tostring(why)) end
     end
