@@ -121,10 +121,14 @@ C.stalls = {
         -- anchor behind the counter got the body pushed back (interrupted player_moving).
         grill = { position = { x = -397.617, y = 715.138, z = 115.000 }, yaw = 64.0, station = "grill",
                   arrivalRadius = 1.0,
-                  measured = false, source = "spots-generated row 9594 (amb_704dff_cook)" },
+                  -- Walked 2026-10-12 (both rigs cooked): the cook stands on the step behind the grill,
+                  -- ~0.5 m from the anchor at z 115.35; the 1 m arrival radius plays the pose there. A
+                  -- body left at z 115.0 on the step edge is refused `player_not_grounded`.
+                  measured = true, source = "spots-generated row 9594 (amb_704dff_cook)" },
         counter = { position = { x = -398.887, y = 715.848, z = 115.000 }, yaw = -107.0,
                     arrivalRadius = 1.0,
-                    measured = false, source = "spots-generated row 1144 (stand_ground facing the grill)" },
+                    -- Walked 2026-10-12: orders and the counter meal played 0.5 m from the anchor.
+                    measured = true, source = "spots-generated row 1144 (stand_ground facing the grill)" },
         pantryCapacityG = 40000,
         passCapacityG = 2000,     -- 8 skewers / 6 burgers waiting at most: "the pass is full"
         -- Seats (only with seating enabled). A1 furniture ids; `spot` is the pose played. Verdicts

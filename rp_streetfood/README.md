@@ -72,8 +72,8 @@ crowd (world suppression) for a lab run. Nothing in this resource vetoes an NPC.
   platform's invitation) or declines. A soda is drawn in the cook's hand while offered.
 - *Stock the pantry* moves every ingredient you carry into the stall's pantry.
 
-**Customer**: at the counter, **E** shows *Order Grilled skewer (18 €$)*, *Order Grill burger
-(24 €$)*, *Order Soda can (6 €$)*, *Eat at the counter*. `/streetfood tip <eddies>` adds a tip to
+**Customer**: at the counter, **E** shows *Order Grilled skewer (18 eddies)*, *Order Grill burger
+(24 eddies)*, *Order Soda can (6 eddies)*, *Eat at the counter*. `/streetfood tip <eddies>` adds a tip to
 your next order (paid to the cook). After paying: *Eat at the counter* (the market-grill customer
 pose at the counter anchor), `/streetfood eat` (takeout, standing where you are), `/streetfood
 drink` (sips while walking, with the can in your hand), or **E** on a seat when seating is on.
