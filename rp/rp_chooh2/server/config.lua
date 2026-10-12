@@ -1,13 +1,12 @@
 -- rp_chooh2 / server/config.lua: everything an operator may move or retune.
 --
--- Places. The fields are the Biotechnica protein farm on the northern edge of Northside, on the
--- road out to the North Sunrise Oil Field: six greenhouse halls (game proxies protein_farm_a,
--- pivots around -939, 2979 / -957, 3030 / -975, 3081) on a raised floor, with a strip of open
--- ground between their west wall and the road. The refinery is the Petrochem tank farm of the
--- North Sunrise Oil Field (game location area north_sunrise_oil_field; four large storage tanks
--- around -1453, 4014; ground 7.1). Heights come from the game's terrain and building proxies,
--- not from a walk: every point is `measured = false` until someone stands on it, reads `/pos`
--- and pastes it here. The road between the two sites is about 1.2 km.
+-- Places, all walked in game. The fields are the planted bed along the outer wall of the
+-- Biotechnica protein farm on the northern edge of Northside (the greenhouse halls behind the wall
+-- are closed; the bed between the wall and the sidewalk slopes down to the north, so each row has
+-- its own height), with the road beside it for the truck. The refinery is the Petrochem tank farm
+-- of the North Sunrise Oil Field (sub-district Badlands_NorthSunriseOilField): the stations stand
+-- at the base of the storage tank centred near -1454.6, 4013.5 (radius 16.5 m), the depot on its
+-- south side. The road between the two sites is about 1.2 km.
 
 Chooh2Config = {}
 local C = Chooh2Config
@@ -71,60 +70,60 @@ C.stashes = {
 -- ---------------------------------------------------------------------------------------------
 -- Farm office: farmhands clock in and out here.
 C.farmOffice = {
-    position = { x = -996.0, y = 2996.0, z = 16.2 }, yaw = -70.6, measured = false,
+    position = { x = -986.5, y = 2998.0, z = 16.01 }, yaw = -70.8, measured = true,
     label = "Biotechnica farm office", distance = 2.5,
 }
 
--- Corn rows: five open77_containers nodes keyed `node.<key>` on the open strip west of the first
--- greenhouse hall, 3 m from its wall (yaw -70.6 faces the wall). One charge per harvest, one
+-- Corn rows: five open77_containers nodes keyed `node.<key>` in the planted bed, 3 m from the
+-- farm's outer wall (measured with rays), yaw -70.8 faces the wall. One charge per harvest, one
 -- back every regrowMs, across restarts. Charges and regrowMs apply when a node is first
 -- created; an existing node keeps its own (chooh2.reset refills it). A node closed in
 -- open77_containers keeps its key spent for good: give it `containerKey = "node.<key>.2"` here.
 C.nodeDefaults = { charges = 4, regrowMs = 5 * 60 * 1000 }
 C.nodes = {
-    { key = "row1", label = "Corn row 1", position = { x = -981.0, y = 3000.0, z = 16.3 }, yaw = -70.6, measured = false },
-    { key = "row2", label = "Corn row 2", position = { x = -983.3, y = 3007.0, z = 16.1 }, yaw = -70.6, measured = false },
-    { key = "row3", label = "Corn row 3", position = { x = -985.6, y = 3014.0, z = 15.9 }, yaw = -70.6, measured = false },
-    { key = "row4", label = "Corn row 4", position = { x = -988.0, y = 3021.0, z = 15.7 }, yaw = -70.6, measured = false },
-    { key = "row5", label = "Corn row 5", position = { x = -990.3, y = 3028.0, z = 15.5 }, yaw = -70.6, measured = false },
+    { key = "row1", label = "Corn row 1", position = { x = -977.71, y = 3000.01, z = 16.55 }, yaw = -70.8, measured = true },
+    { key = "row2", label = "Corn row 2", position = { x = -980.14, y = 3007.01, z = 15.65 }, yaw = -70.8, measured = true },
+    { key = "row3", label = "Corn row 3", position = { x = -982.58, y = 3014.01, z = 14.17 }, yaw = -70.8, measured = true },
+    { key = "row4", label = "Corn row 4", position = { x = -985.01, y = 3021.01, z = 13.13 }, yaw = -70.8, measured = true },
+    { key = "row5", label = "Corn row 5", position = { x = -987.45, y = 3028.01, z = 12.06 }, yaw = -70.8, measured = true },
 }
 -- A new crate is set down this far from its row, towards the lane centre (off the kneeling spot).
 C.crateOffsetM = 1.4
-C.laneCentre = { x = -996.0, y = 3014.0, z = 15.6 }
+C.laneCentre = { x = -989.0, y = 3014.0, z = 14.0 }   -- the sidewalk beside the bed
 
 -- The farm's truck bay: a truck parked with its bed near the marker.
 C.farmBay = {
-    position = { x = -1001.0, y = 3010.0, z = 15.8 }, label = "Farm loading bay", truckRadius = 8.0, measured = false,
+    position = { x = -994.0, y = 3010.0, z = 14.04 }, label = "Farm loading bay", truckRadius = 8.0, measured = true,
 }
 
 -- ---------------------------------------------------------------------------------------------
 -- The refinery: Petrochem tank farm, North Sunrise Oil Field
 -- ---------------------------------------------------------------------------------------------
 C.refineryOffice = {
-    position = { x = -1596.0, y = 3996.0, z = 7.15 }, yaw = -85.0, measured = false,
+    position = { x = -1470.19, y = 4004.5, z = 7.12 }, yaw = -60.0, measured = true,
     label = "Petrochem shift office", distance = 2.5,
 }
 -- Where a truck backs up to be unloaded ("Unload a crate" lifts the top corn crate of the bed).
 C.unloadBay = {
-    position = { x = -1608.0, y = 4016.0, z = 7.15 }, label = "Refinery unloading bay", truckRadius = 8.0, measured = false,
+    position = { x = -1482.6, y = 4013.5, z = 7.12 }, label = "Refinery unloading bay", truckRadius = 8.0, measured = true,
 }
 -- The intake hopper: a corn crate put down here empties into the intake stash.
 C.intake = {
-    position = { x = -1600.0, y = 4008.0, z = 7.15 }, yaw = -85.0, measured = false, label = "Corn intake hopper",
+    position = { x = -1471.99, y = 4018.16, z = 7.12 }, yaw = -105.0, measured = true, label = "Corn intake hopper",
 }
--- The control station: the refining run (yaw -85 faces the nearest storage tank).
+-- The control station: the refining run, at the foot of the tank (yaw -90 faces it).
 C.control = {
-    position = { x = -1590.0, y = 4003.0, z = 7.15 }, yaw = -85.0, measured = false, label = "Fermenter control station",
+    position = { x = -1472.6, y = 4013.5, z = 7.12 }, yaw = -90.0, measured = true, label = "Fermenter control station",
 }
 -- The output rack: operators take canisters from the output stash into their pockets.
 C.outputRack = {
-    position = { x = -1588.0, y = 3994.0, z = 7.15 }, yaw = -85.0, measured = false, label = "CHOOH2 output rack",
+    position = { x = -1471.99, y = 4008.84, z = 7.12 }, yaw = -75.0, measured = true, label = "CHOOH2 output rack",
 }
 -- The fuel depot: the clerk buys canisters (money minted on behalf of this resource, share to
 -- the society). The counter is the point players stand at, 1.2 m in front of the clerk.
 C.depot = {
-    position = { x = -1620.0, y = 3992.0, z = 7.15 }, yaw = -90.0,
-    counter = { x = -1618.8, y = 3992.0, z = 7.15 }, measured = false,
+    position = { x = -1463.15, y = 3998.69, z = 7.12 }, yaw = 150.0,
+    counter = { x = -1463.8, y = 3997.57, z = 7.12 }, measured = true,
     label = "Sunrise fuel depot", name = "the depot clerk", buyer = "depot",
     -- An NPC behind the counter (presentation only; a refusal is logged, the counter still works).
     -- damagePolicy 2 = invulnerable.
@@ -132,7 +131,7 @@ C.depot = {
 }
 -- The pump: "Refuel the nearest car" with a canister from your pockets.
 C.pump = {
-    position = { x = -1612.0, y = 4002.0, z = 7.15 }, measured = false, label = "Depot fuel pump", vehicleRadius = 7.0,
+    position = { x = -1476.0, y = 3996.0, z = 7.12 }, measured = true, label = "Depot fuel pump", vehicleRadius = 7.0,
 }
 
 -- `/chooh2 load`, `/chooh2 unload` and `/chooh2 refuel` look for a vehicle this close to the player.

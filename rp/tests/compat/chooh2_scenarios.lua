@@ -13,26 +13,26 @@ local A, B, C, D = "acct-a", "acct-b", "acct-c", "acct-d"
 local CORN, CAN = "biotech_corn", "chooh2_canister"
 local INTAKE, OUTPUT = "stash:chooh2.sunrise:intake", "stash:chooh2.sunrise:output"
 
-local AT_FARM_OFFICE = { x = -996.0, y = 2997.0, z = 16.3 }
+local AT_FARM_OFFICE = { x = -986.8, y = 2997.6, z = 16.0 }
 local AT_ROW = {
-    row1 = { x = -981.5, y = 3000.5, z = 16.3 },
-    row2 = { x = -983.8, y = 3007.5, z = 16.1 },
-    row3 = { x = -986.1, y = 3014.5, z = 15.9 },
-    row4 = { x = -988.5, y = 3021.5, z = 15.7 },
-    row5 = { x = -990.8, y = 3028.5, z = 15.5 },
+    row1 = { x = -978.2, y = 3000.4, z = 16.55 },
+    row2 = { x = -980.6, y = 3007.4, z = 15.65 },
+    row3 = { x = -983.1, y = 3014.4, z = 14.17 },
+    row4 = { x = -985.5, y = 3021.4, z = 13.13 },
+    row5 = { x = -987.9, y = 3028.4, z = 12.06 },
 }
-local FARM_BAY = { x = -1001.0, y = 3010.0, z = 15.8 }
-local TRUCK_AT_FARM = { x = -1001.0, y = 3013.0, z = 15.8 }
-local AT_REFINERY_OFFICE = { x = -1596.0, y = 3997.0, z = 7.15 }
-local UNLOAD_BAY = { x = -1608.0, y = 4016.0, z = 7.15 }
-local TRUCK_AT_REFINERY = { x = -1608.0, y = 4019.0, z = 7.15 }
-local AT_INTAKE = { x = -1600.0, y = 4008.5, z = 7.15 }
-local AT_CONTROL = { x = -1590.0, y = 4003.5, z = 7.15 }
-local AT_CONTROL_2 = { x = -1590.8, y = 4003.0, z = 7.15 }
-local AT_OUTPUT = { x = -1588.0, y = 3994.5, z = 7.15 }
-local AT_COUNTER = { x = -1618.8, y = 3992.5, z = 7.15 }
-local AT_PUMP = { x = -1612.0, y = 4002.5, z = 7.15 }
-local TRUCK_AT_PUMP = { x = -1612.0, y = 4006.0, z = 7.15 }
+local FARM_BAY = { x = -994.0, y = 3010.0, z = 14.04 }
+local TRUCK_AT_FARM = { x = -996.0, y = 3013.0, z = 14.0 }
+local AT_REFINERY_OFFICE = { x = -1470.6, y = 4004.3, z = 7.12 }
+local UNLOAD_BAY = { x = -1482.6, y = 4013.5, z = 7.12 }
+local TRUCK_AT_REFINERY = { x = -1484.0, y = 4016.0, z = 7.12 }
+local AT_INTAKE = { x = -1472.4, y = 4018.4, z = 7.12 }
+local AT_CONTROL = { x = -1473.0, y = 4013.5, z = 7.12 }
+local AT_CONTROL_2 = { x = -1473.6, y = 4012.9, z = 7.12 }
+local AT_OUTPUT = { x = -1472.4, y = 4008.6, z = 7.12 }
+local AT_COUNTER = { x = -1464.0, y = 3997.2, z = 7.12 }
+local AT_PUMP = { x = -1476.0, y = 3996.5, z = 7.12 }
+local TRUCK_AT_PUMP = { x = -1477.0, y = 3999.5, z = 7.12 }
 local TRUCK = 701
 local PLATE = "NC-CH2O1"
 

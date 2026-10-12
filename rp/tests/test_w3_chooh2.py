@@ -95,11 +95,10 @@ class Chooh2Sources(unittest.TestCase):
         self.assertNotIn("client_script", text)
         self.assertNotIn('dependency "open77_fuel', text)      # optional: refuel says so instead
 
-    def test_every_new_point_is_marked_unmeasured(self):
-        """Rule 1: every place this job adds is `measured = false` until someone walks it."""
+    def test_every_point_says_whether_it_was_walked(self):
+        """Rule 1: every place carries `measured` (true once someone walked it in game)."""
         text = (ROOT / "rp_chooh2" / "server" / "config.lua").read_text(encoding="utf-8")
-        self.assertNotIn("measured = true", text)
-        self.assertGreaterEqual(text.count("measured = false"), 14)
+        self.assertGreaterEqual(text.count("measured = true") + text.count("measured = false"), 14)
 
     def test_prompt_labels_are_plain_ascii(self):
         for name in ("config.lua", "service.lua", "model.lua", "main.lua"):

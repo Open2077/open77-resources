@@ -269,6 +269,14 @@ class TraumaService(unittest.TestCase):
         # a disconnect while down
         self.assertEqual((r["call3"], r["call3_gone"], r["closed3"], r["target3_gone"]), ("3", "true", "1", "true"))
 
+    def test_healed_elsewhere_or_console_frees_the_hold(self):
+        r = self.run_ok("healed_elsewhere")
+        self.assertEqual((r["was_held"], r["freed"], r["frozen_after"], r["told_patched"]),
+                         ("true", "true", "false", "true"))
+        self.assertLess(int(float(r["low_health"])), 50)
+        self.assertEqual((r["held_again"], r["released_by_console"], r["told_console"]), ("true", "true", "true"))
+        self.assertEqual(r["paid"], "0")
+
     def test_responder_leaves_reopens(self):
         r = scenario("responder_leaves")
         self.assertEqual(r.get("errors"), "0", r.get("first_error"))

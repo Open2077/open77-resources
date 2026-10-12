@@ -554,10 +554,14 @@ local function applyHold(playerId)
         log("player %d: setHealth(%d) refused: %s", playerId, low, tostring(whyH))
     end
     Open77.stats.setHealthRegenEnabled(playerId, false)
+    entry.holdHealth = low
 
     entry.held = true
     entry.applying = false
-    -- The wounded pose for as long as the player is down (Config.Stage.down).
+    -- The wounded pose for as long as the player is down (Config.Stage.down). A second alive
+    -- phase of the same respawn (the platform reports two) re-applies the hold: the first pose
+    -- is stopped first, so a single stop frees the body at the end.
+    if entry.pose then stageRelease(playerId, entry.pose); entry.pose = nil end
     entry.pose = stageHold(playerId, "down")
     TriggerClientEvent("rp_trauma:hold", playerId, true, secondsLeft(entry), entry.stable == true)
     say(playerId, downMessage(entry, playerId))
@@ -586,7 +590,8 @@ local function stabiliseHeld(playerId, fraction)
     if entry.held then
         local stats = Open77.stats.get(playerId)
         local maximum = stats and stats.health and stats.health.maximum or 100
-        Open77.stats.setHealth(playerId, math.max(1, math.floor(maximum * fraction)))
+        entry.holdHealth = math.max(1, math.floor(maximum * fraction))
+        Open77.stats.setHealth(playerId, entry.holdHealth)
         TriggerClientEvent("rp_trauma:hold", playerId, true, secondsLeft(entry), true)
     end
     return true
@@ -741,11 +746,27 @@ AddEventHandler("onPlayerLifeStateChanged", function(playerId, revision, phase)
     end
 end)
 
+-- A held body that another resource healed (an admin or gamemode heal, the platform's
+-- revive of a living player is a no-op) is up again: the hold would otherwise keep a player
+-- at full health frozen on the floor, which no admin command could clear.
+local function healedElsewhere(id, entry)
+    if not entry.held or entry.applying or entry.respawning or not entry.holdHealth then return false end
+    local stats = Open77.stats.get(id)
+    local current = stats and stats.health and stats.health.value
+    local maximum = stats and stats.health and stats.health.maximum or 100
+    if type(current) ~= "number" or current <= entry.holdHealth + math.max(5, maximum * 0.15) then return false end
+    log("player %d healed by another resource (%d > %d): hold released", id, current, entry.holdHealth)
+    releaseHold(id, nil, "healed", nil)
+    say(id, "You were patched up: you can move again.")
+    return true
+end
+
 -- Countdown reminders for down players.
 CreateThread(function()
     while true do
         Wait(1000)
         for id, entry in pairs(down) do
+          if not healedElsewhere(id, entry) then
             local left = secondsLeft(entry)
             if left == 0 and not entry.announcedOpen then
                 entry.announcedOpen = true
@@ -759,6 +780,7 @@ CreateThread(function()
                 entry.reminderAt = nowMono() + Config.downReminderSeconds
                 say(id, downMessage(entry, id))
             end
+          end
         end
     end
 end)
@@ -1660,6 +1682,20 @@ local function argPlayer(source, value)
     end
     return pid
 end
+
+-- trauma.release <playerId>: an operator frees a down player at full health, no bill (console).
+RegisterCommand("trauma.release", function(source, args)
+    if source ~= 0 then return end
+    local id = playerIdArg(args[1])
+    if not id or not down[id] then return log("trauma.release: player %s is not down", tostring(args[1])) end
+    if Open77.players.isDead(id) then
+        local ok, why = Open77.players.revive(id, { health = 1.0, graceMs = Config.reviveGraceMs })
+        if not ok then return log("trauma.release %d: revive refused: %s", id, tostring(why)) end
+    end
+    releaseHold(id, 1.0, "released", nil)
+    say(id, "An operator got you back on your feet.")
+    log("trauma.release %d: hold released by the console", id)
+end, true)
 
 RegisterCommand("tti.status", function(source)
     local s = Svc.stats

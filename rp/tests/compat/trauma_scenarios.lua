@@ -463,6 +463,34 @@ function scenarios.call_closes()
 end
 
 -- ---------------------------------------------------------------------------------------------
+-- Out of the hold without Trauma Team: another resource heals the held body (an admin or
+-- gamemode heal), or the console's trauma.release. Neither bills anything.
+-- ---------------------------------------------------------------------------------------------
+function scenarios.healed_elsewhere()
+    TW.boot()
+    TW.join(2, PAT, "Patient", DEATH)
+    TW.settle()
+    local cash0 = TW.balance("cash:" .. PAT)
+    local held = TW.die(2)
+    local wasHeld = held ~= nil and held.held == true
+    local lowHealth = MH.players[2].health
+    MH.players[2].health = MH.players[2].maxHealth or 100      -- a heal from another resource
+    MH.run(2)
+    local freed = TW.entry(2) == nil
+    local frozenAfter = MH.players[2].frozen == true
+    local toldPatched = TW.told(2, "You were patched up")
+    local held2 = TW.die(2)
+    MH.command("trauma.release", 0, { "2" })
+    MH.run(1)
+    return TW.result({
+        was_held = wasHeld, low_health = lowHealth, freed = freed, frozen_after = frozenAfter,
+        told_patched = toldPatched, held_again = held2 ~= nil, released_by_console = TW.entry(2) == nil,
+        told_console = TW.told(2, "An operator got you back on your feet"),
+        paid = cash0 - TW.balance("cash:" .. PAT), unbalanced = tostring(TW.unbalanced()),
+    })
+end
+
+-- ---------------------------------------------------------------------------------------------
 -- The responder disconnects or clocks out: the call opens again and is announced again.
 -- ---------------------------------------------------------------------------------------------
 function scenarios.responder_leaves()
