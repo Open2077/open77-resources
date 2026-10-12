@@ -123,3 +123,38 @@ Config.stolenCooldownS = 300
 -- Dialog timeouts (ms), within the UI kit's 1 000..120 000.
 Config.menuTimeoutMs = 60000
 Config.confirmTimeoutMs = 30000
+
+-- Access policy (row A9): who may drive, lock, store, open the cargo / trunk / glovebox of a
+-- tracked vehicle. Read by server/access.lua through exports.rp_garage:canAccess(playerId, plate,
+-- part, action). Legal ownership only: the physics owner (Open77.vehicles.owner) and an open
+-- trunk in the world never grant anything.
+--   owner    : the owner's identifier, or the boss of the owning society
+--   key      : a duplicate-key holder (rp_garage_keys), or any employee of the owning society
+--   mechanic : a `mechanicJob` employee on duty holding an active job order for the plate
+--              (`/cles ordre <playerId>` by the owner, or exports.rp_garage:authorize)
+--   police   : a `policeJob` officer on duty, with a warrant: the plate's wanted flag
+--              (setWanted) or an active police grant (authorize, console `vehwarrant`);
+--              no warrant is needed at the impound lot (state impounded)
+-- Vehicle actions: drive lock store manage repair impound. Part actions: view take put.
+Config.access = {
+    parts = { "cargo", "trunk", "glovebox" },
+    mechanicJob = "mecano",
+    policeJob = "ncpd",
+    requireDuty = { mechanic = true, police = true },
+    roles = {
+        owner    = { vehicle = { "drive", "lock", "store", "manage", "repair" },
+                     parts = { ["*"] = { "view", "take", "put" } } },
+        key      = { vehicle = { "drive", "lock", "store" },
+                     parts = { ["*"] = { "view", "take", "put" } } },
+        mechanic = { vehicle = { "drive", "lock", "repair" },
+                     parts = { cargo = { "view" }, trunk = { "view" } } },
+        police   = { vehicle = { "drive", "lock", "impound" },
+                     parts = { ["*"] = { "view", "take" } } },
+    },
+    police = {
+        wantedIsWarrant = true,       -- setWanted(plate, true) counts as a warrant on that vehicle
+        withoutWarrant = {},          -- e.g. { "cargo:view" } lets any officer on duty look in the bed
+        warrantMinGrade = 2,          -- rp_jobs grade an officer needs to issue a warrant through authorize
+    },
+    grantMinutes = { default = 60, max = 24 * 60 },
+}

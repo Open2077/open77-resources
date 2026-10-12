@@ -30,7 +30,7 @@ visuals, holding versus drinking, permissions and current first-person limits.
 |---|---|
 | Core | `rp_config` (live tunables, `/rpconfig`), `rp_identity`, `rp_economy` (SQL wallets, payday), `rp_inventory` (WebUI backpack, stashes), `rp_jobs` (jobs, grades, societies), `rp_hud`, `rp_chat` (`/me`, `/do`, proximity), `rp_logs`, `rp_whitelist`, `rp_admin` |
 | Jobs | `rp_mecano` (repair, paint, refuel, invoices, impound), `rp_ferrailleur` (scrapper), `rp_bar`, `rp_ripperdoc`, `rp_medic`, `rp_trauma` (death, respawn at Vik's, bills), `rp_ncpd` (cuff, search, fines, jail) + `rp_mdt`, `rp_netrunner`, `rp_fixer`, `rp_nomade` (crate convoys: carry animation, cargo in the truck bed, GPS route), `rp_delamain` (taxi) |
-| World | `rp_zones`, `rp_ambiance`, `rp_shops` (kiosks + vendors), `rp_bank` (ATMs), `rp_garage`, `rp_housing` (five real flats, doors found through `open77_doors`), `rp_needs` (hunger/thirst/fatigue), `rp_phone`, `rp_radio`, `rp_vigile` (security), `rp_fireworks` (synchronized shows) |
+| World | `rp_zones`, `rp_ambiance`, `rp_shops` (kiosks + vendors), `rp_bank` (ATMs), `rp_garage` (plates, keys, job orders, warrants: `canAccess`), `rp_cargo` (opt-in: cargo layouts and slots on the A13 coordinator), `rp_housing` (five real flats, doors found through `open77_doors`), `rp_needs` (hunger/thirst/fatigue), `rp_phone`, `rp_radio`, `rp_vigile` (security), `rp_fireworks` (synchronized shows) |
 | Crime | `rp_crime` (lockpick, shop robbery, dealer, fence), `rp_gangs` (territories, street market) |
 | Spectacle | `rp_fireworks` (synchronized shows), `rp_drones` (a drone light show: real drone bodies held in the sky, an OPEN//77 sign, cut and flip-book choreography) |
 | Lab helpers | `rp_selftest` (33 checks, console `selftest`), `rp_taxitest` (`groundz`), `rp_worldprobe` (`wprobe`, `vwarp`), `eval_taxi` (the first taxi), [`rp_weapons_effect`](rp_weapons_effect) (English weapon workshop, `/weaponeffects`) |
@@ -89,7 +89,12 @@ database connection string is the server's (`OP77_DATABASE_CONNECTION`).
 - **Props use curated aliases** (`crate.small`, `tool.welder`, `street.parking_meter`…); a raw
   `.mesh` path renders as a white slab.
 - **Positions are measured**, not guessed: walked points and the AMM interior table. The
-  coordinate map is in `README.fr.md` § *Carte de Night City*.
+  coordinate map is in `README.fr.md` § *Carte de Night City*. The exception is the cargo beds
+  of `rp_cargo/data/layouts.json`: starting guesses flagged `measured: false` until someone
+  measures them with the lab commands (`cargospawn`, `cargotune`, `cargolayout`).
+- **Vehicle access has one answer**: `exports.rp_garage:canAccess(playerId, plate, part, action)`
+  (owner, key holder, mechanic on a job order, police with a warrant, stranger). An open trunk in
+  the world is not authorization, and durable state is keyed by plate, never by a runtime id.
 - Interiors with vanilla lootable decor can still crash a client on some builds (the Northside
   DLC flat); the housing list avoids them and the platform fix is tracked in the base repo.
 
@@ -99,6 +104,13 @@ database connection string is the server's (`OP77_DATABASE_CONNECTION`).
 - [Animated actions](https://open2077.net/docs/animated-actions) — poses, props in hand, durations
 - [Open77 Devkit MCP](https://github.com/Open2077/open77-devkit) — the tool these resources were written with
 - `PLAN.html` — the delivery plan the set was built from
+- `docs/world-interaction/` — the world-interaction rows done in this repository:
+  [B8 compatibility audit](docs/world-interaction/b8-compat-audit.md),
+  [A9 vehicle access and cargo](docs/world-interaction/a9-cargo.md)
+- `tests/` — offline checks, no game and no database:
+  `python -m unittest discover -s tests -p "test_compat*.py"` (B8 contracts, `rp_economy`) and
+  `-p "test_a9*.py"` (`rp_garage` access matrix, `rp_cargo`); they need a Lua 5.4 engine
+  (`lupa`, or the KeraLua `lua54.dll`, see `tests/compat/luahost.py`)
 
 ## License
 

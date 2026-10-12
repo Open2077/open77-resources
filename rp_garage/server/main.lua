@@ -6,6 +6,11 @@
 -- and the fuel level (open77_fuel). Garages store and take vehicles out, the dealership sells
 -- them, keys are duplicates other citizens hold, the impound lot keeps a vehicle until the owner
 -- pays the fee. Exports never yield: the cache answers, SQL is written through with callbacks.
+--
+-- Access (row A9 of the world-interaction plan): canAccess(playerId, plate, part, action) answers
+-- for the owner, key holders, a mechanic on a job order, the police with a warrant and everybody
+-- else, from server/access.lua. Everything durable is keyed by PLATE; a runtime vehicle id is only
+-- the current projection (rp_garage:spawned / rp_garage:despawned say when it changes).
 
 local function log(fmt, ...)
     print(("[rp_garage] " .. fmt):format(...))
@@ -18,6 +23,7 @@ end
 local store = { mode = "pending", reason = nil }   -- pending | sql | kvp
 local vehicles = {}        -- plate -> row (see newRow)
 local keys = {}            -- plate -> { [holderIdentifier] = { name, givenBy, at } }
+local grants = {}          -- plate -> { { role, holder, grantedBy, reason, expiresAt, at }, ... } (A9)
 local live = {}            -- tostring(vehicleId) -> plate, for vehicles currently in the world
 local menuBusy = {}        -- playerId -> Open77.time.monotonic() seconds when a dialog was opened
 local stolenSeen = {}      -- plate .. "|" .. identifier -> unix seconds of the last alert
@@ -107,6 +113,13 @@ end
 local function onDuty(playerId)
     local ok, r = pcall(function() return exports.rp_jobs:onDuty(playerId) end)
     return ok and r == true
+end
+
+local function getGrade(playerId)
+    local ok, r = pcall(function() return exports.rp_jobs:getGrade(playerId) end)
+    if ok and type(r) == "table" then return tonumber(r.level) or 0 end
+    if ok and type(r) == "number" then return r end
+    return 0
 end
 
 local function listOnDuty(job)
@@ -265,6 +278,52 @@ local function isOwner(playerId, row)
 end
 
 -- ---------------------------------------------------------------------------------------------
+-- Access (A9): server/access.lua holds the pure policy (Config.access); this gathers the facts.
+-- ---------------------------------------------------------------------------------------------
+
+local Access = RpGarageAccess
+
+local function accessFacts(playerId, row)
+    local identifier = identifierOf(playerId)
+    local policy = Config.access
+    local f = { row = row, identifier = identifier, now = now() }
+    if not row or not identifier then return f end
+    local holders = keys[row.plate]
+    f.holdsKey = holders ~= nil and holders[identifier] ~= nil
+    local society = societyOf(row.owner)
+    if society then
+        f.society = society
+        f.employee = hasJob(playerId, society)
+        f.boss = f.employee and isBoss(playerId)
+    end
+    if hasJob(playerId, policy.mechanicJob) then
+        f.mechanic = { job = true, duty = onDuty(playerId),
+            order = Access.findGrant(grants[row.plate], "mechanic", identifier, policy.mechanicJob, f.now) }
+    end
+    if hasJob(playerId, policy.policeJob) then
+        f.police = { job = true, duty = onDuty(playerId), grade = getGrade(playerId),
+            warrant = Access.findGrant(grants[row.plate], "police", identifier, policy.policeJob, f.now) }
+    end
+    return f
+end
+
+-- true, role, state | false, reason
+local function decideAccess(playerId, row, part, action)
+    local ok, result = Access.decide(Config.access, accessFacts(playerId, row), part, action)
+    if ok then return true, result, row.state end
+    return false, result
+end
+
+-- May this player enter the locked car (per-player lock exception)? The owner and key holders as
+-- before, plus a mechanic on duty with a job order for the plate.
+local function mayEnter(playerId, row)
+    if holdsKey(playerId, row) then return true end
+    if not row then return false end
+    local ok, role = decideAccess(playerId, row, nil, "drive")
+    return ok and role == "mechanic"
+end
+
+-- ---------------------------------------------------------------------------------------------
 -- Persistence: SQL first, KVP fallback (write-through, callback forms only)
 -- ---------------------------------------------------------------------------------------------
 
@@ -296,6 +355,20 @@ CREATE TABLE IF NOT EXISTS rp_garage_keys (
     given_by    VARCHAR(64) NOT NULL DEFAULT '',
     at          BIGINT      NOT NULL DEFAULT 0,
     PRIMARY KEY (plate, holder)
+)]]
+
+-- A9 grants: mechanic job orders and police warrants on one plate. `holder` is a durable
+-- identifier or "job:<name>" (every employee of that job); `expires_at` is unix seconds.
+local SQL_GRANTS = [[
+CREATE TABLE IF NOT EXISTS rp_garage_grants (
+    plate       VARCHAR(16) NOT NULL,
+    role        VARCHAR(16) NOT NULL,
+    holder      VARCHAR(64) NOT NULL,
+    granted_by  VARCHAR(64) NOT NULL DEFAULT '',
+    reason      VARCHAR(64) NOT NULL DEFAULT '',
+    expires_at  BIGINT      NOT NULL DEFAULT 0,
+    at          BIGINT      NOT NULL DEFAULT 0,
+    PRIMARY KEY (plate, role, holder)
 )]]
 
 local SQL_UPSERT = [[
@@ -368,6 +441,49 @@ local function persistKeyClear(plate)
     end
 end
 
+local function persistGrantsKvp(plate)
+    local list = {}
+    for _, g in ipairs(grants[plate] or {}) do
+        list[#list + 1] = { role = g.role, holder = g.holder, grantedBy = g.grantedBy, reason = g.reason, expiresAt = g.expiresAt, at = g.at }
+    end
+    local encoded = json.encode(list)
+    if encoded then Open77.kvp.set("grants:" .. plate, encoded) end
+end
+
+local function persistGrant(plate, g)
+    if store.mode == "sql" then
+        Open77.database.update(
+            "REPLACE INTO rp_garage_grants (plate, role, holder, granted_by, reason, expires_at, at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            { plate, g.role, g.holder, g.grantedBy or "", g.reason or "", g.expiresAt, g.at or 0 },
+            function(result)
+                if result == nil then log("SQL grant write failed for plate %s", plate) end
+            end)
+    elseif store.mode == "kvp" then
+        persistGrantsKvp(plate)
+    end
+end
+
+local function persistGrantDelete(plate, role, holder)
+    if store.mode == "sql" then
+        Open77.database.update("DELETE FROM rp_garage_grants WHERE plate = ? AND role = ? AND holder = ?",
+            { plate, role, holder }, function() end)
+    elseif store.mode == "kvp" then
+        persistGrantsKvp(plate)
+    end
+end
+
+local function adoptGrant(plate, g)
+    if not vehicles[plate] or not Access.GRANT_ROLES[g.role] or not Access.validHolder(g.holder) then return false end
+    local expiresAt = tonumber(g.expiresAt or g.expires_at) or 0
+    if expiresAt <= now() then return false end
+    grants[plate] = grants[plate] or {}
+    table.insert(grants[plate], {
+        role = g.role, holder = g.holder, grantedBy = g.grantedBy or g.granted_by or "",
+        reason = g.reason or "", expiresAt = expiresAt, at = tonumber(g.at) or 0,
+    })
+    return true
+end
+
 local function adoptRow(plain)
     local row = newRow(plain.plate, plain.owner, plain.ownerName or plain.owner_name or "", plain.record, plain.label or "")
     row.state = plain.state or "stored"
@@ -389,6 +505,7 @@ end
 local function loadFromSql()
     Open77.database.update.await(SQL_VEHICLES)
     Open77.database.update.await(SQL_KEYS)
+    Open77.database.update.await(SQL_GRANTS)
     local rows = Open77.database.query.await("SELECT * FROM rp_garage_vehicles") or {}
     local count = 0
     for _, r in ipairs(rows) do
@@ -415,8 +532,14 @@ local function loadFromSql()
             keyCount = keyCount + 1
         end
     end
+    local grows = Open77.database.query.await(
+        "SELECT plate, role, holder, granted_by, reason, expires_at, at FROM rp_garage_grants WHERE expires_at > ?", { now() }) or {}
+    local grantCount = 0
+    for _, g in ipairs(grows) do
+        if adoptGrant(g.plate, g) then grantCount = grantCount + 1 end
+    end
     store.mode = "sql"
-    log("store=sql tables=rp_garage_vehicles,rp_garage_keys vehicles=%d keys=%d", count, keyCount)
+    log("store=sql tables=rp_garage_vehicles,rp_garage_keys,rp_garage_grants vehicles=%d keys=%d grants=%d", count, keyCount, grantCount)
     -- Rows that were `out` at the last shutdown were read back as `stored` (adoptRow): write that
     -- through, so rp_mdt's direct SELECTs on rp_garage_vehicles do not keep showing `out`.
     for _, r in ipairs(rows) do
@@ -444,6 +567,13 @@ local function loadFromKvp(reason)
                         keys[plain.plate][entry.holder] = { name = entry.name or "", givenBy = entry.givenBy or "", at = tonumber(entry.at) or 0 }
                         keyCount = keyCount + 1
                     end
+                end
+            end
+            local rawGrants = Open77.kvp.get("grants:" .. plain.plate)
+            local glist = type(rawGrants) == "string" and json.decode(rawGrants) or nil
+            if type(glist) == "table" then
+                for _, g in ipairs(glist) do
+                    if type(g) == "table" then adoptGrant(plain.plate, g) end
                 end
             end
         end
@@ -496,7 +626,7 @@ end
 local function applyKeyExceptions(row)
     if row.state ~= "out" or not row.vehicleId then return end
     for _, pid in ipairs(Open77.players.all()) do
-        if holdsKey(pid, row) then
+        if mayEnter(pid, row) then
             Open77.vehicles.setLockedForPlayer(row.vehicleId, pid, false)
         end
     end
@@ -579,6 +709,8 @@ local function spawnRow(row, spawnPoint, bucket, playerId)
     live[tostring(id)] = row.plate
     applyKeyExceptions(row)
     if playerId then Open77.vehicles.setLockedForPlayer(id, playerId, false) end
+    -- A9: the plate has a new runtime id; cargo / inventory projections re-bind to it.
+    TriggerEvent("rp_garage:spawned", row.plate, id, row.record)
     return id, restored
 end
 
@@ -607,6 +739,7 @@ local function retireRow(row, nextState, garageId, reason)
         row.impoundReason = ""
     end
     persistVehicle(row)
+    if id then TriggerEvent("rp_garage:despawned", row.plate, id, nextState) end
 end
 
 local function tellOwner(row, text)
@@ -1239,6 +1372,271 @@ exports("spawnOwned", function(playerId, plate)
 end)
 
 -- ---------------------------------------------------------------------------------------------
+-- A9: access adapter, grants (mechanic job orders, police warrants) and vehicle identity.
+-- Synchronous and cache-only, never yield: safe through the exports.rp_garage:x() sugar. Every
+-- durable key is the plate; a runtime vehicle id is accepted only by canAccessVehicle, which
+-- resolves it to the plate first.
+-- ---------------------------------------------------------------------------------------------
+
+-- A plate argument: a string, never a bare number (a runtime vehicle id must not be read as the
+-- plate "NC-<id>"). Returns the normalized plate | nil, "invalid_plate".
+local function plateArg(plate)
+    if type(plate) ~= "string" or plate:match("^%s*%d+%s*$") then return nil, "invalid_plate" end
+    local p = normalizePlate(plate)
+    if not p then return nil, "invalid_plate" end
+    return p
+end
+
+local function accessFor(playerId, row, part, action)
+    if store.mode == "pending" then return false, "registry_loading" end
+    local pid = toPlayerId(playerId)
+    if not pid then return false, "invalid_player_id" end
+    return decideAccess(pid, row, part, action)
+end
+
+-- A grant holder: a player id (resolved to its durable identifier), an identifier, "job:<name>".
+local function holderOf(value)
+    local pid = type(value) == "number" and toPlayerId(value) or nil
+    if pid then return identifierOf(pid) end
+    if Access.validHolder(value) then return value end
+    return nil
+end
+
+-- Online players a grant holder covers.
+local function grantPlayers(holder)
+    local out = {}
+    local job = holder:match("^job:(.+)$")
+    for _, pid in ipairs(Open77.players.all()) do
+        if identifierOf(pid) == holder or (job and hasJob(pid, job)) then out[#out + 1] = pid end
+    end
+    return out
+end
+
+-- Re-evaluates the lock exception of every online player a grant holder covers.
+local function refreshExceptions(row, holder)
+    if row.state ~= "out" or not row.vehicleId then return end
+    for _, pid in ipairs(grantPlayers(holder)) do
+        Open77.vehicles.setLockedForPlayer(row.vehicleId, pid, mayEnter(pid, row) and false or nil)
+    end
+end
+
+-- Who may issue or lift a grant: the owner (manage) for a mechanic order, an officer on duty of
+-- grade >= Config.access.police.warrantMinGrade for a police warrant.
+local function grantAuthority(by, row, role)
+    if role == "mechanic" then
+        if not decideAccess(by, row, nil, "manage") then return nil, "not_owner" end
+        return true
+    end
+    if not (hasJob(by, Config.access.policeJob) and onDuty(by)) then return nil, "not_police" end
+    if getGrade(by) < (Config.access.police.warrantMinGrade or 0) then return nil, "grade_too_low" end
+    return true
+end
+
+-- authorize(plate, role, holder, { minutes, reason, by }) -> { role, holder, expiresAt } | nil, reason
+local function authorize(plate, role, holder, opts)
+    opts = type(opts) == "table" and opts or {}
+    if store.mode == "pending" then return nil, "registry_loading" end
+    local p, why = plateArg(plate)
+    if not p then return nil, why end
+    local row = vehicles[p]
+    if not row then return nil, "vehicle_not_tracked" end
+    if not Access.GRANT_ROLES[role] then return nil, "invalid_role" end
+    local h = holderOf(holder)
+    if not h then return nil, "invalid_holder" end
+    local limits = Config.access.grantMinutes
+    local minutes = opts.minutes == nil and limits.default or tonumber(opts.minutes)
+    if not minutes or minutes < 1 or minutes > limits.max then return nil, "invalid_duration" end
+    local by = nil
+    if opts.by ~= nil then
+        by = toPlayerId(opts.by)
+        if not by then return nil, "invalid_player_id" end
+        local allowed, refusal = grantAuthority(by, row, role)
+        if not allowed then return nil, refusal end
+    end
+    local t = now()
+    local g = {
+        role = role, holder = h,
+        grantedBy = by and (identifierOf(by) or "") or tostring(GetInvokingResource() or "server"),
+        reason = type(opts.reason) == "string" and opts.reason:sub(1, 64) or "",
+        expiresAt = t + math.floor(minutes * 60), at = t,
+    }
+    local list = grants[p] or {}
+    for i = #list, 1, -1 do
+        if list[i].role == role and list[i].holder == h then table.remove(list, i) end
+    end
+    list[#list + 1] = g
+    grants[p] = list
+    persistGrant(p, g)
+    refreshExceptions(row, h)
+    log("grant %s on plate %s to %s for %d min by %s (%s)", role, p, h, math.floor(minutes), g.grantedBy, g.reason)
+    TriggerEvent("rp_garage:changed", row.owner, p, "authorized")
+    return { role = role, holder = h, expiresAt = g.expiresAt }
+end
+
+-- revoke(plate, role, holder?, { by }) -> count | nil, reason. No holder: every grant of the role.
+local function revokeGrant(plate, role, holder, opts)
+    opts = type(opts) == "table" and opts or {}
+    if store.mode == "pending" then return nil, "registry_loading" end
+    local p, why = plateArg(plate)
+    if not p then return nil, why end
+    local row = vehicles[p]
+    if not row then return nil, "vehicle_not_tracked" end
+    if not Access.GRANT_ROLES[role] then return nil, "invalid_role" end
+    local h = nil
+    if holder ~= nil then
+        h = holderOf(holder)
+        if not h then return nil, "invalid_holder" end
+    end
+    if opts.by ~= nil then
+        local by = toPlayerId(opts.by)
+        if not by then return nil, "invalid_player_id" end
+        local allowed, refusal = grantAuthority(by, row, role)
+        if not allowed then return nil, refusal end
+    end
+    local list = grants[p] or {}
+    local removed = 0
+    for i = #list, 1, -1 do
+        local g = list[i]
+        if g.role == role and (h == nil or g.holder == h) then
+            table.remove(list, i)
+            persistGrantDelete(p, g.role, g.holder)
+            refreshExceptions(row, g.holder)
+            removed = removed + 1
+        end
+    end
+    if removed == 0 then return nil, "not_found" end
+    log("grant %s on plate %s revoked (%d)", role, p, removed)
+    TriggerEvent("rp_garage:changed", row.owner, p, "unauthorized")
+    return removed
+end
+
+-- Drops expired grants (called by the snapshot loop): exceptions follow, the row is deleted.
+local function purgeExpiredGrants()
+    local t = now()
+    for plate, list in pairs(grants) do
+        for i = #list, 1, -1 do
+            local g = list[i]
+            if not Access.active(g, t) then
+                table.remove(list, i)
+                persistGrantDelete(plate, g.role, g.holder)
+                local row = vehicles[plate]
+                if row then
+                    refreshExceptions(row, g.holder)
+                    TriggerEvent("rp_garage:changed", row.owner, plate, "unauthorized")
+                end
+                log("grant %s on plate %s to %s expired", g.role, plate, g.holder)
+            end
+        end
+    end
+end
+
+-- canAccess(playerId, plate, part, action) -> true, role, state | false, reason
+--   part nil: drive lock store manage repair impound; part cargo|trunk|glovebox: view take put.
+--   Reasons: registry_loading invalid_player_id invalid_plate invalid_part invalid_action
+--            vehicle_not_tracked player_not_found no_access action_not_permitted impounded
+--            off_duty no_job_order warrant_required
+exports("canAccess", function(playerId, plate, part, action)
+    local p, why = plateArg(plate)
+    if not p then return false, why end
+    return accessFor(playerId, vehicles[p], part, action)
+end)
+
+-- The same for a runtime vehicle id (resolved to its plate; an untracked car is refused).
+exports("canAccessVehicle", function(playerId, vehicleId, part, action)
+    if vehicleId == nil then return false, "invalid_vehicle_id" end
+    return accessFor(playerId, rowOfVehicle(vehicleId), part, action)
+end)
+
+-- The coordinator account of a vehicle part: "veh:<plate>:<part>" (A13 contract section 3.1).
+exports("accountOf", function(plate, part)
+    local p, why = plateArg(plate)
+    if not p then return nil, why end
+    if not vehicles[p] then return nil, "vehicle_not_tracked" end
+    if not Access.validPart(Config.access, part) then return nil, "invalid_part" end
+    return ("veh:%s:%s"):format(p, part)
+end)
+
+-- The durable identity of a plate and its current projection (vehicleId only while out).
+exports("describe", function(plate)
+    local p, why = plateArg(plate)
+    if not p then return nil, why end
+    local row = vehicles[p]
+    if not row then return nil, "vehicle_not_tracked" end
+    return {
+        plate = row.plate, record = row.record, label = row.label, state = row.state, owner = row.owner,
+        society = societyOf(row.owner), vehicleId = row.vehicleId, wanted = row.wanted == true,
+    }
+end)
+
+exports("authorize", function(plate, role, holder, opts)
+    return authorize(plate, role, holder, opts)
+end)
+
+exports("revokeAuthorization", function(plate, role, holder, opts)
+    return revokeGrant(plate, role, holder, opts)
+end)
+
+exports("authorizations", function(plate)
+    local out = {}
+    local p = plateArg(plate)
+    if not p then return out end
+    local t = now()
+    for _, g in ipairs(grants[p] or {}) do
+        if Access.active(g, t) then
+            out[#out + 1] = { role = g.role, holder = g.holder, grantedBy = g.grantedBy, reason = g.reason, expiresAt = g.expiresAt }
+        end
+    end
+    table.sort(out, function(a, b) return a.role .. "|" .. a.holder < b.role .. "|" .. b.holder end)
+    return out
+end)
+
+-- /cles ordre <mechanicId> [plate] [minutes]: the owner hands a mechanic a job order (drive, lock,
+-- repair, look in the bed and the trunk); /cles ordre annuler [plate] lifts every order.
+local function orderCommand(playerId, targetArg, plateText, minutesArg)
+    if not storeReady(playerId) then return end
+    local first = type(targetArg) == "string" and targetArg:lower() or nil
+    if first == "annuler" or first == "cancel" then
+        local row, why = ownedVehicleFor(playerId, plateText, Config.reach.keyVehicle)
+        if not row then return warn(playerId, why) end
+        local n, err = revokeGrant(row.plate, "mechanic", nil, { by = playerId })
+        if not n then
+            return warn(playerId, err == "not_found" and ("No job order open on the %s."):format(row.label) or ("Refused: " .. tostring(err)))
+        end
+        return say(playerId, ("%d job order(s) on the %s (plate %s) cancelled."):format(n, row.label, row.plate))
+    end
+    local target = toPlayerId(targetArg)
+    if not target or target == playerId then
+        return warn(playerId, "Usage: /cles ordre <mechanicId> [plate] [minutes] | /cles ordre annuler [plate]")
+    end
+    if not Open77.players.name(target) then return warn(playerId, ("No player with id %d online."):format(target)) end
+    if not hasJob(target, Config.access.mechanicJob) then return warn(playerId, ("%s is not a mechanic."):format(displayName(target))) end
+    local row, why = ownedVehicleFor(playerId, plateText, Config.reach.keyVehicle)
+    if not row then return warn(playerId, why) end
+    local grant, err = authorize(row.plate, "mechanic", target, { by = playerId, minutes = tonumber(minutesArg), reason = "job order" })
+    if not grant then return warn(playerId, "Job order refused: " .. tostring(err)) end
+    local minutes = math.floor((grant.expiresAt - now()) / 60 + 0.5)
+    say(playerId, ("Job order on the %s (plate %s) handed to %s for %d min."):format(row.label, row.plate, displayName(target), minutes))
+    say(target, ("%s handed you a job order on their %s (plate %s) for %d min: you can drive it and look in the bed."):format(
+        displayName(playerId), row.label, row.plate, minutes))
+end
+
+-- Console (lab / admin): `vehwarrant <plate> <minutes> [reason]` issues a police warrant for every
+-- officer on duty ("job:<policeJob>"); `vehwarrant <plate> off` lifts it.
+RegisterCommand("vehwarrant", function(source, args)
+    if source ~= 0 then return end
+    local plate, second = args[1], args[2]
+    if not plate or not second then return log("usage: vehwarrant <plate> <minutes> [reason] | vehwarrant <plate> off") end
+    local holder = "job:" .. Config.access.policeJob
+    if second == "off" then
+        local n, why = revokeGrant(plate, "police", holder)
+        return log("vehwarrant %s off: %s", tostring(plate), n and (tostring(n) .. " lifted") or tostring(why))
+    end
+    local reason = table.concat(args, " ", 3)
+    local grant, why = authorize(plate, "police", holder, { minutes = tonumber(second), reason = reason ~= "" and reason or "warrant" })
+    log("vehwarrant %s: %s", tostring(plate), grant and ("until " .. tostring(grant.expiresAt)) or tostring(why))
+end, false)
+
+-- ---------------------------------------------------------------------------------------------
 -- Commands
 -- ---------------------------------------------------------------------------------------------
 
@@ -1273,6 +1671,7 @@ RegisterCommand("cles", function(source, args)
     local first = args[1]
     if not first then return listKeys(source) end
     if first:lower() == "revoke" or first:lower() == "retirer" then return revokeKeys(source, args[2]) end
+    if first:lower() == "ordre" or first:lower() == "order" then return orderCommand(source, args[2], args[3], args[4]) end
     local target = toPlayerId(first)
     if not target then return warn(source, "Usage: /cles <playerId> [plate] | /cles revoke [plate] | /cles") end
     giveKey(source, target, args[2])
@@ -1336,7 +1735,7 @@ local SUGGESTIONS = {
     { command = "/garage", help = "Open the garage you stand at: store, take out, settle the impound" },
     { command = "/concession", help = "Buy a vehicle at the dealership (plate and keys included)" },
     { command = "/cles", help = "Hand a key of your vehicle to a nearby player, or list your vehicles", parameters = {
-        { name = "playerId", help = "The player receiving the key (or 'revoke')" },
+        { name = "playerId", help = "The player receiving the key (or 'revoke', or 'ordre <mechanicId>' for a job order)" },
         { name = "plate", help = "Optional plate; default: the vehicle you sit in or the nearest one" } } },
     { command = "/verrouiller", help = "Lock / unlock the nearest vehicle you hold a key for (6 m)" },
     { command = "/plaque", help = "Read the plate, the owner and the wanted flag of the nearest vehicle" },
@@ -1403,7 +1802,7 @@ AddEventHandler("onPlayerReady", function(playerId)
     if not pid then return end
     -- A key holder who reconnects gets their per-player lock exceptions back.
     for _, row in pairs(vehicles) do
-        if row.state == "out" and row.vehicleId and holdsKey(pid, row) then
+        if row.state == "out" and row.vehicleId and mayEnter(pid, row) then
             Open77.vehicles.setLockedForPlayer(row.vehicleId, pid, false)
         end
     end
@@ -1419,7 +1818,7 @@ AddEventHandler("onPlayerEnteredVehicle", function(playerId, vehicleId, seat)
     if tostring(seat) ~= "seat_front_left" then return end
     local pid = toPlayerId(playerId)
     local row = rowOfVehicle(vehicleId)
-    if not pid or not row or holdsKey(pid, row) then return end
+    if not pid or not row or mayEnter(pid, row) then return end
     local identifier = identifierOf(pid) or "?"
     local key = row.plate .. "|" .. identifier
     local t = now()
@@ -1443,6 +1842,7 @@ AddEventHandler("onVehicleRemoved", function(vehicleId, reason)
     row.state = "stored"
     persistVehicle(row)
     log("plate %s lost from the world (%s): back in the garage", plate, tostring(reason))
+    TriggerEvent("rp_garage:despawned", plate, vehicleId, "lost")
     TriggerEvent("rp_garage:changed", row.owner, row.plate, "lost")
 end)
 
@@ -1455,6 +1855,7 @@ AddEventHandler("rp_mecano:impounded", function(vehicleId, byPlayerId, record, p
     if id and tostring(id) == tostring(vehicleId) then
         live[tostring(id)] = nil
         row.vehicleId = nil
+        TriggerEvent("rp_garage:despawned", row.plate, id, "impounded")
     end
     row.state = "impounded"
     row.impoundReason = "towed by the garage"
@@ -1474,16 +1875,19 @@ CreateThread(function()
                 if Open77.vehicles.get(row.vehicleId) == nil then
                     -- Gone without onVehicleRemoved reaching us (event lost, handler raised):
                     -- same outcome as the handler below, back in the garage as last snapshotted.
-                    live[tostring(row.vehicleId)] = nil
+                    local goneId = row.vehicleId
+                    live[tostring(goneId)] = nil
                     row.vehicleId = nil
                     row.state = "stored"
                     persistVehicle(row)
                     log("plate %s lost from the world (sweep): back in the garage", row.plate)
+                    TriggerEvent("rp_garage:despawned", row.plate, goneId, "lost")
                     TriggerEvent("rp_garage:changed", row.owner, row.plate, "lost")
                 else
                     snapshotRow(row)
                 end
             end
         end
+        purgeExpiredGrants()
     end
 end)
