@@ -179,7 +179,7 @@ Kiosks (open77_actions targets; `measured = false` marks an estimate still to be
 server), `countdownWithoutMedics` (true; false for a live server: `/respawn` at once with nobody on
 duty), `hospitalBill`, `healFee`, `reviveFee`, the bars of the older acts, `downHealthFraction`
 (0.05), `reviveHealthFraction` (0.5), the hospital point (Vik's clinic, `-1546, 1231, 11.6`), the AV
-(`Vehicle.av_trauma`, pad `-1370, 953, 23.5` r 12) and the staging poses.
+(`Vehicle.av_militech_manticore`: `Vehicle.av_trauma` never spawns on a 2.31 client; pad `-1370, 953, 23.5` r 12) and the staging poses.
 
 | Key (`shared/config.lua`) | Value | Meaning |
 |---|---|---|

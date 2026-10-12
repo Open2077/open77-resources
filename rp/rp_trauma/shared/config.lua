@@ -117,12 +117,13 @@ Config.hospital = {
     heading = 180.0,
 }
 
--- The Trauma Team AV spawned by /trauma av (on-duty medic, standing on the pad).
--- `Vehicle.av_trauma` is the "AV Trauma" record of the 2.31 catalogue (class av,
--- 4 seats). No `_player` variant of any AV exists in the catalogue; if this record
--- refuses to spawn on your build, try `Vehicle.av_rayfield_excalibur`.
+-- The Trauma Team AV spawned by /trauma av (on-duty medic, standing on the pad), with the
+-- medic at the controls. No `_player` variant of any AV exists in the 2.31 catalogue.
 Config.av = {
-    record = "Vehicle.av_trauma",
+    -- Measured 2026-10-13 on 2.31: Vehicle.av_trauma and Vehicle.av_trauma_savable are accepted by
+    -- the server but never spawn on a client (the request registers and no entity follows), so the
+    -- medic sat in nothing. The Militech Manticore, the same AV-4 airframe, spawns in 130 ms and flies.
+    record = "Vehicle.av_militech_manticore",
     spawnDistance = 8.0,   -- metres in front of the medic
     spawnUp = 1.0,         -- metres above the medic's feet
     ttlMs = 30 * 60 * 1000,
