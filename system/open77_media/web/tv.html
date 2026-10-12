@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <!--
+    An embedded player decides whether to run by what it can learn about the
+    page around it: a page that presents no referrer it finds acceptable is
+    refused (YouTube's error 153). The host serves this page from the plugin's
+    own `https://` origin, where the browser's default policy already sends one,
+    so this is not a repair -- it is the referrer made the page's own decision
+    instead of the browser's, because `tv.js` reports that refusal verbatim and a
+    variable would make the report ambiguous.
+
+    Nothing here depends on the referrer being withheld: it is a game page whose
+    address is a synthetic origin, not a private URL.
+  -->
+  <meta name="referrer" content="unsafe-url" />
+  <title>Open77 television</title>
+  <link rel="stylesheet" href="tv.css" />
+</head>
+<body>
+  <!--
+    One television. This document is created once per screen by
+    client/main.lua and destroyed with it, and it is mapped 1:1 onto the
+    screen's quad, so everything here is sized against the whole surface.
+
+    There is no window chrome and no cursor by default: the player is on foot
+    with a controller, not sitting at a desktop. The control strip exists but
+    stays hidden unless the surface actually has keyboard focus, which happens
+    two ways: someone opens the television from the menu, or someone looks at
+    the screen in the world and presses the client's screen key, which hands the
+    pointer and the keyboard to this page. In the second case the pointer is not
+    the OS cursor -- the client paints it onto the panel -- so the strip becomes
+    clickable exactly when the strip appears.
+  -->
+  <div id="stage" class="stage">
+    <!-- Idle: what a television shows when it has no URL. Deliberately a test
+         pattern rather than a blank rectangle, because "the screen is black"
+         is the same picture as "the composite is broken" and this project has
+         already spent a day on that difference once. If you can see bars, the
+         whole chain -- page, surface, projection, quad -- is working. -->
+    <div id="idle" class="idle">
+      <div class="bars">
+        <div class="bar b1"></div>
+        <div class="bar b2"></div>
+        <div class="bar b3"></div>
+        <div class="bar b4"></div>
+        <div class="bar b5"></div>
+        <div class="bar b6"></div>
+        <div class="bar b7"></div>
+      </div>
+      <div class="idle-text">
+        <div id="idle-label" class="idle-label">Open77 television</div>
+        <!-- The key is named in the client, not here: `kControlKey` in
+             `Api/MediaScreens.cpp`. It is spelled out in this text because a
+             player looking at a dead television is the only person who needs to
+             learn it, and because a hint that says "press the screen key" is a
+             hint that teaches nobody. Rebinding means changing both. -->
+        <div id="idle-detail" class="idle-detail">no signal &mdash; set a URL from the menu, or look at this screen and press F8 to use it</div>
+      </div>
+    </div>
+
+    <!-- A direct media file: the page owns the element and therefore owns the
+         whole transport, which is why this is the only case with a working seek
+         bar. -->
+    <video id="media" class="media" playsinline preload="metadata"></video>
+
+    <!-- Anything else: an embedded player. A YouTube embed is driven through
+         postMessage (see tv.js), which needs no external script. Anything that
+         refuses to be framed cannot be framed, and says so. -->
+    <!-- A container rather than an iframe, because there are two ways to put a
+         player in it and only one of them can be driven directly: YouTube's own
+         IFrame API replaces the element it is handed with its own frame, and
+         that frame records the player's state (which is how a television can
+         report *why* a link is not playing instead of showing a black
+         rectangle and saying nothing). The plain-iframe path remains as the
+         fallback when the API script cannot be fetched, and tv.js owns both. -->
+    <div id="embed" class="media embed"></div>
+
+    <div id="notice" class="notice" hidden></div>
+
+    <!-- The curtain, and the reveal behind it.
+         A cinema in front of a film: a pelmet with the house name, two panels
+         with real folds, a gold trim and tie-backs, and the countdown drawn on
+         the curtain while it is still closed. `tv.js` owns the timeline -- the
+         panels part on `LINK START` -- and reports each beat so the client can
+         play the game's own race-start sound and colours on the same clock.
+         All of the presentation is in `tv.css`: this markup is only the pieces
+         the timeline moves.
+         The border is set from the record (see `applyBorder` in tv.js): a red
+         edge is what makes a 30 m panel read as a screen in the dark. -->
+    <div id="frame" class="frame"></div>
+    <div id="curtain" class="curtain" hidden>
+      <div class="curtain-pelmet">
+        <div class="curtain-house" id="curtain-house">OPEN77 PICTURES</div>
+      </div>
+      <div class="curtain-panel curtain-left"><div class="curtain-folds"></div><div class="curtain-swag"></div></div>
+      <div class="curtain-panel curtain-right"><div class="curtain-folds"></div><div class="curtain-swag"></div></div>
+      <div class="curtain-countdown" id="curtain-countdown"></div>
+      <!-- The panel's own half of the race start's colour burst, fired on the
+           `LINK START` beat. The world effects are the client's (`race.firework
+           .burst` and two `race.flare.smoke` columns, placed against this very
+           quad), so a client that could not place them still shows the burst on
+           the screen the audience is looking at. -->
+      <div class="curtain-flare" id="curtain-flare"></div>
+    </div>
+
+    <div id="controls" class="controls" hidden>
+      <div id="transport" class="transport">
+        <button id="play" class="button" type="button" title="Play or pause (space)">&#10074;&#10074;</button>
+        <div class="seek-wrap">
+          <input id="seek" class="seek" type="range" min="0" max="1000" value="0" step="1" />
+          <div id="seek-fill" class="seek-fill"></div>
+        </div>
+        <div id="time" class="time">--:-- / --:--</div>
+      </div>
+      <div class="audio">
+        <button id="mute" class="button" type="button" title="Mute (m)">&#128266;</button>
+        <!-- 75, matching `DEFAULT_VOLUME` in server/main.lua and the page's own
+             initial state. The slider is only re-set by `applyVolume`, which runs
+             once something is playing -- so on a television that has no URL yet
+             this attribute is what a person reads, and it should be the volume
+             they will actually get. -->
+        <input id="volume" class="volume" type="range" min="0" max="100" value="75" step="1"
+               title="Volume" />
+        <span id="volume-text" class="volume-text">75</span>
+      </div>
+      <div class="source">
+        <input id="url" class="url" type="text" spellcheck="false"
+               placeholder="https://..." />
+        <button id="go" class="button go" type="button">Load</button>
+        <!-- Presentation controls, next to the transport because they belong to
+             the same person: whoever is holding the screen's key. Both ask the
+             server, like every other control here. -->
+        <button id="curtain-toggle" class="button" type="button"
+                title="Draw the curtain">Curtain</button>
+        <button id="reveal" class="button" type="button"
+                title="Countdown, colours, then the curtain parts">Reveal</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="tv.js"></script>
+</body>
+</html>

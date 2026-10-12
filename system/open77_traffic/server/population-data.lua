@@ -1,0 +1,155 @@
+-- Appearance pools are engine lookups, never free text: an empty name, or the
+-- engine's own "random" sentinel, hands the look back to each client's engine,
+-- which then draws its own variant at stub creation. That is the per-client
+-- divergence these pools exist to remove, so every entry is a name the engine
+-- was observed to accept for that exact record, and both pools are validated
+-- as named appearances before the resource starts.
+--
+-- Vehicle names: read live on both clients via `entity.appearances <entity>`
+-- for traffic cars the engine had already spawned from exactly these records
+-- (17 sampling rounds, 34 distinct cars; only the record's own
+-- *__basic_suburban_* family ever appeared). Evidence:
+-- artifacts/traffic-appearance-sync/, and the "Traffic appearance" section of
+-- docs/research/world-population-and-traffic.md.
+--
+-- Driver names: the full `effectiveAppearances` list of each driver record's
+-- template in docs/generated/npc-entity-appearances-2.31.json --
+-- citizen__ep1_lowlife_ma.ent (14), citizen__ep1_nightlife_wa.ent (30) and
+-- citizen__ep1_rich_wa.ent (30). Authored spellings are kept verbatim
+-- (`hood_hootie_wa_...` on 01-08, `..._casual` on 23-30).
+Open77TrafficPopulationCatalog = {
+    schema = 1,
+    runtimeValidated = true,
+    profiles = {
+        {
+            name = "hella-lowlife-male",
+            runtimeValidated = true,
+            weight = 1,
+            vehicleRecord = "Vehicle.v_standard2_archer_hella",
+            driverRecord = "Character.LowlifeMaleDriver",
+            vehicleAppearances = {
+                "archer_hella__basic_suburban_1",
+                "archer_hella__basic_suburban_1_2",
+                "archer_hella__basic_suburban_1_3",
+                "archer_hella__basic_suburban_1_4",
+                "archer_hella__basic_suburban_2",
+                "archer_hella__basic_suburban_2_1",
+                "archer_hella__basic_suburban_2_2",
+                "archer_hella__basic_suburban_2_3",
+                "archer_hella__basic_suburban_2_4",
+            },
+            driverAppearances = {
+                "king_of_the_stoop_ma_king_of_the_stoop_ma_01",
+                "king_of_the_stoop_ma_king_of_the_stoop_ma_010",
+                "king_of_the_stoop_ma_king_of_the_stoop_ma_011",
+                "king_of_the_stoop_ma_king_of_the_stoop_ma_012",
+                "king_of_the_stoop_ma_king_of_the_stoop_ma_013",
+                "king_of_the_stoop_ma_king_of_the_stoop_ma_014",
+                "king_of_the_stoop_ma_king_of_the_stoop_ma_02",
+                "king_of_the_stoop_ma_king_of_the_stoop_ma_03",
+                "king_of_the_stoop_ma_king_of_the_stoop_ma_04",
+                "king_of_the_stoop_ma_king_of_the_stoop_ma_05",
+                "king_of_the_stoop_ma_king_of_the_stoop_ma_06",
+                "king_of_the_stoop_ma_king_of_the_stoop_ma_07",
+                "king_of_the_stoop_ma_king_of_the_stoop_ma_08",
+                "king_of_the_stoop_ma_king_of_the_stoop_ma_09",
+            },
+        },
+        {
+            name = "maimai-nightlife-female",
+            runtimeValidated = true,
+            weight = 1,
+            vehicleRecord = "Vehicle.v_standard2_makigai_maimai",
+            driverRecord = "Character.NightlifeFemaleDriver",
+            vehicleAppearances = {
+                "makigai_maimai__basic_suburban_01",
+                "makigai_maimai__basic_suburban_02",
+                "makigai_maimai__basic_suburban_03",
+                "makigai_maimai__basic_suburban_04",
+                "makigai_maimai__basic_suburban_05",
+                "makigai_maimai__basic_suburban_06",
+                "makigai_maimai__basic_suburban_07",
+            },
+            driverAppearances = {
+                "citizen__nightlife_wa_hood_hottie_wa_09",
+                "citizen__nightlife_wa_hood_hottie_wa_10",
+                "citizen__nightlife_wa_hood_hottie_wa_11",
+                "citizen__nightlife_wa_hood_hottie_wa_12",
+                "citizen__nightlife_wa_hood_hottie_wa_13",
+                "citizen__nightlife_wa_hood_hottie_wa_14",
+                "citizen__nightlife_wa_hood_hottie_wa_15",
+                "citizen__nightlife_wa_hood_hottie_wa_16",
+                "citizen__nightlife_wa_hood_hottie_wa_17",
+                "citizen__nightlife_wa_hood_hottie_wa_18",
+                "citizen__nightlife_wa_hood_hottie_wa_19",
+                "citizen__nightlife_wa_hood_hottie_wa_20",
+                "citizen__nightlife_wa_hood_hottie_wa_21",
+                "citizen__nightlife_wa_hood_hottie_wa_22",
+                "citizen__nightlife_wa_hood_hottie_wa_23",
+                "citizen__nightlife_wa_hood_hottie_wa_24",
+                "citizen__nightlife_wa_hood_hottie_wa_25",
+                "citizen__nightlife_wa_hood_hottie_wa_26",
+                "citizen__nightlife_wa_hood_hottie_wa_27",
+                "citizen__nightlife_wa_hood_hottie_wa_28",
+                "citizen__nightlife_wa_hood_hottie_wa_29",
+                "citizen__nightlife_wa_hood_hottie_wa_30",
+                "hood_hootie_wa_hood_hottie_wa_01",
+                "hood_hootie_wa_hood_hottie_wa_02",
+                "hood_hootie_wa_hood_hottie_wa_03",
+                "hood_hootie_wa_hood_hottie_wa_04",
+                "hood_hootie_wa_hood_hottie_wa_05",
+                "hood_hootie_wa_hood_hottie_wa_06",
+                "hood_hootie_wa_hood_hottie_wa_07",
+                "hood_hootie_wa_hood_hottie_wa_08",
+            },
+        },
+        {
+            name = "galena-rich-female",
+            runtimeValidated = true,
+            weight = 1,
+            vehicleRecord = "Vehicle.v_standard2_thorton_galena",
+            driverRecord = "Character.CitizenRichFemaleDriver",
+            vehicleAppearances = {
+                "thorton_galena__basic_suburban_01",
+                "thorton_galena__basic_suburban_02",
+                "thorton_galena__basic_suburban_03",
+                "thorton_galena__basic_suburban_04",
+                "thorton_galena__basic_suburban_05",
+                "thorton_galena__basic_suburban_06",
+                "thorton_galena__basic_suburban_07",
+            },
+            driverAppearances = {
+                "citizen__rich_wa_rich_01",
+                "citizen__rich_wa_rich_02",
+                "citizen__rich_wa_rich_03",
+                "citizen__rich_wa_rich_04",
+                "citizen__rich_wa_rich_05",
+                "citizen__rich_wa_rich_06",
+                "citizen__rich_wa_rich_07",
+                "citizen__rich_wa_rich_08",
+                "citizen__rich_wa_rich_09",
+                "citizen__rich_wa_rich_10",
+                "citizen__rich_wa_rich_11",
+                "citizen__rich_wa_rich_12",
+                "citizen__rich_wa_rich_13",
+                "citizen__rich_wa_rich_14",
+                "citizen__rich_wa_rich_15",
+                "citizen__rich_wa_rich_16",
+                "citizen__rich_wa_rich_17",
+                "citizen__rich_wa_rich_18",
+                "citizen__rich_wa_rich_19",
+                "citizen__rich_wa_rich_20",
+                "citizen__rich_wa_rich_21",
+                "citizen__rich_wa_rich_22",
+                "citizen__rich_wa_rich_23_casual",
+                "citizen__rich_wa_rich_24_casual",
+                "citizen__rich_wa_rich_25_casual",
+                "citizen__rich_wa_rich_26_casual",
+                "citizen__rich_wa_rich_27_casual",
+                "citizen__rich_wa_rich_28_casual",
+                "citizen__rich_wa_rich_29_casual",
+                "citizen__rich_wa_rich_30_casual",
+            },
+        },
+    },
+}

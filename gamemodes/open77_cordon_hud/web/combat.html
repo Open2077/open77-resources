@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Open//77 — Cordon combat</title>
+
+  <link rel="stylesheet" href="design-system.css">
+  <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="combat.css">
+</head>
+
+<body data-active="false" data-alive="true" data-outside="false">
+
+  <div class="cordon-vignette" id="cordonVignette" aria-hidden="true"></div>
+  <div class="cordon-static" id="cordonStatic" aria-hidden="true"></div>
+
+  <div class="reticle" id="reticle" aria-hidden="true">
+    <span class="tick tick-up"></span>
+    <span class="tick tick-down"></span>
+    <span class="tick tick-left"></span>
+    <span class="tick tick-right"></span>
+    <span class="dot"></span>
+  </div>
+
+  <div class="hitmarker" id="hitmarker" aria-hidden="true">
+    <span class="blade blade-tl"></span>
+    <span class="blade blade-tr"></span>
+    <span class="blade blade-bl"></span>
+    <span class="blade blade-br"></span>
+  </div>
+
+  <div class="shield" id="shield" aria-hidden="true">
+    <svg class="shield-ring" viewBox="0 0 240 240" focusable="false">
+      <circle class="shield-track" cx="120" cy="120" r="104"></circle>
+      <circle class="shield-sweep" id="shieldSweep" cx="120" cy="120" r="104"></circle>
+    </svg>
+  </div>
+  <div class="shield-readout" id="shieldReadout" aria-hidden="true">
+    <span class="eyebrow" data-t="combat.shield"></span>
+    <strong class="num" id="shieldCount">0.0</strong>
+  </div>
+
+  <div class="damage-flash" id="damageFlash" aria-hidden="true"></div>
+  <div class="cordon-pulse" id="cordonPulse" aria-hidden="true"></div>
+
+  <div class="move-pulse" id="movePulse" aria-hidden="true"></div>
+
+  <div class="indicators" id="indicators" aria-hidden="true"></div>
+
+  <section class="outside" id="outside" aria-hidden="true">
+    <strong data-t="cordon.outsideTitle"></strong>
+    <span class="num" id="outsideRate"></span>
+
+    <span class="num flatline" id="outsideFlatline" hidden></span>
+    <div class="compass" id="compass">
+      <div class="compass-arrow" id="compassArrow" aria-hidden="true">
+        <span></span>
+      </div>
+      <div class="compass-text">
+        <span class="tag" data-t="cordon.compass"></span>
+        <b class="num" id="compassDistance">--</b>
+      </div>
+    </div>
+  </section>
+
+  <section class="move" id="move" aria-hidden="true">
+    <strong class="move-title" id="moveTitle"></strong>
+    <span class="num" id="moveSub"></span>
+    <div class="compass" id="moveCompass">
+      <div class="compass-arrow" id="moveArrow" aria-hidden="true">
+        <span></span>
+      </div>
+      <div class="compass-text">
+        <span class="tag" data-t="cordon.moveCompass"></span>
+        <b class="num" id="moveDistance">--</b>
+      </div>
+    </div>
+  </section>
+
+  <section class="revive" id="revive" aria-hidden="true">
+    <span class="eyebrow" id="reviveLabel"></span>
+    <span class="revive-name" id="reviveName"></span>
+    <span class="self-revive-hint" id="selfReviveHint" hidden></span>
+    <div class="revive-bar"><i id="reviveFill"></i></div>
+  </section>
+
+  <section class="use-action" id="useAction" aria-hidden="true" hidden>
+    <span class="eyebrow" id="useLabel"></span>
+    <strong class="num" id="useRemaining"></strong>
+    <div class="revive-bar"><i id="useFill"></i></div>
+  </section>
+
+  <section class="dock" id="dock" aria-hidden="true">
+    <div class="vitals">
+      <div class="vitals-head">
+        <span class="tag" data-t="combat.health"></span>
+        <strong class="num" id="healthValue">0</strong>
+        <span class="armor-chip" id="armorChip">
+          <span class="tag" data-t="combat.armor"></span>
+          <b class="num" id="armorValue">0</b>
+        </span>
+      </div>
+      <div class="bar bar-health"><i id="healthFill"></i></div>
+      <div class="bar bar-armor" id="armorBar"><i id="armorFill"></i></div>
+
+      <div class="plates" id="plates" aria-hidden="true">
+        <i></i><i></i><i></i>
+      </div>
+    </div>
+
+    <div class="ammo" id="ammo">
+      <div class="ammo-read">
+        <strong class="num" id="ammoValue">--</strong><span class="ammo-divider" aria-hidden="true">/</span><span class="num ammo-reserve" id="ammoReserve">--</span>
+      </div>
+      <span class="tag" id="ammoLabel" data-t="combat.ammo"></span><span class="reload-hint" data-t="combat.reload"></span>
+    </div>
+  </section>
+
+  <script src="i18n.js"></script>
+  <script src="combat.js"></script>
+</body>
+</html>

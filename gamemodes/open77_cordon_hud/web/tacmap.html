@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Open//77 — Cordon tactical map</title>
+
+  <link rel="stylesheet" href="design-system.css">
+  <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="tacmap.css">
+</head>
+
+<body data-mode="none" data-ready="false">
+  <div class="scrim"></div>
+
+  <main class="map" role="dialog" aria-modal="true" aria-label="Tactical map">
+    <header class="map-head">
+      <div class="titles">
+        <span class="eyebrow" data-t="tacmap.eyebrow"></span>
+        <strong class="terminated" data-t="tacmap.title"></strong>
+      </div>
+      <div class="head-right">
+        <div class="phase-block">
+          <span class="tag" id="mapPhaseLabel"></span>
+          <strong class="num" id="mapClock">--:--</strong>
+        </div>
+
+        <button type="button" class="editor-toggle" id="mapEditToggle" data-t="tacmap.editorOpen"></button>
+        <button type="button" class="close-hint" id="mapClose">
+            <kbd id="mapCloseKey"></kbd><span data-t="tacmap.close"></span></button>
+      </div>
+    </header>
+
+    <div class="canvas-wrap">
+
+      <canvas id="mapCanvas" width="1200" height="900"></canvas>
+      <div class="no-data" id="mapNoData" hidden>
+        <span class="eyebrow" data-t="tacmap.noData"></span>
+        <p data-t="tacmap.noDataLead"></p>
+      </div>
+    </div>
+
+    <aside class="editor" id="mapEditor" hidden>
+      <header class="editor-head">
+        <span class="eyebrow" data-t="tacmap.editorEyebrow"></span>
+        <strong data-t="tacmap.editorTitle"></strong>
+      </header>
+
+      <div class="editor-map">
+        <span class="tag" data-t="tacmap.editorMap"></span>
+        <strong id="edMapName">--</strong>
+        <span class="flag" id="edSurveyed" data-t="tacmap.editorSurveyed" hidden></span>
+        <span class="flag warn" id="edProvisional" data-t="tacmap.editorProvis" hidden></span>
+      </div>
+
+      <div class="editor-kinds" id="edKinds">
+        <button type="button" data-kind="spawn"  data-t="tacmap.kindSpawn"></button>
+        <button type="button" data-kind="land"   data-t="tacmap.kindLand"></button>
+        <button type="button" data-kind="loot"   data-t="tacmap.kindLoot"></button>
+        <button type="button" data-kind="veh"    data-t="tacmap.kindVeh"></button>
+        <button type="button" data-kind="stage"  data-t="tacmap.kindStage"></button>
+        <button type="button" data-kind="mark"   data-t="tacmap.kindMark"></button>
+        <button type="button" data-kind="supply" data-t="tacmap.kindSupply"></button>
+        <button type="button" data-kind="hold"   data-t="tacmap.kindHold"></button>
+        <button type="button" data-kind="exit"   data-t="tacmap.kindExit"></button>
+      </div>
+
+      <input class="editor-arg" id="edArg" type="text" maxlength="96" spellcheck="false">
+      <div class="editor-actions" id="edLootTier" role="group" aria-label="Loot tier">
+        <button type="button" data-tier="street" aria-pressed="true">COMMON</button>
+        <button type="button" data-tier="rare" aria-pressed="false">RARE</button>
+        <button type="button" data-tier="epic" aria-pressed="false">EPIC</button>
+        <button type="button" data-tier="legendary" aria-pressed="false">LEGENDARY</button>
+      </div>
+      <p class="editor-hint" id="edVehHint" data-t="tacmap.editorVehHint" hidden></p>
+
+      <div class="editor-actions">
+        <button type="button" id="edHere"   data-t="tacmap.editorHere"></button>
+        <button type="button" id="edList"   data-t="tacmap.editorList"></button>
+        <button type="button" id="edGround" data-t="tacmap.editorGround"></button>
+        <button type="button" id="edDelete" class="danger" data-t="tacmap.editorDelete"></button>
+      </div>
+
+      <div class="editor-actions map-level">
+        <button type="button" id="edNew"    data-t="tacmap.editorNew"></button>
+        <button type="button" id="edCopy"   data-t="tacmap.editorCopy"></button>
+        <button type="button" id="edSelect" data-t="tacmap.editorSelect"></button>
+      </div>
+
+      <output class="editor-reply" id="edReply" data-t="tacmap.editorReply"></output>
+    </aside>
+
+    <footer class="map-foot">
+      <div class="map-instruction"><span class="eyebrow" data-t="tacmap.objective"></span><strong id="mapAction"></strong></div>
+
+      <ul class="legend">
+        <li><i class="sw open"></i><span data-t="tacmap.legendOpen"></span></li>
+        <li><i class="sw closing"></i><span data-t="tacmap.legendClosing"></span></li>
+        <li><i class="sw closed"></i><span data-t="tacmap.legendClosed"></span></li>
+        <li><i class="sw final"></i><span data-t="tacmap.legendFinal"></span></li>
+        <li><i class="sw landing"></i><span data-t="tacmap.legendLanding"></span></li>
+        <li><i class="sw loot"></i><span data-t="tacmap.legendLoot"></span></li>
+        <li><i class="sw supply"></i><span data-t="tacmap.legendSupply"></span></li>
+        <li><i class="sw pin"></i><span data-t="tacmap.legendPin"></span></li>
+        <li><i class="sw you"></i><span data-t="tacmap.legendYou"></span></li>
+        <li><i class="sw squad"></i><span data-t="tacmap.legendSquad"></span></li>
+        <li><i class="sw ping"></i><span data-t="tacmap.legendPing"></span></li>
+      </ul>
+
+      <span class="mode-hint" id="mapModeHint"></span>
+
+      <span class="cursor num" id="mapCursor"></span>
+      <span class="scale num" id="mapScale"></span>
+    </footer>
+  </main>
+
+  <script src="i18n.js"></script>
+  <script src="sweep-geometry.js"></script>
+  <script src="tacmap.js"></script>
+</body>
+</html>

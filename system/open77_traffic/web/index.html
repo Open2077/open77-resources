@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open//77 — Traffic</title>
+<!-- design-system.css is a byte-identical copy of freeroam's production
+     transcription (docs/ui-design-system.md, section 3): never edit this copy
+     on its own. It is linked first; app.css only composes its roles. -->
+<link rel="stylesheet" href="design-system.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<div class="scrim" id="scrim" aria-hidden="true"></div>
+
+<aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="title">
+  <span class="drawer-edge" aria-hidden="true"></span>
+
+  <header class="head">
+    <div class="head-copy">
+      <h1 id="title">TRAF<span>FIC</span><i aria-hidden="true"></i></h1>
+      <div class="head-meta">
+        <span class="ds-badge is-idle" id="badge-state">WAITING</span>
+        <span class="ds-data">OPEN//77 · ADMIN</span>
+      </div>
+    </div>
+    <button class="close" id="close" type="button" aria-label="Close the traffic panel">
+      <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M1.5 1.5l9 9M10.5 1.5l-9 9"/></svg>
+    </button>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Traffic sections">
+    <button class="tab active" type="button" role="tab" id="tab-overview" data-tab="overview"
+            aria-controls="page-overview" aria-selected="true">OVERVIEW</button>
+    <button class="tab" type="button" role="tab" id="tab-settings" data-tab="settings"
+            aria-controls="page-settings" aria-selected="false" tabindex="-1">SETTINGS<span class="tab-dot" id="settings-dot" hidden></span></button>
+    <button class="tab" type="button" role="tab" id="tab-nearby" data-tab="nearby"
+            aria-controls="page-nearby" aria-selected="false" tabindex="-1">NEARBY</button>
+  </nav>
+
+  <p class="blocked" id="blocked" role="alert" hidden></p>
+
+  <div class="pages">
+
+    <section class="page active" id="page-overview" role="tabpanel" aria-labelledby="tab-overview">
+      <!-- The `enabled` setting is mounted here rather than in its group: it is
+           the one control an operator reaches for first. -->
+      <div class="master" id="master"></div>
+
+      <div class="stats">
+        <div class="stat"><strong id="stat-active">—</strong><span>FLEET CARS</span></div>
+        <div class="stat"><strong id="stat-near">—</strong><span id="stat-near-label">NEAR YOU</span></div>
+        <div class="stat"><strong id="stat-drivers">—</strong><span>NPC DRIVERS</span></div>
+      </div>
+      <p class="hint" id="stats-note">Counts only the cars this resource spawned.</p>
+
+      <div class="section-head compact">
+        <h2>RESET</h2>
+        <p class="hint">Deletes every car and driver this resource spawned, then starts spawning again. Settings are kept.</p>
+      </div>
+      <div class="reset">
+        <button class="btn danger" id="reset-ask" type="button">RESET TRAFFIC</button>
+        <div class="confirm" id="reset-confirm" role="group" aria-labelledby="reset-question" hidden>
+          <p id="reset-question"><strong>Delete all traffic cars and drivers?</strong>
+            Anyone sitting in one is put back on foot first.</p>
+          <div class="row">
+            <button class="btn danger solid" id="reset-go" type="button">DELETE AND RESTART</button>
+            <button class="btn" id="reset-cancel" type="button">CANCEL</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="page-settings" role="tabpanel" aria-labelledby="tab-settings">
+      <p class="hint" id="settings-note">Waiting for the server&rsquo;s settings&hellip;</p>
+      <div class="groups" id="groups"></div>
+    </section>
+
+    <section class="page" id="page-nearby" role="tabpanel" aria-labelledby="tab-nearby">
+      <form class="scan" id="radius-form" autocomplete="off" novalidate>
+        <label class="field-label" for="radius">RADIUS</label>
+        <span class="field">
+          <input id="radius" name="radius" type="text" inputmode="numeric" maxlength="3"
+                 spellcheck="false" value="100">
+          <span class="unit">m</span>
+        </span>
+        <button class="btn" id="radius-go" type="submit">SCAN</button>
+        <span class="scan-count" id="nearby-count" role="status">&mdash;</span>
+      </form>
+
+      <div class="modes" id="patterns" role="group" aria-labelledby="modes-label">
+        <div class="modes-copy">
+          <span class="field-label" id="modes-label">DRIVING MODE</span>
+          <p class="hint">Sent to every traffic car inside the radius, not only the listed ones. Panic is a timed reaction that starts once each car's game confirms it, then the cars rejoin traffic; Normal or Stop ends it early.</p>
+        </div>
+        <div class="seg">
+          <button type="button" data-pattern="default">NORMAL</button>
+          <button type="button" data-pattern="stop">STOP</button>
+          <button type="button" class="danger" data-pattern="panic">PANIC</button>
+        </div>
+      </div>
+      <p class="counts" id="pattern-counts" hidden></p>
+
+      <table class="grid" id="nearby">
+        <thead>
+          <tr>
+            <th scope="col">VEHICLE</th>
+            <th scope="col">MODE</th>
+            <th scope="col">STATUS</th>
+            <th scope="col" class="n">DIST <small>M</small></th>
+            <th scope="col" class="n">SPEED <small>KM/H</small></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+  </div>
+
+  <div class="savebar" id="savebar" hidden>
+    <span class="savebar-count" id="savebar-count" role="status"></span>
+    <button class="btn" id="discard" type="button">DISCARD</button>
+    <button class="btn primary" id="apply-all" type="button">APPLY</button>
+  </div>
+
+  <footer class="foot">
+    <span class="keycap">ESC</span><span>CLOSE</span>
+    <i></i>
+    <span class="ds-data">/traffic</span><span>REOPEN</span>
+    <span class="live" id="live">WAITING FOR SERVER</span>
+  </footer>
+</aside>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

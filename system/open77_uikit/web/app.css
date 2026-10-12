@@ -1,0 +1,613 @@
+/* =============================================================================
+   OPEN//77 UI kit -- dialog and HUD widget surface
+   =============================================================================
+
+   Tokens come from the mirrored `open77-ui.css` in this folder, which is the
+   stylesheet every shared platform service carries (notifications, chat, admin,
+   pause, shell, debug, watermark). That is a deliberate choice and it has a
+   trade-off worth stating, because `docs/ui-design-system.md` section 1 ranks
+   the versioned kit above that compatibility layer:
+
+     * a system resource cannot LINK another resource's stylesheet -- each
+       WebUI surface runs under its own isolated virtual origin -- so the only
+       options are to mirror `open77-ui.css` (hash-gated by the one-line check
+       in section 3) or to create a SECOND ungated mirror of freeroam's
+       `design-system.css`. A second ungated mirror is how a design system
+       drifts.
+     * the four places section 4 records the kit and section 2 disagreeing are
+       about RULES, not values, so this surface follows the kit on all four
+       while sourcing its numbers from the mirrored tokens:
+         1. chamfer, not radius -- every panel and control here is cut at 45
+            degrees; no radius above 0 survives except true circles;
+         2. mono carries machine values only -- keycaps, counters, timers;
+            labels and eyebrows take the display face tracked wide;
+         3. no separation shadow -- `clip-path` clips an outer `box-shadow`
+            away, so a chamfered panel cannot have one. Separation is carried
+            by an opaque fill at the floor plus a raised hairline;
+         4. the opacity floor WINS over the kit's 0.82 + backdrop blur. Every
+            panel that carries words sits on --op77-panel (0.94) or above. A
+            backdrop filter over a game frame costs more than it is worth and
+            the kit's own alpha is below the floor section 4 sets.
+
+   Accent budget: a dialog shows cyan on at most three things -- the leading
+   rule, the primary action, and the one focused/selected row. Everything else
+   is chrome and ink.
+   ========================================================================== */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  font-family: var(--op77-font-body);
+  color: var(--op77-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+#root { position: fixed; inset: 0; }
+
+:root {
+  /* The 45-degree cut, at the two sizes this surface uses. Local rather than
+     in the mirrored token file: that file is byte-identical across twelve
+     resources and adding to it means editing twelve copies. */
+  --cut-sm: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
+  --cut-md: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+  --cut-tr: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%);
+}
+
+/* The house marker: a 3px accent rule down the leading edge of a panel. */
+.rule::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: var(--op77-rule);
+  background: var(--accent, var(--op77-accent));
+}
+
+.eyebrow {
+  font: 700 var(--op77-fs-micro) / 1 var(--op77-font-display);
+  letter-spacing: var(--op77-track-micro);
+  text-transform: uppercase;
+  color: var(--op77-text-dim);
+}
+.eyebrow::before {
+  content: "//";
+  margin-right: 0.7em;
+  color: var(--accent, var(--op77-accent));
+  font-weight: 900;
+  letter-spacing: -0.06em;
+}
+
+.keycap {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  clip-path: var(--cut-sm);
+  background: var(--op77-surface-2);
+  border: 1px solid var(--op77-line-hud);
+  font: 700 var(--op77-fs-label) / 1 var(--op77-font-mono);
+  letter-spacing: var(--op77-track-label);
+  color: var(--op77-text);
+}
+
+/* ===========================================================================
+   Cinematic bars -- two flat bands, no focus, no scrim, no pointer events
+
+   Deliberately the one element on this surface with NO chamfer, no rule and
+   no accent: a letterbox is a frame around the picture, not a panel in it,
+   and any ornament on it reads as UI over a cutscene. The height and the ease
+   are inline custom properties set from Lua; `.shown` drives the slide so the
+   bars come in from off-screen and leave the same way rather than fading,
+   which is how a projector mask behaves.
+   =========================================================================== */
+
+.cinematic {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  --bar-height: 12vh;
+  --bar-ease: 350ms;
+  --bar-color: #000000;
+}
+/* `.letterbox`, not `.bar`: `.bar` is the progress widget's panel (420 px wide,
+   cut corners, a border), and the first cut of the letterbox borrowed the name
+   -- measured 2026-09-16 as two 420 px stubs in the top-left and bottom-left
+   corners instead of full-width bands. */
+.cinematic .letterbox {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: var(--bar-height);
+  background: var(--bar-color);
+  transition: transform var(--bar-ease) cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: transform;
+}
+.cinematic .letterbox.top    { top: 0;    transform: translateY(-100%); }
+.cinematic .letterbox.bottom { bottom: 0; transform: translateY(100%); }
+.cinematic.shown .letterbox  { transform: translateY(0); }
+
+/* ===========================================================================
+   Text UI -- a hint stack, no focus, no scrim
+   =========================================================================== */
+
+#text { position: absolute; inset: 0; pointer-events: none; }
+
+.text-stack {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--op77-space-2);
+  align-items: center;
+  pointer-events: none;
+}
+.text-stack[data-position="bottom"] { bottom: calc(var(--op77-inset-y) + 96px); }
+.text-stack[data-position="center"] { top: 50%; margin-top: 96px; }
+.text-stack[data-position="top"]    { top: var(--op77-inset-y); }
+
+.hint {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--op77-space-3);
+  padding: var(--op77-space-2) var(--op77-space-4) var(--op77-space-2) var(--op77-space-4);
+  padding-left: calc(var(--op77-space-4) + var(--op77-rule));
+  clip-path: var(--cut-sm);
+  background: var(--op77-panel);
+  border: 1px solid var(--op77-line-hud);
+  max-width: 640px;
+  animation: rise var(--op77-dur) var(--op77-ease) both;
+}
+.hint .copy { display: flex; flex-direction: column; gap: 2px; }
+.hint .body {
+  font: 400 var(--op77-fs-body) / 1.35 var(--op77-font-body);
+  color: var(--op77-text);
+}
+.hint .icon {
+  display: inline-grid;
+  place-items: center;
+  width: 22px; height: 22px;
+  clip-path: var(--cut-sm);
+  background: var(--op77-surface);
+  border: 1px solid var(--op77-line-hud);
+  font: 700 var(--op77-fs-label) / 1 var(--op77-font-mono);
+  color: var(--accent, var(--op77-accent));
+}
+
+/* ===========================================================================
+   Progress -- no focus, ever. The player is blocked through the control
+   surface, not by this page holding the keyboard.
+   =========================================================================== */
+
+.progress-region {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.progress-region[data-position="bottom"] { bottom: calc(var(--op77-inset-y) + 24px); }
+.progress-region[data-position="center"] { top: 50%; transform: translate(-50%, -50%); }
+.progress-region[data-position="top"]    { top: var(--op77-inset-y); }
+
+.bar {
+  position: relative;
+  width: 420px;
+  padding: var(--op77-space-3) var(--op77-space-4);
+  padding-left: calc(var(--op77-space-4) + var(--op77-rule));
+  clip-path: var(--cut-sm);
+  background: var(--op77-panel);
+  border: 1px solid var(--op77-line-hud);
+  animation: rise var(--op77-dur) var(--op77-ease) both;
+}
+.bar .head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--op77-space-4);
+  margin-bottom: var(--op77-space-2);
+}
+.bar .label {
+  font: 600 var(--op77-fs-lead) / 1.2 var(--op77-font-display);
+  letter-spacing: var(--op77-track-head);
+  color: var(--op77-text);
+}
+.bar .hintline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: 400 var(--op77-fs-meta) / 1 var(--op77-font-mono);
+  letter-spacing: var(--op77-track-label);
+  color: var(--op77-text-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.bar .track {
+  position: relative;
+  height: 4px;
+  background: var(--op77-void);
+  overflow: hidden;
+}
+.bar .fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  transform: scaleX(0);
+  background: var(--accent, var(--op77-accent));
+  animation: fill linear both;
+  animation-duration: var(--duration, 1000ms);
+}
+
+/* The circular variant, for a bar that must sit where a panel would not. */
+.dial {
+  position: relative;
+  width: 118px; height: 118px;
+  display: grid; place-items: center;
+  animation: rise var(--op77-dur) var(--op77-ease) both;
+}
+.dial svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.dial .ring-track { stroke: var(--op77-void); }
+.dial .ring-fill {
+  stroke: var(--accent, var(--op77-accent));
+  stroke-linecap: butt;
+  stroke-dasharray: var(--circumference) var(--circumference);
+  stroke-dashoffset: var(--circumference);
+  animation: sweep linear both;
+  animation-duration: var(--duration, 1000ms);
+}
+.dial .core {
+  position: relative;
+  width: 84px; height: 84px;
+  display: grid; place-items: center;
+  gap: 2px;
+  padding: 0 6px;
+  border-radius: 50%;
+  background: var(--op77-panel);
+  border: 1px solid var(--op77-line-hud);
+  text-align: center;
+}
+.dial .label {
+  font: 600 var(--op77-fs-label) / 1.2 var(--op77-font-display);
+  letter-spacing: var(--op77-track-label);
+  text-transform: uppercase;
+  color: var(--op77-text);
+  max-width: 74px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@keyframes fill  { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes sweep { to { stroke-dashoffset: 0; } }
+@keyframes rise  { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes fade  { from { opacity: 0; } to { opacity: 1; } }
+
+/* ===========================================================================
+   Dialogs -- the only things on this page that take focus
+   =========================================================================== */
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  background: var(--op77-scrim);
+  animation: fade var(--op77-dur) var(--op77-ease) both;
+}
+.scrim[data-position="center"] { place-items: center; }
+.scrim[data-position="top"]    { place-items: start center; padding-top: 12vh; }
+.scrim[data-position="bottom"] { place-items: end center; padding-bottom: 12vh; }
+
+.panel {
+  position: relative;
+  width: min(520px, 88vw);
+  max-height: 76vh;
+  display: flex;
+  flex-direction: column;
+  clip-path: var(--cut-md);
+  background: var(--op77-panel-raised);
+  border: 1px solid var(--op77-line-hud);
+}
+.panel.large { width: min(700px, 92vw); }
+
+.panel > header {
+  padding: var(--op77-space-4) var(--op77-space-5) var(--op77-space-3);
+  padding-left: calc(var(--op77-space-5) + var(--op77-rule));
+  border-bottom: 1px solid var(--op77-line);
+}
+.panel h1 {
+  margin: 6px 0 0;
+  font: 600 var(--op77-fs-head) / 1.15 var(--op77-font-display);
+  letter-spacing: var(--op77-track-head);
+  color: var(--op77-text);
+}
+.panel .sub {
+  margin: 6px 0 0;
+  font: 400 var(--op77-fs-body) / 1.4 var(--op77-font-body);
+  color: var(--op77-text-dim);
+}
+.panel .content {
+  padding: var(--op77-space-4) var(--op77-space-5);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--op77-space-4);
+}
+.panel .content::-webkit-scrollbar { width: 6px; }
+.panel .content::-webkit-scrollbar-thumb { background: var(--op77-line-strong); }
+.panel > footer {
+  display: flex;
+  gap: var(--op77-space-2);
+  justify-content: flex-end;
+  padding: var(--op77-space-3) var(--op77-space-5) var(--op77-space-4);
+  border-top: 1px solid var(--op77-line);
+}
+
+.btn {
+  appearance: none;
+  min-height: 34px;
+  padding: 0 var(--op77-space-4);
+  clip-path: var(--cut-sm);
+  background: var(--op77-surface);
+  border: 1px solid var(--op77-line-strong);
+  color: var(--op77-text);
+  font: 600 var(--op77-fs-label) / 1 var(--op77-font-display);
+  letter-spacing: var(--op77-track-label);
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background var(--op77-dur-fast) var(--op77-ease),
+              border-color var(--op77-dur-fast) var(--op77-ease);
+}
+.btn:hover { background: var(--op77-surface-2); border-color: var(--op77-line-hud); }
+.btn.primary {
+  clip-path: var(--cut-tr);
+  background: var(--op77-accent);
+  border-color: var(--op77-accent);
+  color: var(--op77-ink);
+}
+.btn.primary:hover { background: var(--op77-accent-ice); border-color: var(--op77-accent-ice); }
+.btn.danger { background: var(--op77-danger); border-color: var(--op77-danger); color: var(--op77-ink); }
+.btn:focus-visible { outline: 2px solid var(--op77-accent-ice); outline-offset: 2px; }
+
+/* --- Option rows: context, menu ------------------------------------------ */
+
+.rows { display: flex; flex-direction: column; gap: 1px; }
+
+.row {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--op77-space-3);
+  width: 100%;
+  padding: var(--op77-space-3) var(--op77-space-4);
+  text-align: left;
+  appearance: none;
+  background: var(--op77-surface);
+  border: 1px solid transparent;
+  border-left: var(--op77-rule) solid transparent;
+  color: var(--op77-text);
+  cursor: pointer;
+  transition: background var(--op77-dur-fast) var(--op77-ease),
+              border-color var(--op77-dur-fast) var(--op77-ease);
+}
+.row:hover:not([aria-disabled="true"]),
+.row.active:not([aria-disabled="true"]) {
+  background: var(--op77-surface-2);
+  border-left-color: var(--accent, var(--op77-accent));
+}
+.row[aria-disabled="true"] { cursor: default; color: var(--op77-text-faint); }
+.row .icon {
+  display: inline-grid;
+  place-items: center;
+  width: 26px; height: 26px;
+  clip-path: var(--cut-sm);
+  background: var(--op77-void);
+  border: 1px solid var(--op77-line);
+  font: 700 var(--op77-fs-label) / 1 var(--op77-font-mono);
+  color: var(--accent, var(--op77-accent));
+}
+.row .text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.row .title {
+  font: 600 var(--op77-fs-body) / 1.25 var(--op77-font-display);
+  letter-spacing: var(--op77-track-head);
+}
+.row .desc {
+  font: 400 var(--op77-fs-meta) / 1.35 var(--op77-font-body);
+  color: var(--op77-text-dim);
+}
+.row .trail {
+  display: flex;
+  align-items: center;
+  gap: var(--op77-space-2);
+  font: 400 var(--op77-fs-meta) / 1 var(--op77-font-mono);
+  letter-spacing: var(--op77-track-label);
+  color: var(--op77-text-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.row.danger .title { color: var(--op77-danger); }
+.row.success .title { color: var(--op77-ok); }
+.row .meta {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--op77-space-1) var(--op77-space-4);
+  margin-top: 2px;
+  font: 400 var(--op77-fs-meta) / 1.4 var(--op77-font-mono);
+  letter-spacing: var(--op77-track-label);
+  color: var(--op77-text-dim);
+  font-variant-numeric: tabular-nums;
+}
+.row .meta b { color: var(--op77-text); font-weight: 600; }
+
+.check {
+  width: 16px; height: 16px;
+  clip-path: var(--cut-sm);
+  background: var(--op77-void);
+  border: 1px solid var(--op77-line-strong);
+}
+.check[data-on="1"] { background: var(--op77-accent); border-color: var(--op77-accent); }
+
+/* --- Input fields -------------------------------------------------------- */
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field > label {
+  font: 600 var(--op77-fs-label) / 1 var(--op77-font-display);
+  letter-spacing: var(--op77-track-label);
+  text-transform: uppercase;
+  color: var(--op77-text-dim);
+}
+.field .desc { font: 400 var(--op77-fs-meta) / 1.35 var(--op77-font-body); color: var(--op77-text-dim); }
+.field .err { font: 400 var(--op77-fs-meta) / 1.35 var(--op77-font-body); color: var(--op77-danger); }
+
+.field input[type="text"],
+.field input[type="password"],
+.field input[type="number"],
+.field textarea {
+  appearance: none;
+  width: 100%;
+  min-height: 34px;
+  padding: 7px var(--op77-space-3);
+  clip-path: var(--cut-sm);
+  background: var(--op77-void);
+  border: 1px solid var(--op77-line-strong);
+  color: var(--op77-text);
+  font: 400 var(--op77-fs-body) / 1.3 var(--op77-font-body);
+}
+.field textarea { min-height: 84px; resize: none; }
+.field input:focus, .field textarea:focus {
+  outline: none;
+  border-color: var(--op77-accent);
+}
+.field input::placeholder, .field textarea::placeholder { color: var(--op77-text-faint); }
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--op77-space-3);
+  padding: 7px var(--op77-space-3);
+  clip-path: var(--cut-sm);
+  background: var(--op77-void);
+  border: 1px solid var(--op77-line-strong);
+  cursor: pointer;
+}
+.toggle .body { font: 400 var(--op77-fs-body) / 1.3 var(--op77-font-body); color: var(--op77-text); }
+
+.slider { display: flex; align-items: center; gap: var(--op77-space-3); }
+.slider input[type="range"] {
+  appearance: none;
+  flex: 1;
+  height: 4px;
+  background: var(--op77-void);
+  border: 1px solid var(--op77-line);
+  cursor: pointer;
+}
+.slider input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px; height: 18px;
+  background: var(--op77-accent);
+  border: none;
+  cursor: pointer;
+}
+.slider output {
+  min-width: 52px;
+  text-align: right;
+  font: 400 var(--op77-fs-meta) / 1 var(--op77-font-mono);
+  letter-spacing: var(--op77-track-label);
+  color: var(--op77-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The custom dropdown. The native popup does not render reliably in the CEF
+   compositor, so this is a listbox of buttons -- see the page comment. */
+.listbox {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: 168px;
+  overflow-y: auto;
+  clip-path: var(--cut-sm);
+  background: var(--op77-void);
+  border: 1px solid var(--op77-line-strong);
+}
+.listbox::-webkit-scrollbar { width: 6px; }
+.listbox::-webkit-scrollbar-thumb { background: var(--op77-line-strong); }
+.listbox .opt {
+  appearance: none;
+  text-align: left;
+  padding: 7px var(--op77-space-3);
+  background: transparent;
+  border: none;
+  border-left: var(--op77-rule) solid transparent;
+  color: var(--op77-text);
+  font: 400 var(--op77-fs-body) / 1.3 var(--op77-font-body);
+  cursor: pointer;
+}
+.listbox .opt:hover { background: var(--op77-surface); }
+.listbox .opt[aria-selected="true"] {
+  background: var(--op77-accent-soft);
+  border-left-color: var(--op77-accent);
+  color: var(--op77-text);
+}
+
+/* --- Radial -------------------------------------------------------------- */
+
+.radial { position: relative; width: 380px; height: 380px; display: grid; place-items: center; }
+.radial svg { position: absolute; inset: 0; }
+.radial .sector {
+  fill: var(--op77-panel);
+  stroke: var(--op77-line-hud);
+  stroke-width: 1;
+  cursor: pointer;
+  transition: fill var(--op77-dur-fast) var(--op77-ease);
+}
+.radial .sector:hover, .radial .sector.active { fill: var(--op77-surface-2); }
+.radial .sector[aria-disabled="true"] { cursor: default; opacity: 0.45; }
+.radial .spoke { pointer-events: none; }
+.radial .spoke .glyph {
+  font: 700 12px var(--op77-font-mono);
+  fill: var(--op77-accent);
+  text-anchor: middle;
+}
+.radial .spoke .name {
+  font: 600 11px var(--op77-font-display);
+  letter-spacing: 0.1em;
+  fill: var(--op77-text);
+  text-anchor: middle;
+}
+.radial .hub {
+  position: relative;
+  width: 122px; height: 122px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  padding: 0 10px;
+  text-align: center;
+  background: var(--op77-panel-raised);
+  border: 1px solid var(--op77-line-hud);
+}
+.radial .hub .title {
+  font: 600 var(--op77-fs-body) / 1.2 var(--op77-font-display);
+  letter-spacing: var(--op77-track-head);
+  color: var(--op77-text);
+}
+
+/* --- Footer hint line ---------------------------------------------------- */
+
+.legend {
+  margin-right: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--op77-space-2);
+  font: 400 var(--op77-fs-meta) / 1 var(--op77-font-mono);
+  letter-spacing: var(--op77-track-label);
+  color: var(--op77-text-dim);
+}
+
+[hidden] { display: none !important; }

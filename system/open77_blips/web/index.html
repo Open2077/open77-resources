@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    html, body, #blips { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent; }
+    #blips { position: fixed; inset: 0; pointer-events: none; }
+    .blip { position: absolute; display: block; object-fit: contain; transform: translate(-50%, -50%);
+      transform-origin: center; pointer-events: none; user-select: none; }
+  </style>
+</head>
+<body>
+  <div id="blips"></div>
+  <script>
+    (() => {
+      const root = document.getElementById('blips');
+      const assets = new Map();
+      const nodes = new Map();
+
+      function removeId(id) {
+        for (const [key, node] of nodes) {
+          if (key.startsWith(id + ':')) { node.remove(); nodes.delete(key); }
+        }
+        assets.delete(id);
+      }
+
+      Open77.on('blips:asset', value => {
+        if (!value || !value.id || !value.src) return;
+        assets.set(String(value.id), value);
+        for (const [key, node] of nodes) {
+          if (!key.startsWith(String(value.id) + ':')) continue;
+          node.src = value.src;
+          node.style.width = `${value.size || 48}px`;
+          node.style.height = `${value.size || 48}px`;
+        }
+      });
+
+      Open77.on('blips:frame', value => {
+        const live = new Set();
+        for (const item of (value && value.items) || []) {
+          const id = String(item.id || '');
+          const asset = assets.get(id);
+          if (!asset) continue;
+          const key = `${id}:${item.surface}`;
+          live.add(key);
+          let node = nodes.get(key);
+          if (!node) {
+            node = document.createElement('img');
+            node.className = 'blip';
+            node.alt = '';
+            root.appendChild(node);
+            nodes.set(key, node);
+          }
+          node.src = asset.src;
+          node.style.width = `${asset.size || 48}px`;
+          node.style.height = `${asset.size || 48}px`;
+          node.style.left = `${item.x}px`;
+          node.style.top = `${item.y}px`;
+          node.style.display = 'block';
+        }
+        for (const [key, node] of nodes) if (!live.has(key)) node.style.display = 'none';
+      });
+
+      Open77.on('blips:remove', value => { if (value && value.id) removeId(String(value.id)); });
+      Open77.on('blips:clear', () => {
+        for (const node of nodes.values()) node.remove();
+        nodes.clear(); assets.clear();
+      });
+    })();
+  </script>
+</body>
+</html>

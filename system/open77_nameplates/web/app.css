@@ -1,0 +1,98 @@
+/* Nameplate fallback page.
+ *
+ * DEAD ON ANY CURRENT CLIENT. `client/main.lua:67-72` calls
+ * `Open77.nameplates.render(true)` and returns before `WebUI.create` whenever
+ * the native path is available, so this page only ever paints on a client old
+ * enough to lack `Open77.nameplates.render`. It is kept in the system so that
+ * fallback does not look like a different product, and it is kept visually in
+ * step with the native Plate so the two are interchangeable — but the plate the
+ * player actually sees is drawn in C++ and styled by the spec in
+ * `docs/ui-design-system.md`, not by this file.
+ *
+ * Tokens come from `open77-ui.css`.
+ */
+
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body, #nameplates {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+body { background: transparent; font-family: var(--op77-font-display); }
+
+.nameplate {
+  --plate-color: var(--op77-text);
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--op77-space-2);
+  max-width: 300px;
+  padding: var(--op77-space-1) var(--op77-space-3);
+  color: var(--plate-color);
+  /* Solid, not a fade to 0.58. A nameplate is read at a glance against
+     whatever is behind the other player, and the native Plate it stands in for
+     also uses a flat fill. */
+  background: var(--op77-panel);
+  border: 1px solid color-mix(in srgb, var(--plate-color) 28%, transparent);
+  border-left: 2px solid var(--plate-color);
+  border-radius: var(--op77-radius-sm);
+  box-shadow: var(--op77-shadow);
+  transform: translate(-50%, calc(-100% - 10px));
+  transition: opacity 90ms linear, transform 90ms ease-out;
+  white-space: nowrap;
+  opacity: var(--plate-opacity, 1);
+}
+/* The diamond pip — the same mark the server browser puts beside a live row. */
+.nameplate::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  flex: 0 0 auto;
+  background: var(--plate-color);
+  transform: rotate(45deg);
+}
+.nameplate-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--op77-font-display);
+  font-size: var(--op77-fs-lead);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.1;
+}
+
+/* Fallback-only speaker. The current client draws the same shape directly in
+   WorldOverlay; keeping it geometric here avoids depending on an icon font. */
+.nameplate-voice {
+  display: none;
+  position: relative;
+  width: 16px;
+  height: 14px;
+  flex: 0 0 16px;
+}
+.nameplate--talking .nameplate-voice { display: block; }
+.nameplate-voice::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 4px;
+  width: 4px;
+  height: 6px;
+  background: var(--plate-color);
+  clip-path: polygon(0 20%, 45% 20%, 100% 0, 100% 100%, 45% 80%, 0 80%);
+}
+.nameplate-voice::after {
+  content: "))";
+  position: absolute;
+  left: 6px;
+  top: -1px;
+  color: var(--plate-color);
+  font: 700 11px/14px var(--op77-font-mono);
+  letter-spacing: -2px;
+}

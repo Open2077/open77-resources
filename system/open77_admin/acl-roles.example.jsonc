@@ -1,0 +1,159 @@
+// open77_admin -- recommended roles for acl.jsonc.
+//
+// Paste the "roles" array into the server's acl.jsonc (the file named by
+// `accessControl.file` in server.jsonc), then give a principal one of them with
+// `"role": "moderator"`. Warden's Access page writes the same document, so a
+// role defined here shows up there and vice versa.
+//
+// This resource implements NO rights system of its own. There is exactly one
+// authorisation source on this platform -- the ACL, compiled by
+// AccessControlService and consulted by the C# transport before any Lua
+// handler runs. What differs between a server with Warden and one without is
+// only who WRITES this file.
+//
+// ---------------------------------------------------------------------------
+// TWO OPENERS, TWO PERMISSIONS
+// ---------------------------------------------------------------------------
+// `command.admin`     raises the COMPACT keyboard menu, which never takes the
+//                     mouse: the operator keeps playing while using it. This is
+//                     the everyday tool and every role below holds it.
+// `command.adminfull` raises the FULL console -- rosters, the whole vehicle
+//                     catalogue, the audit trail, an arbitrary command line. It
+//                     takes the cursor and the keyboard, so nobody is playing
+//                     while it is up.
+//
+// The console used to be `command.admin`. **Upgrading a server means adding
+// `command.adminfull` to whoever should keep it** -- a role that lists only
+// `command.admin` now gets the compact menu and no console, silently and with
+// no error. Note also that `command.admin.*` does not cover EITHER of them:
+// the matcher keeps the dot, and neither name has one.
+//
+// ---------------------------------------------------------------------------
+// ARMING PLAYERS
+// ---------------------------------------------------------------------------
+// `command.admin.weap.give` hands an online player a working, LOADED weapon --
+// itself or anybody else -- from the 189-record catalogue. It is the one
+// permission in this file that changes what a player can do TO other players,
+// so it is granted deliberately and never as a side effect: `helper` does not
+// hold it, `moderator` takes the family explicitly, and `operator` gets it from
+// `command.admin.*` like everything else.
+//
+// The short alias `/gun` carries its OWN `command.gun`, because the transport
+// derives the permission from the word actually typed. Granting
+// `command.admin.weap.*` therefore does NOT grant `/gun`; the roles below list
+// it beside the family so the short form works for whoever holds the long one.
+//
+// Do not confuse these with `command.weapon.give`, `command.weapon.remove` and
+// `command.weapon.ammo`, which belong to the `open77_weapons` resource. Those
+// take an ARBITRARY TweakDB record and no allowlist; the admin family only
+// forwards records that are in the shipped catalogue.
+//
+// ---------------------------------------------------------------------------
+// TWO THINGS ABOUT THE WILDCARD RULE, BOTH OF WHICH BITE
+// ---------------------------------------------------------------------------
+// 1. `command.admin.*` does NOT match `command.admin`.
+//    The matcher strips only the star and keeps the dot, so a role holding the
+//    wildcard alone cannot open the panel. Every role below lists both.
+//
+// 2. `command.*` DOES match everything, including `command.client.exec`.
+//    The built-in `admin` role is exactly ["command.*"], so on a server that
+//    also loads open77_debug, granting built-in admin grants arbitrary Lua
+//    execution inside another player's privileged VM. That is why the roles
+//    below are enumerated rather than wildcarded to the root, and why
+//    "operator" exists as a narrower alternative to built-in "admin".
+//
+// `owner` (*) and `admin` (command.*) are built in and need no definition.
+// ---------------------------------------------------------------------------
+{
+  "version": 2,
+
+  "roles": [
+    {
+      // Trusted regular: can look at everything and get themselves unstuck,
+      // and can do nothing at all to anybody else.
+      "name": "helper",
+      "permissions": [
+        // The compact menu only. A trusted regular does not need the console,
+        // and the console's Players screen lists every identifier on the server.
+        "command.admin",
+        "command.admin.read.*",
+        "command.admin.self.*"
+      ]
+    },
+    {
+      // The working moderator role. Everything a report actually needs:
+      // find them, get to them, fix them, remove them, and put a car in the
+      // world. No time, no weather, no rights.
+      //
+      // The last two are named individually rather than taken as
+      // `command.admin.world.*`, which would also hand over the saved-
+      // destination list. Somebody who may spawn cars should be able to tidy
+      // them up, and somebody handling an incident should be able to tell the
+      // server about it; neither needs to edit the server's map.
+      "name": "moderator",
+      "permissions": [
+        "command.admin",
+        "command.adminfull",
+        "command.admin.read.*",
+        "command.admin.self.*",
+        "command.admin.player.*",
+        "command.admin.moderate.*",
+        "command.admin.veh.*",
+        // Arming a player is a privileged action with real consequences for
+        // everyone around them, so it is named here rather than falling out of
+        // a wildcard. `command.admin.weap.give` alone is enough to hand out a
+        // loaded weapon; the rest of the family only refills, clears and
+        // holsters what is already there.
+        "command.admin.weap.*",
+        "command.gun",
+        "command.admin.world.cleanup",
+        "command.admin.world.announce"
+      ]
+    },
+    {
+      // Full admin package plus the other resources' operator commands --
+      // but NOT command.*, so open77_debug's client.exec stays out of reach.
+      "name": "operator",
+      "permissions": [
+        "command.admin",
+        "command.adminfull",
+        "command.admin.*",
+        // The short aliases. Each is its own permission -- the transport
+        // derives it from the word typed -- so `command.admin.*` does not
+        // cover /noclip, /car or /gun.
+        "command.gun",
+        // Map travel. It matters more than the other aliases that this be
+        // granted alongside the long name: the double click sends back
+        // whichever word armed the gesture, so an operator who armed it with
+        // /maptp and lacks this would watch every click be refused.
+        "command.maptp",
+        "command.tpall",
+        "command.dvall",
+        "command.tv",
+        "command.media.*",
+        "command.fireworks",
+        "command.droneshow",
+        "command.weather.*",
+        "command.vehicle.*",
+        "command.npc.*",
+        "command.loot.*",
+        "command.elevator.*"
+      ]
+    }
+  ],
+
+  // Principals bind by master userId, by handshake public key, or by both.
+  // A keyless, userId-bound principal is what lets an operator grant admin to
+  // somebody who is offline, without walking them through `identity.dump`.
+  //
+  // Never commit a real principal: acl.jsonc is gitignored precisely because a
+  // userId and a public key are personal data.
+  "principals": [
+    // {
+    //   "name": "Some Player [1a2b3c4d]",
+    //   "userId": "00000000-0000-0000-0000-000000000000",
+    //   "role": "moderator",
+    //   "permissions": []
+    // }
+  ]
+}

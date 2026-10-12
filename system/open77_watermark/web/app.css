@@ -1,0 +1,88 @@
+/* Passive session signature. Keep the entire surface inside CHROME_STRIP
+ * (the top 7%); MATCH_BAND belongs to the active gamemode. No continuous
+ * animation, blur or full-width backing on this permanent 10-fps surface. */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 100%; height: 100%; overflow: hidden;
+  background: transparent; pointer-events: none; user-select: none;
+}
+.watermark {
+  --watermark-top: clamp(3px, .65vh, 8px);
+  position: absolute; top: var(--watermark-top); left: 50%;
+  transform: translateX(-50%);
+  width: max-content; max-width: min(520px, calc(100vw - 24px));
+  max-height: calc(7vh - var(--watermark-top)); overflow: hidden;
+  padding: 5px 14px 6px;
+  border: 1px solid rgba(211, 234, 242, .09); border-radius: 2px;
+  background: linear-gradient(110deg, rgba(9, 17, 22, .88), rgba(9, 17, 22, .72));
+  color: #c2cdd3;
+  font: 10px / 14px var(--op77-font-mono, monospace);
+  -webkit-font-smoothing: antialiased;
+  animation: arrive 350ms ease-out both;
+}
+.brandline {
+  display: flex; align-items: center; justify-content: center; gap: 13px;
+  height: 19px; white-space: nowrap;
+}
+.logo-crop { display: block; flex: none; width: 108px; height: 17px; overflow: hidden; }
+.logo-crop img { display: block; width: 108px; height: auto; transform: translateY(-9px); }
+.release {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding-left: 13px; border-left: 1px solid rgba(211, 234, 242, .18);
+  color: #dce9ed;
+  font: 600 10px / 15px var(--op77-font-body, sans-serif);
+  letter-spacing: .095em; text-transform: uppercase;
+}
+.release i {
+  width: 4px; height: 4px; flex: none; border-radius: 50%;
+  background: #78868e; transition: background-color 250ms ease;
+}
+.watermark[data-online="true"] .release i { background: var(--op77-accent, #22d8e2); }
+.telemetry {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  margin-top: 2px; min-width: 0; white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.player { display: flex; align-items: baseline; gap: 5px; min-width: 0; }
+#player-name { max-width: 18ch; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.player-id { color: #8e9ea7; flex: none; }
+.build, .session { display: flex; align-items: baseline; gap: 5px; }
+.build { min-width: 0; }
+.build::before, .session::before {
+  content: ""; flex: none; width: 2px; height: 2px; border-radius: 50%;
+  align-self: center; margin-right: 5px; background: #63727c;
+}
+#build-value { max-width: 15ch; overflow: hidden; text-overflow: ellipsis; }
+.label { color: #8e9ea7; font-size: 9px; }
+.session { flex: none; }
+#session-value { color: #a6b7c0; }
+.watermark[data-online="false"] #session-value { color: #8e9ea7; }
+@keyframes arrive {
+  from { opacity: 0; transform: translate(-50%, -3px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+@media (max-width: 600px) {
+  .watermark { padding-inline: 10px; }
+  .telemetry { gap: 7px; font-size: 9px; }
+  .label { display: none; }
+  #player-name { max-width: 12ch; }
+  #build-value { max-width: 10ch; }
+  .build::before, .session::before { margin-right: 2px; }
+}
+/* A short viewport needs a single row, not clipped session information. */
+@media (max-height: 650px) {
+  .watermark { display: flex; align-items: center; gap: 14px; max-width: calc(100vw - 24px); padding-block: 4px; }
+  .telemetry { margin-top: 0; }
+  .build { display: none; }
+}
+@media (max-height: 650px) and (max-width: 760px) {
+  .logo-crop { display: none; }
+  .release { padding-left: 0; border-left: 0; font-size: 9px; letter-spacing: .04em; }
+  .brandline { flex: none; }
+  .session .label { display: none; }
+  #player-name { max-width: 8ch; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .watermark { animation: none; }
+  .release i { transition: none; }
+}

@@ -1,0 +1,25 @@
+'use strict';
+const el=id=>document.getElementById(id);
+const send=payload=>Open77.emit('polyzone:action',payload);
+const command=(name,args=[])=>send({action:'command',name,args});
+el('close').onclick=()=>send({action:'close'});
+el('create').onclick=()=>command('pzcreate',[el('kind').querySelector('input:checked').value]);
+for(const [id,name] of Object.entries({add:'pzadd',undo:'pzundo',finish:'pzfinish',cancel:'pzcancel'}))el(id).onclick=()=>command(name);
+el('copy').onclick=()=>send({action:'copy'});
+el('here').onclick=()=>send({action:'moveHere'});
+for(const key of ['name','length','width','radius','heading','minZ','maxZ','useZ'])el(key).onchange=()=>send({action:'patch',[key]:key==='useZ'?el(key).checked:el(key).value});
+document.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();send({action:'close'});}});
+Open77.on('polyzone:state',state=>{
+    el('editor').hidden=!state.open;
+    el('new').hidden=!!state.draft;el('properties').hidden=!state.draft;
+    el('source').value=state.source||'';el('copy').disabled=!state.source;
+    const draft=state.draft;if(!draft)return;
+    for(const key of ['name','length','width','radius','heading','minZ','maxZ'])el(key).value=draft[key]??'';
+    el('useZ').checked=!!draft.useZ;
+    document.querySelectorAll('[data-for]').forEach(node=>{node.hidden=node.dataset.for==='height'?draft.kind==='circle':node.dataset.for!==draft.kind;});
+    el('count').textContent=draft.kind==='poly'?`${draft.points.length} vertices · at least 3 required`:'Debug geometry follows these dimensions in world space.';
+    el('add').hidden=el('undo').hidden=draft.kind!=='poly';el('here').hidden=draft.kind==='poly';
+    el('finish').disabled=!state.source;
+});
+Open77.on('polyzone:notice',value=>{el('notice').textContent=value.text;el('notice').dataset.error=String(!value.ok);});
+Open77.ready();Open77.emit('polyzone:ready',{});

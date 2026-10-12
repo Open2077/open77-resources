@@ -1,0 +1,423 @@
+/* One television, sized to the whole surface. No scrollbars, no margins: the
+   page is mapped 1:1 onto a screen quad in the world, so a scrollbar would be
+   a visible artifact hanging off the edge of somebody's wall panel. */
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #05070a;
+  color: #d8e2ea;
+  font-family: "Segoe UI", "Noto Sans", system-ui, sans-serif;
+}
+
+.stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Everything that occupies the picture area shares one rule, so a media element
+   and an embed cannot disagree about where the picture is. */
+.media,
+.idle {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.media { display: none; background: #000; border: 0; }
+.media.on { display: block; }
+
+/* The embed is a container: whichever player tv.js puts in it (YouTube's own
+   frame, or a plain iframe when the API script cannot be fetched) has to fill
+   the screen exactly, or the picture would sit in a corner of it. */
+#embed > iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+video.media { object-fit: contain; }
+
+/* ---------------------------------------------------------------------------
+   Idle: a test pattern, not a blank rectangle.
+   --------------------------------------------------------------------------- */
+
+.idle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: #05070a;
+}
+.idle.on { display: flex; }
+
+.bars {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  filter: saturate(0.85);
+}
+.bar { flex: 1 1 0; opacity: 0.9; }
+.b1 { background: #c0c0c0; }  /* white        */
+.b2 { background: #c0c000; }  /* yellow       */
+.b3 { background: #00c0c0; }  /* cyan         */
+.b4 { background: #00c000; }  /* green        */
+.b5 { background: #c000c0; }  /* magenta      */
+.b6 { background: #c00000; }  /* red          */
+.b7 { background: #0000c0; }  /* blue         */
+
+/* A dark band across the middle, so the label is legible over any bar. */
+.idle-text {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding: 3.5% 4%;
+  text-align: center;
+  background: rgba(5, 7, 10, 0.82);
+  border-top: 1px solid rgba(216, 226, 234, 0.18);
+  border-bottom: 1px solid rgba(216, 226, 234, 0.18);
+}
+.idle-label {
+  font-size: 4.2vmin;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.idle-detail {
+  margin-top: 0.9vmin;
+  font-size: 2.4vmin;
+  color: #8fa3b4;
+}
+
+/* ---------------------------------------------------------------------------
+   Notice: what went wrong with a URL, said on the screen being looked at.
+   --------------------------------------------------------------------------- */
+
+.notice {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  padding: 1.6vmin 2.4vmin;
+  background: rgba(120, 24, 24, 0.86);
+  color: #ffe6e6;
+  font-size: 2.1vmin;
+}
+.notice[hidden] { display: none; }
+
+/* ---------------------------------------------------------------------------
+   Controls.
+   Hidden unless the surface has focus: the television is watched from the
+   street, and a control strip permanently across the bottom of the picture is
+   not what a television looks like.
+   --------------------------------------------------------------------------- */
+
+.controls {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* Above the curtain: the one thing a person in front of a shut curtain must
+     still be able to reach is the strip that opens it. */
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1vmin;
+  padding: 1.8vmin 2.4vmin;
+  background: linear-gradient(to top, rgba(5, 7, 10, 0.94), rgba(5, 7, 10, 0.72));
+  border-top: 1px solid rgba(216, 226, 234, 0.16);
+}
+.controls[hidden] { display: none; }
+
+.transport,
+.audio,
+.source {
+  display: flex;
+  align-items: center;
+  gap: 1.4vmin;
+}
+
+.button {
+  flex: 0 0 auto;
+  min-width: 6vmin;
+  padding: 1vmin 1.6vmin;
+  font-size: 2.1vmin;
+  color: #d8e2ea;
+  background: rgba(216, 226, 234, 0.10);
+  border: 1px solid rgba(216, 226, 234, 0.22);
+  border-radius: 0.5vmin;
+  cursor: pointer;
+}
+.button:hover { background: rgba(216, 226, 234, 0.18); }
+.button:active { background: rgba(216, 226, 234, 0.26); }
+
+.seek-wrap { flex: 1 1 auto; position: relative; height: 1.6vmin; }
+.seek {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  margin: 0;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+.seek-fill {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  height: 0.5vmin;
+  transform: translateY(-50%);
+  background: #f0b429;
+  pointer-events: none;
+}
+.seek { border-bottom: 0.5vmin solid rgba(216, 226, 234, 0.22); }
+
+.time,
+.volume-text {
+  flex: 0 0 auto;
+  min-width: 14vmin;
+  font-size: 1.9vmin;
+  color: #8fa3b4;
+  font-variant-numeric: tabular-nums;
+}
+
+.volume { flex: 1 1 auto; cursor: pointer; }
+
+.url {
+  flex: 1 1 auto;
+  padding: 1vmin 1.4vmin;
+  font-size: 2vmin;
+  color: #d8e2ea;
+  background: rgba(5, 7, 10, 0.7);
+  border: 1px solid rgba(216, 226, 234, 0.22);
+  border-radius: 0.5vmin;
+}
+.url:focus { outline: none; border-color: #f0b429; }
+.go { background: rgba(240, 180, 41, 0.22); border-color: rgba(240, 180, 41, 0.5); }
+
+/* ---------------------------------------------------------------------------
+   The panel's frame: the borderline a record declares.
+
+   A picture this size is watched in the dark, and a 30 m rectangle with no edge
+   reads as a hole in the world rather than as a screen. The colour comes from
+   the record (`border` in shared/records.lua) and is applied by `applyBorder`
+   in tv.js as the `--frame` custom property -- the property is what makes the
+   glow around the panel the same colour as its edge, which a `border-color`
+   alone cannot do.
+   --------------------------------------------------------------------------- */
+
+.frame {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  border: 0.9vmin solid transparent;
+  transition: border-color 0.35s ease, box-shadow 0.35s ease;
+}
+.frame.on {
+  border-color: var(--frame, #c8102e);
+  box-shadow:
+    inset 0 0 5vmin rgba(0, 0, 0, 0.55),
+    0 0 2.2vmin var(--frame, #c8102e);
+}
+
+/* ---------------------------------------------------------------------------
+   The curtain, and the reveal behind it.
+
+   A cinema in front of a film rather than a black rectangle in front of one:
+   a pelmet carrying the house name, two velvet panels with real folds, a gold
+   braid and a tie-back rosette on each, and the countdown drawn on the velvet
+   while the panels are still shut.
+
+   tv.js owns the timeline and this file owns only what each beat LOOKS like:
+   the shut curtain is the default state, `.parting` is the panels on their way
+   out, and `.flare` is the colour burst that goes up on `LINK START`.
+
+   Everything is sized in `vmin` against the whole surface, like the rest of
+   this page, because the surface is mapped 1:1 onto the panel in the world --
+   so the curtain has the proportions of a film screen on a 5 in set and on a
+   150 ft one alike.
+   --------------------------------------------------------------------------- */
+
+.curtain {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  overflow: hidden;
+  background: #120a0e;
+}
+.curtain[hidden] { display: none; }
+
+/* The velvet behind the panels, so the seam they part on is dark cloth rather
+   than the picture showing through a one-pixel gap. */
+.curtain::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 85% at 50% 8%, #2b1420 0%, #150a10 55%, #080406 100%);
+}
+
+.curtain-pelmet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 12%;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(#43131f 0%, #260c14 62%, #170810 100%);
+  border-bottom: 0.4vmin solid #d8a94a;
+  box-shadow: 0 1vmin 2.6vmin rgba(0, 0, 0, 0.75);
+}
+
+.curtain-house {
+  font-size: 3.4vmin;
+  font-weight: 600;
+  letter-spacing: 0.42em;
+  /* The trailing letterspace would push the text off-centre. */
+  text-indent: 0.42em;
+  text-transform: uppercase;
+  color: #e8c979;
+  text-shadow: 0 0.2vmin 0.8vmin rgba(0, 0, 0, 0.9);
+}
+
+.curtain-panel {
+  position: absolute;
+  top: 12%;
+  bottom: 0;
+  width: 52%;
+  z-index: 2;
+  /* The cloth's own colour, rolling in and out of each pleat. */
+  background-image: repeating-linear-gradient(90deg,
+    #7c2637 0%,
+    #571a28 1.2%,
+    #8d2d42 2.4%);
+  box-shadow: inset 0 0 7vmin rgba(0, 0, 0, 0.55);
+  border-top: 0.3vmin solid #d8a94a;
+  transition: transform 2.4s cubic-bezier(0.62, 0.02, 0.28, 1);
+}
+
+/* The sheen on the leading edge of every crest, which is what makes the panel
+   read as velvet rather than as stripes. A layer of its own so the pleats and
+   the cloth can be tuned apart. */
+.curtain-folds {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background-image: repeating-linear-gradient(90deg,
+    rgba(255, 255, 255, 0.10) 0%,
+    rgba(255, 255, 255, 0.00) 0.7%,
+    rgba(0, 0, 0, 0.26) 1.6%,
+    rgba(0, 0, 0, 0.00) 2.4%);
+}
+
+/* The panels are wider than half the stage so they overlap a little at the
+   centre and meet with a seam, the way two drawn drapes do. */
+.curtain-left { left: 0; }
+.curtain-right { right: 0; }
+
+.curtain.parting .curtain-left { transform: translateX(-97%); }
+.curtain.parting .curtain-right { transform: translateX(97%); }
+
+/* The gold braid and its rosette, gathered on the inner edge of each panel. */
+.curtain-swag {
+  position: absolute;
+  top: 34%;
+  width: 9%;
+  height: 5%;
+  background: linear-gradient(#f0d488, #a5761f 60%, #7a5214);
+  box-shadow: 0 0.4vmin 1.2vmin rgba(0, 0, 0, 0.6);
+}
+.curtain-left .curtain-swag {
+  right: 4%;
+  border-radius: 0 2.4vmin 2.4vmin 0;
+}
+.curtain-right .curtain-swag {
+  left: 4%;
+  border-radius: 2.4vmin 0 0 2.4vmin;
+}
+.curtain-swag::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3.4vmin;
+  height: 3.4vmin;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #f6e3ab, #b0842a 62%, #6d4810);
+  box-shadow: 0 0.3vmin 1vmin rgba(0, 0, 0, 0.7);
+}
+
+.curtain-countdown {
+  position: absolute;
+  inset: 0;
+  /* Above the flare, so `LINK START` stays legible through the colours. */
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24vmin;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #f4e3bd;
+  text-shadow:
+    0 0 2vmin rgba(0, 0, 0, 0.95),
+    0 0 7vmin rgba(240, 180, 41, 0.45);
+}
+.curtain-countdown:empty { opacity: 0; }
+
+/* One punch-in per beat, re-triggered by tv.js so `3`, `2`, `1` and `LINK
+   START` each land rather than the text simply swapping.
+
+   The animation moves SCALE and nothing else, and that is a deliberate
+   restriction rather than a style choice. A keyframe that starts at
+   `opacity: 0` leaves the number invisible for as long as the animation is held
+   at its first frame, and a surface that has not produced a composite yet holds
+   every animation there -- so a reveal on a screen the compositor had not caught
+   up with would have counted down in silence, with the digits in the DOM and
+   nothing on the glass. Measured: the countdown read `opacity: 0` with the text
+   `3` in it, in the headless capture of this very page. Scale cannot hide
+   anything: the base rule's opacity is 1, so the worst case is a number that
+   does not punch and is still readable. */
+@keyframes curtain-beat {
+  from { transform: scale(1.5); }
+  to   { transform: scale(1); }
+}
+.curtain-countdown.tick { animation: curtain-beat 0.85s ease-out; }
+
+/* The colours on the start beat. This is the panel's own half of the race
+   start: the world effects tv.js's client half fires are `race.firework.burst`
+   and two `race.flare.smoke` columns, and a watcher whose client could not
+   place them still gets the burst on the screen they are looking at. */
+.curtain-flare {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  opacity: 0;
+  pointer-events: none;
+  background: conic-gradient(
+    from 0deg at 50% 62%,
+    rgba(240, 180, 41, 0.85), rgba(200, 16, 46, 0.85) 12%,
+    rgba(60, 220, 230, 0.85) 26%, rgba(120, 70, 255, 0.85) 40%,
+    rgba(240, 180, 41, 0.85) 55%, rgba(200, 16, 46, 0.85) 70%,
+    rgba(60, 220, 230, 0.85) 84%, rgba(240, 180, 41, 0.85));
+  mix-blend-mode: screen;
+}
+@keyframes curtain-flare {
+  from { opacity: 0; transform: scale(0.2) rotate(0deg); }
+  35%  { opacity: 0.9; }
+  to   { opacity: 0; transform: scale(2.4) rotate(115deg); }
+}
+.curtain.flare .curtain-flare { animation: curtain-flare 2.4s ease-out; }

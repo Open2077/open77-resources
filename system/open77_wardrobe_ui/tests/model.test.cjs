@@ -1,0 +1,11 @@
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const M=require('../web/model.js');
+const source=()=>M.normalize({revision:12,characterKey:'rp-a',equipment:{Head:'Items.Cap',UnderwearBottom:'Items.Underwear'},wardrobe:{active:0,outfits:{0:{Head:false},1:{Feet:'Items.Boots'}},names:{0:'Night shift'}}});
+test('cancel baseline never changes when draft is edited',()=>{const base=source(),draft=M.clone(base);draft.equipment.Head=false;draft.wardrobe.names[0]='New';assert.equal(base.equipment.Head,'Items.Cap');assert.equal(base.wardrobe.names[0],'Night shift');});
+test('unchanged projected outfits and protected underwear are never sent',()=>{const base=source(),draft=M.clone(base);draft.equipment.Head='Items.Hat';const p=M.patch(base,draft);assert.deepEqual(p.equipment,{Head:'Items.Hat'});assert.deepEqual(p.wardrobe.outfits,{});assert.equal(p.expectedRevision,12);assert.equal(p.characterKey,'rp-a');});
+test('hide and inherit remain distinct across JSON and patch',()=>{const base=source(),draft=M.clone(base);delete draft.wardrobe.outfits[0].Head;const p=JSON.parse(JSON.stringify(M.patch(base,draft)));assert.deepEqual(p.wardrobe.outfits,{'0':{}});assert.equal(M.dirty(base,draft),true);});
+test('reset an active outfit clears full set, resets name and disables overlay',()=>{const base=source(),draft=M.clone(base);draft.wardrobe.outfits[0]={};draft.wardrobe.names[0]='Outfit 1';draft.wardrobe.active=false;assert.deepEqual(M.patch(base,draft).wardrobe,{outfits:{0:{}},names:{0:'Outfit 1'},active:false});});
+test('unmodified state has no dirty slots or active intent',()=>{const base=source();assert.equal(M.dirty(base,M.clone(base)),false);assert.equal(Object.hasOwn(M.patch(base,base).wardrobe,'active'),false);});
+test('Lua empty arrays are normalized to object maps before editing',()=>{const base=M.normalize({equipment:[],wardrobe:{outfits:{0:[]},names:[]}});base.equipment.Head='Items.Hat';base.wardrobe.outfits[0].Head=false;const decoded=JSON.parse(JSON.stringify(base));assert.equal(decoded.equipment.Head,'Items.Hat');assert.equal(decoded.wardrobe.outfits[0].Head,false);});
+test('outfit zero remains active and every one of seven slots exists',()=>{const base=source();assert.equal(base.wardrobe.active,0);assert.equal(Object.keys(base.wardrobe.outfits).length,7);assert.equal(base.wardrobe.names[6],'Outfit 7');});

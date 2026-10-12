@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>OPEN//77 Voice</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <!-- One compact line, no panel: mic glyph, input meter, range and distance,
+       cycle key. Everything sits straight on the game with a shadow for legibility. -->
+  <section id="voice" class="voice" aria-live="polite" aria-label="Voice status">
+    <div id="error" class="voice__error" role="status"></div>
+    <div class="voice__line">
+      <span class="voice__mic" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 15.25a3.75 3.75 0 0 0 3.75-3.75V6.25a3.75 3.75 0 1 0-7.5 0v5.25A3.75 3.75 0 0 0 12 15.25Z"></path>
+          <path d="M5.75 10.75v.75a6.25 6.25 0 0 0 12.5 0v-.75M12 17.75v3.5M8.75 21.25h6.5"></path>
+        </svg>
+        <i class="voice__mute-line"></i>
+      </span>
+      <span id="meter" class="voice__meter" role="meter" aria-label="Microphone input level">
+        <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+      </span>
+      <span class="voice__range">
+        <b id="modeLabel">Normal</b>
+        <span class="voice__sep">·</span>
+        <span class="voice__distance"><span id="distance">20</span>m</span>
+      </span>
+      <kbd id="cycleKey" class="voice__key" title="Cycle the voice range">F11</kbd>
+      <span id="talkers" class="voice__talkers" title="Players heard right now" hidden><i></i><span id="talkerCount">0</span></span>
+    </div>
+  </section>
+  <script src="app.js"></script>
+</body>
+</html>

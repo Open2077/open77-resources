@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Open77 Wardrobe</title><link rel="stylesheet" href="design-system.css"><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="freeroam-controls.css"></head>
+<body><main id="room" hidden>
+<section class="wardrobe drawer" role="dialog" aria-modal="true" aria-labelledby="title">
+<span class="drawer-edge" aria-hidden="true"></span><header class="head"><div class="head-copy"><p class="ds-section-label">PERSONAL STYLE</p><h1 id="title">WARD<span>ROBE</span><i aria-hidden="true"></i></h1></div><button id="close" class="icon" aria-label="Cancel changes and close">ESC</button></header>
+<div class="identity head-meta"><span id="family" class="ds-data"></span><span id="saved-state" class="ds-badge">SAVED</span></div>
+<nav class="tabs" aria-label="Clothing mode"><button id="equipment-tab" class="selected" aria-pressed="true">EQUIPMENT</button><button id="outfits-tab" aria-pressed="false">OUTFITS <span>07</span></button></nav>
+<div id="outfit-tools" hidden><div id="outfits" class="outfits" aria-label="Saved outfits"></div><div class="name-row"><input id="outfit-name" maxlength="48" aria-label="Outfit name" autocomplete="off"><button id="rename">RENAME</button></div><div class="outfit-actions"><button id="wear">WEAR OUTFIT</button><button id="capture">COPY WORN</button><button id="delete" class="danger">RESET OUTFIT</button></div></div>
+<div id="overlay-banner" class="notice" hidden><span id="overlay-text"></span><button id="disable-overlay">SHOW EQUIPMENT</button></div>
+<nav id="slots" class="slots" aria-label="Clothing slot"></nav>
+<div class="search-row"><label class="search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Search clothing" aria-label="Search clothing" autocomplete="off"></label><button id="filter" aria-pressed="false" aria-label="Show favorites only">ALL CLOTHING</button></div>
+<div class="selection"><div><span class="eyebrow" id="slot-label">HEADWEAR</span><p id="selected-name">No item equipped</p></div><div class="slot-actions"><button id="inherit" hidden>USE EQUIPMENT</button><button id="remove">REMOVE</button></div></div>
+<p class="help" id="semantics">Equipment is what your character wears underneath an outfit.</p>
+<div id="catalogue" class="catalogue" role="list" aria-label="Available clothing"></div>
+<div class="pagination"><button id="previous" aria-label="Previous page">←</button><span id="count"></span><button id="next" aria-label="Next page">→</button></div>
+<div id="status" class="status" role="status" aria-live="polite">Select clothing to try it on. Save when your look is ready.</div>
+<footer><button id="cancel" class="btn">CANCEL</button><button id="save" class="btn primary" disabled>SAVE CHANGES</button></footer><div class="reopen"><span class="keycap">ESC</span><span>CLOSE</span><i></i><span class="ds-data">/wardrobe</span><span>REOPEN</span></div></section>
+<aside class="preview"><div class="preview-caption"><p class="eyebrow">FITTING ROOM</p><h2>MAKE IT YOURS.</h2><p>Preview your look before saving.</p></div><div class="preview-bottom"><div id="camera-controls" class="camera-controls"><button id="front">FRONT</button><button id="rotate-left" aria-label="Rotate camera left">↶</button><button id="rotate-right" aria-label="Rotate camera right">↷</button><button id="back">BACK</button></div><div class="shortcuts"><button id="appearance">EDIT APPEARANCE</button><button id="barber">BARBER</button></div><p>The world stays live. Find a safe place to change.</p></div></aside>
+<div id="confirm" class="confirm" hidden><section role="alertdialog" aria-labelledby="confirm-title" aria-describedby="confirm-text"><h2 id="confirm-title">DISCARD CHANGES?</h2><p id="confirm-text"></p><div><button id="confirm-no">KEEP EDITING</button><button id="confirm-yes" class="primary">DISCARD</button></div></section></div>
+</main><script src="model.js"></script><script src="app.js"></script></body></html>

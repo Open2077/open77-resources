@@ -1,0 +1,399 @@
+/* The combat surface.
+ *
+ * Everything on this page answers a trigger inside one frame, which is why it
+ * is a page of its own at 60 fps. It is passive by construction: no pointer
+ * events anywhere, never focused, so it can never take a click or a key away
+ * from the game.
+ *
+ * Screen regions used, from docs/ui-design-system.md section 6.2:
+ *   RETICLE       50% +/- 3%      reticle and hitmarker, no text
+ *   STAGE         25-75%, 20-62%  callouts, protection countdown
+ *   GAMEMODE_LOW  25-75%, 62-86%  the vitals/ammo dock, pinned to the BOTTOM
+ *                                 of the region and to its LEFT half
+ *                                 (25-47% x, 80-86% y). The full reasoning --
+ *                                 including why it is not centred, and why the
+ *                                 width cap is a constraint rather than a
+ *                                 taste -- is at the dock rule itself.
+ * Nothing here draws in MINIMAP, QUICKSLOTS, CONTROL_HINTS, SUBTITLES,
+ * CHROME_STRIP, CHROME_COLUMN, CHROME_TOASTS or CHROME_TOOL.
+ */
+
+body { pointer-events: none; }
+
+/* --------------------------------------------------------------------------
+   Reticle
+   Copied in spirit from open77_perspective/web/reticle.css, which exists
+   because the vanilla reticle is anchored to the first-person aiming camera
+   and is simply not drawn otherwise. Same dark rim, for the same reason: a
+   flat cyan line vanishes over Night City neon and over a white wall for
+   opposite reasons.
+   -------------------------------------------------------------------------- */
+
+.reticle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease);
+  --gap: 8px;
+  --arm: 7px;
+  --thickness: 2px;
+}
+body[data-active="true"][data-alive="true"][data-crosshair="true"] .reticle { opacity: .82; }
+
+.tick, .dot {
+  position: absolute;
+  background: var(--cyan-hot);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .55), 0 0 6px rgba(112, 243, 245, .35);
+}
+.tick-up, .tick-down {
+  width: var(--thickness);
+  height: var(--arm);
+  left: calc(var(--thickness) / -2);
+}
+.tick-up { top: calc(-1 * (var(--gap) + var(--arm))); }
+.tick-down { top: var(--gap); }
+.tick-left, .tick-right {
+  width: var(--arm);
+  height: var(--thickness);
+  top: calc(var(--thickness) / -2);
+}
+.tick-left { left: calc(-1 * (var(--gap) + var(--arm))); }
+.tick-right { left: var(--gap); }
+.dot { width: 2px; height: 2px; left: -1px; top: -1px; border-radius: 50%; opacity: .85; }
+
+/* --------------------------------------------------------------------------
+   Hitmarker
+   Four blades that snap outward. The lethal variant is a different colour AND
+   a different size and rotation, so it reads at the edge of vision rather than
+   asking the player to compare two shades of white mid-fight.
+   -------------------------------------------------------------------------- */
+
+.hitmarker {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  opacity: 0;
+}
+.hitmarker .blade {
+  position: absolute;
+  width: 11px;
+  height: 2px;
+  background: #ffffff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .6);
+  transform-origin: 50% 50%;
+}
+.blade-tl { left: -18px; top: -18px; transform: rotate(45deg); }
+.blade-tr { left: 7px; top: -18px; transform: rotate(-45deg); }
+.blade-bl { left: -18px; top: 16px; transform: rotate(-45deg); }
+.blade-br { left: 7px; top: 16px; transform: rotate(45deg); }
+
+.hitmarker.show { animation: hit-pop 220ms var(--ease) forwards; }
+.hitmarker.headshot .blade { background: var(--yellow); box-shadow: 0 0 0 1px rgba(0, 0, 0, .6), 0 0 8px rgba(245, 201, 92, .55); }
+.hitmarker.lethal .blade { background: var(--red); width: 15px; height: 3px; box-shadow: 0 0 0 1px rgba(0, 0, 0, .6), 0 0 12px rgba(255, 75, 85, .6); }
+.hitmarker.lethal.show { animation: hit-kill 340ms var(--ease) forwards; }
+
+@keyframes hit-pop {
+  0% { opacity: 0; transform: scale(.55); }
+  22% { opacity: 1; transform: scale(1.08); }
+  100% { opacity: 0; transform: scale(1); }
+}
+@keyframes hit-kill {
+  0% { opacity: 0; transform: scale(.5) rotate(0deg); }
+  18% { opacity: 1; transform: scale(1.25) rotate(45deg); }
+  100% { opacity: 0; transform: scale(1.05) rotate(45deg); }
+}
+
+/* --------------------------------------------------------------------------
+   Spawn protection
+   It already exists via graceMs and nobody can see it, which is
+   indistinguishable from a hit-registration bug. The ring drains clockwise and
+   the countdown states the number.
+   -------------------------------------------------------------------------- */
+
+.protection {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 240px;
+  height: 240px;
+  margin: -120px 0 0 -120px;
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease);
+}
+body[data-protected="true"] .protection { opacity: 1; }
+
+.protection-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+.protection-track {
+  fill: none;
+  stroke: rgba(34, 216, 226, .16);
+  stroke-width: 2;
+}
+.protection-sweep {
+  fill: none;
+  stroke: var(--cyan);
+  stroke-width: 3;
+  stroke-linecap: butt;
+  /* 2 * pi * 104, rounded down so a full ring never leaves a seam. */
+  stroke-dasharray: 653.4;
+  stroke-dashoffset: 653.4;
+  filter: drop-shadow(0 0 6px rgba(34, 216, 226, .45));
+  transition: stroke-dashoffset 120ms linear;
+}
+
+/* The number lives below the ring, clear of the reticle box, so the RETICLE
+   region stays free of text. */
+.protection-readout {
+  position: absolute;
+  left: 50%;
+  top: 57%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, .8);
+  transition: opacity var(--dur) var(--ease);
+}
+body[data-protected="true"] .protection-readout { opacity: 1; }
+.protection-readout strong { color: #fff; font: 700 22px/1 var(--mono); }
+body[data-protected="true"][data-protection-timed="false"] .protection-readout strong { display: none; }
+
+/* --------------------------------------------------------------------------
+   Directional damage
+   The Lua side owns the projection: it keeps the world-space direction and
+   re-aims every push, so the chevron tracks while the player turns. The page
+   only rotates and fades, and the 40ms linear transition is the interpolation
+   between two 25 Hz snapshots -- the one local calculation allowed here.
+   -------------------------------------------------------------------------- */
+
+.indicators {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+}
+.ind {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  transition: transform 40ms linear;
+}
+.ind-arc {
+  position: absolute;
+  left: -70px;
+  top: -232px;
+  width: 140px;
+  height: 46px;
+  background: linear-gradient(to top, rgba(255, 75, 85, 0), var(--red));
+  clip-path: polygon(50% 0, 100% 100%, 50% 62%, 0 100%);
+  filter: drop-shadow(0 0 10px rgba(255, 75, 85, .45));
+}
+/* A hit with no horizontal bearing -- straight up, straight down -- has no
+   direction to point at. It becomes a ring pulse instead of an arrow aimed at
+   an arbitrary angle. */
+.ind.omni .ind-arc {
+  left: -150px;
+  top: -150px;
+  width: 300px;
+  height: 300px;
+  clip-path: none;
+  background: radial-gradient(circle, rgba(255, 75, 85, 0) 58%, rgba(255, 75, 85, .55) 100%);
+}
+
+/* Taking a hit at all. A vignette rather than a full-screen wash, because the
+   player has to keep shooting through it. */
+.damage-flash {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: radial-gradient(ellipse at 50% 50%, rgba(255, 75, 85, 0) 46%, rgba(255, 75, 85, .32) 100%);
+}
+.damage-flash.show { animation: flash-in 420ms var(--ease) forwards; }
+@keyframes flash-in {
+  0% { opacity: 0; }
+  14% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* --------------------------------------------------------------------------
+   Callouts
+   -------------------------------------------------------------------------- */
+
+.callout {
+  position: absolute;
+  left: 50%;
+  top: 29%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  opacity: 0;
+  text-align: center;
+  text-shadow: 0 3px 18px rgba(0, 0, 0, .85);
+}
+.callout strong {
+  color: var(--yellow);
+  font: 700 44px/1 var(--display);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.callout span {
+  color: var(--faint);
+  font: 700 11px/1 var(--mono);
+  letter-spacing: .22em;
+}
+.callout.show { animation: callout-in 1500ms var(--ease) forwards; }
+.callout[data-kind="firstBlood"] strong,
+.callout[data-kind="revenge"] strong { color: var(--red); }
+.callout[data-kind="streak"] strong { color: var(--cyan); }
+
+@keyframes callout-in {
+  0% { opacity: 0; transform: translateX(-50%) translateY(10px) scale(.94); }
+  10% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  74% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+}
+
+/* --------------------------------------------------------------------------
+   Vitals and ammunition dock
+
+   BOTTOM-LEFT-OF-CENTRE, and every one of those three words was paid for.
+
+   It was centred at `top: 66vh` -- the upper half of GAMEMODE_LOW that 6.2
+   recommends for a persistent readout, chosen to stay clear of the aim-gated
+   `F` interaction prompt. Seen in game on 2026-08-31 that is simply wrong: at
+   66% of a 1080 frame the bar floats level with the player's hands, mid-scene,
+   and reads as an overlay dropped into the world rather than as a HUD. A vitals
+   dock has to sit on an edge to be read without being looked at.
+
+   Which edge is decided entirely by what vanilla already owns, and all three
+   neighbours bite:
+
+     QUICKSLOTS      <= 8% x,  >= 76% y   the status icons -- bottom LEFT taken
+     CONTROL_HINTS   >= 70% x, >= 66% y   vanilla's own ammo counter and the
+                                          Q / R / C prompt stack -- bottom
+                                          RIGHT taken, and 6.5 already records
+                                          one collision of exactly this kind
+     SUBTITLES       20-80% x, >= 88% y   inferred, never measured, so treated
+                                          as occupied rather than gambled on
+     F prompt        49-55% x, ~82% y     aim-gated, so it cannot be predicted
+                                          from position -- the worst neighbour
+                                          there is, and it lands dead centre
+
+   What survives is a band from 25% to 47% x, 80% to 86% y: inside
+   GAMEMODE_LOW, hard against its bottom edge, left of the interaction prompt
+   with two percent of margin, and clear of all three vanilla regions. The
+   width cap is what holds the right edge there, so it is a constraint and not
+   a taste -- widening this block walks it back under the `F` keycap.
+   -------------------------------------------------------------------------- */
+
+.dock {
+  position: absolute;
+  left: 25%;
+  /* 14vh of clearance = a bottom edge at 86% y, GAMEMODE_LOW's floor. */
+  bottom: 14vh;
+  width: min(420px, 22vw);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease);
+}
+body[data-active="true"] .dock { opacity: 1; }
+body[data-alive="false"] .dock { opacity: .35; }
+
+.tag {
+  color: var(--muted);
+  font: 700 9px/1 var(--mono);
+  letter-spacing: .18em;
+}
+
+/* Flexible rather than 320px fixed: the dock's own width is the constraint
+   that keeps it clear of the interaction prompt, so the health block takes
+   what is left after the ammo readout instead of forcing the dock wider. */
+.vitals { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.vitals-head { display: flex; align-items: baseline; gap: 8px; }
+.vitals-head > strong {
+  color: #fff;
+  font: 700 26px/1 var(--mono);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, .8);
+}
+.armor-chip {
+  margin-left: auto;
+  padding: 3px 8px;
+  display: none;
+  align-items: baseline;
+  gap: 6px;
+  background: var(--panel);
+  border-left: 2px solid var(--cyan);
+}
+body[data-armored="true"] .armor-chip { display: flex; }
+.armor-chip b { color: var(--cyan); font: 700 14px/1 var(--mono); }
+
+.bar {
+  height: 7px;
+  background: rgba(7, 16, 21, .94);
+  border: 1px solid var(--line);
+}
+.bar i {
+  display: block;
+  height: 100%;
+  /* 90ms is the colour duration and 150ms the movement duration; the bar reads
+     as one motion because both are the house easing. */
+  transition: width var(--dur) var(--ease), background-color var(--dur-fast) var(--ease);
+}
+.bar-health i { background: var(--green); box-shadow: 0 0 12px rgba(79, 227, 169, .35); }
+body[data-vitals="warn"] .bar-health i { background: var(--yellow); box-shadow: 0 0 12px rgba(245, 201, 92, .35); }
+body[data-vitals="critical"] .bar-health i { background: var(--red); box-shadow: 0 0 14px rgba(255, 75, 85, .45); }
+body[data-vitals="critical"] .vitals-head > strong { color: var(--red); }
+
+.bar-armor { height: 4px; display: none; }
+body[data-armored="true"] .bar-armor { display: block; }
+.bar-armor i { background: var(--cyan-deep); }
+
+/* KEPT, despite vanilla drawing `020 0173` at bottom right, and the decision
+   is deliberate rather than an oversight -- §9 of the plan lists magazine and
+   reserve as a HUD element to build, and there are three things vanilla's
+   counter cannot do:
+     * it lives inside CONTROL_HINTS, a region we neither own nor can restyle,
+       and it shares that corner with the prompt stack;
+     * it has no concept of a mode state -- our `--` means "no weapon issued
+       yet", and the low/empty colouring is measured against the round's own
+       capacity;
+     * it is not where the player is already looking. Health, armor and ammo
+       are one glance in this dock; splitting them across two corners costs a
+       second one in a fight.
+   What it must NOT do is shout louder than health, which is what a 38px
+   magazine next to a 30px health number was doing. Both readouts now sit at
+   26px: peers, one dock, one glance. */
+.ammo { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+.ammo-read { display: flex; align-items: baseline; gap: 6px; }
+.ammo-read strong {
+  color: #fff;
+  font: 700 26px/1 var(--mono);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, .8);
+}
+.ammo-sep { color: var(--faint); font: 700 15px/1 var(--mono); }
+.ammo-read span:last-child { color: var(--muted); font: 700 15px/1 var(--mono); }
+body[data-ammo="low"] .ammo-read strong { color: var(--yellow); }
+body[data-ammo="empty"] .ammo-read strong { color: var(--red); }
+
+/* Team colour. A non-zero team recolours the two accents this surface owns --
+   the reticle and the armor chip -- and nothing else, because the accent
+   budget is three cyan elements per viewport and a combat HUD spends them on
+   status, not decoration. */
+body[data-team="1"] { --cyan: var(--team-1); }
+body[data-team="2"] { --cyan: var(--team-2); --cyan-hot: #ff8f95; }
+body[data-team="3"] { --cyan: var(--team-3); --cyan-hot: #ffe2a0; }
+body[data-team="4"] { --cyan: var(--team-4); --cyan-hot: #9df3d1; }

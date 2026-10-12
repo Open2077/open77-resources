@@ -1,0 +1,135 @@
+/* Open77 toasts.
+ *
+ * Design tokens come from `open77-ui.css`, the mirrored OPEN//77 token file
+ * every in-game surface loads. Nothing below invents a colour, a radius or a
+ * duration; everything is a token or a documented local derivation.
+ *
+ * Two constraints shape this surface and outrank prettiness:
+ *
+ *   1. It is drawn over a game whose brightness is unpredictable. A toast can
+ *      appear over a white plaza at noon or a black alley at 3am, so the panel
+ *      is opaque (--op77-panel, 0.94) rather than a translucent gradient, and
+ *      it carries the one permitted separation shadow. Transparency here costs
+ *      legibility and buys nothing.
+ *   2. It never takes a click. `pointer-events: none` on the root is never
+ *      overridden.
+ */
+
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body, #notifications {
+  width: 100%; height: 100%; margin: 0; overflow: hidden;
+  background: transparent; pointer-events: none; user-select: none;
+}
+body { font-family: var(--op77-font-body); }
+
+/* Stacks sit on the shared HUD inset so the toast column lines up with the
+   chat, the watermark and the kill feed instead of each picking its own vw. */
+.stack {
+  position: absolute; z-index: 1;
+  width: min(420px, 32vw);
+  display: flex; flex-direction: column;
+  gap: var(--op77-space-2);
+}
+.top_left     { top: var(--op77-inset-y); left: var(--op77-inset-x); align-items: flex-start; }
+.top_center   { top: var(--op77-inset-y); left: 50%; transform: translateX(-50%); align-items: center; }
+.top_right    { top: var(--op77-inset-y); right: var(--op77-inset-x); align-items: flex-end; }
+.middle_left  { top: 50%; left: var(--op77-inset-x); transform: translateY(-50%); align-items: flex-start; }
+.bottom_left  { bottom: var(--op77-inset-y); left: var(--op77-inset-x); flex-direction: column-reverse; align-items: flex-start; }
+.bottom_center{ bottom: var(--op77-inset-y); left: 50%; transform: translateX(-50%); flex-direction: column-reverse; align-items: center; }
+.bottom_right { bottom: var(--op77-inset-y); right: var(--op77-inset-x); flex-direction: column-reverse; align-items: flex-end; }
+
+/* The toast.
+ *
+ * House shape: square-leaning panel, hairline border, one accent rule down the
+ * leading edge. No rounded pill, no gradient fill, no coloured glow — the
+ * accent is carried by the rule, the eyebrow and the chip, which is the same
+ * three-part treatment the pause menu and the server browser use. */
+.toast {
+  --accent: var(--op77-accent);
+  /* Message copy: bright enough to read at a glance over any backdrop
+     (~11:1 on --op77-panel) while still sitting below the title. */
+  --toast-message: #cfd8de;
+
+  position: relative;
+  width: max-content; min-width: 280px; max-width: 420px;
+  padding: var(--op77-space-3) var(--op77-space-4) var(--op77-space-3) var(--op77-space-3);
+  display: grid; grid-template-columns: auto minmax(0, 1fr);
+  align-items: start; column-gap: var(--op77-space-3);
+
+  overflow: hidden;
+  color: var(--op77-text);
+  background: var(--op77-panel);
+  border: 1px solid var(--op77-line-hud);
+  border-left: var(--op77-rule) solid var(--accent);
+  border-radius: var(--op77-radius-sm);
+  box-shadow: var(--op77-shadow);
+
+  opacity: 0; transform: translateX(16px);
+  transition: opacity var(--op77-dur) var(--op77-ease),
+              transform var(--op77-dur) var(--op77-ease);
+}
+.top_left .toast, .middle_left .toast, .bottom_left .toast { transform: translateX(-16px); }
+.top_center .toast, .bottom_center .toast { transform: translateY(-10px); }
+.toast.visible { opacity: 1; transform: none; }
+.toast.leaving { opacity: 0; transform: translateY(-6px); }
+
+/* Icon chip. A square, not a circle: every badge in the system is square or
+   chamfered. The glyph is caller-supplied text, so it is set in the mono face
+   where a one- or two-character label sits on its own centre. */
+.icon {
+  min-width: 30px; height: 30px; padding: 0 var(--op77-space-1);
+  display: grid; place-items: center;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: var(--op77-radius-sm);
+  font: 700 var(--op77-fs-label) / 1 var(--op77-font-mono);
+  letter-spacing: var(--op77-track-label);
+  text-transform: uppercase;
+}
+/* A class rule with `display` beats the UA sheet's `[hidden] { display: none }`,
+   so without this an icon-less toast still drew an empty 30px chip. */
+.icon[hidden] { display: none; }
+
+.copy { min-width: 0; display: grid; gap: var(--op77-space-1); }
+
+/* The `//` eyebrow — the identity's core device, and the one line that tells
+   the player what kind of message this is before they read the message. */
+.kind {
+  font: 700 var(--op77-fs-micro) / 1 var(--op77-font-mono);
+  letter-spacing: var(--op77-track-micro);
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.kind::before { content: "// "; letter-spacing: -0.06em; }
+.kind:empty { display: none; }
+
+.copy strong {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--op77-text);
+  font-family: var(--op77-font-display);
+  font-size: var(--op77-fs-title);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: var(--op77-track-head);
+}
+
+.message {
+  overflow-wrap: anywhere;
+  color: var(--toast-message);
+  font-family: var(--op77-font-body);
+  font-size: var(--op77-fs-body);
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+/* Two pixels, flush to the bottom edge, no glow. It reports time left; it is
+   not decoration, so it gets no more weight than that. */
+.progress {
+  --duration: 5000ms;
+  position: absolute; left: 0; bottom: 0; width: 100%; height: 2px;
+  background: var(--accent); transform-origin: left center;
+  animation: notification-progress var(--duration) linear forwards;
+}
+@keyframes notification-progress { from { transform: scaleX(1); } to { transform: scaleX(0); } }

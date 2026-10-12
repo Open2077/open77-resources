@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Open77 Remote Camera view</title>
+  <style>
+    /* The camera image is drawn by a native underlay BEHIND this page, so the
+       page paints nothing at all: no background, no margin, no scrollbars. Its
+       only job is to be a transparent surface the binding can sit under. */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body></body>
+</html>

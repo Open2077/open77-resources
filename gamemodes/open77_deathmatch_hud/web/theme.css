@@ -1,0 +1,105 @@
+/* OPEN//77 deathmatch HUD -- shared tokens for both surfaces.
+ *
+ * Mirrored, not shared: WebUI origins are per resource, so this file is the
+ * copy this resource owns. It keeps the deathmatch's established voice (cyan
+ * #22d8e2, red #ff4b55, amber #f5c95c on near-black #071015, condensed display
+ * type, mono labels) and states it once for the combat surface and the match
+ * surface so the two cannot drift apart.
+ *
+ * The house rules that apply here, from docs/ui-design-system.md:
+ *   * the opacity floor -- anything carrying WORDS over gameplay sits at 0.94
+ *     alpha or above, because the scene behind swings from a blown-out plaza to
+ *     a black alley within one turn of the camera;
+ *   * the accent budget -- if a viewport shows more than about three cyan
+ *     elements, remove some. Cyan is a status LED, not a highlighter;
+ *   * tabular numerals on anything that changes every frame, or the layout
+ *     jitters;
+ *   * three durations only: 90ms colour, 150ms enter/leave, 220ms panels.
+ *
+ * The first font in each stack never resolves in-game -- no network, no bundled
+ * face -- so the second name is what actually renders. It stays first so that
+ * bundling a webfont later takes over with no edit here.
+ */
+
+:root {
+  --cyan: #22d8e2;
+  --cyan-hot: #70f3f5;
+  --cyan-deep: #18c8d4;
+  --red: #ff4b55;
+  --yellow: #f5c95c;
+  --green: #4fe3a9;
+  --ink: #071015;
+
+  --panel: rgba(7, 16, 21, .94);
+  --panel-raised: rgba(11, 22, 28, .96);
+  --panel-quiet: rgba(7, 16, 21, .78);
+  --line: rgba(108, 220, 228, .22);
+  --line-strong: rgba(174, 211, 224, .30);
+  --muted: #8d99a8;
+  --faint: rgba(141, 153, 168, .72);
+  --text: #edfafd;
+
+  --display: "Rajdhani", "Bahnschrift Condensed", "Arial Narrow", "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", "Cascadia Mono", "Consolas", monospace;
+
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --dur-fast: 90ms;
+  --dur: 150ms;
+  --dur-slow: 220ms;
+
+  --shadow: 0 8px 28px rgba(0, 0, 0, .55);
+
+  /* Team colours. Team 0 is "no team" and never resolves to one of these.
+   * They are the house signal colours, not new swatches: an arena mode with
+   * more than four teams is out of scope by decision 5. */
+  --team-1: #22d8e2;
+  --team-2: #ff4b55;
+  --team-3: #f5c95c;
+  --team-4: #4fe3a9;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+body {
+  color: var(--text);
+  font-family: var(--display);
+  pointer-events: none;
+  user-select: none;
+}
+
+.hidden { display: none !important; }
+
+.eyebrow {
+  color: var(--cyan);
+  font: 700 11px/1 var(--mono);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.num { font-variant-numeric: tabular-nums; }
+
+kbd {
+  padding: 3px 7px;
+  border: 1px solid rgba(255, 255, 255, .28);
+  border-bottom-width: 2px;
+  border-radius: 2px;
+  color: #fff;
+  background: rgba(255, 255, 255, .08);
+  font: 700 11px/1 var(--mono);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}

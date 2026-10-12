@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="open77-ui.css">
+  <link rel="stylesheet" href="app.css">
+  <title>Open77 UI Kit</title>
+</head>
+<body>
+  <!--
+    ONE page, every widget. Four regions, and they are independent: a text hint
+    and a progress bar coexist, a dialog draws its scrim over both without
+    removing them, and the letterbox sits under all three -- a cutscene may
+    still show a hint, and a bar must never hide a dialog's buttons. Content below each region is built in app.js rather than
+    written here, because every widget is data-driven and a half-written
+    template is one more thing that can disagree with the Lua that feeds it.
+
+    No native dropdown element appears anywhere in this kit. Its popup does not
+    render reliably in the CEF compositor, and the server suite asserts as much
+    in ShippedWebUiUsesCefSafeCustomDropdowns. The input dialog's "select" FIELD
+    TYPE is a custom role="listbox" built in app.js.
+  -->
+  <main id="root">
+    <div id="cinematic" class="cinematic" aria-hidden="true" hidden>
+      <div class="letterbox top"></div>
+      <div class="letterbox bottom"></div>
+    </div>
+    <section id="text" aria-live="polite" hidden></section>
+    <section id="progress" class="progress-region" hidden></section>
+    <div id="scrim" class="scrim" hidden></div>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

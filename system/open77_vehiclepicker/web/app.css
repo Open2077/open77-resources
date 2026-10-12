@@ -1,0 +1,330 @@
+/* =============================================================================
+   open77_vehiclepicker - surface styles
+   =============================================================================
+
+   Every value here comes from `open77-ui.css`, which is linked first. If you
+   find a hex literal below it is a bug, not a shortcut -- see
+   `docs/ui-design-system.md` section 8.
+
+   Region: this is a MODAL surface. `docs/ui-design-system.md` section 6.2
+   exempts modals from the screen-region map because they dim what is behind
+   them and take the screen for as long as they are up. It is only exempt while
+   it is genuinely modal: the panel is centred, the scrim is real, and nothing
+   of this surface paints at all while it is closed.
+   ========================================================================== */
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+  font-family: var(--op77-font-body);
+  color: var(--op77-text);
+  /* The surface is created visible and stays visible; the BODY is what opens
+     and closes. Two reasons, both load-bearing:
+       * a surface created hidden never uploads a frame once shown on the
+         current client build (recorded in `freeroam/client/main.lua`);
+       * `pointer-events: none` while closed means a closed picker cannot eat a
+         click even if focus were left on by mistake. */
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------- open/closed */
+
+.wrap {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--op77-dur) var(--op77-ease),
+              visibility 0s linear var(--op77-dur);
+}
+
+body.open { pointer-events: auto; }
+body.open .wrap {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity var(--op77-dur) var(--op77-ease), visibility 0s;
+}
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--op77-scrim);
+}
+
+/* ------------------------------------------------------------------- panel --*/
+
+.panel {
+  position: relative;
+  width: min(1080px, 78vw);
+  max-height: 78vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--op77-panel-raised);
+  border: 1px solid var(--op77-line-hud);
+  border-radius: var(--op77-radius-md);
+  box-shadow: var(--op77-shadow);
+  overflow: hidden;
+  transform: translateY(8px);
+  transition: transform var(--op77-dur) var(--op77-ease);
+}
+body.open .panel { transform: translateY(0); }
+
+/* The house marker. One per surface. */
+.panel::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: var(--op77-rule);
+  background: var(--op77-accent);
+}
+
+/* -------------------------------------------------------------------- head --*/
+
+.head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: var(--op77-space-3);
+  padding: var(--op77-space-5) var(--op77-space-5) var(--op77-space-4)
+           calc(var(--op77-space-5) + var(--op77-rule));
+  border-bottom: 1px solid var(--op77-line);
+}
+
+.head h1 {
+  margin: var(--op77-space-2) 0 0;
+  font-family: var(--op77-font-display);
+  font-size: var(--op77-fs-head);
+  font-weight: 700;
+  letter-spacing: var(--op77-track-head);
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.head .sub {
+  margin: var(--op77-space-2) 0 0;
+  font: var(--op77-fs-meta) / 1.4 var(--op77-font-mono);
+  color: var(--op77-text-dim);
+}
+
+.head-right {
+  display: flex;
+  align-items: center;
+  gap: var(--op77-space-3);
+}
+
+/* A deadline. `tabular-nums` because it changes every second and the panel
+   must not twitch. */
+.deadline {
+  font-family: var(--op77-font-display);
+  font-size: var(--op77-fs-title);
+  font-variant-numeric: tabular-nums;
+  color: var(--op77-accent);
+  display: none;
+}
+.deadline.on { display: block; }
+.deadline.urgent { color: var(--op77-signal); }
+
+.close {
+  appearance: none;
+  border: 1px solid var(--op77-line-hud);
+  border-radius: var(--op77-radius-sm);
+  background: var(--op77-surface);
+  color: var(--op77-text-dim);
+  font: var(--op77-fs-label) / 1 var(--op77-font-mono);
+  letter-spacing: var(--op77-track-label);
+  padding: var(--op77-space-2) var(--op77-space-3);
+  cursor: pointer;
+  transition: color var(--op77-dur-fast) var(--op77-ease),
+              border-color var(--op77-dur-fast) var(--op77-ease);
+}
+.close:hover { color: var(--op77-text); border-color: var(--op77-line-strong); }
+
+/* --------------------------------------------------------------- lock note --*/
+
+.lock {
+  display: none;
+  align-items: center;
+  gap: var(--op77-space-3);
+  padding: var(--op77-space-3) var(--op77-space-5) var(--op77-space-3)
+           calc(var(--op77-space-5) + var(--op77-rule));
+  background: var(--op77-surface);
+  border-bottom: 1px solid var(--op77-line);
+  font: var(--op77-fs-meta) / 1.4 var(--op77-font-mono);
+  color: var(--op77-warn);
+}
+body.locked .lock { display: flex; }
+
+/* -------------------------------------------------------------------- grid --*/
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+  gap: var(--op77-space-3);
+  padding: var(--op77-space-4) var(--op77-space-5);
+  overflow-y: auto;
+}
+
+.card {
+  position: relative;
+  text-align: left;
+  appearance: none;
+  cursor: pointer;
+  padding: var(--op77-space-4);
+  background: var(--op77-surface);
+  border: 1px solid var(--op77-line);
+  border-radius: var(--op77-radius-sm);
+  color: inherit;
+  font: inherit;
+  transition: background var(--op77-dur-fast) var(--op77-ease),
+              border-color var(--op77-dur-fast) var(--op77-ease);
+}
+.card:hover { background: var(--op77-surface-2); border-color: var(--op77-line-strong); }
+.card:focus-visible { outline: 1px solid var(--op77-accent); outline-offset: 2px; }
+
+.card.selected {
+  background: var(--op77-accent-soft);
+  border-color: var(--op77-accent-line);
+}
+.card.selected::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--op77-accent);
+}
+
+.card .name {
+  font-family: var(--op77-font-display);
+  font-size: var(--op77-fs-title);
+  font-weight: 700;
+  letter-spacing: var(--op77-track-head);
+  text-transform: uppercase;
+  line-height: 1.1;
+}
+
+.card .meta {
+  margin-top: var(--op77-space-1);
+  font: var(--op77-fs-meta) / 1.4 var(--op77-font-mono);
+  color: var(--op77-text-dim);
+}
+
+/* One tag row. Cyan is the accent budget's whole allowance on a card, and the
+   selected rule already spends it, so tags are deliberately colourless unless
+   they carry a real status. */
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--op77-space-1);
+  margin-top: var(--op77-space-3);
+}
+.tag {
+  font: var(--op77-fs-micro) / 1 var(--op77-font-mono);
+  letter-spacing: var(--op77-track-micro);
+  text-transform: uppercase;
+  padding: 3px 6px;
+  border: 1px solid var(--op77-line);
+  border-radius: var(--op77-radius-sm);
+  color: var(--op77-text-dim);
+}
+.tag.default { color: var(--op77-ok); border-color: var(--op77-line-strong); }
+.tag.unverified { color: var(--op77-warn); border-color: var(--op77-line-strong); }
+
+/* -------------------------------------------------------------------- bars --*/
+
+.bars {
+  margin-top: var(--op77-space-3);
+  display: grid;
+  gap: var(--op77-space-1);
+}
+.bar {
+  display: grid;
+  grid-template-columns: 46px 1fr 30px;
+  align-items: center;
+  gap: var(--op77-space-2);
+  font: var(--op77-fs-micro) / 1 var(--op77-font-mono);
+  letter-spacing: var(--op77-track-micro);
+  text-transform: uppercase;
+  color: var(--op77-text-dim);
+}
+.bar .track {
+  position: relative;
+  height: 2px;
+  background: var(--op77-void);
+  border-radius: 0;
+}
+.bar .fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: var(--op77-text-dim);
+}
+.card.selected .bar .fill { background: var(--op77-accent); }
+.bar .val {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--op77-text-dim);
+}
+
+/* -------------------------------------------------------------------- foot --*/
+
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--op77-space-4);
+  padding: var(--op77-space-3) var(--op77-space-5);
+  border-top: 1px solid var(--op77-line);
+  background: var(--op77-bg-elev);
+  font: var(--op77-fs-meta) / 1.4 var(--op77-font-mono);
+  color: var(--op77-text-dim);
+}
+
+/* Neutral keycaps, and this is a deliberate departure from the native Card's
+   accent-washed cap. The accent budget is about three cyan elements per
+   viewport, and this panel already spends it on the leading rule, the selected
+   card and the deadline. A world prompt draws ONE cap and it is the only thing
+   on screen; a footer legend draws three at once, and three more cyan chips
+   here would make the selected card stop reading as the selected thing. */
+.foot .keys span {
+  display: inline-block;
+  min-width: 18px;
+  text-align: center;
+  padding: 2px 5px;
+  margin-right: var(--op77-space-1);
+  border: 1px solid var(--op77-line-strong);
+  border-radius: var(--op77-radius-sm);
+  background: var(--op77-surface-2);
+  color: var(--op77-text-dim);
+  font-size: var(--op77-fs-label);
+  letter-spacing: var(--op77-track-label);
+}
+.foot .keys + .keys { margin-left: var(--op77-space-4); }
+
+.status {
+  font-variant-numeric: tabular-nums;
+  color: var(--op77-text-dim);
+  transition: color var(--op77-dur-fast) var(--op77-ease);
+}
+.status.ok { color: var(--op77-ok); }
+.status.bad { color: var(--op77-danger); }
+
+.empty {
+  padding: var(--op77-space-6);
+  text-align: center;
+  font: var(--op77-fs-body) / 1.5 var(--op77-font-body);
+  color: var(--op77-text-dim);
+}

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Server loading overlay example</title>
+<style>
+html,body {margin:0;background:transparent;color:#e9f1f5;font-family:Arial,sans-serif}
+#cover {position:fixed;inset:0;display:none;place-content:center;background:#071017;text-align:center}
+#cover.active {display:grid}
+.tag {font:12px monospace;letter-spacing:.2em;color:#00d7e6}
+h1 {font-size:36px;margin:20px 0}
+progress {width:360px;height:6px;accent-color:#00d7e6}
+#label {color:#b0c1cc;font:14px monospace}
+</style>
+<section id="cover"><div class="tag">OPEN//77 — SERVER UI EXAMPLE</div><h1>Loading your destination</h1><progress id="bar" max="1"></progress><p id="label">Loading…</p></section>
+<script>
+Open77.on('loading:state', state => {
+  document.querySelector('#cover').classList.toggle('active', state.active);
+  const bar = document.querySelector('#bar');
+  if (state.progressKnown) bar.value = state.progress;
+  else bar.removeAttribute('value');
+  document.querySelector('#label').textContent = state.progressKnown
+    ? `${Math.round(state.progress * 100)}%` : 'Loading…';
+});
+Open77.ready();
+</script>
+</html>
