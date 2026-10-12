@@ -1,308 +1,172 @@
 # rp_ripperdoc
 
-Adds a ripperdoc job at Viktor's clinic: the on-duty ripper installs and removes implants on a patient lying in the chair, once the patient accepts a quote. Implants are real platform cyberware, saved for each player.
+Adds a ripperdoc job at Viktor's clinic: the ripperdoc quotes a patient, the patient accepts, sits in the operating chair and gets real platform cyberware installed, paid once from a clinic stock the ripperdoc restocks at a chrome dealer or from players.
 
-- **Docs:** [Cyberware](https://open2077.net/docs/cyberware)
-- **Starts:** on its own
-- **Needs:** `open77_cyberware`, `open77_player_interactions`, `open77_uikit`, `open77_worldui`, `open77_contextmenu`, `open77_notifications`, `open77_props`
+- **Docs:** [Build a job: prompts, animations, items and pay](https://open2077.net/docs/world-interaction), [Cyberware](https://open2077.net/docs/cyberware), [Player interactions](https://open2077.net/docs/player-interactions)
+- **Starts:** with `ensure rp_ripperdoc` (it declares `auto_start false`)
+- **Needs:** `open77_transactions`, `open77_actions`, `open77_player_interactions`, `open77_cyberware`, `open77_uikit`, `open77_contextmenu`, `open77_notifications`, `rp_jobs`, `rp_inventory`, `rp_economy`; optional `rp_zones`, `rp_identity`, `open77_seating` + `open77_furniture`, `open77_hacking`
 - **Runs on:** server and client
 
-Server-authoritative ripperdoc for a Night City RP server on Open77 (build `2.31.13+op77.76`).
-The on-duty **ripper** (`rp_jobs` job `ripper`) installs and removes implants on a **patient lying
-on the clinic chair**, through the platform's cyberware framework (`open77_cyberware`): the server
-owns the catalogue, the quote, the fee, the boxed stock, the durable implant record and the log.
+Every eddy and every boxed implant moves through `open77_transactions`, in the hooks of the
+`open77_actions` library; the implant itself is the platform's (`Open77.cyberware`). The clinic is
+Viktor Vektor's, under the Misty's Esoterica alley in Little China (Watson), inside the `rp_zones`
+zone `viktor_clinic`.
 
-The catalogue is exactly the five implant slots the cyberware guide documents on this build —
-`arms/gorilla_arms`, `legs/double_jump`, `operating_system/cyberdeck`, `self_ice/self_ice`,
-`purge/active_purge` — with grades defined by this resource (`shared/config.lua`). Nothing is
-guessed: the three hacking implants are registered through `Open77.hacking.define/defineIce/
-definePurge` plus `Open77.cyberware.define`, exactly as the hacking guide prescribes.
+## How to play
 
-## What the player sees
+**The ripperdoc** has the `rp_jobs` job `ripper` (label "Ripperdoc") and is on duty (`/service`).
 
-1. **The chair.** A purple ring, a map pin and an `E` prompt **Vik's chair** (`open77_worldui`,
-   `promptDistance = 4.0`, ring radius 4) at `-1548.0, 1230.0, 11.6` — **Viktor Vektor's real
-   chair room**, under the Misty's Esoterica alley in Little China (Watson), inside the `rp_zones`
-   **`viktor_clinic`** zone (centre `-1548, 1230, 11.6`, radius 12). Press **E**: the server checks
-   you stand within 4.5 m and plays the RP `lie` posture on you **at the chair**
-   (`Open77.animations.playAt(player, "lie", position, yaw)`, permission
-   `players.animations.control` — the server native that places a posture at a pose; its portable
-   `lie` workspot is the invisible bed under you). You are now "on the chair". Press **E** again
-   (or walk more than 0.5 m) to get up. The clinic already has its chair, so no prop is spawned.
-   The owner moves the chair and the zone by editing `RpRipperConfig.chair` / `clinicZone`.
-2. **The ripper operates.** On duty (`/service`), within 4 m, inside the clinic zone: hold **ALT**,
-   click the patient, pick **Operate** (`open77_contextmenu`) — or type `/operer <playerId>`. A UI-kit
-   **context menu** lists the catalogue: one row per grade with **price**, **grade**, **stock** (a
-   boxed implant in the ripper's pockets first, else the patient's own) and **duration**; a slot that
-   is already filled shows **Remove …** at half price instead. Rows without a box, or whose provider
-   is offline, are greyed out with the reason.
-3. **The quote.** The patient reads the quote in chat and as a toast — implant, grade, price,
-   duration, cyberpsychosis risk — and consents through **`open77_player_interactions`**
-   (`Open77.playerInteractions.request(ripper, patient, "custom", …)` with `consent = true`,
-   30 s to answer): the platform's own invitation prompt, or `/interaction accept` /
-   `/interaction decline`. Declining, letting it expire, walking away, dying, a vehicle or a
-   disconnect cancels the whole thing; both players are told why.
-4. **Under the knife.** On acceptance the interaction plays `examine` on the ripper and `lie` on the
-   patient, and a UI-kit **progress bar** runs on **both** screens for the configured duration
-   (12 to 22 s per implant, `grades[].durationMs`). **X** on either side aborts: nothing is charged.
-5. **The chrome.** When the bar completes the server re-checks duty, the record, the box and the
-   money, takes the box (`rp_inventory:remove`), charges the fee — `rp_bank:charge(patient, price,
-   "ripper", "implant:<key>")`, cash fallback through `rp_economy:remove` + `rp_bank:societyAdd` —
-   then stages `Open77.cyberware.install` / `.remove` with a fresh `newOperationId` and the record's
-   `expectedRevision`. The result arrives on `onCyberwareOperationCompleted`: on `ok` the row is
-   logged and both players are told; on failure the box and the eddies come back (the refund lands
-   in **cash**: `rp_bank` has no society-to-account move). **100 % of the fee goes to the `ripper`
-   society**; the ripper is paid by the `rp_jobs` payroll.
-6. **Cyberpsychosis.** After an install, when the patient carries **more than**
-   `cyberpsychosisThreshold` implants (4 on the shipped config, so the fifth implant), the server plays
-   the `drugged` full-screen overlay on that patient for 60 s — `Open77.effects.screen(patient,
-   "drugged", { strength = 0.5, duration = 60 })`, the server-targeted, non-replicated screen effect
-   of the effects guide, permission `players.screenfx` — plus a red toast and a chat warning. Set
-   the threshold to `0` to see it on the very first implant.
+1. **Quote.** Inside the clinic, within 4 m of a standing patient: hold **ALT**, click the patient,
+   pick **Quote** (or `/ripper quote <id>`, or the old `/operer <id>`). The catalogue opens: one row
+   per implant grade with its price, the clinic's stock and the time under the knife; an implant the
+   patient already carries shows **Remove** at half its grade's price. Picking a row sends the quote.
+   `/ripper quote <id> arms street` skips the menu.
+2. **Wait for consent.** The patient reads the quote and answers. On accept, the price and the boxed
+   implant are put on hold (nothing is paid yet) and the station next to the chair now offers the
+   procedure: **E Install Gorilla Arms (Street)**.
+3. **Operate.** Once the patient sits in the chair, stand at the station and press **E** (or
+   `/ripper operate`). The ripperdoc plays the drill workspot at the station and a bar runs on both
+   screens (12 to 22 s by grade). **X** stops it: nothing is charged. When the bar ends the implant is
+   installed, then the hold is paid: the price to the `ripper` society, the box out of the stock.
+4. **Restock.** At the chrome dealer in Kabuki Market, **E Buy chrome for the clinic** opens the order
+   menu (or `/ripper restock arms industrial 2`). The boxes are delivered to the clinic's stash in the
+   same operation, paid by the `ripper` society, or by the ripperdoc's cash when the society is short.
+   `/ripper buy <id> <implant> [grade] [count]` buys boxes from a player in the clinic: they accept the
+   hand-over, the boxes go into the stash and half their retail price to the seller.
+5. `/ripper` shows the board (duty, the current procedure, the stock, the society, today's log);
+   `/ripper stock` the stock; `/ripper cancel` withdraws a quote or stops a procedure before the
+   implant goes in.
 
-Every refusal is explained in chat, in English: not a ripper, off duty, patient not on the chair,
-too far (with the distance), outside the clinic, no box, patient cannot afford it, record not
-ready, provider offline, and every platform reason (`animation_busy`, `player_reserved`, …).
+**The patient.**
 
-## Where it is
+1. Stand next to the ripperdoc in the clinic and ask for a quote. The quote arrives in chat and as a
+   toast (implant, grade, price, time, cyberpsychosis risk), and the platform's offer card opens in the
+   middle of the screen: accept with **Y**, refuse with **N** (30 s; the keys are rebindable, and `/interaction accept` or
+   `decline` also work).
+2. Sit in Vik's operating chair: **E Sit in the operating chair** (or `/ripper lie`). Walk away to get
+   up. A patient already seated when the quote comes is stood up for the answer and seated again
+   after accepting.
+3. During the operation a bar shows the time under the knife. **X** stops it: nothing is charged.
+4. Done: chat, toast, `/implants` lists the chrome as the platform reports it. A patient past the
+   cyberpsychosis threshold (4 implants) gets a 60 s `drugged` overlay and a warning.
 
-| What | Position | Notes |
+**Everyone nearby** sees the patient in the chair and the ripperdoc at work; both postures are
+played by the server.
+
+**What ends a procedure and gives everything back** (the hold is released, the box stays in stock,
+both players are told why): the patient declines or does not answer, walks more than 25 m from the
+chair, gets off the chair during the operation, presses X, dies or disconnects; the ripperdoc presses
+X, disconnects or clocks out; the accepted quote waits more than 3 minutes; the cyberware framework
+refuses the implant or does not answer in time; the clinic restarts before the implant went in.
+
+## Setup
+
+In `resources.load`, after their libraries:
+
+```text
+open77_transactions, open77_actions, open77_player_interactions, open77_cyberware, open77_uikit,
+open77_contextmenu, open77_notifications, rp_jobs, rp_inventory, rp_economy, rp_zones, rp_identity,
+rp_ripperdoc
+```
+
+Add `open77_hacking` for the three hacking implants (without it they show as "provider offline"),
+and `open77_seating` + `open77_furniture` for a seating-mode chair.
+
+| Setting | Value | Why |
 |---|---|---|
-| Vik's chair (ring + pin + E prompt) | `-1548.0, 1230.0, 11.6`, yaw -89.5 | `RpRipperConfig.chair`; AMM point +0.1 m |
-| Clinic entrance (inside) | `-1545.0, 1233.0, 11.6` | where rp_bank's ATM stands |
-| `viktor_clinic` zone (rp_zones) | centre `-1548, 1230, 11.6`, r 12 | the ripper must stand inside it to operate |
+| convar `rp_inventory_backend` | `transactions` | the stash, pockets and wallets must be coordinator accounts |
+| coordinator `writers` | `*`, or at least `rp_ripperdoc:cash+bank+soc+char+stash/stock, rp_economy:cash+bank+soc, rp_inventory` | the clinic writes the patient's wallets, the society, the seller's pockets and its own stock stash |
+| coordinator mint rule | `rp_ripperdoc sys:ripperdoc.supplier * 40` | boxes created at the chrome dealer (size the hourly cap to your server) |
+| rp_jobs | the `ripper` job (shipped) | duty and the work epoch |
+| database | MariaDB or MySQL | the coordinator and the cyberware records need it; the clinic keeps its 1.x history table `rp_ripperdoc_operations` (one row per finished procedure) |
 
-From the Kabuki Market spawn (`-1191.3, 2006.9, 7.8`) the clinic is about **860 m south-west**
-as the crow flies: down through Little China, into the alley by Misty's, down the stairs.
-
-## Commands
-
-| Command | Who | Effect |
-|---|---|---|
-| `/ripper` | ripper (any grade) | The clinic board: your grade and duty, **patients on the chair** (name, id, distance), the **boxes in your pockets**, the catalogue with retail prices (or `OFFLINE <reason>`), the society balance, and **today's log** (last 24 h: count + the last 5 operations). |
-| `/ripper restock <arms\|legs\|deck\|ice\|purge> [count]` | ripper | Buys 1–5 boxed implants at 60 % of the retail price, paid by the `ripper` society (`rp_bank:societyRemove`), else from your cash; the boxes land in your pockets. Refunded if they do not fit. |
-| `/ripper` | anyone else | Your installed implants (see `/implants`) and **who is on duty** — or `Rippers on duty: none. Nobody can give you a quote right now`. |
-| `/operer <playerId>` | ripper on duty | Operates on the patient lying on the chair: same flow as ALT+click > **Operate**. |
-| `/implants` | anyone | Your implants **as the platform reports them** (`Open77.cyberware.current`): one line per slot (`arms`, `legs`, `operating_system`, `self_ice`, `purge`), the count and the cyberpsychosis threshold. |
-
-From the server console all three answer `run it from the game`. Player ids are the session ids
-(`/players`). Names come from `rp_identity` (`fullName`) when it runs, else from the account.
-
-## Exports (server, synchronous, never yield)
-
-```lua
-exports.rp_ripperdoc:isOnChair(playerId)      -- boolean
-exports.rp_ripperdoc:implantCount(playerId)   -- integer | nil, reason (record not ready)
-exports.rp_ripperdoc:catalogue()              -- { { key, label, slot, profile, definitionId, box,
-                                              --     available, reason, grades = { { id, label, price, durationMs } } }, ... }
+```text
+tunable.set open77_transactions writers rp_ripperdoc:cash+bank+soc+char+stash/stock, rp_economy:cash+bank+soc, rp_inventory, <your other writers>
+tunable.set open77_transactions mint3 rp_ripperdoc sys:ripperdoc.supplier * 40      (any free mintN, or appended to one with ";")
+ensure rp_ripperdoc
 ```
 
-Call them inside `pcall`. A resource with a client script must not declare `dependency
-"rp_ripperdoc"` (this manifest is delivered to clients).
+No money is ever created: the patient pays the society, the society (or the ripperdoc) pays the
+dealer, which burns the money. Expected start lines:
 
-## Events (host bus, `TriggerEvent`)
-
-```lua
-AddEventHandler("rp_ripperdoc:operation", function(ripperId, patientId, action, implantKey, gradeId, price) end)
--- raised once per completed operation; action is "install" or "remove"
+```text
+[rp_ripperdoc] coordinator ready (store=sql)
+[rp_ripperdoc] boxed implants defined through rp_inventory: 7
+[rp_ripperdoc] catalogue arms defined (arms/gorilla_arms, 2 grade(s))
+[rp_ripperdoc] history=sql table=rp_ripperdoc_operations
+[rp_ripperdoc] ready: clinics viktor (placed chair), 3 targets, supplier kabuki_chrome, job ripper; recovery: 0 released, 0 to settle
 ```
 
-Internal transport, not an API: net events `rp_ripperdoc:chair`, `rp_ripperdoc:operate`,
-`rp_ripperdoc:clientReady` (client → server) and `rp_ripperdoc:duty` (server → client).
+Operator console (restricted): `ripper.status` (counters and live procedures), `ripper.seed
+[clinic] [item|all] [count]` (boxes into a stock under the dealer's mint rule), `ripper.setup
+<playerId>` (the `ripper` job and duty), `ripper.journal` (procedures a restart would settle).
 
-## Persistence
+## Config
 
-Created inside `Open77.database.ready(...)` with `CREATE TABLE IF NOT EXISTS`, permission
-`database.access`, keyed by the durable `Open77.players.identifier`:
-
-```sql
-rp_ripperdoc_operations (
-    id           INT AUTO_INCREMENT PRIMARY KEY,
-    ripper       VARCHAR(64)  NOT NULL,        -- the ripper's identifier
-    ripper_name  VARCHAR(64)  NOT NULL,
-    patient      VARCHAR(64)  NOT NULL,        -- the patient's identifier
-    patient_name VARCHAR(64)  NOT NULL,
-    implant      VARCHAR(96)  NOT NULL,        -- the cyberware definition id (rp_ripperdoc.gorilla_arms, ...)
-    grade        VARCHAR(32)  NOT NULL,        -- installed grade id ('' for a removal)
-    action       VARCHAR(16)  NOT NULL,        -- install | remove
-    price        INT          NOT NULL,
-    paid_via     VARCHAR(16)  NOT NULL,        -- account | cash | free
-    `at`         BIGINT       NOT NULL         -- unix seconds
-)
-```
-
-Rows are written with the callback form; `/ripper` reads today's log with `.await` inside its
-command handler. **No database** (`ready` answers `database_unavailable`, or nothing answers 15 s
-after start): the log falls back to `Open77.kvp` (key `operations`, last 100 rows) and the log
-says `[rp_ripperdoc] store=kvp reason=...`. The implant record itself is the platform's
-(`open77_cyberware_v1`), never this resource's.
-
-## Configuration (`shared/config.lua`)
+Everything is in `shared/config.lua` (`RpRipperConfig`).
 
 | Key | Default | Meaning |
 |---|---|---|
-| `job` / `society` | `ripper` / `ripper` | The `rp_jobs` job that may operate; the `rp_bank` society that receives every fee. |
-| `clinicZone` | `viktor_clinic` | `rp_zones` zone the ripper must stand in (`nil` = anywhere; ignored when `rp_zones` is not running). |
-| `chair.position` / `yaw` | `-1548, 1230, 11.6` / `-89.5` | Vik's chair; `z` is the floor under the chair (`/pos` on the spot if the ring is invisible). |
-| `chair.promptDistance` / `reach` / `radius` | `4.0` / `4.5` / `4.0` | The E prompt range; the server's own re-check; the ring covers the whole chair. |
-| `operateDistance` | `4.0` | The ripper must be within this distance of the patient. |
-| `quoteTimeoutMs` | `30000` | Time to accept or decline the quote. |
-| `removalPriceFactor` | `0.5` | A removal costs half the install price of the installed grade. |
-| `restockPriceFactor` / `restockMaxCount` | `0.6` / `5` | `/ripper restock` wholesale price and cap. |
-| `cyberpsychosisThreshold` | `4` | More implants than this after an install triggers the effect. |
-| `cyberpsychosis` | `drugged`, `0.5`, `60` | Screen-effect alias, tier and seconds. |
-| `animations` | `lie` / `lie` / `examine` | Chair posture; surgery postures (patient / ripper). |
-| `catalogue` | 5 entries, 7 grades | Per entry: slot, profile, definition id, box item, grades (`label`, `price`, `durationMs` + the platform grade fields; `hacking` block for the three hacking implants). |
-| `items` | 5 boxes | `implant_box_arms`, `_legs`, `_deck`, `_ice`, `_purge`: 2.0 kg, not usable, **illegal unless the holder is a `ripper`** (`permit = "ripper"`), registered in `rp_inventory` through `exports.rp_inventory:define` on start and whenever `rp_inventory` restarts. |
+| `job`, `society`, `fixerJob` | `ripper`, `ripper`, `ripperdoc` | the rp_jobs job, the society paid, the job id in `rp:job:completed` |
+| `clinics.viktor.chair.mode` | `placed` | `placed`: the `lie` action at the chair point; `seating`: a real furniture through open77_seating (`chair.furniture`, optional `chair.spot`) |
+| `clinics.viktor.chair.position`, `yaw`, `arrivalRadius` | `-1546.92, 1234.22, 11.6`, `145`, `1.0` | Vik's reclining chair; the body sits on it facing the clinic floor |
+| `clinics.viktor.chair.profiles`, `actionLabel` | `seatedsleep`, `seated`; `Sit in the operating chair` | the patient's posture (the first one the server knows is played) and the prompt; the bed postures `lie` / `bedsidelie` only suit a flat bed |
+| `clinics.viktor.station` | `-1547.991, 1229.0, 11.6`, yaw `0.5` | where the ripperdoc stands to operate |
+| `clinics.viktor.zone`, `stockCapacityG` | `viktor_clinic`, `60000` | the zone to work in, the stash capacity (30 boxes) |
+| `supplier.position`, `yaw` | `-1172.45, 2024.30, 7.764`, `-60` | the chrome dealer, Kabuki Market |
+| `supplier.mode` | `mint` | `components`: each box burns its grade's `components` (a future techie's parts) from `componentsFrom` instead of money |
+| `supplier.payFrom`, `priceFactor`, `maxCount`, `durationMs` | `society, cash`, `0.6`, `5`, `6000` | who pays an order, the wholesale share, boxes per order, the bar |
+| `quote.distance`, `inviteTimeoutMs`, `validMs`, `leashM` | `4.0`, `30000`, `180000`, `25.0` | consent reach and time, how long an accepted quote waits, how far the patient may walk |
+| `operation.profiles`, `installTimeoutMs`, `holdTtlMs` | driller, tablet, examine; `20000`; `600000` | the ripperdoc's pose, the cyberware answer, the coordinator hold |
+| `payFrom` | `cash, bank` | the patient's wallets in order |
+| `removalPriceFactor` | `0.5` | a removal's price share; it returns nothing to the stock |
+| `buyback.ratio`, `maxCount`, `payFrom` | `0.5`, `5`, `society, cash` | buying boxes from players |
+| `cyberpsychosisThreshold`, `cyberpsychosis` | `4`, `drugged` 0.5 for 60 s | the overlay past that many implants |
+| `catalogue` | 5 implants, 7 grades | price, duration, the boxed `item` and the platform grade fields per grade |
+| `items` | 7 boxes | `implant_box_arms` (Street), `_arms_ind`, `_legs` (Training), `_legs_ath`, `_deck`, `_ice`, `_purge`: 2 kg, illegal unless the holder is a `ripper` |
 
-Prices at the shipped config: Gorilla Arms 1 500 (Street) / 3 200 €$ (Industrial), Reinforced
-Tendons 1 200 / 2 500 €$, Cyberdeck 2 000 €$, Self-ICE 1 800 €$, Active Purge 1 600 €$; a removal is
-half the installed grade's price.
+Prices: Gorilla Arms 1500 (Street) / 3200 (Industrial), Reinforced Tendons 1200 (Training) / 2500
+(Athlete), Cyberdeck 2000, Self-ICE 1800, Active Purge 1600 eddies; the dealer charges 60 %.
 
-## Staging: poses, props and durations
+Every new point carries `measured = false` and its `source`: walk it, read `/pos`, correct it.
 
-The chair and the surgery postures come from the server's `open77_animations` catalogue
-(`Open77.animations.playAt`, and the quote interaction's own postures). During the surgery the
-ripper holds a curated prop attached to the body (`Open77.props.create` + `attach`, permission
-`world.props`) while the UI-kit progress bar runs on both screens (X aborts).
-`/ripper restock` plays a short gesture (`Open77.animations.play`, permission
-`players.animations.control`) with no UI-kit bar. Other players see all of it: poses and props
-are server-driven. Everything is in `RpRipperConfig.Stage` and `RpRipperConfig.animations`
-(`shared/config.lua`) and follows rp_nomade's carry-pose
-pattern: `pose.profiles` is a list tried in order through `Open77.animations.get` -- the
-best future name first (the 76-profile catalogue of the pending base PR), then what today's
-18-profile eval catalogue has -- and `prop.models` a list of aliases tried in order. A
-refusal (unknown profile, `player_in_vehicle`, `animation_owned`, an attach the client
-cannot bind) is logged once and never blocks the action. Hand-slot offsets are not measured
-on 2.31: if a prop sits wrong, move one axis of `offset` / `rotation` at a time.
+## For other resources
 
-| Action | Pose today (future name) | Prop | Duration |
-|---|---|---|---|
-| E on the chair | `lie` at the chair (`Open77.animations.playAt`, unchanged) | -- | until E again |
-| the surgery | the quote interaction plays `examine` on the ripper and `lie` on the patient (unchanged) | `medical.device` in the ripper's right hand from the first cut to the last stitch (`medical.injector` once it exists) | the grade's `durationMs` (12-22 s) |
-| `/ripper restock` | `phone` one-shot: the order on the holo | the profile's holo | 3 s |
+```lua
+-- after every committed step (server, host-wide)
+AddEventHandler("rp:job:completed", function(e) end)
+-- e = { job = "ripperdoc", kind = "operation", playerId = <ripperdoc>, ref = <action opId>,
+--       data = { action = "install" | "remove", implant = "arms", grade = "street", definition, price,
+--                paid, patient, patientSubject, ripperSubject, surgery, clinic } }
+-- e = { job = "ripperdoc", kind = "restock", playerId, ref,
+--       data = { source = "supplier" | "player", item, count, cost, paidBy, clinic } }
+AddEventHandler("rp_ripperdoc:operation", function(ripperId, patientId, action, implantKey, gradeId, price) end)
 
-Log lines (grep `stage`, `gesture`, `hold`):
-
-```text
-[rp_ripperdoc] player 3 hold surgery: pose=none prop=medical.device@RightHand
-[rp_ripperdoc] player 3 gesture restock: pose=phone/stand__2h_phone__03__tap_phone__01 prop=none 3000 ms
+exports.rp_ripperdoc:isOnChair(playerId)     -- boolean
+exports.rp_ripperdoc:implantCount(playerId)  -- integer | nil, reason
+exports.rp_ripperdoc:catalogue()             -- { { key, label, slot, definitionId, available, reason, grades = { { id, label, price, durationMs, item } } } }
+exports.rp_ripperdoc:procedure(playerId)     -- { id, state, action, implant, grade, price, clinic, ripper, patient } | nil
 ```
 
-A refused pose reads
-`stage <key>: pose <profile> refused for player N: <reason> (the action runs without it)`,
-an unknown list `stage <key>: no known profile among [...]`, a refused prop `stage
-<key>.prop: attach of <alias> to player N refused: <reason> (no prop shown)`.
+## Limits
 
-## Manifest
-
-Dependencies (all ship a client half): `open77_cyberware`, `open77_player_interactions`,
-`open77_uikit`, `open77_worldui`, `open77_contextmenu`, `open77_notifications`, `open77_props`.
-Permissions: `network.events`, `database.access`, `players.cyberware.define/read/manage`,
-`players.hacking.define`, `players.animations.control`, `world.props`,
-`players.interactions.control/read`, `players.screenfx`. `rp_jobs`, `rp_inventory`, `rp_bank`, `rp_economy`, `rp_zones` and
-`rp_identity` are reached through `pcall`'d exports and never declared (their READMEs ask a
-resource with a client script not to): without `rp_jobs` nobody can operate; without
-`rp_inventory` there is no stock and installs are refused; without `rp_bank` the fee comes from
-cash; without both money resources the clinic works for free (logged); without `rp_zones` the
-zone check is skipped.
-
-The three hacking implants need the platform's `open77_hacking` resource: when
-`Open77.hacking.define` answers `hacking_unavailable` they stay in the menu as **Provider offline**
-and are re-defined when `open77_hacking` or `open77_cyberware` (re)starts.
-
-## Log (grep-able)
-
-```text
-[rp_ripperdoc] catalogue arms defined (arms/gorilla_arms, 2 grade(s))
-[rp_ripperdoc] catalogue deck NOT defined: hacking_unavailable
-[rp_ripperdoc] boxed implants registered in rp_inventory: 5 registered, 0 rejected
-[rp_ripperdoc] started: 5 implants in the catalogue, chair at -1548.0 1230.0 11.6 (zone viktor_clinic), threshold 4 implants
-[rp_ripperdoc] store=sql table=rp_ripperdoc_operations
-[rp_ripperdoc] op <id> offered: install arms, 1500 eddies, player 1 -> player 2
-[rp_ripperdoc] op <id> done: install arms on player 2 by player 1, 1500 eddies via account
-[rp_ripperdoc] op <id> cancelled: declined
-[rp_ripperdoc] cyberpsychosis on player 2 (5 implants > 4)
-[rp_ripperdoc] player 1 restocked 2 x implant_box_arms for 1800 (society)
-```
-
-## Test in 2 minutes
-
-Two players inside Viktor's clinic (walk from Kabuki Market, ~860 m south-west, or console
-`tp <id> -1545 1233 11.6` onto the clinic entrance), ids `1` (the ripper) and `2` (the patient);
-`rp_jobs`, `rp_inventory`, `rp_bank`, `rp_economy` and `rp_zones` running. On start the log shows the
-`catalogue ... defined` lines (the three hacking ones say `NOT defined: hacking_unavailable` when
-`open77_hacking` is not loaded — arms and legs are enough for this walkthrough).
-
-1. **Console:** `setjob 1 ripper 3` (boss; the society is seeded with 50 000 €$ by `rp_jobs`),
-   `givemoney 2 5000`. Player 1: `/service` → `Clocked in at Ripperdoc as boss.`
-2. Player 1: `/ripper` → `RIPPERDOC <name> - grade boss - ON DUTY.`, `On the chair: nobody.`,
-   `Boxes in your pockets: none. /ripper restock ...`, the catalogue with prices, `Society ripper:
-   50 000 €$.`, `Last 24 h: 0 operation(s).`
-3. Player 1: `/ripper restock arms 1` → `Restocked 1 x Implant box: Gorilla Arms for 900 €$ (paid by
-   the ripper society).` (`/inv` shows the box.) `/ripper` now lists `Gorilla Arms x1`.
-4. Player 2 walks to the purple ring around Vik's chair (map pin **Vik's chair**), looks at it,
-   presses **E** → they lie down on the chair; chat `You lie down on the ripperdoc chair. 1
-   ripper(s) on duty can operate. Press E again to get up.` Player 1 reads
-   `<name> is lying on the chair. ALT+click them > Operate, or /operer 2.`
-5. Player 1 stands 6 m away, at the clinic entrance: `/operer 2` → `Get within 4 m of the patient
-   (6.0 m).` Walks next to the chair, holds **ALT**, clicks player 2, picks **Operate** → the menu `Ripperdoc - <name>`:
-   `Gorilla Arms - Street` (1 500 €$, stock `yours x1`, 15 s), `Gorilla Arms - Industrial`
-   (3 200 €$, the same box, 22 s: one box serves every grade of an implant),
-   `Reinforced Tendons - ...` greyed (no box), the hacking rows greyed or `Provider offline`.
-   Pick **Gorilla Arms - Street** → player 1 `Quote sent to <name>: install Gorilla Arms [Street]
-   for 1 500 €$. Waiting for consent (30 s).`
-6. Player 2 reads `QUOTE from <ripper>: install Gorilla Arms [Street] for 1 500 €$. 15 s under the
-   knife. Risk: cyberpsychosis past 4 implants (you carry 0). Answer on screen, or /interaction
-   accept | /interaction decline (30 s).` plus a toast. Type `/interaction decline` → both read `No
-   procedure: the patient declined the quote.`; player 2 is put back on the chair.
-7. Repeat step 5; player 2 accepts (`/interaction accept` or the on-screen prompt). Player 2
-   reads `Quote accepted. Under the knife for 15 s - press X to abort.`, player 1
-   `<name> accepted the quote. Operating for 15 s - press X to abort.`; a purple **Installing Gorilla
-   Arms** bar runs on both screens, the patient lies, the ripper kneels and examines. Press **X**
-   on either side → `No procedure: the ripper stopped.` / `the patient stopped.` Nothing charged.
-8. Repeat and let the bar finish → player 1 `Closing up. Waiting for the chrome to settle...` then
-   `Done: Gorilla Arms [Street] installed on <name>. 1 500 €$ to the ripper society.`; player 2
-   `Done: Gorilla Arms [Street] installed. You paid 1 500 €$ (account).` (or `(cash)` when the
-   account was short) and a success toast. `/solde` on player 2 shows the debit; `/inv` on player 1
-   shows the box gone; player 1 `/ripper` → `Last 24 h: 1 operation(s).` + the row; log `op ...
-   done`. Player 2 draws fists and punches: Gorilla Arms.
-9. Player 2: `/implants` → `Implants: 1 installed (cyberpsychosis past 4).`, `arms: Gorilla Arms
-   [Street]`, the other slots `-`.
-10. Player 1 operates again: the menu now shows **Remove Gorilla Arms** at 750 €$; accept, wait →
-    `Done: Gorilla Arms removed.` Native arms are back; `/implants` shows `arms: -`.
-11. Cyberpsychosis: set `cyberpsychosisThreshold = 0` in `shared/config.lua`, reload, install any
-    implant → the patient's screen smears (`drugged`) for 60 s, red toast **Cyberpsychosis**, chat
-    `WARNING - 1 implants: your chrome is fighting your brain...`, ripper told too, log
-    `cyberpsychosis on player 2 (1 implants > 0)`.
-12. Player 1: `/service` (clock out) then `/operer 2` → `Clock in first: /service.` Player 2:
-    `/operer 1` → `You are no ripperdoc. Only a ripper on duty can operate.`
-
-### What a single player can check
-
-- The **chair prompt**: walk to the ring in Vik's chair room, press **E** → you lie down on the
-  chair; `E` again → you get up. Walk away while lying → `You left the ripperdoc chair.`
-- `/implants` → your record from the platform (`Implants: 0 installed ...`, five slot lines), or
-  `Your implant record is not ready (...)` while `open77_appearance` is still binding you.
-- **The quote refusal when no ripper is on duty**: `/ripper` (as a citizen) → `Rippers on duty:
-  none. Nobody can give you a quote right now - come back later, choom.`; lying on the chair →
-  `... No ripper is on duty right now - nobody can give you a quote.`; `/operer 1` on yourself
-  without the job → `You are no ripperdoc ...`; with the job but off duty → `Clock in first`.
-- As a ripper alone (`setjob 1 ripper 3`, `/service`): `/ripper`, `/ripper restock legs 2`, and
-  `/operer 1` → `Operating on yourself? Not even in Night City.`
-
-## Notes and limits
-
-- The chair posture is stopped just before the quote is sent: the interaction coordinator refuses
-  a participant in another animation (`animation_busy`), and the quote interaction plays the
-  surgery postures itself. After any end of the flow the patient is put back on the chair when
-  still next to it (1.5 s later). A patient who walked away gets no message. If the posture is
-  refused, the patient is told to press **E** again.
-- The consent prompt is the platform's (`open77_player_interactions`); the quote text itself is
-  this resource's chat line and toast. `/interaction accept` / `/interaction decline` always work.
-- Record fields for the three hacking slots are read as `record.operating_system`, `record.self_ice`,
-  `record.purge`, and any other implant-shaped field of the record is listed as well; the cyberware
-  guide documents only `arms` and `legs`, so if the platform stores the hacking slots under other
-  names the menu still offers **install** on a filled slot and the platform's refusal is shown.
-- A removal returns no box. A resource stop between the payment and the platform's result loses
-  the completion event: the log line `op ... offered` without a `done` is the trace to refund by hand.
+- **Exactly once.** An accepted quote mints one coordinator operation id and, from it, the cyberware
+  operation id. The surgery accepts exactly one operate action: its `opId` is recorded when the
+  action adopts the hold and checked at validate, commit and cancel. A retried commit replays the
+  coordinator's receipt and the cyberware framework's idempotent answer; a second press is refused.
+- **Restarts.** A hold dies with a restart (the coordinator cancels a stopped resource's holds and a
+  server restart forgets them). The clinic keeps a small notebook in `Open77.kvp` (no value in it): a
+  procedure that had not reached the implant is released at the next start and both players are
+  told; one that was installing is settled from the patient's cyberware record when they are back
+  (installed: charged once under `rd.settle:<id>`; not installed after 30 s: released). A wallet that
+  cannot pay at that point is logged as unpaid (the implant stays: it is the platform's record).
+- **One procedure per clinic** at a time; one stock per clinic.
+- **Prompts close together.** The chair and the station are 1 m apart: a card answers the nearest
+  player. Move `station` if the wrong card shows.
+- **Seating mode** depends on a furniture id near the clinic (`chair.furniture`) and on
+  open77_seating's lying prompt; until then the chair is `placed`.
+- **Hacking implants** need `open77_hacking`; the record shape of their slots is read loosely.
+- **Postures.** `lie` and the driller workspot ship in the RP archive; a server that does not know a
+  profile runs the action without it (logged once at start).
+- **No society refunds.** A procedure that ends without the implant releases the hold: nothing was
+  paid, so nothing is refunded.

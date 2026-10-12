@@ -105,7 +105,7 @@ local REASONS = {
 }
 
 local function explain(reason)
-    return REASONS[reason] or ("Refused: " .. tostring(reason))
+    return REASONS[reason] or "That did not work. Try again in a moment."   -- never the raw code on screen; the server log keeps it
 end
 
 local function isCount(n)
