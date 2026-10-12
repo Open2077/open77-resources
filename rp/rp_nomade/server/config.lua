@@ -207,7 +207,8 @@ C.crate = {
     binding = {
         bone = "Chest",
         offset = { x = -0.12, y = -0.42, z = -0.22 }, rotation = { x = 0.0, y = 90.0, z = 0.0 },
-        firstPerson = { offset = { x = 0.10, y = -0.55, z = 0.0 }, rotation = { x = 90.0, y = 0.0, z = 0.0 } },
+        -- measured with the camera level (the Chest slot does not follow the view's pitch)
+        firstPerson = { offset = { x = 0.10, y = -0.60, z = 0.20 }, rotation = { x = 90.0, y = 0.0, z = 0.0 } },
     },
     -- Who may lift a crate off the ground: "anyone" (a crate left alone can be stolen: the run of
     -- its nomad fails) or "crew" (nomads on duty only).
