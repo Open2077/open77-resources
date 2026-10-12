@@ -160,7 +160,7 @@ local scenarios = {}
 function scenarios.layouts()
     local ex = setup()
     local r = {}
-    r.loaded_log = tostring(#logsMatching("4 layout%(s%) from data/layouts.json, 4 not measured yet") == 1)
+    r.loaded_log = tostring(#logsMatching("4 layout%(s%) from data/layouts.json, 3 not measured yet") == 1)
     local l = ex.layout(MACKINAW)
     r.mackinaw_slots = tostring(#l.slots)
     r.mackinaw_objects = tostring(l.objects)
@@ -543,7 +543,7 @@ function scenarios.lab()
     H.logs = {}
     H.commands.cargoinfo(0, { "NC-TRKB" })
     r.info_header = tostring(#logsMatching("cargoinfo NC%-TRKB: " .. MACKINAW:gsub("%.", "%%.") .. " state=out") == 1)
-    r.info_slot1 = tostring(#logsMatching("slot 1 %(2 max%): c1%-01%(nomad_crate%)@prop") == 1)
+    r.info_slot1 = tostring(#logsMatching("slot 1 %(2 max[^)]*%): c1%-01%(nomad_crate%)@prop") == 1)
     return r
 end
 

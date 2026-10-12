@@ -36,12 +36,12 @@ class Cargo(unittest.TestCase):
             "loaded_log": "true",
             "mackinaw_slots": "4",
             "mackinaw_objects": "8",
-            "mackinaw_measured": "false",
+            "mackinaw_measured": "true",              # integrator check 2026-10-12, two clients
             "alias_ncu": "Vehicle.v_standard3_thorton_mackinaw_02_player",
             "alias_pickup02": "Vehicle.v_standard25_thorton_colby_pickup_player",
             "unknown": "nil",
             "problems": "0",
-            "unmeasured_slots": "16",          # every shipped slot is a guess until measured
+            "unmeasured_slots": "12",          # the Mackinaw's 4 were checked on two clients; the rest are guesses
             "roundtrip": "ok",                 # cargolayout's JSON == the data file entry
             "v_ok": "ok",
         })

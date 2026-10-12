@@ -266,6 +266,10 @@ function L.tune(layout, slotId, x, y, z, yaw)
     if yaw ~= nil and (not finite(yaw) or math.abs(yaw) > L.LIMITS.yaw) then return nil, "invalid_yaw" end
     s.x, s.y, s.z = x, y, z
     if yaw ~= nil then s.yaw = yaw end
+    -- A tuned slot is a new guess until it is checked again on both clients, and a layout is
+    -- only measured while every one of its slots is.
+    s.measured = false
+    layout.measured = false
     return true
 end
 
