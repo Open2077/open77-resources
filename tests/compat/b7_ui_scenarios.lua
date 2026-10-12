@@ -566,6 +566,11 @@ function scenarios.hud_wallet_and_job()
     TriggerEvent("rp_economy:walletChanged", "soc", nil, "ncpd", 10, 10, "x")   -- a society: nobody
     H.run(1)
     out.epoch_push = tostring(hudPushes(2) - before)
+    -- A coordinator health transition redraws every connected panel at once (not on the keepalive).
+    local h1, h2 = hudPushes(1), hudPushes(2)
+    TriggerEvent("rp_economy:healthChanged", false, "store_unavailable")
+    H.run(1)
+    out.health_push = tostring(hudPushes(1) - h1) .. "," .. tostring(hudPushes(2) - h2)
     local targets = {}
     for _, e in ipairs(H.client) do
         if e.name == "rp_hud:state" then targets[tostring(e.target)] = true end

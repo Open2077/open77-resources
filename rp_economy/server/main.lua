@@ -770,6 +770,12 @@ local function preloadSocieties()
     for _, name in ipairs(Migrate.archivedSocieties()) do Wallets.society(name) end
 end
 
+-- Host-wide: every coordinator health transition (rp_hud redraws "offline, last known" at once
+-- instead of on its 30 s keepalive; live 2026-10-12 the marker had not appeared after 19 s).
+Tx.onChange(function(healthy, reason)
+    TriggerEvent("rp_economy:healthChanged", healthy == true, reason)
+end)
+
 Tx.onChange(function(healthy)
     if not healthy then return end
     CreateThread(function()
