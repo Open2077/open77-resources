@@ -232,6 +232,8 @@ AddEventHandler("rp_economy:walletChanged", function(kind, playerId)
     if (kind == "cash" or kind == "bank") and playerId ~= nil then push(playerId) end
 end)
 AddEventHandler("rp_jobs:workEpoch", function(playerId) push(playerId) end)
+-- The wallet store went down or came back: every panel's wallet state changed at once.
+AddEventHandler("rp_economy:healthChanged", function() pushEveryone() end)
 
 -- --------------------------------------------------------------------------
 -- Player lifecycle
