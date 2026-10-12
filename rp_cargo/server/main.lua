@@ -61,7 +61,10 @@ local function mayWrite(account, opId, playerId)
         if granted and grant == true then return true end
         return nil, "namespace_denied", { account = account, detail = granted and tostring(gwhy) or "rp_inventory_unavailable" }
     end
-    return nil, why or "namespace_denied", { account = account }
+    -- Any other account outside our writers may still be open to this one operation through a
+    -- two-party grant (`authorize`, e.g. rp_salvage's crate hold), which the coordinator does not
+    -- let us query: its transfer enforces writers and grants, so let it decide (C1 finding R-1).
+    return true
 end
 
 -- ---------------------------------------------------------------------------------------------
