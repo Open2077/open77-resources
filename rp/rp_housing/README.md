@@ -1,4 +1,11 @@
-# rp_housing - apartments and hideouts
+# rp_housing
+
+Lets players buy real Night City apartments from an agency at Kabuki Market, with keys to share, a private stash, rent every payday and eviction when they stop paying. Players can also choose to wake up at home when they reconnect.
+
+- **Docs:** [Networked world doors](https://open2077.net/docs/doors)
+- **Starts:** on its own
+- **Needs:** `open77_worldui`, `open77_uikit`, `open77_contextmenu`, `open77_notifications`
+- **Runs on:** server and client
 
 A roof over your head in Night City, for an Open77 RP server (build `2.31.13+op77.76`).
 Five real flats — V's apartment in Megabuilding H10, Judy's, Northside, Japantown, the Glen —
@@ -19,8 +26,8 @@ spawn-at-home lands on, `heading` the body yaw there) and the door is the flat's
 door**, found at runtime (next section). The door is a **two-sided pass-through**: two
 `Apartment door` rings, one on each side of it (`door_a`, `door_b`), and E on either one is an
 `Open77.players.teleport` to the other side behind a fade (`Config.enterFade`, 400 ms each way).
-Which side is the flat proper is **not knowable** from the door snapshot (Northside, measured
-2026-09-18: the AMM `interior` point `-1503.8, 2224.9` is the corridor in front of unit 1242,
+Which side is the flat proper is **not knowable** from the door snapshot (Northside, measured:
+the AMM `interior` point `-1503.8, 2224.9` is the corridor in front of unit 1242,
 not the flat), so the flat's "inside" is simply **whichever side of the door the player crosses
 to**: the server's `inside` flag toggles on every pass-through (first crossing = in, next = out,
 log `passed through the door of <id>: side A -> side B, inside=true`). A **Stash** ring (E opens
@@ -62,7 +69,7 @@ derivation the first time `open77_doors:get` sees the door.
 
 **Client POI ids are never reused in a session.** A ring re-created by `worldui remove` +
 `create` under the id it had before kept a frozen distance (`3.0 m`) and its E never fired
-(measured 2026-09-18, Northside, after the auto door resolved), while rings created once at
+(measured at Northside, after the auto door resolved), while rings created once at
 start worked. Every id therefore carries a generation suffix — `door_a:<id>:<n>`,
 `door_b:<id>:<n>`, `stash:<id>:<n>`, `agency:<n>` — and each move increments it: the client
 removes the old handle first, creates the new POI, and logs
@@ -210,7 +217,7 @@ for a `home_id` that is no longer in `shared/config.lua` is kept but ignored (lo
 `[rp_housing] store=kvp reason=...`. The choice is made once per boot. The stash content
 itself lives in `rp_inventory_stashes` (`rp_inventory`).
 
-## Staging: poses, props and durations (2026-09-18)
+## Staging: poses, props and durations
 
 Every action below plays a pose from the server's `open77_animations` catalogue
 (`Open77.animations.play`, permission `players.animations.control`), shows a curated prop

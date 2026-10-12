@@ -1,17 +1,24 @@
-# rp_salvage — the scrapyard job, on the world-interaction libraries (pilot C1)
+# rp_salvage
+
+Adds a scrapyard job at the Rancho Coronado junkyard: cut or pry wrecks, fill a crate, carry it to a truck, drive it to the buyer and sell it. It is built on the platform's job libraries, every step that moves value is a single durable operation, and a server runs it instead of rp_ferrailleur, never both.
+
+- **Docs:** [Build a job: prompts, animations, items and pay](https://open2077.net/docs/world-interaction), [Actions and carrying](https://open2077.net/docs/actions)
+- **Starts:** with `ensure rp_salvage` (it declares `auto_start false`)
+- **Needs:** `open77_transactions`, `open77_actions`, `open77_containers`, `open77_notifications`, `rp_jobs`, `rp_inventory`, `rp_economy`, `rp_garage`, `rp_cargo`
+- **Runs on:** server
 
 Cut or pry a wreck at the Rancho Coronado junkyard, fill a crate, carry it, load it on a truck,
 drive, unload it at the buyer and sell it. Every step that moves value is one durable,
 idempotent operation; every prompt, bar, claim and carry comes from a library, not from this
 resource.
 
-**Status: experimental; proven live on two clients (2026-10-12).** The whole loop (works, carry,
-truck, unload, sale), contention, cancellations, restarts, a database outage and authorization ran
-on two clients with both body rigs, on a SQL server with strict coordinator writers; the yard
+**Status: experimental.** The whole loop (works, carry,
+truck, unload, sale), contention, cancellations, restarts, a database outage and authorization have run
+in game with both body rigs, on a SQL server with strict coordinator writers; the yard
 positions were walked in game. The test script is in
 [`docs/world-interaction/c1-salvage.md`](../docs/world-interaction/c1-salvage.md) §6; evidence in
 the Open77 repository, `docs/research/world-interaction.md`. The `amb_*` job animations need the
-`Open77RP.archive` that ships them (not in the release archives as of 2026-10-12).
+`Open77RP.archive` that ships them (not yet in the release archives).
 
 ---
 
@@ -38,7 +45,7 @@ economies, plan decision 5; both also define the item `crowbar`). It never start
    created on `rp_salvage`'s behalf). The entry (B3-1, c1-salvage.md §7) ships with rp_economy from
    the `wi/reconcile-a13` merge (`wi/integration` ff0d303); an older rp_economy needs it added by
    hand, or every sale answers `mint_denied`.
-5. Lab without a database: `open77_transactions` store `lab_kvp` (+ `open77_transactions_lab 1`,
+5. Test server without a database: `open77_transactions` store `lab_kvp` (+ `open77_transactions_lab 1`,
    unmastered host) and `open77_containers_store lab_kvp` + `open77_containers_lab 1`. A server
    with a database needs neither.
 
@@ -204,7 +211,7 @@ the libraries' own (`off_duty`, `no_job`, `stale_job_epoch`, `no_access`, `cargo
 
 ## 4. Console (restricted: console or ACL `command.salvage.*`)
 
-Explicit player ids; each drives the same server path as the prompts, so a lab run never depends
+Explicit player ids; each drives the same server path as the prompts, so a test run never depends
 on aiming at a prompt.
 
 | Command | Does |

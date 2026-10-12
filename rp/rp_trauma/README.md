@@ -1,4 +1,11 @@
-# rp_trauma — Trauma Team and RP death
+# rp_trauma
+
+Replaces the instant respawn with a roleplay death: a player who dies stays down while on-duty Trauma Team medics are called, then is revived where they fell or wakes up at Viktor's clinic with a bill. It includes the medic commands of rp_medic, so run one or the other.
+
+- **Docs:** [Player health and stamina](https://open2077.net/docs/player-stats)
+- **Starts:** on its own
+- **Needs:** `open77_uikit`, `open77_contextmenu`, `open77_notifications`, `open77_props`
+- **Runs on:** server and client
 
 Open77 Lua resource (build `2.31.13+op77.76`) that replaces the automatic freeroam respawn
 with an RP death: a player who dies is **down** for `Config.downSeconds`, on-duty Trauma Team
@@ -251,7 +258,7 @@ Load `open77_uikit`, `open77_contextmenu`, `open77_notifications`, `rp_economy`,
 13. Other resources: `print(exports.rp_trauma:isDown(2), exports.rp_trauma:hasContract(2))`,
     `exports.rp_trauma:revive(2, 1)`.
 
-## Staging: poses, props and durations (2026-09-18)
+## Staging: poses, props and durations
 
 Every action below plays a pose from the server's `open77_animations` catalogue
 (`Open77.animations.play`, permission `players.animations.control`), shows a curated prop

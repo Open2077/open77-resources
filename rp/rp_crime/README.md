@@ -1,4 +1,11 @@
-# rp_crime — robberies, vehicle theft, street deals, contraband and a fence
+# rp_crime
+
+Adds the crime side of the city: shop robberies, lockpicking locked cars, street drug deals, stealing nomad cargo and selling stolen goods to a fence at night. Robberies, car thefts and some deals page the NCPD, which gives the police work.
+
+- **Docs:** [Player interactions](https://open2077.net/docs/player-interactions)
+- **Starts:** on its own
+- **Needs:** `open77_uikit`, `open77_player_interactions`, `open77_interactions`, `open77_notifications`, `open77_props`, `rp_economy`, `rp_inventory`, `rp_identity`, `rp_zones`, `rp_ncpd`, `rp_shops`, `rp_garage`, `rp_gangs`, `rp_nomade`
+- **Runs on:** server
 
 The crime side of the Night City RP build, the thing that gives the NCPD work. Build target
 **2.31.13+op77.76**. **Server-only**: no client script. Every distance, weapon check, item,
@@ -23,7 +30,7 @@ run from the game.
 ## Where things are (real Night City; freeroam spawn = Kabuki Market Centre `-1191.30, 2006.88, 7.82`)
 
 Everything is in `shared/config.lua` (`RpCrimeConfig`). The five shops are the Kabuki Market
-stalls (walked points, 2026-09-18); the fence works the Rancho Coronado junkyard out in the
+stalls (walked points); the fence works the Rancho Coronado junkyard out in the
 Badlands.
 
 | What | Position | From spawn | Config key |
@@ -173,7 +180,7 @@ path. **No database** (`ready` answers `database_unavailable`, or nothing answer
 kept) and the log says `store=kvp reason=...`. Rows logged before the store answered are queued and
 flushed. Cooldowns, the wanted list, gutted crates and pending deals live in memory.
 
-## Staging: poses, props and durations (2026-09-18)
+## Staging: poses, props and durations
 
 Every action below plays a pose from the server's `open77_animations` catalogue
 (`Open77.animations.play`, permission `players.animations.control`), shows a curated prop

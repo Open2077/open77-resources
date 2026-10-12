@@ -1,4 +1,11 @@
-# rp_identity - the civil registry of Night City
+# rp_identity
+
+Gives every player a citizen identity: a registration form on first connection, an ID card they can read or show to someone next to them, and their RP name above their body. Staff can edit a record with an admin command.
+
+- **Docs:** [Player identity and username](https://open2077.net/docs/identity)
+- **Starts:** on its own
+- **Needs:** `open77_uikit`, `open77_contextmenu`, `open77_notifications`
+- **Runs on:** server and client
 
 One persistent citizen record per durable identity (`Open77.players.identifier`), a
 registration form on first connection, an ID card you can read or show to somebody standing

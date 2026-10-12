@@ -1,4 +1,11 @@
-# rp_delamain — player-driven Delamain cabs
+# rp_delamain
+
+Lets players drive Delamain cabs for a living: a customer calls a cab, every on-duty driver is paged, and the meter runs while the customer rides. The fare is paid in cash, 80% to the driver and 20% to the Delamain society, and with no driver on duty the customer is sent to the NPC taxi of eval_taxi.
+
+- **Docs:** [Vanilla blips and mappins](https://open2077.net/docs/blips)
+- **Starts:** on its own
+- **Needs:** nothing
+- **Runs on:** server and client
 
 Server-authoritative taxi service for an Open77 RP server (build `2.31.13+op77.76`). A client
 calls a cab, every **on-duty Delamain driver** (`rp_jobs`, job `delamain`) is paged with the
@@ -127,7 +134,7 @@ resource's `Open77.kvp` store (`ride:<n>`, `rides:count`, `stats:<identifier>`) 
 [rp_delamain] ride 2 cancelled by driver_cancelled phase_was=waiting metres=0
 ```
 
-## Staging: poses, props and durations (2026-09-18)
+## Staging: poses, props and durations
 
 Every action below plays a pose from the server's `open77_animations` catalogue
 (`Open77.animations.play`, permission `players.animations.control`), shows a curated prop
@@ -195,7 +202,7 @@ passenger gets out.
 
 ## Test in 2 minutes
 
-Two clients at the Kabuki Market spawn (`-1191.3, 2006.9, 7.8`; the market lanes are
+Two players at the Kabuki Market spawn (`-1191.3, 2006.9, 7.8`; the market lanes are
 pedestrian — walk out to the South Gate street, `-1218, 1950`, for the car), ids `1` (driver)
 and `2` (client); `rp_jobs` v2, `rp_economy`, `rp_bank` running. Log on start: `[rp_delamain] started:
 ...` then `[rp_delamain] store=sql table=rp_delamain_rides`.

@@ -1,4 +1,11 @@
-# rp_mdt — the NCPD / Trauma Team tablet
+# rp_mdt
+
+Gives on-duty NCPD officers and Trauma Team medics a tablet, opened with /mdt, to look up citizens, warrants, fines, criminal records, plates and medical contracts. Officers act on what they find through the same rules as the chat commands.
+
+- **Docs:** none yet
+- **Starts:** on its own
+- **Needs:** nothing
+- **Runs on:** server and client
 
 A WebUI **mobile data terminal** for the Night City RP build (Open77 `2.31.13+op77.76`): a
 900×600 dark panel — NCPD blue for the police, Trauma red for the medics — opened with `/mdt`

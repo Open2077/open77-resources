@@ -1,4 +1,11 @@
-# rp_bank — bank accounts, ATMs and societies
+# rp_bank
+
+Gives every player a bank account next to their cash, used at ATMs around Night City or from anywhere with chat commands. Players deposit, withdraw and wire money, and every job gets a society account that pays its staff.
+
+- **Docs:** [Durable transactions](https://open2077.net/docs/transactions)
+- **Starts:** on its own
+- **Needs:** `open77_uikit`, `open77_worldui`
+- **Runs on:** server and client
 
 Server-authoritative bank for an Open77 RP server. Version **2.0.0** is a **facade** (world-interaction
 row B3): the **account** (`bank:<subject>`), the **society** funds (`soc:<name>`) and the cash
@@ -113,7 +120,7 @@ Re-published from `rp_economy:walletChanged` (one tick later than 1.x). `kind` i
 `deposit withdraw charge transfer_out transfer_in society_add society_remove`, or `sync` when the
 cache caught up with a change made elsewhere.
 
-## Staging: poses, props and durations (2026-09-18)
+## Staging: poses, props and durations
 
 Every action below plays a pose from the server's `open77_animations` catalogue
 (`Open77.animations.play`, permission `players.animations.control`), shows a curated prop
@@ -164,7 +171,7 @@ server checks distance against the same list and spawns one **terminal prop** pe
 (`Open77.props.create`, `Config.AtmProp.model` = the curated prop alias `street.parking_meter`
 (see `prop.catalog`; a raw `.mesh` path renders as a white slab), 1 m off the ring, removed on
 stop; a refusal only logs). Five real Night City points,
-measured 2026-09-18 — three around the freeroam spawn (Kabuki Market Centre
+measured — three around the freeroam spawn (Kabuki Market Centre
 `-1191.30, 2006.88, 7.82`), two inside landmarks:
 
 | ATM | Ring (x, y, z) | Terminal | Where |

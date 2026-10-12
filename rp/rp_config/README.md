@@ -1,5 +1,12 @@
 # rp_config
 
+Gives you one catalogue of every RP setting, such as prices, salaries, timings and positions, with live overrides saved in SQL. Staff change a value with the /config command, and the resources that read rp_config pick it up without a restart.
+
+- **Docs:** [Cross-resource server exports](https://open2077.net/docs/server-exports)
+- **Starts:** on its own
+- **Needs:** nothing
+- **Runs on:** server
+
 Central, hot-reloadable settings store for the Night City RP resources. **Server-only**
 (no client script). Build `2.31.13+op77.76`.
 
@@ -219,7 +226,7 @@ without the slash from the server console. Stand anywhere -- the freeroam spawn
   sections to `shared/defaults.lua` once their configs are frozen. `rp_crime` already reads
   `rp_crime.<path>` through its own `tunable()` helper (19 keys, listed in the sheet): until
   its section exists those reads answer `unknown key` and the file value stands.
-- The catalogue was re-synced on 2026-09-18 after the move from the eval plateau to the real
+- The catalogue was re-synced after the move from the eval plateau to the real
   Night City map: every position, zone name (`kabuki_market`, `kabuki`, `afterlife`, `lizzies`,
   `h10`, `viktor_clinic`, `ncpd_hq`, `junkyard`, `nomad_camp`, `westbrook_dealer`, `badlands`),
   ATM id and home price now mirrors the resources' current `shared/config.lua`; `rp_housing`

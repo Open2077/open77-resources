@@ -1,5 +1,12 @@
 # rp_inventory
 
+Gives every player pockets with a weight limit, opened as a panel with /inv, where they use, drop and give items. Dropped items become loot on the ground, and shared stashes open in the same panel.
+
+- **Docs:** [Durable transactions](https://open2077.net/docs/transactions), [Server loot and ground drops](https://open2077.net/docs/loot)
+- **Starts:** on its own
+- **Needs:** `open77_uikit`, `open77_contextmenu`, `open77_loot`
+- **Runs on:** server and client
+
 The pockets of a Night City RP server. Server-authoritative: clients only render
 and request. Two storage backends, chosen once per boot (convar
 `rp_inventory_backend`, else `RpInventoryConfig.backend`), never switched while
@@ -458,9 +465,9 @@ reached through exports inside `pcall` and are optional at runtime.
     in chat `Pockets - 27.6 / 40 kg`, the listing, then
     `Panel unavailable (webui_unavailable); listed in chat. Commands: /use /drop /give.`
 
-### Transactions backend (lab only until proven)
+### Transactions backend (test servers only for now)
 
-Not yet run in game. On a lab server with a disposable database:
+Not yet run in game. On a test server with a disposable database:
 
 1. `resources.load` gains `open77_transactions`; the convar
    `rp_inventory_backend transactions`. The log must say

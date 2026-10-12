@@ -1,4 +1,11 @@
-# rp_mecano — the garage job
+# rp_mecano
+
+Adds a mechanic job: repair, refuel, paint and tow vehicles, send invoices and run the impound lot. Every command needs the mecano job on duty and works on server vehicles only.
+
+- **Docs:** [Build a job: prompts, animations, items and pay](https://open2077.net/docs/world-interaction), [Network vehicles](https://open2077.net/docs/vehicles)
+- **Starts:** on its own
+- **Needs:** `open77_uikit`, `open77_worldui`, `open77_contextmenu`, `open77_player_interactions`, `open77_notifications`, `open77_props`, `rp_jobs`, `rp_inventory`
+- **Runs on:** server and client
 
 Repairs, towing, paint jobs, invoices, the impound lot and refuelling for the Night City RP
 build (Open77 `2.31.13+op77.76`). Server-authoritative: the server checks the job and the duty
@@ -163,7 +170,7 @@ first time the truck drives faster than 1.5 m/s — if the towed car ever appear
 truck it flips on the next tick and logs `tow: yaw sign flipped`. It is a teleport chain, not
 physics: the towed car has no wheels on the ground between ticks.
 
-## Staging: poses, props and durations (2026-09-18)
+## Staging: poses, props and durations
 
 Every action below plays a pose from the server's `open77_animations` catalogue
 (`Open77.animations.play`, permission `players.animations.control`), shows a curated prop
@@ -233,7 +240,7 @@ reached through `pcall`; `rp_zones` and `open77_fuel` are optional (fallbacks ab
 
 ## Test in 2 minutes
 
-Two clients on the Afterlife street (`-1396, 966, 23.5`, the workshop ring — drive there from
+Two players on the Afterlife street (`-1396, 966, 23.5`, the workshop ring — drive there from
 the Kabuki Market spawn, ~1.1 km south, or console `tp <id> -1396 966 23.6`): **1** = mechanic,
 **2** = customer. `rp_jobs`, `rp_inventory`, `rp_economy`, `rp_bank`, `rp_zones`, `open77_uikit`,
 `open77_contextmenu`, `open77_player_interactions`, `open77_notifications` running (and

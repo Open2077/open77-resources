@@ -1,4 +1,11 @@
-# rp_weapons_effect — weapon workshop
+# rp_weapons_effect
+
+Gives administrators an English weapon workshop: browse firearm records, equip a weapon, adjust its native tuning, refill ammunition and test impact blasts on nearby vehicles and characters. It needs a compatible development client with native weapon tuning.
+
+- **Docs:** [Weapon customization](https://open2077.net/docs/weapon-customization)
+- **Starts:** with `ensure rp_weapons_effect` (it declares `auto_start false`)
+- **Needs:** nothing
+- **Runs on:** server and client
 
 An opt-in administrator weapon workshop with an English WebUI and the bundled Freeroam theme. Browse 137 firearm records, equip a weapon, adjust native tuning, refill ammunition and test impact blasts on nearby vehicles and network characters.
 
@@ -79,7 +86,7 @@ All commands use the same administrator ACL and target the requesting player:
 - Impulse counters report queued events, not measured vehicle movement. No extra explosion VFX is generated.
 - Character launches exclude the shooter. The server derives targets in the same routing bucket and within the three-dimensional blast radius, capped at 256 candidates. Targets must be ready, alive and unmounted; existing motion and recovery protection can refuse another launch. Character strengths are capped at 20 m/s horizontally and 14 m/s upward.
 - Real victims apply one native player impulse on their own client. Updated headless bots instead publish a bounded ballistic trajectory with gravity and a horizontal ground plane at their initial height. Headless bots do not simulate terrain or world collisions. Observers follow owner snapshots and display a reaction pose; they do not independently move the victim's proxy.
-- The native `open77:weaponBlast(owner, record, sequence, x, y, z)` event supplies string arguments. The workshop forwards a profile-versioned request; the server rechecks ACL, record, sequence, cooldown, shooter life and reported impact distance (at most 250 meters), then chooses targets itself. This administrator lab request is not a trusted competitive hit or damage receipt.
+- The native `open77:weaponBlast(owner, record, sequence, x, y, z)` event supplies string arguments. The workshop forwards a profile-versioned request; the server rechecks ACL, record, sequence, cooldown, shooter life and reported impact distance (at most 250 meters), then chooses targets itself. This administrator workshop request is not a trusted competitive hit or damage receipt.
 - When the optional platform helper `open77_crowd_ambient` is running, its workspots are stopped through an awaited batch export before motion is admitted. The helper is not bundled in this public example. Profiles, life state, bucket and target range are rechecked after the wait.
 - `projectileContacts` and `trackedProjectiles` diagnose the tracked-projectile path only. Native entity hits and `GameEffectExecutor_StimOnHit` can produce blasts with `projectileContacts` still zero. Character authorization/refusal counts are separate from queued car impulses. Neither counter proves visible flight; verify actual owner snapshots and motion.
 - The real-owner adapter and headless bot paths have been exercised separately. Weapon-hit behavior between two real clients remains unverified.

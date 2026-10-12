@@ -1,4 +1,11 @@
-# rp_nomade — convoys and crate deliveries in the Badlands
+# rp_nomade
+
+Adds the nomad job: take a contract at the Aldecaldos camp, carry crates into a truck, drive them across the Badlands through an ambush, and unload them for pay. It is the reference for carrying an object while walking and for crates attached to a truck bed.
+
+- **Docs:** [Animated actions: a pose, a prop in the hands, a real duration](https://open2077.net/docs/animated-actions), [Synchronized attachments](https://open2077.net/docs/attachments)
+- **Starts:** on its own
+- **Needs:** `open77_uikit`, `open77_worldui`, `open77_interactions`, `open77_props`, `open77_animations`, `open77_notifications`
+- **Runs on:** server and client
 
 The scripted run of the `nomade` job (rp_jobs v2), replacing the v1 courier mission.
 Use the current base build with its carry layer and matching client assets; the
@@ -75,7 +82,7 @@ Offsets for the body root cannot be reused as Chest offsets.
 **The crate in first person** (`Carry.firstPerson`). The binding above is measured on the
 third-person rig (the F7 body, everyone else's proxy). In first person the carrier's own client
 parents the crate to V's own `Chest`, which sits right under the camera: with the same numbers
-the crate's lid covers the whole screen (seen 2026-09-19). `firstPerson` is the placement that
+the crate's lid covers the whole screen. `firstPerson` is the placement that
 client uses instead -- only that client; other players keep `offset` / `rotation`. In the Chest
 frame +x is up and -y forward, so the default is the third-person spot 0.35 m lower and 0.15 m
 further out (crate low in the view, top edge under the crosshair). Tune it live with
@@ -439,7 +446,7 @@ real Badlands drive: allow the 20 minutes.
     rings and truck are gone, `/money` is 100 €$ lighter (deposit kept). **Militech salvage**
     goes to the Drive-In Theater, which has no rp_zones zone: the `Unload` prompt appears from
     the 1 s tick once the truck is within 40 m of the screen (no `Drive-In` toast).
-12. **Convoy (optional, two clients):** second player `setjob 2 nomade 0`, `/service`, stands
+12. **Convoy (optional, two players):** second player `setjob 2 nomade 0`, `/service`, stands
     within 30 m of the truck at unload time → driver `+450 €$` and both `Convoy bonus: +56 €$ (2
     nomads rode together).` (25 % of 450 = 113, split in two); log `... bonus=113 convoy=2`.
 

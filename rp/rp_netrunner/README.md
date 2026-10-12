@@ -1,4 +1,11 @@
-# rp_netrunner — hacking contracts
+# rp_netrunner
+
+Adds a netrunner job: track a player with a ping, hack them with Short Circuit or Overheat, jam the NCPD radio, and breach an access point for a door or a data bounty. Every contract uses up a quickhack item and may leave a trace in the NCPD records.
+
+- **Docs:** [Hacking and counterplay](https://open2077.net/docs/hacking)
+- **Starts:** on its own
+- **Needs:** `open77_uikit`, `open77_worldui`, `open77_contextmenu`, `open77_props`
+- **Runs on:** server and client
 
 The netrunner job of the Night City RP build (Open77 build `2.31.13+op77.76`): a tracking
 **ping**, **Short Circuit** and **Overheat** uploads through the platform's hacking kit, a
@@ -168,7 +175,7 @@ unavailable (<reason>)`), and the data bounty is paid instead — that is the ex
 - The ping blip is positional (the server relays the target's position every 2 s), not attached
   to the target's entity: it works even when the target is not streamed on the netrunner's client.
 
-## Staging: poses, props and durations (2026-09-18)
+## Staging: poses, props and durations
 
 Every action below plays a pose from the server's `open77_animations` catalogue
 (`Open77.animations.play`, permission `players.animations.control`), shows a curated prop

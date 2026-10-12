@@ -1,4 +1,11 @@
-# rp_hud — the discreet RP panel
+# rp_hud
+
+Shows each player a small panel in the bottom-left corner: cash, bank balance, job and duty, the three needs, the current zone, the server clock and their RP name. It only displays what the other RP resources report, and /interface hides it.
+
+- **Docs:** [Vanilla HUD visibility](https://open2077.net/docs/hud-visibility)
+- **Starts:** on its own
+- **Needs:** nothing
+- **Runs on:** server and client
 
 A small bottom-left WebUI panel for the Night City RP build (Open77 `2.31.13+op77.76`):
 cash, bank account, job and grade with a duty dot, the three needs bars, the zone you stand
@@ -179,5 +186,5 @@ At the freeroam spawn Kabuki Market `-1191.30, 2006.88, 7.82 (Kabuki Market Cent
    4 s later the server log reads `[rp_hud] rp_needs restarted, refreshing 1 panel(s)` and
    the bars show the reloaded values. With a resource that is not in the load list at all,
    its row stays at `--` (bars empty, `unemployed`, `Open Night City`) and nothing errors.
-9. Two clients: each panel shows its own id and name; a `/pay` between them updates both
+9. Two players: each panel shows its own id and name; a `/pay` between them updates both
    `CASH` rows.

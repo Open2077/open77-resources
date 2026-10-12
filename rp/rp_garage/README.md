@@ -1,4 +1,11 @@
-# rp_garage — owned vehicles, plates, keys, garages, dealership and impound
+# rp_garage
+
+Gives players vehicles they own: a dealership sells them, garages store them, plates and duplicate keys decide who can drive, and an impound lot keeps a car until its owner pays. It is also the one place other resources ask whether a player may drive, open or load a vehicle.
+
+- **Docs:** [Network vehicles](https://open2077.net/docs/vehicles)
+- **Starts:** on its own
+- **Needs:** `open77_uikit`, `open77_worldui`, `open77_contextmenu`, `open77_notifications`
+- **Runs on:** server and client
 
 Server-authoritative vehicle ownership for the Night City RP build (Open77 `2.31.13+op77.76`).
 Every vehicle this resource creates carries a **plate** `NC-XXXX` (state-bag key `plate`, the one
@@ -98,7 +105,7 @@ only sends the target id; the server resolves distance and keys again.
 
 From the server console every command answers `run it from the game`. The console has one
 command of its own: `vehwarrant <plate> <minutes> [reason]` issues a police warrant on that car
-for every NCPD officer on duty (`job:ncpd`), `vehwarrant <plate> off` lifts it (lab and admin
+for every NCPD officer on duty (`job:ncpd`), `vehwarrant <plate> off` lifts it (test and admin
 use; a judge flow in `rp_mdt` would call `authorize` instead).
 
 **`/car` (freeroam, admin) stays.** It spawns an untracked vehicle: no plate, no owner, no row.

@@ -1,4 +1,11 @@
-# rp_shops v2 — shops in the world
+# rp_shops
+
+Opens five shops at real Kabuki Market stalls, each with a vendor NPC: a supermarket, a pharmacy, a gun shop that needs an NCPD licence, a clothes shop and a black market that only trades at night. Players pay in cash first, then from their bank account, and a shop can be run by a player job.
+
+- **Docs:** [World-anchored POIs](https://open2077.net/docs/worldui), [The UI kit](https://open2077.net/docs/ui-kit)
+- **Starts:** on its own
+- **Needs:** `open77_uikit`, `open77_worldui`, `open77_weapons`, `open77_props`
+- **Runs on:** server and client
 
 Five real stalls of Kabuki Market (Watson), each with a **vendor NPC** standing behind the
 counter, a real stall prop, a ring + map pin + **E** prompt, a UI-kit catalogue, a quantity dialog, and a payment
@@ -17,7 +24,7 @@ the server, which re-checks the distance after every dialog.
 ## The shops (`shared/config.lua`)
 
 Five real stalls of **Kabuki Market** (Watson), the hub of the server: every ring stands on a
-walked market spot (2026-09-18, z exact), the vendor NPC stands 1.2 m behind the ring facing it
+walked market spot (z exact), the vendor NPC stands 1.2 m behind the ring facing it
 (`vendorPosition`, `yaw`), and one real prop dresses each stall 0.8 m off the ring next to the
 vendor (`prop.models`, curated prop aliases — see `prop.catalog`; a raw `.mesh` path renders as
 a white slab — tried in order, spawned by the server on start with `Open77.props.create` —
@@ -147,7 +154,7 @@ the log says `store=kvp reason=...`, and there is no sales ledger (sales are sti
 [rp_shops] no clock authority (environment_unavailable): the black market never closes
 ```
 
-## Staging: poses, props and durations (2026-09-18)
+## Staging: poses, props and durations
 
 Every action below plays a pose from the server's `open77_animations` catalogue
 (`Open77.animations.play`, permission `players.animations.control`), shows a curated prop

@@ -1,5 +1,12 @@
 # rp_drones
 
+Puts on a drone light show: real drone bodies hang in the night sky, light up and switch between shapes and an OPEN//77 sign that every player sees in the same place at the same time. Staff start a show with the /droneshow command, and the whole show runs in server Lua.
+
+- **Docs:** [Server-owned NPCs](https://open2077.net/docs/npcs), [Visual and audio effects](https://open2077.net/docs/effects)
+- **Starts:** on its own
+- **Needs:** nothing
+- **Runs on:** server
+
 A drone light show. Two dozen lights hang in the night sky, ignite, and morph
 between a ring, a heart and the **77** — and every player watching sees the
 same shape in the same place at the same instant.
@@ -130,7 +137,7 @@ takes one straight. Two things about them are now measured **on screen**, not
 inferred from the canonical record, and between them they decide the whole
 design of this style.
 
-### The hold works — confirmed visually, 2026-09-20
+### The hold works — confirmed visually
 
 A drone spawned at 10 m, with `stage.facing` set to the player's own yaw so it
 landed in his line of sight, was captured on his screen: a real drone body, dark
@@ -143,7 +150,7 @@ platform's research is real and it is about *humanoid puppets with an AI agent*;
 every drone record resolves to an `av_*.ent` **vehicle** template instead, and a
 frozen one hangs exactly where it is put.
 
-### The morph does not — refuted visually, 2026-09-20, in both AI modes
+### The morph does not — refuted visually, in both AI modes
 
 `npcmove` at 1 Hz over 30 m: **58 writes sent, 58 accepted**, steps up to
 7.79 m, the canonical position changing on 9 reads out of 10 — and across four
@@ -201,7 +208,7 @@ instruments are reachable; it is `play` that refuses, and its message says why.
 
 ### The blink — still open, and one hypothesis is dead
 
-Reported in game 2026-09-20: the drones of a held figure **flicker in and out**,
+Reported in game: the drones of a held figure **flicker in and out**,
 while the server writes nothing at all and nothing is simulating them.
 
 **The leading hypothesis was tested and it did not fire.** The candidate was a
@@ -234,7 +241,7 @@ bytes a drone. So motion is not written, it is **redrawn**: interpolate between
 two formations, cut each intermediate pose, hold it just long enough for the
 next to replace it.
 
-**Measured 2026-09-20**, 8 drones at 24 m, from the driver's own readiness
+**Measured**, 8 drones at 24 m, from the driver's own readiness
 counter, three movements per run:
 
 | Frame | Result |
@@ -647,7 +654,7 @@ so a loop left running is not invisible.
 
 ### Landing lights
 
-Measured 2026-09-20, the owner watching a cut show: *"ils font pas trop de
+Measured while the owner watched a cut show: *"ils font pas trop de
 lumiere donc pas tres impressionant dans le ciel"*. He is right — a drone rig's
 own emissives are a couple of small lamps meant to be seen from a few metres,
 and the hull is dark.
@@ -670,7 +677,7 @@ rather than hidden.
 
 ### Thirty-five dark drones, and why the server log showed nothing
 
-Measured 2026-09-21, from a photograph the owner sent of the sign: *"pourquoi
+Measured from a photograph the owner sent of the sign: *"pourquoi
 certain sont pas allume"*. The left third of `OPEN//77` was dark hulls; the
 rest was lit. The server log was clean — `88 bodies and 88 lights spawned`,
 every call answered an id.
@@ -718,7 +725,7 @@ moved on.
 
 ### Which side of the drone the audience sees
 
-Measured 2026-09-21, the same evening: *"met les dans le sens inverse les
+Measured the same evening: *"met les dans le sens inverse les
 drones comme ca on verra leur lumiere violette, la on les vois a l'envers"*.
 
 Every body was spawned at `yaw = 0` — due north — because the *picture* already

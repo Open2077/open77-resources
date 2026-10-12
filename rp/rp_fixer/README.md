@@ -1,4 +1,11 @@
-# rp_fixer — the fixer's gig board
+# rp_fixer
+
+Adds a fixer and a gig board at the back of the Afterlife: the fixer publishes gigs, mercs take one at a time, run it against the clock and are paid in cash. The fixer's society takes 15%, and each success adds reputation that unlocks better-paid gigs.
+
+- **Docs:** [Build a job: prompts, animations, items and pay](https://open2077.net/docs/world-interaction)
+- **Starts:** on its own
+- **Needs:** `open77_uikit`, `open77_worldui`, `open77_props`
+- **Runs on:** server and client
 
 Gigs for a Night City RP server on Open77 (build `2.31.13+op77.76`). The fixer publishes
 gigs on a board at the office — Rogue's meeting room at the back of **The Afterlife**; mercs
@@ -194,7 +201,7 @@ success, and the server measures the prompt distance in 3D. Walked points carry 
 floor height, AMM points +0.1 m; if a ring is not visible, stand on the spot, `/pos`, and
 paste the ground height.
 
-## Staging: poses, props and durations (2026-09-18)
+## Staging: poses, props and durations
 
 Every action below plays a pose from the server's `open77_animations` catalogue
 (`Open77.animations.play`, permission `players.animations.control`), shows a curated prop

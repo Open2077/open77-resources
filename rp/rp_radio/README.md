@@ -1,4 +1,11 @@
-# rp_radio - handheld radio (voice + text)
+# rp_radio
+
+Gives players a handheld radio: tune a frequency with /radio and talk to everyone on it with a push-to-talk key or in text. Some bands are reserved for jobs on duty, and a netrunner can jam a band.
+
+- **Docs:** [Integrated voice chat](https://open2077.net/docs/voice)
+- **Starts:** on its own
+- **Needs:** nothing
+- **Runs on:** server and client
 
 A pocket radio for the Night City RP server. `/radio 95.5` tunes the handheld to a
 frequency; everyone on the same frequency shares one Open77 **voice channel**

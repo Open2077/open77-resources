@@ -1,5 +1,12 @@
 # rp_zones
 
+Names the places of Night City for the other RP resources: each zone announces itself when you enter, gets a map pin, and can be a safe zone where nobody can be hurt. Job resources ask it which zone a player stands in.
+
+- **Docs:** [Zones](https://open2077.net/docs/zones)
+- **Starts:** on its own
+- **Needs:** `open77_notifications`, `open77_worldui`
+- **Runs on:** server and client
+
 Named zones for the Night City RP build: an announcement on entry, a server-authoritative
 `zoneOf`, safe zones where nobody can be hurt, a map pin per zone and a ground ring around the
 small ones. Every job resource (`rp_ncpd`, `rp_trauma`, `rp_mecano`, `rp_delamain`, ...) reads
@@ -68,7 +75,7 @@ if ok and zone and zone.kind == "clinic" then ... end
 
 ## Shipped zones
 
-Real Night City places, measured on 2026-09-18 (walked points in Kabuki, AMM interiors for the
+Real Night City places, measured (walked points in Kabuki, AMM interiors for the
 landmarks). The freeroam spawn is **Kabuki Market Centre** `-1191.30, 2006.88, 7.82` (Watson).
 Circles (`maxHeight` 15 m unless noted) except `badlands`, which is a polygon. Zones with a
 radius of at most 25 m draw a ground ring.

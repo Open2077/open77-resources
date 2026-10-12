@@ -1,4 +1,11 @@
-# rp_medic — medical service (server-only)
+# rp_medic
+
+Lets players with the medic job heal and revive other players for a fee, and gives everyone an emergency call. rp_trauma replaces it, so run one or the other, not both.
+
+- **Docs:** [Player health and stamina](https://open2077.net/docs/player-stats)
+- **Starts:** on its own
+- **Needs:** `rp_economy`, `rp_jobs`, `open77_uikit`, `open77_props`
+- **Runs on:** server
 
 > The verbs are `/soin` and `/reanimer`: `/heal` already belongs to the admin menu (`open77_admin`) and `/revive` to freeroam, and a command name registered twice is served by the first resource.
 
@@ -56,7 +63,7 @@ id. An identifier that cannot be found (player gone) simply skips the write.
 `players.life.read` (`isDead`), `players.life.revive` (`revive`), `network.events`
 (`RegisterNetEvent("chat:ready")` for the suggestions), `acl.read` (`acl.isAllowed`).
 
-## Staging: poses, props and durations (2026-09-18)
+## Staging: poses, props and durations
 
 Every action below plays a pose from the server's `open77_animations` catalogue
 (`Open77.animations.play`, permission `players.animations.control`), shows a curated prop
@@ -93,7 +100,7 @@ an unknown list `stage <key>: no known profile among [...]`, a refused prop `sta
 
 1. Load `rp_economy`, `rp_jobs` and `rp_medic` in `server.jsonc` (`resources.load`) and
    start the server. The log shows `[rp_medic] started: fees heal=100 revive=300 ...`.
-2. Connect two clients A and B. Give A the job through `rp_jobs` (for instance `/job medecin`
+2. Connect two players A and B. Give A the job through `rp_jobs` (for instance `/job medecin`
    with that resource) and B some money through `rp_economy` (`/givemoney`). Note the ids with `/id`.
 3. B types `/911 I got shot`: A receives the "911" alert with the rounded position, B reads
    "Call relayed to 1 responder(s)".

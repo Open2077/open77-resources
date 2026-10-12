@@ -1,6 +1,8 @@
-# Scripts RP — serveur Night City (générés via le Devkit MCP)
+# Le pack roleplay Night City
 
-> Plan complet v2 : `PLAN.html` à la racine du dépôt.
+Ce dossier `rp/` d'`open77-resources` est le pack roleplay Night City complet. Les ressources de la plateforme sur lesquelles il tourne sont dans [`../system/`](../system/), et le téléchargement de ton serveur les contient déjà.
+
+> Plan complet v2 : [`docs/PLAN.html`](docs/PLAN.html).
 
 **Depuis le 18 septembre au soir, tout le serveur vit dans le vrai Night City.** Le plateau
 d'eval des Badlands a disparu : le spawn freeroam est **Kabuki Market Centre**

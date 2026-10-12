@@ -1,4 +1,11 @@
-# rp_ambiance — the living-city layer
+# rp_ambiance
+
+Makes Night City feel alive: a day and night cycle with changing weather, civilian extras in the busy zones, rotating server notices, NCPD sirens and an ambience sound loop per zone. You tune each layer in shared/config.lua and steer it live with the /ambiance admin command.
+
+- **Docs:** [Synchronised time and weather](https://open2077.net/docs/weather)
+- **Starts:** on its own
+- **Needs:** `open77_notifications`, `rp_zones`
+- **Runs on:** server and client
 
 Day cycle and weather, civilian figurants in the key zones, rotating server notices, NCPD
 alert sirens and an ambience loop per zone, for the Night City RP build on Open77

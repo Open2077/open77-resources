@@ -1,4 +1,11 @@
-# rp_ferrailleur — scrap and salvage out of town
+# rp_ferrailleur
+
+Adds a scrapper job at the Rancho Coronado junkyard: buy a crowbar, pry open wrecks for scrap and sell it to a dealer NPC whose prices change every ten minutes. Your crowbar wears out, and a server runs either this resource or rp_salvage, never both.
+
+- **Docs:** [Build a job: prompts, animations, items and pay](https://open2077.net/docs/world-interaction)
+- **Starts:** on its own
+- **Needs:** `open77_uikit`, `open77_worldui`, `open77_notifications`, `open77_props`
+- **Runs on:** server and client
 
 The "miner" job of Night City for an Open77 RP server (build `2.31.13+op77.76`): a scrapper
 clocks in, pries wrecks open in the **Rancho Coronado junkyard** with a **crowbar** that wears
@@ -145,7 +152,7 @@ reason=...`. The choice is kept for the whole boot.
 Wreck states and prices live in memory only: a restart brings every wreck back and redraws
 the prices.
 
-## Staging: poses, props and durations (2026-09-18)
+## Staging: poses, props and durations
 
 Every action below plays a pose from the server's `open77_animations` catalogue
 (`Open77.animations.play`, permission `players.animations.control`), shows a curated prop

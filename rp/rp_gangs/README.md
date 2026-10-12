@@ -1,4 +1,11 @@
-# rp_gangs — territories and criminal life
+# rp_gangs
+
+Adds gangs that fight over territory: members earn influence in a zone, the gang with the most influence holds it and collects a tribute, and a buyer NPC in each territory pays cash for drug packs. Gangs can also rob a cuffed or surrendering player, declare war on a territory and run a racket that pages the NCPD.
+
+- **Docs:** [Build a job: prompts, animations, items and pay](https://open2077.net/docs/world-interaction)
+- **Starts:** on its own
+- **Needs:** `open77_contextmenu`, `open77_interactions`, `open77_notifications`, `open77_props`
+- **Runs on:** server and client
 
 Gangs for a Night City RP server on Open77 (build `2.31.13+op77.76`): seven gangs, a
 membership with three ranks, **influence** per territory (the gang with the most points holds
@@ -30,7 +37,7 @@ Commands accept a gang or a territory by id, label or unambiguous prefix (`mael`
 
 ## Territories
 
-Territories are `rp_zones` zones, real Night City places (measured 2026-09-18). The freeroam
+Territories are `rp_zones` zones, real Night City places (measured). The freeroam
 spawn is Kabuki Market Centre `-1191.30, 2006.88, 7.82`. No territory has a default holder.
 
 | Territory | Zone centre | Buyer NPC (+ crate prop) | From spawn |
@@ -197,7 +204,7 @@ Wars, cooldowns and the buyer NPCs are in memory only: a resource stop ends ever
 [rp_gangs] war end zone=junkyard attacker=maelstrom defender=scavs score=6-4 winner=maelstrom (time)
 ```
 
-## Staging: poses, props and durations (2026-09-18)
+## Staging: poses, props and durations
 
 Every action below plays a pose from the server's `open77_animations` catalogue
 (`Open77.animations.play`, permission `players.animations.control`), shows a curated prop

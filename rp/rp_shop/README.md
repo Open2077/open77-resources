@@ -1,4 +1,11 @@
-# rp_shop — server-side shop
+# rp_shop
+
+Gives your server a simple chat shop: /shop lists the catalogue, /buy sells heals, armour, weapons and vehicles, and /sell takes back a vehicle bought here for half its price. rp_shops replaces it with real shops in the world, so do not load both.
+
+- **Docs:** [Weapon Lua API](https://open2077.net/docs/weapons-api)
+- **Starts:** on its own
+- **Needs:** `rp_economy`, `open77_weapons`, `open77_props`
+- **Runs on:** server
 
 **Server-only** resource: a shop for an RP server. Money always goes through the
 `rp_economy` exports, never through this resource.
@@ -49,7 +56,7 @@ model) is ignored and then purged.
 If `rp_economy` is not loaded, the shop stays usable read-only
 (`/shop`) and refuses purchases with a clear message.
 
-## Staging: poses, props and durations (2026-09-18)
+## Staging: poses, props and durations
 
 Every action below plays a pose from the server's `open77_animations` catalogue
 (`Open77.animations.play`, permission `players.animations.control`), shows a curated prop

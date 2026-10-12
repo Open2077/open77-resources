@@ -1,4 +1,11 @@
-# rp_admin — the moderation kit
+# rp_admin
+
+Gives your staff a moderation kit: an admin panel (/rpadmin) that lists every online player with actions such as warn, freeze, spectate, teleport and revive, and an admin mode that shows an ADMIN tag over your body. Players send reports with /report, staff answer them from a ticket queue, and every staff action is logged.
+
+- **Docs:** [Public identity, server commands, and ACL](https://open2077.net/docs/server-acl)
+- **Starts:** on its own
+- **Needs:** `open77_uikit`, `open77_notifications`
+- **Runs on:** server and client
 
 Server-authoritative admin tooling for an Open77 RP server (build `2.31.13+op77.76`): an
 **admin panel** (`/rpadmin`, UI kit context menu) listing everyone online with their RP name,

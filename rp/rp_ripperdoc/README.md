@@ -1,4 +1,11 @@
-# rp_ripperdoc — the ripperdoc clinic
+# rp_ripperdoc
+
+Adds a ripperdoc job at Viktor's clinic: the on-duty ripper installs and removes implants on a patient lying in the chair, once the patient accepts a quote. Implants are real platform cyberware, saved for each player.
+
+- **Docs:** [Cyberware](https://open2077.net/docs/cyberware)
+- **Starts:** on its own
+- **Needs:** `open77_cyberware`, `open77_player_interactions`, `open77_uikit`, `open77_worldui`, `open77_contextmenu`, `open77_notifications`, `open77_props`
+- **Runs on:** server and client
 
 Server-authoritative ripperdoc for a Night City RP server on Open77 (build `2.31.13+op77.76`).
 The on-duty **ripper** (`rp_jobs` job `ripper`) installs and removes implants on a **patient lying
@@ -152,7 +159,7 @@ Prices at the shipped config: Gorilla Arms 1 500 (Street) / 3 200 €$ (Industri
 Tendons 1 200 / 2 500 €$, Cyberdeck 2 000 €$, Self-ICE 1 800 €$, Active Purge 1 600 €$; a removal is
 half the installed grade's price.
 
-## Staging: poses, props and durations (2026-09-18)
+## Staging: poses, props and durations
 
 Every action below plays a pose from the server's `open77_animations` catalogue
 (`Open77.animations.play`, permission `players.animations.control`), shows a curated prop
@@ -220,7 +227,7 @@ and are re-defined when `open77_hacking` or `open77_cyberware` (re)starts.
 
 ## Test in 2 minutes
 
-Two clients inside Viktor's clinic (walk from Kabuki Market, ~860 m south-west, or console
+Two players inside Viktor's clinic (walk from Kabuki Market, ~860 m south-west, or console
 `tp <id> -1545 1233 11.6` onto the clinic entrance), ids `1` (the ripper) and `2` (the patient);
 `rp_jobs`, `rp_inventory`, `rp_bank`, `rp_economy` and `rp_zones` running. On start the log shows the
 `catalogue ... defined` lines (the three hacking ones say `NOT defined: hacking_unavailable` when

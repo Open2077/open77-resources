@@ -1,4 +1,11 @@
-# rp_chat — roleplay chat commands
+# rp_chat
+
+Adds the classic roleplay chat commands: /me and /do for players within 30 m, /ooc for the whole server, whispers, dice rolls and an ID card you show to someone close by.
+
+- **Docs:** [Chat, slash commands, and completion](https://open2077.net/docs/chat)
+- **Starts:** on its own
+- **Needs:** `rp_jobs`, `rp_economy`
+- **Runs on:** server
 
 **Server-only** resource for Open77 (build `2.31.13+op77.76`). It adds the classic chat
 commands of an RP server: the server decides the audience (proximity), reads names, jobs
@@ -56,7 +63,7 @@ of sides, etc.
 1. Drop `rp_chat/` in the resource root, with `rp_jobs` and `rp_economy`.
    Start the server; the log shows
    `[rp_chat] started: /me /do /ooc /w /dice /showid (notifications: toast|chat fallback)`.
-2. Connect with **two clients** (A and B), note their `/id`.
+2. Connect **two players** (A and B), note their `/id`.
 3. A and B side by side: `/me looks around` → both see
    `* A looks around`. `/do It is raining.` → `** It is raining. ((A))`.
 4. B walks more than 30 m away: `/me coughs` from A no longer reaches B (A still sees it).

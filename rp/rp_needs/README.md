@@ -1,5 +1,12 @@
 # rp_needs
 
+Gives every player hunger, thirst and fatigue that drop over time and come back when they eat, drink and rest. Warnings show up as the values run low, and when food or water reaches zero the player slowly loses health.
+
+- **Docs:** [Player health and stamina](https://open2077.net/docs/player-stats)
+- **Starts:** on its own
+- **Needs:** `open77_notifications`, `open77_animations`, `open77_props`
+- **Runs on:** server
+
 Hunger, thirst and fatigue for a Night City RP server. The three values are **satiety** levels (100 = full, 0 = starving / parched / exhausted); the HUD labels them Food / Water / Energy. Below 0 food or water the body loses 1 HP every 10 s down to 10 HP until the player eats or drinks (`/needs`, the kiosks, `/setneeds` for admins). Server-only resource
 (no client script): the server owns the three values, persists them, applies
 the effects and pushes warnings to the player's biomonitor.
@@ -101,7 +108,7 @@ load or save that took that path. A server without any database logs
 [rp_needs] schema ready (rp_needs_state)
 ```
 
-## Staging: poses, props and durations (2026-09-18)
+## Staging: poses, props and durations
 
 Every action below plays a pose from the server's `open77_animations` catalogue
 (`Open77.animations.play`, permission `players.animations.control`), shows a curated prop

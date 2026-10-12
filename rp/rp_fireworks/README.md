@@ -1,7 +1,11 @@
 # rp_fireworks
 
-Synchronized fireworks and celebration shows, fired by the server so that
-everybody on the street sees the same thing at the same moment.
+Fires synchronized fireworks shows from the server, so everybody on the street sees the same shells at the same moment. Staff start a show with the /fireworks command, other resources start one through an export, and the whole show runs in server Lua.
+
+- **Docs:** [Visual and audio effects](https://open2077.net/docs/effects)
+- **Starts:** on its own
+- **Needs:** nothing
+- **Runs on:** server
 
 About 200 lines of server Lua and no client code at all — which is the point of
 the example.

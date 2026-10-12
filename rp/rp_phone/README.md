@@ -1,4 +1,11 @@
-# rp_phone — the holophone
+# rp_phone
+
+Gives every player a holophone, opened with /tel: contacts, text messages that wait for offline players, voice calls, city services, location sharing and a paid ads board. Players need a phone item in their pockets.
+
+- **Docs:** [Integrated voice chat](https://open2077.net/docs/voice)
+- **Starts:** on its own
+- **Needs:** `open77_notifications`, `open77_animations`
+- **Runs on:** server and client
 
 The phone of the Night City RP build (Open77 build `2.31.13+op77.76`): contacts, text messages
 delivered even when the other side is offline, voice calls on a private channel, the city
@@ -142,7 +149,7 @@ summaries and 25 messages of the open thread.
 - `rp_delamain:call` refuses with `no_driver` when nobody drives: the phone answers with the
   `/taxi` line of the automated cab, as `rp_delamain` does.
 
-## Staging: poses, props and durations (2026-09-18)
+## Staging: poses, props and durations
 
 Every action below plays a pose from the server's `open77_animations` catalogue
 (`Open77.animations.play`, permission `players.animations.control`), shows a curated prop

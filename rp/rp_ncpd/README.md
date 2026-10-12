@@ -1,4 +1,11 @@
-# rp_ncpd — the NCPD
+# rp_ncpd
+
+Gives the NCPD its tools: cuff, escort and search suspects, write fines, seat them in the cruiser, send them to jail, and keep criminal records and warrants. Every action needs the ncpd job on duty, and other resources can raise alerts for the police.
+
+- **Docs:** [The role-play kit](https://open2077.net/docs/rp-kit)
+- **Starts:** on its own
+- **Needs:** `open77_contextmenu`, `open77_uikit`, `open77_player_interactions`, `open77_notifications`, `open77_worldui`
+- **Runs on:** server and client
 
 The police of the Night City RP build (Open77 build `2.31.13+op77.76`): cuff / uncuff / escort,
 search and seizure, fines the citizen accepts or refuses, seating a suspect in the cruiser, jail
@@ -130,7 +137,7 @@ player): `Open77.kvp` (`rec:<id>`, `fines:<id>`, `sentence:<id>`, `warrants`) an
 - The fine dialog and the citizen's answer ride `open77_player_interactions`: both must be alive, on
   foot, within 3 m and in the same bucket; the citizen has 30 s.
 
-## Staging: poses, props and durations (2026-09-18)
+## Staging: poses, props and durations
 
 Every action below plays a pose from the server's `open77_animations` catalogue
 (`Open77.animations.play`, permission `players.animations.control`), shows a curated prop
@@ -189,7 +196,7 @@ If `open77_rp_basics` already poses the cuffed suspect, the `cuffed` hold answer
 
 ## Test in 2 minutes
 
-Two clients at the freeroam spawn (Kabuki Market Centre `-1191.30, 2006.88, 7.82`), ids `1` (officer) and `2`
+Two players at the freeroam spawn (Kabuki Market Centre `-1191.30, 2006.88, 7.82`), ids `1` (officer) and `2`
 (citizen); `rp_jobs`, `rp_inventory`, `rp_bank`, `rp_economy`, `open77_rp_basics` running, the
 officer's account holding `rp.cuff` / `rp.escort` / `rp.search` (Setup, step 2).
 

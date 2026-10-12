@@ -1,4 +1,11 @@
-# rp_vigile — private security
+# rp_vigile
+
+Adds a private security job: a guard is hired to watch a zone or protect a person and is paid for every guarded minute. Inside a guarded zone the guard can escort or expel troublemakers, and a camera log records who came and went.
+
+- **Docs:** [Build a job: prompts, animations, items and pay](https://open2077.net/docs/world-interaction)
+- **Starts:** on its own
+- **Needs:** `open77_uikit`, `open77_contextmenu`, `rp_jobs`, `rp_zones`, `rp_bank`, `rp_identity`
+- **Runs on:** server and client
 
 Guard contracts for an Open77 RP server (build `2.31.13+op77.76`): a security guard (`rp_jobs`
 job `vigile`) guards **a place** (a zone from `rp_zones`) or **a person** (a bodyguard) and is paid

@@ -1,4 +1,11 @@
-# rp_whitelist - the door of Night City
+# rp_whitelist
+
+Controls who may join your RP server: a whitelist or a priority queue for listed players, temporary bans that show the reason and the time left, and a /wl command for staff. The whitelist ships turned off, and bans apply even then.
+
+- **Docs:** [Connection control: connect events, whitelists and bans](https://open2077.net/docs/connection-control)
+- **Starts:** on its own
+- **Needs:** `rp_identity`, `rp_logs`
+- **Runs on:** server
 
 Connection control for the RP server: a **whitelist** (strict allowlist, or a **priority
 queue** that lets listed players in first when the city is full), **temporary RP bans**
@@ -217,7 +224,7 @@ Nothing here needs the player to move: Kabuki Market, the freeroam spawn
    whitelisted. Apply on the Discord: https://discord.open2077.net`. `wl ajouter <userId>
    Test bot` (offline add by identifier) and reconnect: admitted. `wl desactiver` to leave
    the eval server as it was; the flag is persisted, so check `wl statut` after a restart.
-9. Queue (optional, needs two clients and a server with `network.maximumPlayers` above the
+9. Queue (optional, needs two players and a server with `network.maximumPlayers` above the
    cap): set `Config.maxPlayers = 1` (or the convar `rp_whitelist_max_players`), `wl activer`
    with `Config.mode = "queue"`. First client in. Second client, unlisted: held ~6.5 s
    (log `connecting '<name>': queue #1 of 1, 1/1 online`), then refused `Night City is full

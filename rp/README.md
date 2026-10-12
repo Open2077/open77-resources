@@ -1,4 +1,6 @@
-# Open77 RP examples — a Night City roleplay server in Lua
+# The Night City roleplay pack
+
+This `rp/` folder of `open77-resources` is the complete Night City roleplay pack. The platform resources it runs on are in [`../system/`](../system/), and your server download already contains them.
 
 Thirty-five gameplay resources and five lab helpers for [Open77](https://open2077.net), the
 Cyberpunk 2077 multiplayer platform. Together they run a complete roleplay server: identity,
@@ -34,7 +36,7 @@ visuals, holding versus drinking, permissions and current first-person limits.
 | Crime | `rp_crime` (lockpick, shop robbery, dealer, fence), `rp_gangs` (territories, street market) |
 | Spectacle | `rp_fireworks` (synchronized shows), `rp_drones` (a drone light show: real drone bodies held in the sky, an OPEN//77 sign, cut and flip-book choreography) |
 | Lab helpers | `rp_selftest` (33 checks, console `selftest`), `rp_taxitest` (`groundz`), `rp_worldprobe` (`wprobe`, `vwarp`), `eval_taxi` (the first taxi), [`rp_weapons_effect`](rp_weapons_effect) (English weapon workshop, `/weaponeffects`) |
-| Platform (reference) | [`platform/open77_prediction`](platform/open77_prediction): read-only copy of the bundled prediction operator layer (switches, ping ceiling, telemetry); already on every server, do not install. [`platform/prediction_policy_example`](platform/prediction_policy_example): the ~40 lines a gamemode needs to turn on melee, Slam and hack prediction |
+| Platform (reference) | [`open77_prediction`](../system/open77_prediction/): the bundled prediction operator layer (switches, ping ceiling, telemetry), in the platform's `../system/` folder; already on every server, do not install. [`prediction_policy_example`](prediction_policy_example/): the ~40 lines a gamemode needs to turn on melee, Slam and hack prediction |
 
 **`rp_fireworks` is the short one to read first.** Two hundred lines of server
 Lua, no client code, and it is the example for "everybody sees the same thing at
@@ -68,8 +70,10 @@ for supported controls, Lua examples and vehicle physics ownership.
 1. An Open77 server on the current `main` build (the carry animation layer and the loot fixes
    landed in September 2026 releases) with MariaDB configured: every resource persists through
    `Open77.database` and creates its own `rp_*` tables at start.
-2. Copy the folders you want into the server's resources directory and list them in the
-   profile's `resources.load` (or let auto-start discover them). Dependencies are declared in
+2. Copy the folders you want from this `rp/` folder into your server's `resources/` folder (a
+   `resources/rp/` category folder works too) and list them in the profile's `resources.load`
+   (or let auto-start discover them). The `open77_*` resources they depend on are the platform
+   resources of `../system/`. Dependencies are declared in
    each `open77.lua`; `rp_config` first, then `rp_identity` / `rp_economy` / `rp_inventory` /
    `rp_jobs`, then the rest.
 3. Tune in `shared/config.lua` per resource (prices, positions, poses, props, durations).
@@ -103,12 +107,12 @@ database connection string is the server's (`OP77_DATABASE_CONNECTION`).
 - [Open77 docs](https://open2077.net/docs) — the API reference, guides and catalogues
 - [Animated actions](https://open2077.net/docs/animated-actions) — poses, props in hand, durations
 - [Open77 Devkit MCP](https://github.com/Open2077/open77-devkit) — the tool these resources were written with
-- `PLAN.html` — the delivery plan the set was built from
+- [`docs/PLAN.html`](docs/PLAN.html) — the delivery plan the set was built from
 - `docs/world-interaction/` — the world-interaction rows done in this repository:
   [B8 compatibility audit](docs/world-interaction/b8-compat-audit.md),
   [A9 vehicle access and cargo](docs/world-interaction/a9-cargo.md),
   [C1 salvage pilot](docs/world-interaction/c1-salvage.md)
-- `tests/` — offline checks, no game and no database:
+- `tests/` — offline checks, no game and no database, run from this `rp/` folder:
   `python -m unittest discover -s tests -p "test_compat*.py"` (B8 contracts, `rp_economy`) and
   `-p "test_a9*.py"` (`rp_garage` access matrix, `rp_cargo`) and `-p "test_c1*.py"` (`rp_salvage` on
   the real open77_actions / open77_containers / open77_transactions); they need a Lua 5.4 engine
@@ -116,4 +120,4 @@ database connection string is the server's (`OP77_DATABASE_CONNECTION`).
 
 ## License
 
-MIT — see [`LICENSE`](LICENSE).
+MIT — see [`LICENSE`](../LICENSE).

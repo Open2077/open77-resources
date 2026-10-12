@@ -1,4 +1,11 @@
-# prediction_policy_example: enable melee, Slam and hack prediction in your gamemode
+# prediction_policy_example
+
+Turns on melee, Slam and hack prediction in your gamemode, so an attacker sees their hit at once while your server still decides every hit. It is about 40 lines of client Lua that publish your combat rules to the client: copy them into your own gamemode.
+
+- **Docs:** [Prediction](https://open2077.net/docs/prediction)
+- **Starts:** on its own
+- **Needs:** nothing
+- **Runs on:** client
 
 Open77 predicts a melee hit, a Slam or a hack on the attacker's screen before the
 server answers. Those three predictions run in the bundled `open77_cyberware` resource and
@@ -33,6 +40,6 @@ own config. Freeroam ships exactly this code, filled from its combat settings.
 
 Car, door and blast predictions need none of this: they are built into the client.
 The operator switches and telemetry come from the bundled
-[`open77_prediction`](../open77_prediction) resource.
+[`open77_prediction`](../../system/open77_prediction/) resource.
 
 Guide: https://open2077.net/docs/prediction

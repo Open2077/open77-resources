@@ -1,4 +1,11 @@
-# rp_jobs v2.1 — grades, bosses, duty, societies and payroll
+# rp_jobs
+
+Gives your server jobs with grades, bosses, clocking in and out, and a salary paid from each job's society account. Other RP resources ask it which job a player has and whether they are on duty.
+
+- **Docs:** [Build a job: prompts, animations, items and pay](https://open2077.net/docs/world-interaction)
+- **Starts:** on its own
+- **Needs:** `open77_uikit`, `open77_worldui`, `open77_contextmenu`
+- **Runs on:** server and client
 
 Server-authoritative jobs for an Open77 RP server (build `2.31.13+op77.76`). Replaces the
 phase-0 `rp_jobs` in place: the `getJob` / `hasJob` exports and the `rp_jobs:changed` event are
@@ -202,7 +209,7 @@ unreachable one is retried.
 
 **No database configured at all** (`ready` answers `database_unavailable`): with
 `RpJobsConfig.LabKvpWithoutDatabase = true` (default) employment lives in `Open77.kvp`
-(`emp:<identifier>`), a disposable lab store the log names at every boot
+(`emp:<identifier>`), a disposable test store the log names at every boot
 (`store=kvp reason=database_unavailable`) and that never leaks into SQL; with `false`, job files
 are refused instead.
 
@@ -255,7 +262,7 @@ employee told; without `rp_identity` account names are used.
 
 ## Test in 2 minutes
 
-Two clients at the freeroam spawn (Kabuki Market Centre), ids `1` and `2`; `rp_bank`, `rp_economy` and (optionally)
+Two players at the freeroam spawn (Kabuki Market Centre), ids `1` and `2`; `rp_bank`, `rp_economy` and (optionally)
 `rp_identity` running. Log on start: `[rp_jobs] started: 13 jobs, ...` then `[rp_jobs]
 store=sql table=rp_jobs_employees`.
 
@@ -294,7 +301,7 @@ store=sql table=rp_jobs_employees`.
     `grade_changed`, `duty_on`, `duty_off`). The B4 eligibility and epoch steps are in
     `docs/world-interaction/b4-jobs.md` ("Integrator test steps").
 
-Offline: `python -m unittest discover -s tests -p "test_compat*.py"` from the repository root runs
+Offline: `python -m unittest discover -s tests -p "test_compat*.py"` from the `rp/` folder runs
 this resource's real server script on the B8 fake host (`tests/test_compat_jobs.py`).
 
 ## Removed from v1

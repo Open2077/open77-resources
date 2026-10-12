@@ -1,4 +1,11 @@
-# rp_cargo — vehicle cargo layouts and the cargo service
+# rp_cargo
+
+Lets a vehicle carry crates in its bed: each crate is held by the vehicle's plate and drawn on whichever car carries that plate. It is an opt-in service for job resources such as rp_salvage, with console commands to measure and tune each vehicle's bed layout.
+
+- **Docs:** [Durable transactions](https://open2077.net/docs/transactions), [Synchronized attachments](https://open2077.net/docs/attachments)
+- **Starts:** with `ensure rp_cargo` (it declares `auto_start false`)
+- **Needs:** `rp_garage`, `open77_props`, `open77_transactions`
+- **Runs on:** server
 
 Row **A9** of the world-interaction plan: crates and other physical objects carried in a
 vehicle's bed, held durably by the **plate**, drawn on whichever runtime vehicle currently
@@ -115,14 +122,14 @@ Operations on one plate run one at a time (two players loading the same truck ar
 turn, never into the same slot). Slotless objects moved in by another resource are drawn in the
 least-filled slot when their item has a model in `Config.models`.
 
-## Lab (console only, explicit ids)
+## Test commands (console only, explicit ids)
 
 | Command | What it does |
 |---|---|
-| `cargospawn <vehicleId> [layers\|all] [model]` | a lab crate at every slot of the vehicle's layout (and every layer with `all`); works on any vehicle of a known record, tracked or not |
-| `cargotune <vehicleId> <slot> <x> <y> <z> [yaw] [stackHeight]` | moves one slot of that record's layout live: lab crates and cargo already drawn follow; until restart |
+| `cargospawn <vehicleId> [layers\|all] [model]` | a test crate at every slot of the vehicle's layout (and every layer with `all`); works on any vehicle of a known record, tracked or not |
+| `cargotune <vehicleId> <slot> <x> <y> <z> [yaw] [stackHeight]` | moves one slot of that record's layout live: test crates and cargo already drawn follow; until restart |
 | `cargolayout <vehicleId>` | prints the record's layout as JSON: paste it over the entry in `data/layouts.json` |
-| `cargoclear <vehicleId>` | removes the lab crates |
+| `cargoclear <vehicleId>` | removes the test crates |
 | `cargoinfo <vehicleId\|plate>` | plate, account, version, occupancy per slot, drawn prop ids |
 
 A tuned slot stays `measured: false`: flip it to `true` in the data file only after checking it

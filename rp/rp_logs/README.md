@@ -1,4 +1,11 @@
-# rp_logs — audit trail
+# rp_logs
+
+Keeps an audit trail of your RP server: every rp_* event, joins, leaves, deaths and admin actions become rows in SQL, and the sensitive ones can also go to a Discord webhook. Staff read the trail with /logs.
+
+- **Docs:** [Configure a SQL database](https://open2077.net/docs/database)
+- **Starts:** on its own
+- **Needs:** nothing
+- **Runs on:** server
 
 Server-only resource. It listens to every `rp_*` event the Night City RP stack raises,
 plus the platform lifecycle (join, leave, death, admin acts, resource start/stop), turns

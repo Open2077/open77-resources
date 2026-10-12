@@ -1,15 +1,22 @@
-# rp_streetfood — a street-food stall on the world-interaction libraries
+# rp_streetfood
+
+Adds a street-food stall: a cook grills a dish and hands it to a customer, who sees the price and accepts, pays and eats at the counter, on the go or seated. Dish, price and tip move in one sale, built on the platform's job libraries.
+
+- **Docs:** [Build a job: prompts, animations, items and pay](https://open2077.net/docs/world-interaction), [Durable transactions](https://open2077.net/docs/transactions)
+- **Starts:** with `ensure rp_streetfood` (it declares `auto_start false`)
+- **Needs:** `open77_transactions`, `open77_actions`, `open77_player_interactions`, `open77_notifications`, `rp_jobs`, `rp_inventory`, `rp_economy`
+- **Runs on:** server
 
 The second example of the world-interaction campaign (row **C4**): a cook grills at a real
 market grill, the dish waits on the pass, the cook hands it to a customer who **sees the price
 and accepts**, the customer pays in **one** atomic sale (dish + price + tip), then eats standing at
 the counter, on the go, or — optionally — seated on real food-court furniture.
 
-**Status: experimental; proven live on two clients (2026-10-12).** Cook (both rigs), order with a
+**Status: experimental.** Cook (both rigs), order with a
 tip, consented serve, sale with the society share, meals at the counter and seated, a declined
 offer, two cooks at one grill and a restart ran in game (crowd pedestrians switched off: they stand
-on the grill spot). The `amb_*` cook animations need the `Open77RP.archive` that ships them (not in
-the release archives as of 2026-10-12). The two-client test script is in
+on the grill spot). The `amb_*` cook animations need the `Open77RP.archive` that ships them (not yet in
+the release archives). The test script is in
 [`docs/world-interaction/c4-streetfood.md`](../docs/world-interaction/c4-streetfood.md) §6.
 
 ## Enable it on a server
@@ -56,10 +63,10 @@ counter at a food court that has a stall.
 | | seats (with seating on) | A1 furniture `14182403679719868087` (chair, 5.6 m), `14644536518519442059` (11 m), `9160494166749203069` (24 m); barstool `3931217955540569133` off | research ledger "A1 ten furniture ids verified live" |
 | `kabuki` (off) | grill / counter | -1167.426, 2023.262, 7.780, 177 / **arithmetic** counter | spot row 7736; no customer spot stands in front of it |
 
-The food court is the upper floor (z 115) of the 2026-09-28 pedestrian proof and of the A3/A1
+The food court is the upper floor (z 115) of the pedestrian proof and of the A3/A1
 seat runs. Every point is `measured = false`: anchor data, not walked by this resource. The crowd
 can book the grill spot (crowd-spot row 58918) and the seats (`npcSeated`/`npcCrowd`): stop the
-crowd (world suppression) for a lab run. Nothing in this resource vetoes an NPC.
+crowd (world suppression) for a test run. Nothing in this resource vetoes an NPC.
 
 ## Playing it
 
@@ -125,7 +132,7 @@ AddEventHandler("rp_streetfood:sold", function(cookId, customerId, itemId, opId)
 | server restart | pantry, pass and pockets intact; open orders and offers are forgotten (intent, not value) |
 | rp_streetfood restart mid-offer | the platform cancels the offer: nothing paid |
 
-## Lab console (restricted: console or ACL)
+## Test console (restricted: console or ACL)
 
 ```text
 streetfood.status
@@ -139,7 +146,7 @@ streetfood.lab.eat <playerId> <counter|go|drink|seat:<n>> [dish] [stall]
 streetfood.lab.state <playerId>                   streetfood.lab.stall [stall]
 ```
 
-The customer's consent stays the customer's: no lab command accepts an offer for them.
+The customer's consent stays the customer's: no test command accepts an offer for them.
 
 ## Tests
 
@@ -149,7 +156,7 @@ python -m unittest discover -s tests -p "test_c4*.py"
 
 16 offline tests (happy path, two cooks one grill, one portion two offers, declines / timeouts /
 clock-outs, payment failures and replays, refusals and forged intents, crash windows, cancellations,
-seating on and off, restart, the lab console, sources and anchors). They run the real
+seating on and off, restart, the test console, sources and anchors). They run the real
 open77_transactions, open77_actions, rp_economy and rp_streetfood; they prove nothing about what
 renders in game.
 

@@ -1,4 +1,11 @@
-# rp_economy — server-side wallet (eurodollars)
+# rp_economy
+
+Gives every player a cash wallet in eurodollars: 500 to start, 200 every 10 minutes on payday, /money to check it and /pay to give some. Other RP resources move money through its exports, including atomic sales that never half happen.
+
+- **Docs:** [Durable transactions](https://open2077.net/docs/transactions)
+- **Starts:** on its own
+- **Needs:** nothing
+- **Runs on:** server
 
 **Server-only** resource for Open77. Version **2.0.0** is a **facade over the
 `open77_transactions` coordinator** (world-interaction row B3): the coordinator owns every
@@ -194,7 +201,7 @@ TriggerEvent("rp_economy:writeBehindFailed", opId, reason, kind, lines)
 [rp_economy] migration v1-rp-<t> complete: subjects=12 societies=4 imported=14 already=0 empty=2 skipped=0
 ```
 
-## Test it (lab, by the integrator)
+## Test it
 
 Offline: `python -m unittest discover -s tests -p "test_compat*.py"` (tests/test_compat_wallet.py,
 tests/test_compat_economy.py). In game, the checklist of b3-wallet.md §7: load

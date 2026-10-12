@@ -1,4 +1,11 @@
-# rp_bar — the Afterlife bar counter
+# rp_bar
+
+Adds a bartender job at the real Afterlife bar: an on-duty barman mixes drinks, restocks with the till's money and serves customers, who see the price and accept before they pay. Each glass raises the drinker's buzz, which wobbles the screen and can make them stumble.
+
+- **Docs:** [Build a job: prompts, animations, items and pay](https://open2077.net/docs/world-interaction)
+- **Starts:** on its own
+- **Needs:** `open77_uikit`, `open77_worldui`, `open77_contextmenu`, `open77_player_interactions`, `open77_notifications`, `open77_animations`, `open77_sound`, `open77_props`
+- **Runs on:** server and client
 
 The bartender job for a Night City RP server on Open77 (build `2.31.13+op77.76`). An on-duty
 `barman` (rp_jobs v2) works a counter inside the `afterlife` zone: mixes drinks from ingredients
@@ -31,7 +38,7 @@ suggestions on `chat:ready` and once at start.
 
 The bar is **The Afterlife** (Little China, Watson) — the real one, inside, at the end of its
 bar counter. `RpBarConfig.counter.position = { x = -1451.5, y = 1012.5, z = 17.8 }` (a bot
-stood on that exact spot on 2026-09-18; `z` is the walked floor height). It sits inside the
+stood on that exact spot; `z` is the walked floor height). It sits inside the
 `afterlife` zone of `rp_zones` (centre `-1453, 1017, 16.6`, radius 50). From the Kabuki Market
 spawn (`-1191.3, 2006.9, 7.8`) it is about **1 km south**: follow the map pin, or a Delamain.
 
@@ -200,7 +207,7 @@ Rows are written with the callback form of `Open77.database.insert` (never on an
 `[rp_bar] store=kvp reason=...`; sales made before the choice are queued and flushed. The till
 itself lives in `rp_bank` (society `barman`); the buzz is in memory.
 
-## Staging: poses, props and durations (2026-09-18)
+## Staging: poses, props and durations
 
 Every action below plays a pose from the server's `open77_animations` catalogue
 (`Open77.animations.play`, permission `players.animations.control`), shows a curated prop
