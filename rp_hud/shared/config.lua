@@ -23,6 +23,15 @@ RpHudConfig = {
     -- it to reload its cache, then push everyone again.
     dependencyRepushMs = 4000,
 
+    -- Server (B7): an unsettled wallet operation (rp_economy:walletStatus) is shown as pending
+    -- once it is this old, so a normal store round trip never flashes on the panel.
+    pendingShowAfterMs = 1500,
+
+    -- Server (B7): how often rp_economy:pendingPlayers() is asked which players have such an
+    -- operation; a player whose pending set changed is re-pushed. One export call per poll for
+    -- the whole server. 0 disables it (pending then shows on the next event or keepalive).
+    pendingPollMs = 2000,
+
     -- The resources whose exports feed the snapshot. None is declared as a
     -- manifest dependency: this resource ships a client script, and a
     -- manifest delivered to clients may not depend on a server-only resource.

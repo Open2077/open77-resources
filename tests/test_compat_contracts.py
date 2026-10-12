@@ -20,13 +20,19 @@ FROZEN_SURFACE = {
     "rp_inventory": {"add", "count", "define", "has", "list", "openStash", "remove"},
     # B3 (rp_economy 2.0.0): add/getBalance/remove are the 1.x surface every caller keeps; the
     # other five are rp_bank 2.0.0 calling the wallet facade (docs/world-interaction/b3-wallet.md).
+    # B7 (rp_hud): walletStatus / pendingPlayers are rp_economy's read-only HUD exports
+    # (docs/world-interaction/b7-ui.md).
     "rp_economy": {"add", "getBalance", "remove",
-                   "balanceOf", "pay", "societyRead", "walletMove", "walletRead"},
+                   "balanceOf", "pay", "societyRead", "walletMove", "walletRead",
+                   "pendingPlayers", "walletStatus"},
     "rp_bank": {"charge", "deposit", "getAccount", "society", "societyAdd", "societyRemove", "withdraw"},
-    "rp_jobs": {"getGrade", "getJob", "hasJob", "isBoss", "listOnDuty", "onDuty", "setJob"},
+    # B7: rp_hud reads B4's summary (getJob/getGrade/onDuty stay as its fallback).
+    "rp_jobs": {"getGrade", "getJob", "hasJob", "isBoss", "listOnDuty", "onDuty", "setJob", "summary"},
     "rp_identity": {"fullName", "get", "isRegistered"},
     # A9 (wave 1): rp_cargo consumes canAccess and describe (docs/world-interaction/a9-cargo.md).
-    "rp_garage": {"canAccess", "describe", "hasKey", "ownerOf", "plateOf", "setWanted", "vehiclesOf"},
+    # B7: the rp_inventory panel's read-only cargo view asks canAccessVehicle(..., "cargo", "view").
+    "rp_garage": {"canAccess", "canAccessVehicle", "describe", "hasKey", "ownerOf", "plateOf", "setWanted",
+                  "vehiclesOf"},
     "rp_housing": {"homeOf"},
     "rp_config": {"get"},
     "rp_nomade": {"activeContract"},

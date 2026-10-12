@@ -609,6 +609,96 @@ exports("balanceOf", function(party)
 end)
 
 ------------------------------------------------------------------------------
+-- Read-only wallet status for a HUD (world-interaction row B7, docs/world-interaction/b7-ui.md).
+-- Additive: no existing export, event or behaviour changes. Synchronous, never yields, reads the
+-- cache only, and answers about connected players only (the caller pushes it to that player).
+------------------------------------------------------------------------------
+
+-- Operations not settled yet that touch one cached wallet, split by what the displayed balance
+-- (Wallets.display) already counts:
+--   incoming     atomic credits in flight: NOT in the displayed balance yet (a sale's payout the
+--                store has not confirmed). A HUD shows them as pending, never as missing money.
+--   outgoing     debits in flight (atomic or write-behind): already subtracted from the display.
+--   unconfirmed  write-behind credits not acknowledged yet: already added to the display.
+--   inDoubt      operations whose caller has been told in_doubt: state in_doubt, or older than
+--                EconomyConfig.asyncWaitSeconds (W.await gave up waiting).
+-- Only operations at least `minAge` seconds old count, so a normal round trip never flashes.
+local function pendingOn(a, minAge)
+    local out = { incoming = 0, outgoing = 0, unconfirmed = 0, ops = 0, inDoubt = 0, oldestSeconds = 0 }
+    if not a then return out end
+    local t = Open77.time.monotonic()
+    for _, e in pairs(a.tracked) do
+        if e.state ~= "committed" and e.state ~= "failed" then
+            local d = e.effects[a.id] or 0
+            local age = t - (e.createdAt or t)
+            if d ~= 0 and age >= minAge then
+                out.ops = out.ops + 1
+                if age > out.oldestSeconds then out.oldestSeconds = age end
+                if e.state == "in_doubt" or age >= cfg.asyncWaitSeconds then out.inDoubt = out.inDoubt + 1 end
+                if d < 0 then
+                    out.outgoing = out.outgoing - d
+                elseif e.legacy then
+                    out.unconfirmed = out.unconfirmed + d
+                else
+                    out.incoming = out.incoming + d
+                end
+            end
+        end
+    end
+    out.oldestSeconds = math.floor(out.oldestSeconds)
+    return out
+end
+
+local function minAgeOf(opts)
+    local v = type(opts) == "table" and tonumber(opts.minAgeSeconds) or nil
+    if not v or v < 0 then return 0 end
+    return v
+end
+
+-- walletStatus(playerId, { minAgeSeconds }?) ->
+--   { loaded = true, reason? = "store_unavailable", cash = { balance, incoming, outgoing,
+--     unconfirmed, inDoubt, ops, oldestSeconds }, bank = { ... } }
+--   | { loaded = false, reason = "not_loaded" | "store_unavailable" | "migration_pending" | ... }
+--   | nil, "invalid_player_id"
+-- `loaded = false` means "unknown", never 0: getBalance answers 0 there (1.x contract).
+exports("walletStatus", function(playerId, opts)
+    local id = toPositiveInteger(asNumber(playerId), 2147483647)
+    if not id then return nil, "invalid_player_id" end
+    local p = Wallets.byPlayer[id]
+    if not p then
+        return { loaded = false, reason = Wallets.ready() and "not_loaded" or Wallets.notReadyReason() }
+    end
+    local minAge = minAgeOf(opts)
+    local out = { loaded = true, reason = (not Tx.healthy) and "store_unavailable" or nil }
+    for _, kind in ipairs({ "cash", "bank" }) do
+        local a = Wallets.accounts[p[kind]]
+        local status = pendingOn(a, minAge)
+        status.balance = a and Wallets.display(a) or 0
+        out[kind] = status
+    end
+    return out
+end)
+
+-- pendingPlayers({ minAgeSeconds }?) -> { [playerId] = fingerprint } for the connected players
+-- with at least one unsettled operation of that age on their cash or bank wallet. One call per
+-- poll for the whole server: a HUD re-pushes a player whose fingerprint changed.
+exports("pendingPlayers", function(opts)
+    local minAge = minAgeOf(opts)
+    local out = {}
+    for playerId, p in pairs(Wallets.byPlayer) do
+        local parts = {}
+        for _, kind in ipairs({ "cash", "bank" }) do
+            local s = pendingOn(Wallets.accounts[p[kind]], minAge)
+            if s.ops > 0 then
+                parts[#parts + 1] = ("%s:%d:%d:%d:%d"):format(kind, s.incoming, s.outgoing, s.unconfirmed, s.inDoubt)
+            end
+        end
+        if #parts > 0 then out[playerId] = table.concat(parts, "|") end
+    end
+    return out
+end)
+
+------------------------------------------------------------------------------
 -- Payday (a mint from sys:rp_economy:payday, capped)
 ------------------------------------------------------------------------------
 

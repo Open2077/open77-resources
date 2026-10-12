@@ -51,45 +51,87 @@ prefix (`bur`).
 
 ### The panel
 
-`/inv` opens `web/index.html` (created hidden by `client/main.lua` at start,
-shown with keyboard + cursor focus, hidden again on Escape / the `x`). The page
-is presentation only: the **server owns the panel** and pushes its whole state
-through `rp_inventory:panel` when it opens and after **every** change of the
-pockets or of the open stash, whoever caused it (a command, the page, another
-resource through `add` / `remove`, another player storing into the same stash).
-The `I` key is not bound (the game uses it).
+`/inv` opens `web/index.html`. The page is presentation only: the **server owns the panel**
+and pushes its whole state through `rp_inventory:panel` when it opens and after **every**
+change of the pockets, the open stash or the cargo view, whoever caused it (a command, the
+page, another resource through `add` / `remove`, another player storing into the same stash,
+any resource committing on `open77_transactions`). Every push goes to **one player**
+(`TriggerClientEvent(..., playerId, ...)`); nothing of the panel is ever written to a state bag
+or broadcast. The `I` key is not bound (the game uses it).
+
+**Focus (world-interaction row B7, `docs/world-interaction/b7-ui.md`).** The surface is created
+at start and left visible with an empty, transparent document (a hidden-to-visible surface did
+not reliably repaint, `wiki/webui.md`); the page draws only while a state is open.
+
+- Browsing takes the **cursor only** (`setFocus(false, true)`): the keyboard stays with the
+  game, so chat, push-to-talk and movement keys are not captured. The keyboard is taken only
+  while the count field has the caret (`setFocus(true, true)`), and given back when it leaves.
+- The panel never opens over another menu holding the keyboard (`Open77.input.isCaptured`,
+  permission `input.actions`): it waits up to a second, then gives up and the server says
+  `Another menu holds the keyboard: close it, then /inv again.`
+- Every exit releases the focus: the `x`, Escape (the page while typing, `open77:pauseKey`
+  while browsing), the server's `{ open = false }` (death, resource stop), another surface taking
+  the focus (the panel closes instead of fighting for it), `open77:session:ended`, the
+  resource stopping, and a focus that never arrived within `panelFocusGraceMs`. A watchdog
+  releases any focus the page still holds while closed.
+- The player can walk while it is open, so the stash column closes past `panelStashReach`
+  (6 m) from where it opened, and the cargo view past `panelCargoReach` (+1 m) of its vehicle.
 
 State payload (`rp_inventory:panel`, server -> client -> page `state` event):
 
 ```lua
 {
-  open = true, playerId = 3, name = "Vincent Marino",       -- rp_identity fullName, else the account name
-  pockets = { id = 3, entries = { ... }, weight = 9.0, capacity = 40 },
-  stash   = { id = "home:12", entries = { ... }, weight = 12.5, capacity = 200 },  -- only while a stash is open
+  open = true, seq = 12, backend = "transactions" | "legacy",
+  playerId = 3, name = "Vincent Marino",                    -- rp_identity fullName, else the account name
+  pockets = { id = 3, entries = { ... }, weight = 9.0, capacity = 40, sync = { ... }? },
+  stash   = { id = "home:12", entries = { ... }, weight = 12.5, capacity = 200, sync = { ... }? },  -- while a stash is open
+  cargo   = { plate, record, capacityKg, objects, free, readOnly = true,
+              slots = { { slot, maxStack, objects = { { instance, item, label, rank } } } } },     -- read-only cargo view
   nearest = { playerId = 4, name = "Jackie Welles", distance = 1.2 },            -- the Give target, or nil
-  notice  = { ok = true, text = "Used Burrito." },                              -- the answer to the last intent, or nil
+  pending = { { opId, action, item, label, count, ageSeconds, state } }?,         -- actions answered in_doubt
+  notice  = { ok, kind = "ok"|"refused"|"retry"|"pending", text, reason?, code?, opId?, stale? },
 }
--- entries: { id, label, count, weight, total, usable, illegal, category } sorted by label
+-- entries: { id, label, count, weight, total, usable, illegal, category, unique?,
+--            held?      units leaving in an operation the store has not settled ("in transit")
+--            variants?  { { asset, count, meta = { quality = 3 } } }      stackable items with stack fields
+--            units?     { { id, meta = { durability, serial, ... } } }   unique items, most worn first (24 per item, 64 per container)
+--            moreUnits? }                                                  sorted by label
+-- sync (transactions backend): { saving = write-behind not acknowledged, inflight, incomingKg = credits in flight }
 -- category (tile glyph only): heal food drink fuel smoke drug stamina tech tool material cargo misc
 { open = false }   -- closes the panel
 ```
 
-Intents (page `intent` event -> client -> `rp_inventory:intent` -> server). Every
-one lands in the function the matching command uses, is re-validated there and is
-followed by a state push carrying the `notice`:
+The client adds `def = { durabilityMax, quality, serial }` to each entry from its verified B1
+catalogue copy (`client/catalogue.lua`), so the page shows `dur 12/20`; without it the raw
+values are shown.
+
+Intents (page `intent` event -> client -> `rp_inventory:intent` -> server). Every one carries
+the `seq` of the state it was made on, lands in the function the matching command uses, is
+re-validated there and is followed by a state push carrying the `notice`. **One intent at a time
+per player**: a second one while the first runs answers `busy_intent`.
 
 | intent | payload | server path |
 |---|---|---|
 | `use` | `{ item }` | `/use`: 3 s progress bar, effect, one unit debited |
 | `drop` | `{ item, count }` | `/drop`: ground drop at the feet, 30 min |
 | `give` | `{ item, count }` | `/give` to the **nearest other player within 3 m** (`Open77.players.closest`), same distance / weight checks |
-| `store` | `{ item, count }` | pockets -> open stash (capacity checked, rollback on failure) |
-| `take` | `{ item, count }` | open stash -> pockets (carry weight checked, rollback on failure) |
+| `store` | `{ item, count }` | pockets -> open stash (capacity checked; one coordinator operation in the transactions backend) |
+| `take` | `{ item, count }` | open stash -> pockets (carry weight checked) |
+| `cargo` | `{ close? }` | read-only cargo of the vehicle the player sits in, else the nearest registered one within `panelCargoReach`: `rp_garage:canAccessVehicle(..., "cargo", "view")`, then `rp_cargo:contents`. Re-read on every commit on that account, `rp_cargo:changed`, `rp_garage:changed` / `despawned`; closes on refusal |
 | `refresh` | | a fresh state, nothing moved |
-| `close` | | the server forgets the panel (Escape, the `x`, a client restart) |
+| `close` | | the server forgets the panel (Escape, the `x`, focus taken, a client restart) |
+| `blocked` | `{ reason }` | the client would not open over a menu holding the keyboard |
 | `unavailable` | `{ reason }` | sent by the client when `Open77.webui.create` failed: the pockets (and the stash) are listed in chat instead |
 
-Money is not an item and never appears on the panel (`rp_economy` owns it).
+A refusal keeps its token (`notice.reason`, plus `notice.code` for the coordinator's own, such
+as `capacity_exceeded`), and the state that comes with it is the current one. A click made on an
+older state that is refused `not_enough` reads `That changed meanwhile: here is what you have
+now.` An action answered **`in_doubt`** is listed under *Pending* (its units shown *in transit*,
+never as gone) and its operation is read (read-only `status`, never `resolve`) until it is
+committed (`Confirmed: Stored Scrap x2.`) or proven not committed (`Not done: ... Nothing was
+lost.`); a closed panel gets the answer in chat.
+
+Money is not an item and never appears on the panel (`rp_economy` owns it; `rp_hud` shows it).
 
 ### Items
 
@@ -351,8 +393,10 @@ drop's metadata, and the next start projects it again where it lay.
 ## Manifest permissions
 
 `network.events` (events), `database.access` (SQL), `world.loot` (drops),
-`world.vehicles` (the seat read for the fuel can), `players.stats.read` /
-`players.stats.apply` (heals), `players.animations.read` (hands-up check).
+`world.vehicles` (the seat read for the fuel can; the panel's cargo view finds the vehicle with
+`Open77.vehicles.nearby`), `players.stats.read` / `players.stats.apply` (heals),
+`players.animations.read` (hands-up check), `input.actions` (client: `Open77.input.isCaptured`,
+so the panel never opens over a menu holding the keyboard).
 `web_files { "web/**" }` ships the panel page; `Open77.webui.create` needs no
 permission (same lines as `rp_mdt`). The transactions backend uses no new
 permission: `open77_transactions` is reached through `Open77.exports.call`, and
@@ -378,8 +422,10 @@ reached through exports inside `pcall` and are optional at runtime.
    3 m` and is greyed while alone). **Use**: the button reads `Working...`, a
    3 s bar, chat `You eat the burrito. Better.` (or the `rp_needs` answer), then
    the tile reads `x2`, the bar `27.2 / 40 kg` and a toast `Used Burrito.`
-   Escape (or the `x`) closes the panel and gives the game its keys back;
-   `/inv` reopens it. Log: `player 1 -1 burrito total=2 (used)`.
+   Escape (or the `x`) closes the panel and gives the game its cursor back
+   (expected: the keyboard stays with the game while browsing, so opening the
+   chat closes the panel and push-to-talk still transmits); `/inv` reopens it.
+   Log: `player 1 -1 burrito total=2 (used)`.
 4. Player 1: `/use maxdoc` at full health: `You are already at full health.`
    Take some damage, use it again: `+60 health`.
 5. Player 1: `/drop crate`. A drop appears at the feet; the console

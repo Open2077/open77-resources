@@ -32,6 +32,14 @@ RpInventoryConfig = {
     importUnknownItems = false,     -- transactions: import rows of undefined item ids (weight 0, reported)
     requireDurableStore = true,     -- transactions: import only when open77_transactions reports store = "sql"
     coordinatorWallets = false,     -- transactions: sellAsync may pay cash:/bank:/soc: (only once B3 owns them)
+
+    -- The /inv panel (world-interaction row B7, docs/world-interaction/b7-ui.md).
+    panelStashReach = 6.0,          -- metres the player may walk from where a stash panel opened
+    panelCargoReach = 5.0,          -- metres to the vehicle for the read-only cargo view (or seated in it)
+    panelUnitsShown = 24,           -- unique units (durability / serial) listed per item in a state
+    panelUnitsBudget = 64,          -- and per container (the rest is counted in moreUnits)
+    panelPendingWatchS = 900,       -- seconds an in_doubt panel action is watched before "ask an admin"
+    panelFocusGraceMs = 3000,       -- client: a panel that never got focus in this time closes itself
 }
 
 RpInventoryItems = {
