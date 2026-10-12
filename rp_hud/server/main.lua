@@ -15,6 +15,7 @@ local RESOURCE = GetCurrentResourceName()
 
 local connected = {}   -- playerId (number) -> true once the player is ready or asked for a snapshot
 local throttle = {}    -- playerId (number) -> { lastAt = seconds | nil, pending = boolean }
+local pendingSeen = {} -- playerId (number) -> wallet pending fingerprint last pushed (B7 pending watch)
 local depSet = {}      -- resource name -> true for the resources whose events feed the panel
 for _, name in ipairs(Config.dependencies) do depSet[name] = true end
 
@@ -44,6 +45,64 @@ end
 -- Snapshot
 -- --------------------------------------------------------------------------
 
+-- The pending part of one wallet as the page draws it, or nil when nothing is unsettled.
+local function pendingView(w)
+    if type(w) ~= "table" or (tonumber(w.ops) or 0) == 0 then return nil end
+    return {
+        incoming = math.floor(tonumber(w.incoming) or 0),       -- not in the balance yet
+        outgoing = math.floor(tonumber(w.outgoing) or 0),       -- already subtracted, unconfirmed
+        unconfirmed = math.floor(tonumber(w.unconfirmed) or 0), -- already added, unconfirmed
+        inDoubt = math.floor(tonumber(w.inDoubt) or 0),
+    }
+end
+
+-- B3 wallet (rp_economy 2.x walletStatus): balances plus what is still unsettled, and an
+-- explicit "unknown" instead of the 0 getBalance answers for a wallet that is not loaded.
+-- Returns false when the export is missing (rp_economy 1.x or 2.0 without it): the caller then
+-- falls back to getBalance / rp_bank:getAccount.
+local function readWallet(playerId, s)
+    local status = safe(function()
+        return exports.rp_economy:walletStatus(playerId, { minAgeSeconds = (Config.pendingShowAfterMs or 0) / 1000 })
+    end)
+    if type(status) ~= "table" then return false end
+    if status.loaded ~= true then
+        s.wallet = { state = tostring(status.reason or "not_loaded") }
+        return true
+    end
+    local cash, bank = status.cash or {}, status.bank or {}
+    if type(cash.balance) == "number" then s.cash = math.floor(cash.balance) end
+    if type(bank.balance) == "number" then s.account = math.floor(bank.balance) end
+    s.wallet = {
+        state = status.reason and tostring(status.reason) or "ok",   -- "store_unavailable": cached values
+        cash = pendingView(cash),
+        account = pendingView(bank),
+    }
+    return true
+end
+
+-- B4 jobs (rp_jobs 2.1 summary): job, grade and duty in one read, and the reason when the file
+-- is not available (store offline, still loading) instead of "unemployed". Returns false when
+-- the export is missing: the caller falls back to getJob / getGrade / onDuty.
+local function readJob(playerId, s)
+    local ok, summary, why = pcall(function() return exports.rp_jobs:summary(playerId) end)
+    if not ok then return false end
+    if type(summary) ~= "table" then
+        s.jobState = tostring(why or "unavailable")
+        return true
+    end
+    if type(summary.job) == "string" and summary.job ~= "" then
+        s.job = {
+            name = summary.job,
+            label = (type(summary.label) == "string" and summary.label) or Config.jobLabels[summary.job] or summary.job:upper(),
+            grade = type(summary.grade) == "number" and summary.grade or nil,
+            gradeLabel = type(summary.gradeLabel) == "string" and summary.gradeLabel or nil,
+            onDuty = summary.onDuty == true,
+        }
+    end
+    s.jobState = "ok"
+    return true
+end
+
 -- Everything the panel shows, read fresh from the owning resources. A field
 -- is absent (nil) when its resource is not running, so the page draws "--"
 -- instead of a wrong number.
@@ -57,17 +116,22 @@ local function snapshot(playerId)
         s.rpName = fullName
     end
 
-    local cash = safe(function() return exports.rp_economy:getBalance(playerId) end)
-    if type(cash) == "number" then
-        s.cash = math.floor(cash)
+    if not readWallet(playerId, s) then
+        local cash = safe(function() return exports.rp_economy:getBalance(playerId) end)
+        if type(cash) == "number" then
+            s.cash = math.floor(cash)
+        end
+
+        local account = safe(function() return exports.rp_bank:getAccount(playerId) end)
+        if type(account) == "table" and type(account.balance) == "number" then
+            s.account = math.floor(account.balance)
+        end
     end
 
-    local account = safe(function() return exports.rp_bank:getAccount(playerId) end)
-    if type(account) == "table" and type(account.balance) == "number" then
-        s.account = math.floor(account.balance)
+    local job = nil
+    if not readJob(playerId, s) then
+        job = safe(function() return exports.rp_jobs:getJob(playerId) end)
     end
-
-    local job = safe(function() return exports.rp_jobs:getJob(playerId) end)
     if type(job) == "string" and job ~= "" then
         local grade = safe(function() return exports.rp_jobs:getGrade(playerId) end)
         local onDuty = safe(function() return exports.rp_jobs:onDuty(playerId) end)
@@ -162,6 +226,12 @@ AddEventHandler("rp_needs:changed", function(playerId) push(playerId) end)
 AddEventHandler("rp_zones:entered", function(playerId) push(playerId) end)
 AddEventHandler("rp_zones:left", function(playerId) push(playerId) end)
 AddEventHandler("rp_identity:changed", function(playerId) push(playerId) end)
+-- B3 / B4 events: every cash or bank change of a connected player (a revert included), and every
+-- job, grade or duty change (the work epoch moves on each of them).
+AddEventHandler("rp_economy:walletChanged", function(kind, playerId)
+    if (kind == "cash" or kind == "bank") and playerId ~= nil then push(playerId) end
+end)
+AddEventHandler("rp_jobs:workEpoch", function(playerId) push(playerId) end)
 
 -- --------------------------------------------------------------------------
 -- Player lifecycle
@@ -184,6 +254,7 @@ AddEventHandler("onPlayerDisconnected", function(playerId)
     if not playerId then return end
     connected[playerId] = nil
     throttle[playerId] = nil
+    pendingSeen[playerId] = nil
 end)
 
 -- The client asks for a snapshot when its page has loaded (and on
@@ -218,6 +289,35 @@ AddEventHandler("onResourceStart", function(name)
         end)
     end
 end)
+
+-- Pending watch (B7): an atomic credit in flight raises no event until it settles, so ask
+-- rp_economy once per poll which players have unsettled operations and re-push those whose set
+-- changed (appeared, changed, or settled). A missing export (older rp_economy) disables nothing
+-- else: the keepalive still refreshes everyone.
+if Config.pendingPollMs and Config.pendingPollMs > 0 then
+    CreateThread(function()
+        while true do
+            Wait(Config.pendingPollMs)
+            local now_ = safe(function()
+                return exports.rp_economy:pendingPlayers({ minAgeSeconds = (Config.pendingShowAfterMs or 0) / 1000 })
+            end)
+            if type(now_) == "table" then
+                for playerId, fingerprint in pairs(now_) do
+                    if connected[playerId] and pendingSeen[playerId] ~= fingerprint then
+                        pendingSeen[playerId] = fingerprint
+                        push(playerId)
+                    end
+                end
+                for playerId in pairs(pendingSeen) do
+                    if now_[playerId] == nil then
+                        pendingSeen[playerId] = nil
+                        push(playerId)
+                    end
+                end
+            end
+        end
+    end)
+end
 
 -- Keepalive: a slow periodic snapshot so a value that changed without an
 -- event (needs decay between rp_needs ticks, a dependency that was down)

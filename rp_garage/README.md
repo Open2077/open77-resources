@@ -11,6 +11,14 @@ own impound log and this resource follows its `rp_mecano:impounded` event.
 The client only places three POIs and adds ALT+click entries; every distance, ownership and
 payment check happens in `server/main.lua`.
 
+**Access (world-interaction row A9).** `exports.rp_garage:canAccess(playerId, plate, part, action)`
+is the one server-side answer to "may this player drive / lock / store this car, or look in, take
+from or put into its cargo, trunk or glovebox". It knows five kinds of caller: the owner, a key
+holder, a mechanic on a job order, the police with a warrant, and everybody else. Inventory and
+cargo adapters (`rp_cargo`, the B2 vehicle container) ask it instead of deciding themselves. See
+[Access](#access-a9-owner-keys-job-orders-warrants) below and
+`docs/world-interaction/a9-cargo.md`.
+
 ## Where things are (world metres, real Night City streets)
 
 The hub is Kabuki Market (freeroam spawn `-1191.30, 2006.88, 7.82`), but its alleys are
@@ -79,6 +87,7 @@ eddies move, so nothing ever needs a refund. The bought vehicle spawns at the de
 | `/concession` | Opens the dealership menu (within 6 m of its ring). |
 | `/cles <playerId> [plate]` | Hands a **duplicate key** of your vehicle to a player within **5 m**. Without a plate: the vehicle you sit in, else the nearest vehicle you **own** within 8 m. Keys persist in SQL; the holder can enter the locked car, `/verrouiller` it and store / take it out. Only the owner gives keys. |
 | `/cles revoke [plate]` (`retirer` also works) | Cancels every duplicate key of that vehicle; online holders lose their lock exception at once. |
+| `/cles ordre <mechanicId> [plate] [minutes]` (`order`) | The owner hands a **job order** to a player with the `mecano` job (default 60 min, at most 24 h): while on duty, the mechanic may drive, lock and repair that car and look in its bed and trunk (`canAccess` role `mechanic`), and gets a lock exception. `/cles ordre annuler [plate]` lifts every order on the car. |
 | `/cles` | Lists your vehicles: plate, label, state (`stored` / `out` / `impounded`), who holds keys, the wanted flag. |
 | `/verrouiller` | Toggles the entry lock of the vehicle you sit in, else the nearest vehicle **you hold a key for** within **6 m** (`Open77.vehicles.isLocked` / `setLocked`, a short horn confirms). Ownership-aware: a vehicle without a plate on file, or one you hold no key for, is refused with the reason. |
 | `/plaque` | The vehicle you sit in, else the nearest server vehicle within **8 m**: plate, label, owner's RP name (`rp_identity`, stored at the last write so an offline owner still has a name), whether you hold a key, distance. A **WANTED** line follows when the vehicle is flagged; NCPD on duty read the reason, everybody else reads "by the NCPD". A vehicle without a row answers *No plate on file: an unregistered ride*. |
@@ -87,7 +96,10 @@ eddies move, so nothing ever needs a refund. The bought vehicle spawns at the de
 flow as `/cles`); on a vehicle **Lock / unlock** (6 m) and **Read the plate** (8 m). The client
 only sends the target id; the server resolves distance and keys again.
 
-From the server console every command answers `run it from the game`.
+From the server console every command answers `run it from the game`. The console has one
+command of its own: `vehwarrant <plate> <minutes> [reason]` issues a police warrant on that car
+for every NCPD officer on duty (`job:ncpd`), `vehwarrant <plate> off` lifts it (lab and admin
+use; a judge flow in `rp_mdt` would call `authorize` instead).
 
 **`/car` (freeroam, admin) stays.** It spawns an untracked vehicle: no plate, no owner, no row.
 `/plaque` on it says *unregistered ride*, `/verrouiller` refuses it (the platform's
@@ -155,12 +167,42 @@ deliver ids as strings). The exports answer from the in-memory cache; SQL is wri
 the callback forms, never awaited on the export path. `rp_garage` ships a client script: a
 resource that also ships one may declare `dependency "rp_garage"`.
 
+Access and identity exports (A9, same rules: synchronous, cache-only, never yield):
+
+```lua
+exports.rp_garage:canAccess(playerId, plate, part, action)
+    -- true, role, state | false, reason
+    -- part nil: action drive | lock | store | manage | repair | impound
+    -- part "cargo" | "trunk" | "glovebox": action view | take | put
+    -- role owner | key | mechanic | police; state stored | out | impounded
+    -- reasons: registry_loading invalid_player_id invalid_plate invalid_part invalid_action
+    --          vehicle_not_tracked player_not_found no_access action_not_permitted impounded
+    --          off_duty no_job_order warrant_required
+exports.rp_garage:canAccessVehicle(playerId, vehicleId, part, action)   -- same, from a runtime id
+exports.rp_garage:accountOf(plate, part)    -- "veh:<plate>:<part>" | nil, "vehicle_not_tracked" | "invalid_part"
+exports.rp_garage:describe(plate)           -- { plate, record, label, state, owner, society, vehicleId, wanted }
+                                            --   | nil, "vehicle_not_tracked"; vehicleId only while out
+exports.rp_garage:authorize(plate, role, holder, { minutes, reason, by })
+    -- role "mechanic" (job order) | "police" (warrant); holder = player id, identifier or "job:<name>"
+    -- by (optional player id): the owner for a job order, an NCPD officer on duty of grade >=
+    -- Config.access.police.warrantMinGrade for a warrant. Without `by`, the calling resource is trusted.
+    -- -> { role, holder, expiresAt } | nil, "invalid_role" | "invalid_holder" | "invalid_duration"
+    --    | "not_owner" | "not_police" | "grade_too_low" | "vehicle_not_tracked" | "invalid_plate"
+exports.rp_garage:revokeAuthorization(plate, role, holder?, { by })   -- count | nil, "not_found" | ...
+exports.rp_garage:authorizations(plate)     -- { { role, holder, grantedBy, reason, expiresAt }, ... }
+```
+
+A plate is always a string (`"NC-K7P2"`, or `"K7P2"` with the prefix added): a bare number is
+refused as `invalid_plate`, so a runtime vehicle id can never be mistaken for a plate.
+
 ## Events (host bus, `TriggerEvent`)
 
 | Event | Arguments | When |
 |---|---|---|
-| `rp_garage:changed` | `identifier, plate, action` | `bought`, `stored`, `taken_out`, `impounded`, `released`, `key_given`, `keys_revoked`, `wanted`, `unwanted`, `lost`. `identifier` is the owner (`society:<job>` for a fleet vehicle). |
-| `rp_garage:stolen` | `plate, byPlayerId` | A player without a key took the driver seat of an owned vehicle (`onPlayerEnteredVehicle`, `seat_front_left`). At most once per player and plate every 5 min. The driver is warned, the owner (if online) is told. |
+| `rp_garage:changed` | `identifier, plate, action` | `bought`, `stored`, `taken_out`, `impounded`, `released`, `key_given`, `keys_revoked`, `wanted`, `unwanted`, `lost`, `authorized`, `unauthorized` (a job order or warrant issued, revoked or expired). `identifier` is the owner (`society:<job>` for a fleet vehicle). An adapter holding an open panel re-checks `canAccess` on every one of them. |
+| `rp_garage:stolen` | `plate, byPlayerId` | A player without a key (and without a job order) took the driver seat of an owned vehicle (`onPlayerEnteredVehicle`, `seat_front_left`). At most once per player and plate every 5 min. The driver is warned, the owner (if online) is told. |
+| `rp_garage:spawned` | `plate, vehicleId, record` | A tracked vehicle entered the world under a NEW runtime id (dealership, take-out, `spawnOwned`). Cargo and inventory projections re-bind to it (A9). |
+| `rp_garage:despawned` | `plate, vehicleId, reason` | That runtime id is gone (`stored`, `impounded`, `lost`). The plate, its keys, grants and cargo stay. |
 
 Consumed: `rp_mecano:impounded (vehicleId, byPlayerId, record, plate)`, `onVehicleRemoved`,
 `onPlayerEnteredVehicle`, `onPlayerReady`, `onPlayerDisconnected`, `chat:ready`.
@@ -168,9 +210,41 @@ Consumed: `rp_mecano:impounded (vehicleId, byPlayerId, record, plate)`, `onVehic
 Internal net events (`rp_garage:open`, `rp_garage:dealer`, `rp_garage:giveKey`,
 `rp_garage:action`) are the client/server transport of the POIs and ALT+click entries, not an API.
 
+## Access (A9): owner, keys, job orders, warrants
+
+Three things are kept apart:
+
+- **legal ownership**: this registry (owner, key holders, grants), keyed by **plate**;
+- **physics authority**: `Open77.vehicles.owner(id)`, whoever simulates the car right now. It moves
+  with the driver and is never consulted for access;
+- **resource permissions**: `world.vehicles` / `world.props` of the calling resource, which says
+  what the *resource* may do, not what a *player* may.
+
+A trunk opened in the world (`Open77.vehicles.isDoorOpen`) is presentation, never authorization.
+
+| Role | Who | Vehicle actions | Parts (cargo, trunk, glovebox) | Gate |
+|---|---|---|---|---|
+| `owner` | the owner's identifier, or the boss of the owning society | drive lock store manage repair | view take put | refused `impounded` while at the impound lot (except `manage`) |
+| `key` | a duplicate-key holder, or any employee of the owning society | drive lock store | view take put | refused `impounded` |
+| `mechanic` | a `mecano` employee **on duty** with an active job order for the plate (`/cles ordre`, or `authorize`) | drive lock repair | cargo view, trunk view | `off_duty`, `no_job_order`, `impounded` |
+| `police` | an `ncpd` officer **on duty** with a warrant: the plate's wanted flag (`setWanted`) or an active police grant | drive lock impound | view take | `off_duty`, `warrant_required`; no warrant needed at the impound lot |
+| anyone else | | | | `no_access` |
+
+The first role that permits the action and passes its gate wins; otherwise the most specific
+refusal comes back (`warrant_required` before `no_access`, `action_not_permitted` when a role
+exists but does not include the action). The table is `Config.access` in `shared/config.lua`
+(roles, jobs, duty requirements, `police.withoutWarrant` for, say, `"cargo:view"`, grant
+durations); the decision itself is the pure `server/access.lua`, tested offline in
+`tests/test_a9_garage_access.py`.
+
+Grants (job orders, warrants) are rows keyed by `(plate, role, holder)` with an expiry; they
+survive a restart, expire in the 30 s snapshot loop (the lock exceptions follow) and raise
+`rp_garage:changed ... "authorized" / "unauthorized"`. A holder is a durable identifier or
+`job:<name>`: a session id or a runtime id is refused (`invalid_holder`).
+
 ## Persistence
 
-Both tables are created inside `Open77.database.ready(...)` with `CREATE TABLE IF NOT EXISTS`
+The three tables are created inside `Open77.database.ready(...)` with `CREATE TABLE IF NOT EXISTS`
 (permission `database.access`) and loaded once into memory; every change is written through with
 the callback forms:
 
@@ -201,11 +275,24 @@ rp_garage_keys (
     at          BIGINT      NOT NULL,
     PRIMARY KEY (plate, holder)
 )
+rp_garage_grants (                             -- A9: job orders and warrants
+    plate       VARCHAR(16) NOT NULL,
+    role        VARCHAR(16) NOT NULL,          -- mechanic | police
+    holder      VARCHAR(64) NOT NULL,          -- identifier, or job:<name>
+    granted_by  VARCHAR(64) NOT NULL,          -- identifier of the issuer, or the calling resource
+    reason      VARCHAR(64) NOT NULL,
+    expires_at  BIGINT      NOT NULL,          -- unix seconds
+    at          BIGINT      NOT NULL,
+    PRIMARY KEY (plate, role, holder)
+)
 ```
 
+`rp_garage_grants` is new in wave 1 (A9): `CREATE TABLE IF NOT EXISTS` adds it to an existing
+database without touching the two older tables (`tests/compat/schema-snapshot.json` carries it).
+
 **No database** (`ready` answers `database_unavailable`, or nothing answers 15 s after start):
-rows fall back to the resource's `Open77.kvp` store (`veh:<plate>` / `keys:<plate>`, JSON) and the
-log says `[rp_garage] store=kvp reason=...`. The choice is kept for the whole boot. Until the
+rows fall back to the resource's `Open77.kvp` store (`veh:<plate>` / `keys:<plate>` /
+`grants:<plate>`, JSON) and the log says `[rp_garage] store=kvp reason=...`. The choice is kept for the whole boot. Until the
 store has answered, the menus and key commands answer *The garage registry is still loading*.
 
 ## The plate on the vehicle
@@ -233,7 +320,7 @@ whatever the platform gives a new car).
 [rp_garage] started: 2 garage(s), dealership at -1442 127, 5 record(s) for sale, impound fee 500, society garage
 [rp_garage] prop 1042 of public at -1408.0 956.8 23.5 (sign.street)
 [rp_garage] prop of dealership refused (invalid_model): light.spotlight
-[rp_garage] store=sql tables=rp_garage_vehicles,rp_garage_keys vehicles=3 keys=1
+[rp_garage] store=sql tables=rp_garage_vehicles,rp_garage_keys,rp_garage_grants vehicles=3 keys=1 grants=0
 [rp_garage] player 1 bought Archer Hella (Vehicle.v_standard2_archer_hella_player) plate=NC-K7P2 owner=<identifier> paid=account
 [rp_garage] player 1 stored Archer Hella plate=NC-K7P2 at public
 [rp_garage] player 1 took out Archer Hella plate=NC-K7P2 at public vehicle=12
@@ -246,6 +333,9 @@ whatever the platform gives a new car).
 [rp_garage] plate NC-K7P2 wanted=true reason=hit and run
 [rp_garage] plate NC-K7P2 lost from the world (removed): back in the garage
 [rp_garage] plate state bag refused: permission_denied:state.write (the plate stays in SQL, ...)
+[rp_garage] grant mechanic on plate NC-K7P2 to <identifier> for 60 min by <identifier> (job order)
+[rp_garage] grant police on plate NC-K7P2 to job:ncpd for 15 min by server (warrant)
+[rp_garage] grant mechanic on plate NC-K7P2 to <identifier> expired
 ```
 
 ## Test in 2 minutes

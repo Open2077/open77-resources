@@ -1,5 +1,8 @@
 -- rp_inventory: item definitions and tunables, loaded on both runtimes.
 -- id -> { label, weight (kg), usable, illegal, effect, category }
+-- This is the legacy shape; shared/schema.lua imports it unchanged as definition schema v1 and
+-- documents the optional v1 fields (weightG, maxStack, unique, metadata, durability, serial,
+-- quality, prop, hand, loot).
 --
 -- `category` only picks the glyph the /inv panel draws on the tile (heal, food,
 -- drink, fuel, smoke, drug, tech, tool, material, cargo, misc); it changes no rule.
@@ -17,6 +20,26 @@ RpInventoryConfig = {
     lootRecord = "Items.money",     -- documented default record for a ground drop
     lootVisual = "Items.MoneyShard",-- documented default 3D entity for a ground drop
     useDurationMs = 3000,           -- progress bar while using a consumable
+
+    -- Storage backend, chosen once per boot (the convar `rp_inventory_backend` overrides it):
+    --   "legacy"        rp_inventory_items / rp_inventory_stashes, kvp when no database answers
+    --   "transactions"  a facade over open77_transactions (must be running and in resources.load);
+    --                   never a kvp fallback; legacy rows are imported once per subject
+    backend = "legacy",
+    migrateOnLoad = true,           -- transactions: import a subject's legacy rows on first load
+    reprojectLimit = 500,           -- transactions: world: drops re-projected per start (open77_transactions:listWorld)
+    pocketGrantees = { rp_salvage = true, rp_economy = true, rp_cargo = true }, -- transactions: grantPockets callers
+    importUnknownItems = false,     -- transactions: import rows of undefined item ids (weight 0, reported)
+    requireDurableStore = true,     -- transactions: import only when open77_transactions reports store = "sql"
+    coordinatorWallets = false,     -- transactions: sellAsync may pay cash:/bank:/soc: (only once B3 owns them)
+
+    -- The /inv panel (world-interaction row B7, docs/world-interaction/b7-ui.md).
+    panelStashReach = 6.0,          -- metres the player may walk from where a stash panel opened
+    panelCargoReach = 5.0,          -- metres to the vehicle for the read-only cargo view (or seated in it)
+    panelUnitsShown = 24,           -- unique units (durability / serial) listed per item in a state
+    panelUnitsBudget = 64,          -- and per container (the rest is counted in moreUnits)
+    panelPendingWatchS = 900,       -- seconds an in_doubt panel action is watched before "ask an admin"
+    panelFocusGraceMs = 3000,       -- client: a panel that never got focus in this time closes itself
 }
 
 RpInventoryItems = {

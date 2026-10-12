@@ -1,0 +1,30 @@
+Vendored, unmodified: the FINAL wave-1 coordinator, for the offline suites of the RP adapters
+(tests/test_compat_inventory.py, test_compat_wallet.py, test_compat_economy.py, test_a9_cargo.py,
+test_compat_jobs.py).
+
+Origin: Open77 repository, resources/system/open77_transactions, branch wi/a13-coordinator,
+commit 697e9e2f0045587e21907c95716a38cc5089a8a1 (2026-10-12, "feat(a13): open77_transactions
+coordinator, wave 1 (opt-in resource)"), merged into feat/world-interaction (7daad67c). Read from
+the worktree C:\Games\cyberm\wt-wi-a13b. The resource's own tests/ folder is not copied.
+
+Git blob ids (LF content), equal to `git rev-parse 697e9e2f:resources/system/open77_transactions/<file>`:
+  eacd4ccb38c9ff83f5dc0cb9fcc55b08f98d1968  open77.lua
+  c3e93e20dab27d6f3f975d91c304476249e95833  shared/model.lua
+  4e72845cbe14b6cd0eb9ab1a60f7034e998fee81  server/policy.lua
+  86c41966040bbdc103833e82efef09935230e8b2  server/memory_store.lua
+  3ba8bf5d9300967ecabe50962c0af5cd47dc3be2  server/sql_store.lua
+  e1ef7a49b6f0097cd2d18399d2c32cb406eb7ee3  server/kvp_store.lua
+  2bc2ad4e7ad6c6569c78beb721c8058c3d75708f  server/coordinator.lua
+  ed46b78326227c8981d31612a798b77eb9a3973f  server/main.lua
+
+How the suites run it: the REAL server scripts, in manifest order, server/main.lua included (its
+exports, tunables, work queue, gate, events and subject provider). The only test seam is
+tests/compat/txshim.lua, loaded just before server/main.lua: it hands the test's in-memory store
+(server/memory_store.lua, with its fault injection) to main.lua in place of the MySQL bridge
+(Open77TxSql.newStore) and of the KVP file (Open77TxKvpStore.new), and records the coordinator
+object for assertions. Hosts: tests/compat/txsandbox.lua on the single-resource fakehost.lua (B2,
+B4, A9), multihost.lua as a resource of its own (B3).
+
+To run the suites against another copy (a newer coordinator), set OP77_TX_DIR to its
+resources/system/open77_transactions folder. Do not edit these files: refresh them from the origin
+and update the commit and the blob ids above (tests/test_compat_wallet.py checks them).
