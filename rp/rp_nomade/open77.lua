@@ -1,36 +1,51 @@
--- rp_nomade: Badlands convoys and crate deliveries for the `nomade` job (replaces the v1 courier run).
+-- rp_nomade: Aldecaldos smuggling runs for the `nomade` job. Take a run at the camp's board, carry
+-- contraband crates into a truck bed, drive past the NCPD checkpoints into Night City, hand the
+-- crates to a fence (or to a player who accepts), get paid minus the camp's cut. Built on the
+-- world-interaction libraries: open77_actions (prompts, bars, carrying), open77_containers (the
+-- crates: keyed, durable, presented by open77_actions), open77_transactions (every custody move),
+-- rp_garage + rp_cargo (truck keys and beds), rp_economy (pay, fines), rp_jobs (duty, epochs).
 resource "rp_nomade"
-version "1.0.0"
+version "2.0.0"
 open77_version "*"
-auto_start true
 
--- network.events  : RegisterNetEvent / TriggerClientEvent (server), TriggerServerEvent / RegisterNetEvent
---                   (client), Open77.notifications.send, Open77.heldItems.hold / release
--- database.access : Open77.database.* (rp_nomade_contracts)
--- world.vehicles  : Open77.vehicles.create / get / getPosition / remove (the rented truck)
--- world.props     : Open77.props.create / attach / detach / update / setTransform / remove (the crates, carried then in the truck bed)
--- world.npcs      : Open77.npcs.create / setAttitude / tasks.attack / remove (the ambush)
--- players.animations.control : Open77.animations.play / stop (the two-hand carry pose while a crate is held)
--- ui.vanilla.map  : Open77.blips.create / setDescription / remove / setWaypoint / clearWaypoint (client: destination and camp pins + GPS route)
-permissions { "network.events", "database.access", "world.vehicles", "world.props", "world.npcs", "players.animations.control", "ui.vanilla.map" }
+-- Opt-in: it needs the world-interaction libraries, which do not start on their own either.
+auto_start false
 
--- Every dependency below ships a client half, so a manifest delivered to clients may depend on it.
---   open77_uikit         : contracts menu (server twin `context`) and the unloading bar (server twin `progress`)
---   open77_worldui       : the contracts board ring + E prompt, one ring + E prompt per crate, the destination ring
---   open77_interactions  : the E prompts on the rented truck (a globalVehicle target: load / unload / return)
---   open77_props         : the client projection that draws the crates and their hand attachment
---   open77_notifications : the payout toast
-dependency "open77_uikit >=1.0.0"
-dependency "open77_worldui >=0.1.0"
-dependency "open77_interactions >=0.1.0"
-dependency "open77_props >=0.1.0"
-dependency "open77_animations"
+-- Least privilege, native by native (wiki/data/api.json):
+--   network.events                 RegisterNetEvent / TriggerClientEvent (the navigation push),
+--                                  Open77.notifications.send (toasts)
+--   world.vehicles                 Open77.vehicles.all / get / getPosition / getDriver / getHealth
+--                                  (the truck near a bay, at a checkpoint, wrecked)
+--   world.npcs                     Open77.npcs.create / remove (the fences, presentation only)
+--   players.wanted                 Open77.players.setWanted (heat after a checkpoint search)
+--   players.interactions.control   Open77.playerInteractions.request / cancel (a crate handed to
+--                                  a player, a driver consenting to a search)
+--   players.interactions.read      Open77.playerInteractions.get (the sweep tells a lost offer)
+--   ui.vanilla.map                 client: Open77.blips (destination, camp and checkpoint pins, GPS)
+-- Carried crates are open77_actions' props, bed crates rp_cargo's: no world.props. No
+-- database.access: every durable value lives in open77_transactions or open77_containers.
+permissions {
+    "network.events", "world.vehicles", "world.npcs", "players.wanted",
+    "players.interactions.control", "players.interactions.read", "ui.vanilla.map",
+}
+
+-- This manifest ships a client script, so it names only dependencies that ship a client half.
+-- open77_transactions, rp_cargo and rp_economy are server-only: the boot waits for them instead
+-- (a client would refuse this resource with missing_dependency otherwise).
+dependency "open77_actions >=0.1.0"
+dependency "open77_containers >=0.2.0"
+dependency "open77_player_interactions >=1.0.0"
 dependency "open77_notifications"
+dependency "rp_jobs >=2.1.0"
+dependency "rp_inventory >=1.1.0"
+dependency "rp_garage"
 
--- rp_jobs, rp_zones, rp_inventory, rp_economy and rp_bank are reached through pcall'd exports:
--- rp_jobs and rp_zones ship a client half of their own and the others are server-only, and a
--- manifest delivered to clients cannot depend on a server-only resource (missing_dependency).
-
-shared_script "shared/config.lua"
+server_scripts {
+    "server/config.lua",
+    "server/model.lua",
+    "server/ledger.lua",
+    "server/ports.lua",
+    "server/service.lua",
+    "server/main.lua",
+}
 client_script "client/main.lua"
-server_script "server/main.lua"
