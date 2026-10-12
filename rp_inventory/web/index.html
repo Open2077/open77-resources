@@ -223,6 +223,9 @@
   const S = { open: false, state: null, sel: null, busy: null, busyTimer: null };   // sel = { side: "pockets"|"stash", id }
 
   const $ = (id) => document.getElementById(id);
+  // An empty Lua table crosses the event bridge as a JSON object ({}), never [] (live 2026-10-12:
+  // the cargo view of a truck with three empty slots threw on {}.map and drew nothing).
+  const arr = (v) => Array.isArray(v) ? v : (v && typeof v === "object" ? Object.values(v) : []);
   const esc = (v) => String(v == null ? "" : v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const kg = (n) => (Math.round(Number(n || 0) * 10) / 10).toFixed(1);
   const cap = (n) => String(Math.round(Number(n || 0)));
@@ -392,11 +395,11 @@
     $("colCargo").hidden = !cargo;
     if (!cargo) { $("listCargo").innerHTML = ""; return; }
     $("cargoPlate").textContent = cargo.plate || "";
-    const slots = cargo.slots || [];
+    const slots = arr(cargo.slots);
     const head = `<div class="hint" style="padding:0 0 6px;color:var(--dim);font-size:10px">${esc(cargo.objects)} object(s), ${esc(cargo.free)} free place(s)${cargo.capacityKg ? " &middot; " + esc(cargo.capacityKg) + " kg max" : ""}</div>`;
     $("listCargo").innerHTML = head + (slots.length ? slots.map((s) => {
-      const objs = (s.objects || []).map((o) => `<div class="obj">${esc(o.label)} <small>${esc(o.instance)}</small></div>`).join("");
-      return `<div class="slot"><div class="sh"><span>Slot ${esc(s.slot)}</span><span>${(s.objects || []).length}/${esc(s.maxStack)}</span></div>${objs || `<div class="none">empty</div>`}</div>`;
+      const objs = arr(s.objects).map((o) => `<div class="obj">${esc(o.label)} <small>${esc(o.instance)}</small></div>`).join("");
+      return `<div class="slot"><div class="sh"><span>Slot ${esc(s.slot)}</span><span>${arr(s.objects).length}/${esc(s.maxStack)}</span></div>${objs || `<div class="none">empty</div>`}</div>`;
     }).join("") : `<div class="empty">No cargo bed.</div>`);
   }
 
