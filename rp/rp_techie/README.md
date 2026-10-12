@@ -29,8 +29,8 @@ on the upper floor west of Kabuki Market.
    (1 plate + 1 logic board, grade 1). At the electronics bench (standing, tablet): *Servo
    actuator* (2 plates + 2 looms), *Neural link chip* (2 logic boards + 1 loom, grade 1), *Optic
    lens array* (1 logic board + 1 plate + 1 loom, grade 2).
-4. **Sell.** At the **2nd Amendment back counter** (East Row) **E** *Sell to 2nd Amendment* sells
-   every weapon mod in your pockets; the **Med-Point parts counter** buys every cyberware
+4. **Sell.** Next to **Wilson** at the 2nd Amendment stall (East Row, under the stairs) **E** *Sell
+   to 2nd Amendment* sells every weapon mod in your pockets; **Dr. Osei** at Med-Point buys every cyberware
    component. One sale: the shop price, 10 percent of it to the `techie` society. To a player:
    `/techie sell <their id> <item> [count] [price]`; they accept the hand-over and pay from their
    cash. Ripperdocs buy cyberware components this way (`tch_cw_*`).
@@ -151,15 +151,15 @@ Everything lives in `server/config.lua`.
 | `trade` | hand-over distances and timeout, `maxCount`, `maxUnitPrice`, `offerCallers` (resources allowed to call `offer`) |
 | `mintCaps` | the caps `techie.mintrules` prints |
 
-Every point is catalogue anchor data, not walked yet (`measured = false`):
+Points (`measured = true` once walked in game):
 
 | Point | Position, yaw | Source |
 |---|---|---|
-| Workbench `kabuki_west_kneel` | -1237.807, 1997.668, 12.010, 155.0 | pedestrian spot row 37034 (`amb_cc2fe0_kneel_ground_tool`) |
-| Electronics bench `kabuki_west_stand` | -1243.586, 2004.144, 11.980, -85.0 | pedestrian spot row 37033 (`amb_83b921_stand_ground_tablet`) |
+| Workbench `kabuki_west_kneel` | -1238.89, 1998.18, 12.010, 155.0 | inside the scaffold, 1.2 m beside the game's own kneeling worker (spot row 37034) |
+| Electronics bench `kabuki_west_stand` | -1240.88, 1999.11, 12.010, 155.0 | the wall panel at the end of the workbench scaffold |
 | Parts dealer `dealer_kabuki_west` | -1235.566, 2000.680, 12.077, -151.0 | pedestrian spot row 32163 (`amb_2ced53_stand_ground`) |
-| Gun-shop counter `shop_gunshop` | -1164.684, 2017.837, 7.763, 67.59 | pedestrian spot row 26187, 4.4 m from rp_shops' walked East Row ring |
-| Med-Point counter `shop_medpoint` | -1225.32, 1992.10, 7.98, -166.6 | 3 m along the counter from rp_shops' walked Med-Point ring |
+| Wilson, 2nd Amendment `shop_gunshop` | -1160.02, 2017.85, 7.76, -21.2 | beside rp_shops' East Row ring, facing Wilson |
+| Dr. Osei, Med-Point `shop_medpoint` | -1224.52, 1990.59, 7.80, 165.3 | beside rp_shops' Med-Point ring, facing Dr. Osei |
 | Gallery workshop (off) | -1172.625, 2071.664, 12.060 / -1171.758, 2079.524, 11.982 | rows 39487 and 31019 |
 
 ### Exports and events for other jobs

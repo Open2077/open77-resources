@@ -694,7 +694,7 @@ function scenarios.lab_console()
         sold = op ~= nil and svc().done[op] ~= nil, shop = sh and sh.state, sights_b = pockets(B, "tch_mod_sight"),
         state_line = TW.printed("player 1 subject acct%-t pockets="), receipt_line = TW.printed("receipt strip tch%.strip:"),
         tray_line = TW.printed("workshop kabuki_west tray stash:tch%.kabuki_west:tray"),
-        bench_line = TW.printed("bench kabuki_west_kneel Workbench %(workbench%) at %-1237%.807,1997%.668,12%.010 yaw 155%.00"),
+        bench_line = TW.printed("bench kabuki_west_kneel Workbench %(workbench%) at %-1238%.890,1998%.180,12%.010 yaw 155%.00"),
         status_line = TW.printed("ready=true targets=5 shopPayment=economy"),
         mint_line = TW.printed("rp_techie sys:techie%.workshop tch_alloy_plate 400; .*rp_techie sys:techie%.dealer chip 40"),
         clock_line = TW.printed("duty 1 off: true"),

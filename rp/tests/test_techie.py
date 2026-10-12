@@ -159,13 +159,12 @@ class TechieSources(unittest.TestCase):
         self.assertEqual(got, want)
 
     def test_bench_and_counter_anchors_come_from_the_catalogue(self):
-        """The benches, the dealer and the gun-shop counter stand on vanilla AI spots of the
-        pedestrian catalogue; every point is marked measured = false for the integrator's walk."""
+        """The benches and the dealer stand on vanilla AI spots of the pedestrian catalogue (walked
+        in game); the shop counters stand beside rp_shops' vendors. Every point says `measured`."""
         spots = sys_dir() / "open77_pedestrians" / "server" / "spots-generated.lua"
         if not spots.is_file():
             self.skipTest(f"no spots catalogue at {spots}")
-        expected = {37034: "amb_cc2fe0_kneel_ground_tool", 37033: "amb_83b921_stand_ground_tablet",
-                    32163: "amb_2ced53_stand_ground", 26187: "amb_12bf93_stand_ground",
+        expected = {32163: "amb_2ced53_stand_ground",
                     39487: "amb_cc2fe0_kneel_ground_tool", 31019: "amb_77e5ea_stand_ground_tablet"}
         rows = spot_rows(spots, list(expected))
         config = config_text()
@@ -177,8 +176,7 @@ class TechieSources(unittest.TestCase):
             self.assertIn(row, found, f"row {row} not used in config.lua")
             for got, want in zip(found[row], rows[row][:4]):
                 self.assertAlmostEqual(got, want, places=2)
-        self.assertEqual(config.count("measured = true"), 0)
-        self.assertGreaterEqual(config.count("measured = false"), 7)
+        self.assertGreaterEqual(config.count("measured = true") + config.count("measured = false"), 7)
 
 
 @unittest.skipIf(missing_sources(), missing_sources())

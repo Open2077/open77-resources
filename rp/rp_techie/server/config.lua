@@ -194,11 +194,11 @@ C.workshops = {
         enabled = true, label = "Kabuki west workshop", trayCapacityG = 30000,
         benches = {
             { key = "kneel", type = "workbench", label = "Workbench",
-              position = { x = -1237.807, y = 1997.668, z = 12.010 }, yaw = 155.0, arrivalRadius = 1.0,
-              measured = false, source = "spots-generated row 37034 (amb_cc2fe0_kneel_ground_tool)" },
+              position = { x = -1238.89, y = 1998.18, z = 12.010 }, yaw = 155.0, arrivalRadius = 1.0,
+              measured = true, source = "walked in game: inside the scaffold, 1.2 m beside the spot where the game kneels its own worker (spots row 37034)" },
             { key = "stand", type = "electronics", label = "Electronics bench",
-              position = { x = -1243.586, y = 2004.144, z = 11.980 }, yaw = -85.0, arrivalRadius = 1.0,
-              measured = false, source = "spots-generated row 37033 (amb_83b921_stand_ground_tablet)" },
+              position = { x = -1240.88, y = 1999.11, z = 12.010 }, yaw = 155.0, arrivalRadius = 1.0,
+              measured = true, source = "walked in game: the wall panel at the end of the workbench scaffold, 2.2 m along it (the spot row 37033 faced the open street)" },
         },
     },
     -- The Gallery walkway (sample, off): a kneeling tool spot 16 m south of the employment agency
@@ -226,7 +226,7 @@ C.dealers = {
     kabuki_west = {
         enabled = true, label = "Sparks, parts dealer", name = "Sparks",
         position = { x = -1235.566, y = 2000.680, z = 12.077 }, yaw = -151.0,
-        measured = false, source = "spots-generated row 32163 (amb_2ced53_stand_ground), 3.8 m from the workbench",
+        measured = true, source = "walked in game: by the dumpster 3.8 m from the workbench (spots row 32163)",
         lots = {
             { item = "scrap_metal", count = 3, price = 75 },
             { item = "copper_wire", count = 2, price = 90 },
@@ -245,15 +245,15 @@ C.dealerOrder = { "kabuki_west" }
 C.shopPayment = convar("rp_techie_shop_payment", "economy")   -- "economy" | "ledger"
 C.shops = {
     gunshop = {
-        enabled = true, label = "2nd Amendment back counter", buyer = "2nd Amendment",
-        position = { x = -1164.684, y = 2017.837, z = 7.763 }, yaw = 67.59,
-        measured = false, source = "spots-generated row 26187 (amb_12bf93_stand_ground), 4.4 m from rp_shops' walked East Row ring",
+        enabled = true, label = "Wilson, 2nd Amendment", buyer = "2nd Amendment",
+        position = { x = -1160.02, y = 2017.85, z = 7.76 }, yaw = -21.2,
+        measured = true, source = "walked in game: beside rp_shops' East Row ring, facing Wilson under the stairs",
         accepts = { "tch_mod_suppressor", "tch_mod_magazine", "tch_mod_sight" },
     },
     medpoint = {
-        enabled = true, label = "Med-Point parts counter", buyer = "Med-Point",
-        position = { x = -1225.32, y = 1992.10, z = 7.98 }, yaw = -166.6,
-        measured = false, source = "arithmetic: 3.0 m along the counter from rp_shops' walked Med-Point ring (-1223.91, 1989.45, 7.98)",
+        enabled = true, label = "Dr. Osei, Med-Point", buyer = "Med-Point",
+        position = { x = -1224.52, y = 1990.59, z = 7.80 }, yaw = 165.3,
+        measured = true, source = "walked in game: beside rp_shops' Med-Point ring (The Stalls), facing Dr. Osei",
         accepts = { "tch_cw_neural_link", "tch_cw_servo", "tch_cw_optic" },
     },
 }

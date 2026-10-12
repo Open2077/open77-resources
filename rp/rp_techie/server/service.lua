@@ -269,6 +269,8 @@ function S:declare()
                     id = id, position = b.position, yaw = b.yaw, bucket = cfg.bucket,
                     label = b.label, description = ws.cfg.label, distance = 1.5, actions = choices,
                     arrivalRadius = b.arrivalRadius, data = { workshop = wsKey, bench = b.key, role = "bench" },
+                    -- The benches are game workspots: the crowd's workers kneel there too otherwise.
+                    keepCrowdOff = b.keepCrowdOff ~= false,
                 })
                 if ok then
                     targets = targets + 1
@@ -291,6 +293,7 @@ function S:declare()
             local ok, why = self.P.actions.target({
                 id = id, position = d.position, yaw = d.yaw, bucket = cfg.bucket, label = d.label,
                 distance = 2.0, actions = choices, data = { dealer = key, role = "dealer" },
+                keepCrowdOff = d.keepCrowdOff ~= false,
             })
             if ok then
                 targets = targets + 1

@@ -8,6 +8,23 @@
 --
 -- Global: TraumaPorts.
 
+-- Every action shows this resource's own words when it is refused or stops (open77_actions
+-- `messages`), never a raw reason code. An older open77_actions ignores the field.
+local function withMessages(def)
+    local text = type(TraumaModel) == "table" and TraumaModel.TEXT
+    if type(def) == "table" and def.messages == nil and type(text) == "table" then
+        local messages, n = {}, 0
+        for reason, line in pairs(text) do
+            if n < 96 and type(reason) == "string" and reason:match("^[%w_:%.%-]+$") and #reason <= 64 and
+                type(line) == "string" and #line >= 1 and #line <= 200 and not line:find("%c") then
+                messages[reason], n = line, n + 1
+            end
+        end
+        def.messages = messages
+    end
+    return def
+end
+
 TraumaPorts = {}
 local P = TraumaPorts
 
@@ -32,7 +49,7 @@ function P.running(resource) return GetResourceState(resource) == "running" end
 -- ---------------------------------------------------------------------------------------------
 local ACTIONS = "open77_actions"
 P.actions = {
-    define = function(def) return sync(ACTIONS, "define", def) end,
+    define = function(def) return sync(ACTIONS, "define", withMessages(def)) end,
     target = function(def) return sync(ACTIONS, "target", def) end,
     untarget = function(id) return sync(ACTIONS, "untarget", id) end,
     request = function(pid, action, target, options) return sync(ACTIONS, "request", pid, action, target, options) end,

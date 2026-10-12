@@ -353,6 +353,8 @@ local TEXTS = {
     patient_down = "You are down: sign it when you are back on your feet.",
 }
 
+M.TEXT = TEXTS   -- read by ports.lua (open77_actions `messages`)
+
 function M.textFor(reason)
     return TEXTS[reason] or ("Refused: " .. tostring(reason))
 end
