@@ -235,6 +235,14 @@ function S:playerJoined(pid)
     end
     self:sendHubs(pid)
     self:sendObjectives(subject)
+    -- Once more a little later, for a client whose script was still loading.
+    self.P.spawn(function()
+        self.P.wait(10000)
+        if self.players[pid] and self.players[pid].subject == subject then
+            self:sendHubs(pid)
+            self:sendObjectives(subject)
+        end
+    end)
     if self.ready then
         for _, c in ipairs(self:held(subject)) do
             self:tell(pid, "Your contract " .. self.M.progressLine(c, self.cfg, self.P.unix()), "info")
