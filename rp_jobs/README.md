@@ -16,7 +16,7 @@ every 10 minutes while on duty. Civil jobs are joined at the **employment agency
 E prompt by the spawn); the others are staffed by their **boss** (ALT+click or `/embaucher`) or
 by an admin (`/setjob`).
 
-## The twelve jobs
+## The thirteen jobs
 
 | name | label | joined how | salary per payroll (grade 0 / 1 / 2 / 3) | tag colour |
 |---|---|---|---|---|
@@ -28,6 +28,7 @@ by an admin (`/setjob`).
 | `nomade` | Nomad | agency | 180 / 260 / 360 / 500 €$ | sand |
 | `ferrailleur` | Scrapper | agency | 150 / 220 / 300 / 420 €$ | grey |
 | `barman` | Bartender | agency | 150 / 220 / 300 / 420 €$ | pink |
+| `cook` | Street cook | agency | 150 / 220 / 300 / 420 €$ | amber (the `rp_streetfood` stall job) |
 | `fixer` | Fixer | boss or admin | 250 / 400 / 550 / 750 €$ | cyan |
 | `netrunner` | Netrunner | boss or admin | 250 / 400 / 550 / 750 €$ | green |
 | `vigile` | Security guard | agency | 180 / 260 / 360 / 500 €$ | steel |
@@ -212,7 +213,7 @@ are wallet state that moves with the societies in the B3 migration.
 
 ```text
 [rp_jobs] job board prop 123456 at -1172.3 2088.3 11.9
-[rp_jobs] started: 12 jobs, payroll every 10 min, agency at -1173.1 2087.4 11.9
+[rp_jobs] started: 13 jobs, payroll every 10 min, agency at -1173.1 2087.4 11.9
 [rp_jobs] store=sql table=rp_jobs_employees
 [rp_jobs] player 3 loaded job=ncpd grade=0 (sql)
 [rp_jobs] player 3 work epoch=1760261234001 (loaded)
@@ -255,7 +256,7 @@ employee told; without `rp_identity` account names are used.
 ## Test in 2 minutes
 
 Two clients at the freeroam spawn (Kabuki Market Centre), ids `1` and `2`; `rp_bank`, `rp_economy` and (optionally)
-`rp_identity` running. Log on start: `[rp_jobs] started: 12 jobs, ...` then `[rp_jobs]
+`rp_identity` running. Log on start: `[rp_jobs] started: 13 jobs, ...` then `[rp_jobs]
 store=sql table=rp_jobs_employees`.
 
 1. **Console:** `setjob 1 ncpd 3` → console `Player 1 (...) is now boss at NCPD.`, player 1 reads

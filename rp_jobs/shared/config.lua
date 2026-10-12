@@ -15,7 +15,7 @@ RpJobsConfig.Grades = {
 }
 RpJobsConfig.BossGrade = 3
 
--- The twelve jobs. Order matters for /jobs and the agency menu.
+-- The jobs. Order matters for /jobs and the agency menu.
 --   name        : the key every export, event, society and SQL row uses
 --   label       : display name
 --   color       : nameplate / tag colour while on duty (#RRGGBB)
@@ -31,6 +31,7 @@ RpJobsConfig.Jobs = {
     { name = "nomade",      label = "Nomad",          color = "#C9A24D", civil = true,  description = "Badlands convoys and long hauls.",                 salary = { [0] = 180, [1] = 260, [2] = 360, [3] = 500 } },
     { name = "ferrailleur", label = "Scrapper",       color = "#9AA0A6", civil = true,  description = "Scrap, components and the odd wreck.",             salary = { [0] = 150, [1] = 220, [2] = 300, [3] = 420 } },
     { name = "barman",      label = "Bartender",      color = "#FF4FA3", civil = true,  description = "Pours the drinks, hears the gossip.",              salary = { [0] = 150, [1] = 220, [2] = 300, [3] = 420 } },
+    { name = "cook",        label = "Street cook",    color = "#FFAA3C", civil = true,  description = "Grills, serves and keeps the stall stocked.",      salary = { [0] = 150, [1] = 220, [2] = 300, [3] = 420 } },
     { name = "fixer",       label = "Fixer",          color = "#00E5FF", civil = false, description = "Gigs, contacts and a cut of everything.",         salary = { [0] = 250, [1] = 400, [2] = 550, [3] = 750 } },
     { name = "netrunner",   label = "Netrunner",      color = "#3CFF8F", civil = false, description = "ICE, daemons and other people's data.",           salary = { [0] = 250, [1] = 400, [2] = 550, [3] = 750 } },
     { name = "vigile",      label = "Security guard", color = "#B0C4DE", civil = true,  description = "Doors, corridors and a stun baton.",              salary = { [0] = 180, [1] = 260, [2] = 360, [3] = 500 } },
