@@ -18,7 +18,7 @@ describes what the server asks for, not what renders.
 ## 0. Summary
 
 1. **`rp_salvage` 0.1.1** (new, opt-in, server-only; 0.1.1 = the open77_containers 0.2.0 reconcile): clock in at a foreman, cut or pry one of
-   rp_ferrailleur's seven wrecks (data reused, code not called), fill a crate, carry it, load it on
+   one of five wrecks walked in the Rancho Coronado yard (rp_ferrailleur's arithmetic points were replaced after the in-game walk), fill a crate, carry it, load it on
    a plated truck, unload it at the buyer, sell it. It runs **instead of** `rp_ferrailleur`.
 2. **Every value move is one coordinator operation with a receipt**: work (yield + crate token +
    tool wear), load, unload, sale (materials + seller cash + society share), retire. No reward
@@ -167,7 +167,7 @@ vehicles, NPCs, state bags, tunables, readJson). Sources outside the pack are re
 | `cancellations` | death mid-work: `cancelled dead`, no crate, no wear, no charge; vehicle, job change (epoch), disconnect, rp_salvage restart while carrying: each `true/true/ground/1` (was carrying / not any more / on the ground / one item), custody in the hold; wear exactly once |
 | `lab_console` | the loop from `salvage.lab.setup/work/pickup/load/unload/sell`; `salvage.lab.state` prints tools, cash, receipts; `salvage.status`; `salvage.lab.reset` refills in place (same node id, 2 → 3/3); `salvage.lab.truck` prints the manual path; `salvage.lab.clock off` |
 | `containers_restart` | nodes keyed `node.<key>`, five zero-capacity world rows; open77_containers stopped during a work, then booting without the coordinator: the charge is kept both times (1 pending), spent once it is ready (3 → 1 after two works), same node ids, node boot re-run on `:ready`; rp_salvage restarted: the five start lines with `(0 created)`; `containers.remove node.thorton`: prompt withdrawn, key spent (said once), other nodes kept |
-| `writers_missing` | strict writers without `open77_containers:world`: seven `namespace_denied` warnings, `WARNING: 7 of 7 wreck nodes unavailable`, `ready: 0 of 5 wreck nodes`, no wreck prompt; the entry added live (`onTunableChanged`): five nodes back within 30 s and a work commits |
+| `writers_missing` | strict writers without `open77_containers:world`: five `namespace_denied` warnings, `WARNING: 5 of 5 wreck nodes unavailable`, `ready: 0 of 5 wreck nodes`, no wreck prompt; the entry added live (`onTunableChanged`): five nodes back within 30 s and a work commits |
 | sources | no BOM, LF, Lua 5.4 compile; manifest opt-in and least privilege |
 
 Not established offline: anything in game (poses, props, prompts, FPP/TPP, timing on a live
@@ -290,7 +290,7 @@ which this branch does not contain yet.
 > **2026-10-12 — C1 salvage pilot `rp_salvage`, built offline (RP pack `wi/c1-salvage`).**
 >
 > **Built:** a new opt-in server-only resource replacing `rp_ferrailleur` (operator choice): foreman
-> duty (rp_jobs `setDuty`), seven wreck nodes (open77_containers charges/regrowth, rp_ferrailleur's
+> duty (rp_jobs `setDuty`), five wreck nodes (open77_containers charges/regrowth, walked in game on 2026-10-12; first placed at rp_ferrailleur's
 > positions), cut/pry actions (open77_actions; A4 welder workspot, player `scavenge`), a haul crate
 > per player and wreck (coordinator `openWorld` hold + `salvage_crate` token), carry (open77_actions,
 > `crate.ammo_box`), load/unload (rp_cargo through two-party `authorize` grants, rp_garage
