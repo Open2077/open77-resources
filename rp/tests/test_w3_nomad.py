@@ -291,6 +291,12 @@ class NomadRun(unittest.TestCase):
         self.assertEqual((r["thief_carries"], r["refused"], r["told"]), ("false", "not_crew", "true"))
         self.assertEqual((r["crew_lift"], r["failed"]), ("true", "nil"))
 
+    def test_the_run_tally_survives_a_restart(self):
+        r = self.run_ok("tally_survives_restart")
+        self.assertEqual(r["ret"], "committed")
+        self.assertEqual((r["returned_before"], r["where_before"]), ("1", "returned"))
+        self.assertEqual((r["returned_after"], r["where_after"], r["replayed"]), ("1", "returned", "1"))
+
     def test_disconnect_and_restart_restore_everything(self):
         r = self.run_ok("restart")
         self.assertEqual(r["dropped_at"], "1795.0,2245.7")

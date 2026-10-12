@@ -138,6 +138,13 @@ P.warn = function(line)
     if Open77.log and Open77.log.warn then Open77.log.warn("[rp_nomade] " .. line) else print("[rp_nomade] " .. line) end
 end
 P.emit = function(name, ...) TriggerEvent(name, ...) end
+-- The resource's own key/value store (no permission): the run tallies (service.lua saveTally).
+P.kvp = {
+    get = function(key) return Open77.kvp.get(key) end,
+    set = function(key, value) return Open77.kvp.set(key, value) end,
+    delete = function(key) return Open77.kvp.delete(key) end,
+    keys = function(prefix, limit) return Open77.kvp.keys(prefix, limit) end,
+}
 -- network.events
 P.toClient = function(pid, name, ...) TriggerClientEvent(name, pid, ...) end
 

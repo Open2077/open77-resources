@@ -323,11 +323,70 @@ function S:runOf(key, meta)
         key = key, owner = meta.o, route = meta.r, n = self.M.integer(meta.n) or 0,
         deadline = tonumber(meta.d) or 0, created = tonumber(meta.t) or 0, failed = meta.f,
         passed = {}, crates = {}, told = {}, checking = {},
-        delivered = 0, seized = 0, returned = 0, hot = 0, sold = 0,
+        delivered = 0, seized = 0, returned = 0, hot = 0, sold = 0, outcomes = {},
     }
     for _, ck in ipairs(type(meta.p) == "table" and meta.p or {}) do run.passed[tostring(ck)] = true end
     self.runs[key] = run
+    self:loadTally(run)
     return run
+end
+
+-- What became of the crates that left a run (delivered, sold, seized, returned, hot), kept in the
+-- resource's kvp. A run is rebuilt from its OPEN crates after a restart and a crate that left it
+-- is closed, so the run used to forget it: measured live (2026-10-13), a crate returned to the
+-- stash before an `ensure rp_nomade` read "gone" and the run summed "returned 0". One outcome per
+-- crate index, the counts recounted from them: a replayed sale or return counts once.
+local TALLY = "tally:"
+local OUTCOMES = { delivered = true, sold = true, seized = true, returned = true, hot = true }
+
+function S:saveTally(run)
+    local words = {}
+    for i = 1, run.n do words[i] = run.outcomes[i] or "" end
+    local ok, saved = pcall(self.P.kvp.set, TALLY .. run.key, table.concat(words, ","))
+    if not ok or saved == false then self:warn("run %s: tally not saved", run.key) end
+end
+
+function S:loadTally(run)
+    local ok, raw = pcall(self.P.kvp.get, TALLY .. run.key)
+    if not ok or type(raw) ~= "string" then return end
+    local i = 0
+    for word in (raw .. ","):gmatch("([^,]*),") do
+        i = i + 1
+        if OUTCOMES[word] and i <= run.n then run.outcomes[i] = word end
+    end
+    self:recount(run)
+end
+
+function S:recount(run)
+    run.delivered, run.sold, run.seized, run.returned, run.hot = 0, 0, 0, 0, 0
+    for _, word in pairs(run.outcomes) do run[word] = run[word] + 1 end
+end
+
+function S:noteOutcome(run, crate, word)
+    if not run or not OUTCOMES[word] then return end
+    local i = crate and self.M.integer(crate.i)
+    if not i or i < 1 or i > run.n then
+        run[word] = run[word] + 1   -- no index to remember it by: counted, not kept
+        return
+    end
+    run.outcomes[i] = word
+    self:recount(run)
+    self:saveTally(run)
+end
+
+-- After the crates are rebuilt: the tallies of runs that are gone (every crate closed) are dropped.
+function S:purgeTallies()
+    local ok, keys = pcall(self.P.kvp.keys, TALLY, 256)
+    if not ok or type(keys) ~= "table" then return end
+    local dropped = 0
+    for _, key in ipairs(keys) do
+        local name = type(key) == "table" and key.key or key
+        if type(name) == "string" and not self.runs[name:sub(#TALLY + 1)] then
+            pcall(self.P.kvp.delete, name)
+            dropped = dropped + 1
+        end
+    end
+    if dropped > 0 then self:log("%d finished run tally(ies) dropped", dropped) end
 end
 
 function S:adopt(id, meta, placement)
@@ -1144,11 +1203,7 @@ function S:afterDelivery(crate, quote, receipt, pid, inPutdown)
     local run = self.runs[crate.run]
     crate.goods = 0
     local replay = type(receipt) == "table" and receipt.replay == true
-    if run then
-        if quote.hot then run.hot = run.hot + 1
-        elseif quote.buyer == "fence" then run.delivered = run.delivered + 1
-        else run.sold = run.sold + 1 end
-    end
+    self:noteOutcome(run, crate, quote.hot and "hot" or (quote.buyer == "fence" and "delivered" or "sold"))
     if quote.hot then self.stats.hot = self.stats.hot + 1
     elseif quote.buyer == "fence" then self.stats.deliveries = self.stats.deliveries + 1
     else self.stats.playerSales = self.stats.playerSales + 1 end
@@ -1257,7 +1312,7 @@ function S:returnToCamp(ctx, crate)
     self.stats.returns = self.stats.returns + 1
     crate.goods = 0
     local run = self.runs[crate.run]
-    if run and goods > 0 then run.returned = run.returned + 1 end
+    if goods > 0 then self:noteOutcome(run, crate, "returned") end
     self:tell(pid, goods > 0 and ("Crate back in the stash: %d %s returned. Nothing paid."):format(goods,
         cfg.items[cfg.goodsItem].label:lower()) or "Empty crate stacked away.", "info")
     self:log("crate %s returned to the stash by player %d: %d goods (op %s%s)", crate.id, pid, goods, opId,
@@ -1301,7 +1356,7 @@ function S:afterSeize(crates, info)
         if crate.state == "ground" then crate.retirePending = true end
         local run = self.runs[crate.run]
         if run then
-            run.seized = run.seized + 1
+            self:noteOutcome(run, crate, "seized")
             byRun[run.key] = byRun[run.key] or { run = run, n = 0 }
             byRun[run.key].n = byRun[run.key].n + 1
         end
@@ -1924,6 +1979,7 @@ function S:loadCrates()
     for _, run in pairs(self.runs) do
         if self:goodsLeft(run) == 0 and not run.ended then run.ended = run.failed or "ended" end
     end
+    self:purgeTallies()
     local live = 0
     for _, run in pairs(self.runs) do if not run.ended then live = live + 1 end end
     self:log("crates rebuilt: %d (ground %d, in a bed %d, empty %d, sold %d, orphans closed %d); %d run(s) going",
@@ -2161,7 +2217,7 @@ function S:runSummary(subject)
                   returned = run.returned, hot = run.hot, left = self:goodsLeft(run), where = {} }
     for i = 1, run.n do
         local crate = self.crates[run.crates[i] or ""]
-        out.where[i] = crate and (crate.state .. (crate.plate and (" " .. crate.plate) or "")) or "gone"
+        out.where[i] = crate and (crate.state .. (crate.plate and (" " .. crate.plate) or "")) or run.outcomes[i] or "gone"
     end
     return out
 end

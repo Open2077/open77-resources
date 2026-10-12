@@ -498,6 +498,39 @@ function scenarios.theft()
     })
 end
 
+-- A crate returned to the stash, then a restart: the run is rebuilt from its open crates, and
+-- the returned one (closed) is still counted and named (live 2026-10-13: "gone", "returned 0").
+function scenarios.tally_survives_restart()
+    NW.boot({ writers = NW.WRITERS_STRICT, config = chances(0, 0) })
+    SW.watch()
+    MH.run(6)
+    nomad(1, A, AT_BOARD)
+    NW.truck(TRUCK, PLATE, A, TRUCK_AT_BAY)
+    take(1, "afterlife")
+    local run = NW.runOf(A)
+    local key = run.key
+    local crates = NW.cratesOf(key)
+    SW.move(1, LOAD[1])
+    NW.pickup(1, crates[1])
+    SW.move(1, AT_STASH)
+    local ret = NW.putdownAt(1, "rp_nomade:return_bay")
+    local before = NW.svc():runSummary(A) or {}
+    local keep = NW.keep()
+    NW.boot({ keep = keep, writers = NW.WRITERS_STRICT, config = chances(0, 0) })
+    SW.watch()
+    nomad(1, A, AT_BOARD)
+    MH.run(2)
+    local after = NW.svc():runSummary(A) or {}
+    local r = NW.svc().runs[key]
+    -- The same return replayed (an operation the coordinator answers again) counts once.
+    if r then NW.svc():noteOutcome(r, { i = 1 }, "returned") end
+    return NW.result({
+        ret = ret and ret.state, returned_before = before.returned, where_before = (before.where or {})[1],
+        returned_after = after.returned, where_after = (after.where or {})[1],
+        replayed = r and r.returned, left = after.left,
+    })
+end
+
 function scenarios.crew_only()
     NW.boot({ config = chances(0, 0, function(cfg) cfg.crate.pickupBy = "crew" end) })
     SW.watch()
