@@ -147,7 +147,8 @@ function M.saleRefusal(reason)
     return reason or "streetfood_unavailable"
 end
 
-function M.money(n) return ("%d €$"):format(math.tointeger(n) or 0) end
+-- ASCII only: prompt cards and chat replace a non-ASCII glyph with "?" (live 2026-10-12: "18 ?$").
+function M.money(n) return ("%d eddies"):format(math.tointeger(n) or 0) end
 
 M.TEXT = {
     not_owner = "That is not yours to do.",

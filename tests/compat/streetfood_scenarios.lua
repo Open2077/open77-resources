@@ -128,7 +128,7 @@ function scenarios.happy_path()
     local ticket = svc().tickets.food_court and svc().tickets.food_court[B]
     local s1 = serve(1)
     local _, opId1 = openOffer(1)
-    local toldPrice = SFW.told(2, "18 €%$ %+ tip 2 €%$ = 20 €%$")
+    local toldPrice = SFW.told(2, "18 eddies %+ tip 2 eddies = 20 eddies")
     answer(1, true)
     local paid = cash0 - SFW.balance("cash:" .. B)
     local soc = SFW.balance("soc:cook")
