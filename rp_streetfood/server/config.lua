@@ -116,9 +116,14 @@ C.stalls = {
     -- in front of the grill and facing it.
     food_court = {
         enabled = true, label = "Food-court grill",
+        -- arrivalRadius: playAt plays where the actor stands when within this many metres of the
+        -- anchor (open77_actions >= 532eb489). Live 2026-10-12: relocating the cook onto the grill
+        -- anchor behind the counter got the body pushed back (interrupted player_moving).
         grill = { position = { x = -397.617, y = 715.138, z = 115.000 }, yaw = 64.0, station = "grill",
+                  arrivalRadius = 1.0,
                   measured = false, source = "spots-generated row 9594 (amb_704dff_cook)" },
         counter = { position = { x = -398.887, y = 715.848, z = 115.000 }, yaw = -107.0,
+                    arrivalRadius = 1.0,
                     measured = false, source = "spots-generated row 1144 (stand_ground facing the grill)" },
         pantryCapacityG = 40000,
         passCapacityG = 2000,     -- 8 skewers / 6 burgers waiting at most: "the pass is full"

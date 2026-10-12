@@ -288,6 +288,7 @@ function S:declare()
             local ok, why = self.P.actions.target({
                 id = stallKey .. "_grill", position = sc.grill.position, yaw = sc.grill.yaw, bucket = cfg.bucket,
                 label = sc.label, distance = 1.0, actions = grill, data = { stall = stallKey, role = "grill" },
+                arrivalRadius = sc.grill.arrivalRadius,
             })
             if ok then targets = targets + 1 else self:warn("grill target %s refused: %s", stallKey, tostring(why)) end
             local counter = {}
@@ -299,6 +300,7 @@ function S:declare()
             ok, why = self.P.actions.target({
                 id = stallKey .. "_counter", position = sc.counter.position, yaw = sc.counter.yaw, bucket = cfg.bucket,
                 label = sc.label .. " counter", distance = 1.0, actions = counter,
+                arrivalRadius = sc.counter.arrivalRadius,
                 data = { stall = stallKey, role = "counter" },
             })
             if ok then targets = targets + 1 else self:warn("counter target %s refused: %s", stallKey, tostring(why)) end
