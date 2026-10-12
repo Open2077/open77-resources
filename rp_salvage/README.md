@@ -5,10 +5,13 @@ drive, unload it at the buyer and sell it. Every step that moves value is one du
 idempotent operation; every prompt, bar, claim and carry comes from a library, not from this
 resource.
 
-**Status: built and tested offline only (2026-10-12).** Nothing here was deployed, launched or
-seen in game. The two-client test script is in
-[`docs/world-interaction/c1-salvage.md`](../docs/world-interaction/c1-salvage.md) §6. Unmeasured
-positions are marked `measured = false` in `server/config.lua`.
+**Status: experimental; proven live on two clients (2026-10-12).** The whole loop (works, carry,
+truck, unload, sale), contention, cancellations, restarts, a database outage and authorization ran
+on two clients with both body rigs, on a SQL server with strict coordinator writers; the yard
+positions were walked in game. The test script is in
+[`docs/world-interaction/c1-salvage.md`](../docs/world-interaction/c1-salvage.md) §6; evidence in
+the Open77 repository, `docs/research/world-interaction.md`. The `amb_*` job animations need the
+`Open77RP.archive` that ships them (not in the release archives as of 2026-10-12).
 
 ---
 
