@@ -1,0 +1,17 @@
+Vendored, unmodified, for the offline B3 wallet suite only (tests/test_compat_wallet.py).
+
+Origin: Open77 repository, resources/system/open77_transactions (A13 offline prototype),
+branch feat/world-interaction, last commit touching the folder de8c785de2e42d8bbfab96c99ca05f9e612e8d7a
+(2026-10-12), read from the worktree C:\Games\cyberm\wt-world-interaction at d5bd5c38.
+
+Git blob ids (LF content):
+  1d0a1257b034424fcfd136700d1ecee18749fddc  shared/model.lua
+  199e80816f3dbacfc33e327c6f4dbb9a5264d7e6  server/coordinator.lua
+  1870f881cd99a25018a46e46d0d2e5795fd0abcb  server/memory_store.lua
+
+The prototype has no server/main.lua (no exports, no manifest). tests/compat/txhost.lua is the
+test stand-in for that wiring; it is NOT the coordinator's real runtime wiring.
+
+To run the suite against another copy (for example the finalized wave-1 coordinator), set
+OP77_TX_DIR to its resources/system/open77_transactions folder. Do not edit these files: refresh
+them from the origin instead, and update the blob ids above.

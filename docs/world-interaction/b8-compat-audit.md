@@ -44,7 +44,7 @@ resource behaviour was changed.
 
 | # | Risk | Evidence | Rows hit |
 |---|---|---|---|
-| R1 | **Per-boot SQL→KVP failover with no reconciliation** in 15 audited resources. A string scan finds the same pattern in at least 11 of the 13 other resources that combine SQL and KVP. A database that is late or unavailable at boot silently gives every player a fresh or stale wallet, empty pockets, no job and no citizen record for that boot. What happens in that boot is never merged back. Measured offline for `rp_economy`: 1 500 €$ in SQL, 500 on the KVP boot, +700 earned, 1 500 again on the next SQL boot. | §3.4; `tests/test_compat_economy.py` | B2 B3 B4 B8, plan §3 "Database failure", decision 2 |
+| R1 | **Per-boot SQL→KVP failover with no reconciliation** in 15 audited resources. A string scan finds the same pattern in at least 11 of the 13 other resources that combine SQL and KVP. A database that is late or unavailable at boot silently gives every player a fresh or stale wallet, empty pockets, no job and no citizen record for that boot. What happens in that boot is never merged back. Measured offline for `rp_economy`: 1 500 €$ in SQL, 500 on the KVP boot, +700 earned, 1 500 again on the next SQL boot. **B3 update (2026-10-12): closed for `rp_economy` and `rp_bank`** (facades over `open77_transactions`, no KVP; `b3-wallet.md`); the other resources are unchanged. | §3.4; `tests/test_compat_economy.py` | B2 B3 B4 B8, plan §3 "Database failure", decision 2 |
 | R2 | **No multi-store atomicity and no receipts.** `Open77.database.transaction` is never used. Every write is an asynchronous absolute snapshot, and failures are logged or ignored. Item↔money flows are 2–6 separate export calls whose compensations are unchecked. Wallets and pockets are **online-only**, so a refund to a disconnected player always fails. | §3.5 | A13 B2 B3 C1 |
 | R3 | **Account = character, plus non-durable ids in durable places.** There are `"session:<id>"` fallbacks in SQL, session ids inside bank ledger notes, runtime vehicle ids in `rp_mecano_impound` and `rp_shop` KVP, and `"vehicle#<id>"`/`"prop#<id>"` log targets. | §1.3 | B2 A9 B8 |
 | R4 | **Unversioned schemas and implicit cross-resource SQL contracts.** 47 tables use `CREATE TABLE IF NOT EXISTS` only: no version table and no `ALTER`. `rp_mdt` reads 8 tables owned by 5 other resources, and `rp_phone` reads `rp_identity_citizens`. | §3.1, §3.6 | B8 migration gate |
@@ -379,7 +379,15 @@ scenario `kvp_boot_between_sql_boots`):
    KVP to 1200.
 3. **SQL again:** **1500.** The +700 is lost, and the 1500 was invisible during step 2.
 
-The test `test_gap_r1_measured_behaviour` freezes these numbers. The invariant "a database outage never changes a
+**B3 update (2026-10-12).** `rp_economy` 2.0.0 and `rp_bank` 2.0.0 are facades over the `open77_transactions`
+coordinator and never touch KVP for economic state. The same scenario name now runs them on the multi-resource fake
+host (`tests/compat/multihost.lua`): the outage boot refuses (`player_not_found`, then `store_unavailable`), writes no
+KVP key, and the balance is 1 500 again as soon as the database answers, without a restart; a change accepted in the
+middle of a session just before the outage is detected lands exactly once. The invariant below is now a plain passing
+test. The 5dcdad2 numbers above stay as the record of the 1.x behaviour (reproducible at d401b40). The remaining 13
+resources of the table still fork.
+
+The test `test_gap_r1_measured_behaviour` froze these numbers at 5dcdad2. The invariant "a database outage never changes a
 balance" is an expected failure (`test_gap_r1_invariant_a_database_outage_never_changes_a_balance`).
 
 **Inferences from the same code paths (not executed).**
@@ -759,6 +767,15 @@ on 2026-10-12.
 | `tests/compat/fakehost.lua` | Fake server host: event bus, exports, a scheduler on a simulated clock, `Open77.database` callback and `.await` forms over a scenario-supplied interpreter, KVP, players. Stores persist across `H.boot` calls to model restarts |
 | `tests/compat/luahost.py` | Lua 5.4 engine: `lupa` if installed, else `lua54.dll` through `ctypes` (`OP77_LUA54_DLL` or the KeraLua NuGet cache). No network |
 | `tests/compat/economy_scenarios.lua`, `tests/test_compat_economy.py` | L1 seed: `rp_economy` as shipped. SQL restart round trip; refusal tokens; R1 characterised and its invariant as an expected failure |
+
+**B3 additions (2026-10-12, `docs/world-interaction/b3-wallet.md`):** `tests/compat/multihost.lua` (several resources,
+one environment each, the export/event/database rules of the platform), `tests/compat/txhost.lua` and
+`tests/compat/vendor/open77_transactions/` (the A13 coordinator prototype behind a test stand-in for its exports),
+`tests/compat/wallet_world.lua` and `wallet_scenarios.lua`, and `tests/test_compat_wallet.py`. `economy_scenarios.lua`
+now forwards to the wallet scenarios; R1 passes. Two frozen values changed together with this note:
+`FROZEN_SURFACE["rp_economy"]` gained the five exports `rp_bank` 2.0.0 calls (`walletRead`, `walletMove`,
+`societyRead`, `pay`, `balanceOf`), and `schema-snapshot.json` gained `rp_wallet_migration` (the 1.x table bodies are
+unchanged: they are kept, created when missing, as the import source and archive). The whole suite: 24 tests, OK.
 
 ### 6.3 Wave-1 suite shape
 

@@ -1,9 +1,13 @@
 # rp_bank — bank accounts, ATMs and societies
 
-Server-authoritative bank for an Open77 RP server (build `2.31.13+op77.76`). Cash stays in
-`rp_economy`; this resource owns the **account** (SQL, keyed by the durable identifier), the
-**ledger** (append-only transactions) and the **society** funds (one row per job/company).
-Players use it at ATMs placed in the world, or from anywhere with the phone-style commands.
+Server-authoritative bank for an Open77 RP server. Version **2.0.0** is a **facade** (world-interaction
+row B3): the **account** (`bank:<subject>`), the **society** funds (`soc:<name>`) and the cash
+(`cash:<subject>`) are owned by the `open77_transactions` coordinator and cached by `rp_economy`,
+the wallet facade; the **ledger** is the coordinator's journal. This resource keeps the ATMs, the
+menu, the commands and the eight 1.x exports. Players use it at ATMs placed in the world, or from
+anywhere with the phone-style commands. Design and tests:
+[`docs/world-interaction/b3-wallet.md`](../docs/world-interaction/b3-wallet.md); nothing of
+version 2 has been run in game yet.
 
 ## What the player sees
 
@@ -31,29 +35,31 @@ Refusals are explained in chat (`Not enough eddies in the account.`, `Unknown re
 
 ## Persistence
 
-Created inside `Open77.database.ready(...)` with `CREATE TABLE IF NOT EXISTS`, needs the manifest
-permission `database.access`:
+None of its own. Every operation is a coordinator operation submitted through `rp_economy`:
 
-| Table | Columns |
+| Operation | Coordinator lines (one operation each) |
 |---|---|
-| `rp_bank_accounts` | `identifier` (PK), `balance`, `created_at` |
-| `rp_bank_transactions` | `id` (auto), `identifier`, `delta`, `balance_after`, `kind`, `note`, `at` |
-| `rp_bank_societies` | `name` (PK), `balance` |
+| deposit / withdraw | `cash:<s>` → `bank:<s>` / `bank:<s>` → `cash:<s>` |
+| transfer (+ fee) | `bank:<s>` → `bank:<t>` (+ `bank:<s>` → `sys:rp_bank:fee`, burned) |
+| charge | `bank:<s>` → `soc:<name>` |
+| societyAdd / societyRemove | `sys:<caller>:legacy` → `soc:<name>` (money created, counted against the caller's mint allowance) / the reverse |
 
-`kind` is one of `deposit withdraw transfer_out transfer_in fee society_add society_remove`.
-Society ledger lines use the identifier `society:<name>`.
+A 1.x deposit removed the cash in `rp_economy` and credited the account in this resource, two
+stores and two writes: a crash in between lost or created money. It is one operation now.
 
-Every account and society is cached in memory and written through with the callback forms of
-`Open77.database.*` (never `.await` on the export path — a synchronous export that yields fails
-with `export_yielded`). The cache is loaded once when the database answers. Two dedicated
-servers sharing one database would not see each other's writes: one server per database.
+The 1.x tables (`rp_bank_accounts`, `rp_bank_transactions`, `rp_bank_societies`) are imported once
+by `rp_economy`'s `economy_migrate` and then kept as a **read-only archive**; the statement still
+shows the archived ledger lines (`… · archive`). Lines after the cutover are in the coordinator
+journal (`op77_tx_journal`); until the coordinator offers a history read, the statement shows this
+boot's operations plus the archive.
 
-**No database** (`ready` answers `database_unavailable`, or the database is still not answering
-15 s after the first player is ready): balances fall back to `Open77.kvp`, the statement is kept
-in memory only, and the log says `[rp_bank] store=kvp reason=...`. The choice is made once per
-boot.
+**No database, no fallback.** While the coordinator (or `rp_economy`) is unavailable every
+operation is refused — `bank_not_ready` (`The bank network is unavailable right now. Nothing was
+moved`), `wallet_unavailable` when `rp_economy` itself is missing — and nothing is written
+anywhere else. The 1.x KVP keys (`acct:`, `soc:`) are never read at runtime: the console command
+`bank_kvp_report` lists how they differ from the coordinator.
 
-## Exports (phase 1 contract, synchronous, never yield)
+## Exports (phase 1 contract, synchronous, never yield — unchanged signatures)
 
 ```lua
 exports.rp_bank:getAccount(playerId)        -- { identifier, balance, createdAt } | nil, reason
@@ -71,8 +77,26 @@ exports.rp_bank:charge(playerId, amount, society, reason)
 
 Reasons: `invalid_player_id player_not_found bank_not_ready invalid_amount amount_too_large
 insufficient_funds insufficient_cash balance_limit unknown_recipient self_transfer
-wallet_unavailable invalid_society invalid_reason`. Society names are lower-cased
-(`[A-Za-z0-9_.-]`, 1..64). `playerId` accepts the string form host events deliver.
+wallet_unavailable invalid_society invalid_reason`, plus `account_not_loaded` (the player's
+wallets are still loading) and, from `societyAdd`, `mint_denied` / `mint_cap` (the calling
+resource is not allowed to create that much money this hour; see rp_economy's README). Society
+names are lower-cased (`[A-Za-z0-9_.-]`, 1..64). `playerId` accepts the string form host events
+deliver.
+
+What changed underneath (version 2):
+- They are rp_economy's **write-behind** facade: the answer is immediate and computed on the
+  cache, the operation commits in the background; a refused commit is reverted and logged by
+  rp_economy (`write-behind … refused`).
+- `transfer` to an identifier accepts only accounts this server has loaded (an online player, or
+  one seen this boot): a synchronous call cannot ask whether an offline account exists. The ATM
+  menu and `/virement` use the atomic API instead, which does check, so offline recipients work
+  there.
+- `society(name)` answers `bank_not_ready` the first time a society this server has not loaded
+  yet is asked for (it loads in the background); the job societies of `rp_economy`'s config and
+  every society of the 1.x archive are loaded at start. `societyAdd` to such a society is accepted
+  (a credit cannot fail) and returns the balance known so far; `societyRemove` needs it loaded.
+- `createdAt` is the time this server first served the account (1.x stored it; the coordinator
+  does not).
 
 Call them inside `pcall` from another resource (synchronous exports raise when the resource is
 missing). A resource **without** a client script may declare `dependency "rp_bank"`; a resource
@@ -84,6 +108,10 @@ with one must not (this manifest is delivered to clients).
 TriggerEvent("rp_bank:changed", playerId, identifier, newBalance, delta, kind)
 -- playerId is nil for an offline recipient and for societies (identifier "society:<name>")
 ```
+
+Re-published from `rp_economy:walletChanged` (one tick later than 1.x). `kind` is one of
+`deposit withdraw charge transfer_out transfer_in society_add society_remove`, or `sync` when the
+cache caught up with a change made elsewhere.
 
 ## Staging: poses, props and durations (2026-09-18)
 
@@ -121,13 +149,12 @@ an unknown list `stage <key>: no known profile among [...]`, a refused prop `sta
 ## Log (grep-able)
 
 ```
-[rp_bank] store=sql accounts=12 societies=2
+[rp_bank] started, 5 ATMs configured (accounts and societies held by open77_transactions through rp_economy)
 [rp_bank] player 3 loaded <identifier> account=700
-[rp_bank] player 3 deposit 500 account=1200
-[rp_bank] player 3 withdraw 200 account=1000
-[rp_bank] player 3 transfer 100 fee 1 to <identifier> account=899
-[rp_bank] player 4 transfer_in 100 from <identifier> account=100
-[rp_bank] society police +250 fine:3 balance=250
+[rp_bank] player 3 deposit 500 op=rp_bank.deposit.<boot>.1.<identifier>          (ATM, atomic)
+[rp_bank] player 3 deposit 500 account=1200 op=rp.wb.<boot>.7                    (export, write-behind)
+[rp_bank] player 3 transfer 100 fee 1 to <identifier> op=rp_bank.transfer.<boot>.2.<identifier>
+[rp_bank] society ncpd +250 fine:3 balance=250 op=rp.wb.<boot>.9
 ```
 
 ## ATM positions
@@ -155,26 +182,28 @@ error (`Config.AtmHeightTolerance`). Up to 8 ATMs get a floating label (UI kit c
 terminal's `yaw` turns the prop towards its ring; the prop's forward axis was not measured, so
 if a machine shows its back, add 180 to `prop.yaw`.
 
-Manifest permissions: `database.access` (SQL), `network.events` (`RegisterNetEvent`,
+Manifest permissions: `database.access` (reads the 1.x ledger archive), `network.events` (`RegisterNetEvent`,
 `TriggerServerEvent`), `ui.vanilla.map` (`Open77.blips.create`), `world.props` (the terminals).
-Dependencies: `open77_uikit`, `open77_worldui`. `rp_economy` and `rp_jobs` are reached through
-`pcall` (server-only resources).
+Dependencies: `open77_uikit`, `open77_worldui`. `rp_economy` (2.0.0, which needs the
+`open77_transactions` coordinator) and `rp_jobs` are reached through `pcall` (server-only
+resources).
 
 ## Test in 2 minutes
 
-1. Drop `rp_bank` next to `rp_economy` in the resource root, start the server. Log:
-   `[rp_bank] started, 5 ATMs configured`, five `terminal prop <id> for atm_... at ...` lines
-   (or `terminal prop for atm_... not spawned (<reason>)`: the ring still works), then
-   `[rp_bank] store=sql accounts=0 societies=0` (or `store=kvp reason=database_unavailable`
-   without a database).
-2. Connect. Chat: `NC Bank: Account balance: 0 €$.` Log: `[rp_bank] new account <identifier> balance=0`.
+1. Load `open77_transactions`, then `rp_economy` and `rp_bank`, start the server. Log:
+   `[rp_economy] coordinator ready (store=sql)`, `[rp_bank] started, 5 ATMs configured …`, five
+   `terminal prop <id> for atm_... at ...` lines (or `terminal prop for atm_... not spawned
+   (<reason>)`: the ring still works). With 1.x data, run `economy_migrate` first (rp_economy's
+   README).
+2. Connect. Chat: `NC Bank: Account balance: 0 €$.` (or the imported 1.x balance). Log:
+   `[rp_bank] player <id> loaded <identifier> account=0`.
 3. `/solde` → `Cash: 500 €$ · Account: 0 €$`.
 4. Open the map: five `ATM — ...` pins (three on Kabuki Market, one on the Afterlife, one on
    Vik's). Walk 3 m east from the spawn to the `ATM — Kabuki Market` ring — a data terminal
    stands next to it — look at the ring, press **E** (or type `/bank` within 3 m). The
    `Night City Bank` menu opens.
 5. **Deposit eddies** → `300` → chat `Deposited 300 €$. Account: 300 €$.`; `/money` from
-   `rp_economy` now says 200. Log: `[rp_bank] player <id> deposit 300 account=300`.
+   `rp_economy` now says 200. Log: `[rp_bank] player <id> deposit 300 op=…`.
 6. **Withdraw eddies** → `1000` → `Not enough eddies in the account.`; `50` → `Withdrew 50 €$.`
 7. **Statement** → two rows, newest first, with the balance after each; **Back**.
 8. Walk 10 m away, `/bank` → `No ATM within 3 m. Find one on the map.` (Noodle Row's ATM is
@@ -185,5 +214,7 @@ Dependencies: `open77_uikit`, `open77_worldui`. `rp_economy` and `rp_jobs` are r
 10. At the ATM, **Wire to a citizen** with recipient `id2` (or their citizen id) → no fee.
 11. `/societe` with a job from `rp_jobs` → `Society police: 0 €$.`; without → `You have no job, choom.`
 12. Reconnect: the balance is back (`[rp_bank] player <id> loaded ... account=...`).
+    Stop the database (or `open77_transactions`) and try a deposit: `The bank network is
+    unavailable right now. Nothing was moved`; restart it: the balances are unchanged.
 13. From another resource: `print(exports.rp_bank:getAccount(id).balance)`,
     `exports.rp_bank:societyAdd("police", 250, "fine:3")`.
