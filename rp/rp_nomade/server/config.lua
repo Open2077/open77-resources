@@ -202,7 +202,10 @@ C.crate = {
     model = "crate.ammo_box",
     bedModel = "crate.ammo_box",   -- what rp_cargo draws in the bed
     label = "nomad crate",
-    reach = 2.0, vehicleReach = 4.5,
+    -- vehicleReach is measured to the truck's centre: the tailgate prompt (cfg.bayPrompt) sits 3.4 m
+    -- behind it on a Mackinaw and is reached from 2.5 m, so 4.5 refused a player at the prompt
+    -- ("Get closer.", measured live). 6.0 covers the prompt's whole reach.
+    reach = 2.0, vehicleReach = 6.0,
     binding = {
         bone = "Chest",
         offset = { x = -0.12, y = -0.42, z = -0.22 }, rotation = { x = 0.0, y = 90.0, z = 0.0 },
