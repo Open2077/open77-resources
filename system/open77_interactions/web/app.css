@@ -1,0 +1,216 @@
+/* Interaction prompt fallback page.
+ *
+ * MOSTLY DEAD. `client/main.lua:553-582` sets `render = "card"` and lets the
+ * plugin draw the prompt natively; the page is still created but is told
+ * `visible: false` once, idempotently, at `main.lua:866-876`. It only paints on
+ * a client where `Open77.anchors.create{ render = "card" }` is refused.
+ *
+ * Everything below the marker rules is therefore a fallback skin: the native
+ * Card has no icon slot, no marker shapes, no multi-choice list and no
+ * proximity scale ramp. Keeping it on-system costs little and stops the
+ * fallback from looking like a different product.
+ *
+ * Tokens come from `open77-ui.css`.
+ */
+
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body {
+  width: 100%; height: 100%; margin: 0; overflow: hidden;
+  background: transparent; pointer-events: none; user-select: none;
+}
+body { font-family: var(--op77-font-body); }
+#interaction {
+  --accent: var(--op77-accent);
+  --marker-scale: 1;
+  --anchor-x: .5;
+  --anchor-y: .5;
+  position: absolute; left: 0; top: 0;
+  width: 42px; height: 42px;
+  opacity: 0;
+  /* Placed by transform rather than by left/top. The anchor feed arrives on
+     every rendered frame, and a percentage offset would relayout the surface at
+     that rate; a transform only recomposites. */
+  transform: translate3d(calc(var(--anchor-x) * 100vw - 50%),
+                         calc(var(--anchor-y) * 100vh - 50%), 0);
+  will-change: transform;
+  transition: opacity 80ms linear;
+}
+#interaction.visible { opacity: 1; }
+.world-marker {
+  position: absolute; left: 50%; top: 50%; display: block;
+  width: 28px; height: 28px;
+  transform: translate(-50%, -50%) scale(var(--marker-scale));
+  color: var(--accent);
+}
+.marker-dot {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--accent) 72%, white);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.marker-dot::before {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 6px; height: 6px;
+  transform: translate(-50%, -50%); border-radius: 50%; background: var(--accent);
+}
+.marker-ring {
+  width: 22px; height: 22px; border: 3px solid var(--accent); border-radius: 50%;
+  background: transparent;
+}
+.marker-diamond {
+  width: 18px; height: 18px;
+  border: 2px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  transform: translate(-50%, -50%) rotate(45deg) scale(var(--marker-scale));
+}
+.marker-diamond::before {
+  content: ""; position: absolute; inset: 4px; background: var(--accent);
+}
+.marker-arrow {
+  width: 38px; height: 40px;
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, .95))
+          drop-shadow(0 0 7px color-mix(in srgb, var(--accent) 78%, transparent));
+}
+.marker-arrow::before {
+  content: ""; position: absolute; inset: 0;
+  background: var(--accent);
+  -webkit-mask: url("marker-arrow.svg") center / contain no-repeat;
+  mask: url("marker-arrow.svg") center / contain no-repeat;
+}
+.marker-chevron::before,
+.marker-chevron::after {
+  content: ""; position: absolute; top: 8px; width: 18px; height: 4px;
+  background: var(--accent);
+}
+.marker-chevron::before { left: 0; transform: rotate(42deg); transform-origin: right center; }
+.marker-chevron::after { right: 0; transform: rotate(-42deg); transform-origin: left center; }
+.marker-chevron {
+  width: 28px; height: 24px;
+  transform: translate(-50%, -50%) rotate(180deg) scale(var(--marker-scale));
+  filter: drop-shadow(0 -2px 2px rgba(0, 0, 0, .9));
+}
+.marker-exclamation,
+.marker-info {
+  width: 34px; height: 34px; border: 4px solid var(--accent); border-radius: 50%;
+  background: rgba(5, 7, 8, .6);
+  color: var(--accent); font-family: var(--op77-font-display);
+  font-size: 27px; font-weight: 950; line-height: 27px; text-align: center;
+  text-shadow: 0 2px 2px #000;
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, .92))
+          drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 62%, transparent));
+}
+.marker-exclamation::before { content: "!"; }
+.marker-info::before { content: "i"; font-family: var(--op77-font-display); font-style: italic; }
+.marker-vehicle {
+  width: 48px; height: 30px;
+  filter: drop-shadow(0 4px 2px rgba(0, 0, 0, .95))
+          drop-shadow(0 0 7px color-mix(in srgb, var(--accent) 72%, transparent));
+}
+.marker-vehicle::before {
+  content: ""; position: absolute; inset: 0; background: var(--accent);
+  -webkit-mask: url("marker-vehicle.svg") center / contain no-repeat;
+  mask: url("marker-vehicle.svg") center / contain no-repeat;
+}
+.marker-person::before {
+  content: ""; position: absolute; left: 50%; top: 1px; width: 11px; height: 11px;
+  transform: translateX(-50%); border-radius: 50%; background: var(--accent);
+  box-shadow: 0 2px 2px rgba(0, 0, 0, .8);
+}
+.marker-person::after {
+  content: ""; position: absolute; left: 50%; bottom: 0; width: 26px; height: 16px;
+  transform: translateX(-50%); border-radius: 15px 15px 4px 4px;
+  background: var(--accent); box-shadow: 0 3px 2px rgba(0, 0, 0, .9);
+}
+.marker-door {
+  width: 24px; height: 34px; border: 4px solid var(--accent); border-bottom-width: 2px;
+  background: rgba(5, 7, 8, .58);
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, .9));
+}
+.marker-door::before {
+  content: ""; position: absolute; right: 4px; top: 16px; width: 4px; height: 4px;
+  border-radius: 50%; background: var(--accent);
+}
+.marker-shop::before {
+  content: ""; position: absolute; left: 1px; top: 2px; width: 27px; height: 10px;
+  background: var(--accent); clip-path: polygon(8% 0, 92% 0, 100% 100%, 0 100%);
+}
+.marker-shop::after {
+  content: ""; position: absolute; left: 4px; top: 13px; width: 21px; height: 15px;
+  border: 4px solid var(--accent); border-top-width: 3px;
+  background: rgba(5, 7, 8, .55); box-shadow: 0 3px 2px rgba(0, 0, 0, .85);
+}
+.marker-ring,
+.marker-dot,
+.marker-diamond { box-shadow: 0 0 5px color-mix(in srgb, var(--accent) 35%, transparent); }
+.world-marker.animated { animation: marker-float 1.05s ease-in-out infinite; }
+@keyframes marker-float {
+  0%, 100% { margin-top: -3px; }
+  50% { margin-top: 4px; }
+}
+.distance {
+  position: absolute; left: 50%; top: calc(22px + 22px * var(--marker-scale));
+  transform: translateX(-50%); padding: 2px var(--op77-space-2) 1px;
+  color: var(--op77-text); background: var(--op77-panel); white-space: nowrap;
+  border-radius: var(--op77-radius-sm); border: 1px solid var(--op77-line-hud);
+  font: 400 var(--op77-fs-lead) / 1.2 var(--op77-font-mono);
+  font-variant-numeric: tabular-nums; letter-spacing: 0;
+  box-shadow: var(--op77-shadow);
+}
+.choices {
+  position: absolute; left: 50%; bottom: calc(28px + 22px * var(--marker-scale));
+  transform: translateX(-50%);
+  width: max-content; min-width: 210px; max-width: 440px;
+  display: grid; gap: 4px;
+}
+#interaction.active .world-marker { opacity: 1; }
+.choice {
+  --choice-accent: var(--accent);
+  position: relative; display: flex; align-items: center; gap: var(--op77-space-2);
+  min-height: 40px; padding: var(--op77-space-2) var(--op77-space-3) var(--op77-space-2) var(--op77-space-2);
+  overflow: hidden;
+  color: var(--op77-text);
+  background: var(--op77-panel);
+  border: 1px solid var(--op77-line-hud);
+  border-left: var(--op77-rule) solid var(--choice-accent);
+  border-radius: var(--op77-radius-sm);
+  box-shadow: var(--op77-shadow);
+}
+/* Keycap. Square chip, mono glyph, accent border at 45% — the same cap the
+   native Card draws, so the two tiers are interchangeable. */
+.key {
+  min-width: 28px; height: 26px; padding: 0 var(--op77-space-1);
+  display: inline-grid; place-items: center;
+  color: var(--choice-accent);
+  background: color-mix(in srgb, var(--choice-accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--choice-accent) 45%, transparent);
+  border-radius: var(--op77-radius-sm);
+  font: 700 var(--op77-fs-body) / 1 var(--op77-font-mono);
+  letter-spacing: 0;
+}
+.icon {
+  color: var(--choice-accent);
+  font: 700 var(--op77-fs-label) / 1 var(--op77-font-mono);
+  letter-spacing: var(--op77-track-label); text-transform: uppercase;
+}
+.copy { min-width: 0; display: grid; gap: 2px; }
+.copy strong {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-family: var(--op77-font-display);
+  font-size: var(--op77-fs-title); font-weight: 700; line-height: 1.1;
+  letter-spacing: var(--op77-track-head);
+}
+.copy small {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--op77-text-dim);
+  font: 400 var(--op77-fs-body) / 1.25 var(--op77-font-body);
+}
+.choice.disabled { filter: saturate(.2); opacity: .52; }
+.choice.disabled .key {
+  color: var(--op77-text-dim); background: var(--op77-surface-2);
+  border-color: var(--op77-line-strong); box-shadow: none;
+}
+.progress {
+  --progress: 0; position: absolute; left: 0; bottom: 0; width: 100%; height: 2px;
+  background: linear-gradient(90deg,
+      var(--choice-accent) calc(var(--progress) * 100%),
+      color-mix(in srgb, var(--choice-accent) 22%, transparent) 0);
+}

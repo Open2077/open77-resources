@@ -1,0 +1,80 @@
+/* The third-person reticle.
+ *
+ * It exists because the vanilla one cannot be reused: the weapon's own HUD
+ * anchors its reticle to the first-person aiming camera, so a camera the engine
+ * does not recognise as its aiming camera leaves it with nothing to anchor to
+ * and it simply is not drawn. Reported in play as "the crosshair disappears when
+ * I right-click with a gun in hand". This surface is the answer that was already
+ * written down for it: a reticle Open77 draws itself.
+ *
+ * Passive by construction -- no pointer events anywhere, so it can never take a
+ * click away from the game.
+ */
+:root {
+  --reticle: #7ee7e0;
+  --reticle-edge: rgba(0, 0, 0, .55);
+  --gap: 7px;
+  --arm: 7px;
+  --thickness: 2px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+
+.reticle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 60ms linear;
+}
+
+/* Dedicated ADS overlay; leave vanilla first-person reticles untouched. */
+.reticle[data-state="aim"]  { opacity: 1;   --gap: 5px; --arm: 8px; }
+.reticle[data-state="hidden"] { opacity: 0; }
+
+.tick, .dot {
+  position: absolute;
+  background: var(--reticle);
+  /* A dark rim, because a flat cyan line vanishes over Night City neon and over
+   * a white wall for opposite reasons. */
+  box-shadow: 0 0 0 1px var(--reticle-edge), 0 0 6px rgba(126, 231, 224, .35);
+}
+
+.tick-up, .tick-down {
+  width: var(--thickness);
+  height: var(--arm);
+  left: calc(var(--thickness) / -2);
+}
+.tick-up   { top: calc(-1 * (var(--gap) + var(--arm))); }
+.tick-down { top: var(--gap); }
+
+.tick-left, .tick-right {
+  width: var(--arm);
+  height: var(--thickness);
+  top: calc(var(--thickness) / -2);
+}
+.tick-left  { left: calc(-1 * (var(--gap) + var(--arm))); }
+.tick-right { left: var(--gap); }
+
+.dot {
+  width: 2px;
+  height: 2px;
+  left: -1px;
+  top: -1px;
+  border-radius: 50%;
+  opacity: .85;
+}

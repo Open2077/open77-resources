@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="open77-ui.css">
+  <link rel="stylesheet" href="app.css">
+  <title>Open77 Chat</title>
+</head>
+<body>
+  <main id="chat" class="chat" aria-label="Open77 chat">
+    <div class="chat-surface">
+      <header class="chat-header" aria-hidden="true">
+        <div class="channel-identity">
+          <span class="slash-mark" aria-hidden="true">//</span>
+          <span class="channel-title">Open channel</span>
+          <span class="channel-name">Global network</span>
+        </div>
+        <div class="link-state">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span>Link active</span>
+          <span id="messageCount" class="message-count">00</span>
+        </div>
+      </header>
+
+      <div class="signal-rail" aria-hidden="true"><span></span></div>
+
+      <div class="log-frame">
+        <section id="messages" class="messages" role="log" aria-live="polite"
+                 aria-relevant="additions" aria-label="Chat messages"></section>
+        <div id="emptyState" class="empty-state" aria-hidden="true">
+          <span>//</span> No signal received
+        </div>
+        <button id="scrollLatest" class="scroll-latest" type="button" hidden>
+          <span id="unreadCount">1</span> new signal <span aria-hidden="true">↓</span>
+        </button>
+      </div>
+
+      <section id="suggestions" class="suggestions" aria-label="Command suggestions">
+        <header class="suggestion-header">
+          <span>// Command index</span>
+          <span id="suggestionCount">00 matches</span>
+        </header>
+        <div id="suggestionList" class="suggestion-list" role="listbox"></div>
+        <footer class="suggestion-footer">
+          <span><kbd>Tab</kbd> Complete</span>
+          <span><kbd>↑</kbd><kbd>↓</kbd> Select</span>
+        </footer>
+      </section>
+
+      <section id="composer" class="composer" aria-hidden="true">
+        <span class="composer-channel">Global</span>
+        <div class="input-frame">
+          <span class="prompt" aria-hidden="true">›</span>
+          <input id="input" maxlength="256" autocomplete="off" spellcheck="false"
+                 aria-label="Chat message" placeholder="Message the network or enter /command">
+          <span id="characterCount" class="character-count">000/256</span>
+        </div>
+        <button id="sendButton" class="send-button" type="button" disabled>
+          Send <kbd>Enter</kbd>
+        </button>
+      </section>
+
+      <footer class="chat-footer" aria-hidden="true">
+        <span>Authenticated session</span>
+        <span><kbd>Esc</kbd> Close</span>
+      </footer>
+    </div>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

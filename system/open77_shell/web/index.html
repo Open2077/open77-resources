@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Open//77 — Connection</title><script src="address-privacy.js"></script><link rel="stylesheet" href="design-system.css"><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="address-privacy.css"></head>
+<body data-view="idle">
+<main id="connection" class="workspace" aria-labelledby="headline">
+<header class="masthead"><img src="open77.png" alt="Open//77" class="wordmark"><span class="edition">MULTIPLAYER / DEVELOPER PREVIEW</span><span id="build" class="build"></span></header>
+<div class="bento">
+<section class="tile hero" aria-live="polite" aria-atomic="true">
+<div class="tile-head"><span class="eyebrow" id="stateLabel">READY WHEN YOU ARE</span><span class="signal" id="signal">STANDBY</span></div>
+<div class="hero-copy"><h1 id="headline">Your next<br>session starts<br>in the launcher<span>.</span></h1><p id="message">Choose a server, manage your mods and connect from the Open77 launcher.</p><p class="next-step" id="nextStep">One place for your servers, history and updates.</p></div>
+<div class="progress" id="progress" hidden><div class="progress-meta"><span id="phase">Connecting</span><span id="percent"></span></div><div class="track" id="track" role="progressbar" aria-label="Connection progress"><div id="fill"></div></div><p id="progressDetail"></p></div>
+<div class="hero-bottom"><span id="elapsed">NO ACTIVE SESSION</span><button id="cancel" class="text-button" hidden>Cancel connection</button></div>
+</section>
+<section class="tile destination"><div class="eyebrow">DESTINATION <span aria-hidden="true">↗</span></div><h2 id="serverName">No server selected</h2><p id="endpoint">Choose your destination in the launcher.</p><label class="address-privacy-toggle"><input type="checkbox" data-show-addresses><span>Show IP addresses</span></label><div class="destination-foot"><span id="master">LAUNCHER MANAGED</span><span id="connectionStatus">OFFLINE</span></div></section>
+<button class="tile launcher action-tile" id="launcher"><span class="eyebrow">SERVER SELECTION <span aria-hidden="true">↗</span></span><span class="action-title">Return to<br>launcher</span><span class="action-description">Opens the launcher and closes the game.</span></button>
+<section class="tile journey"><div class="eyebrow">CONNECTION CHECKPOINTS <span id="checkpoint"></span></div><ol id="steps">
+<li data-step="0"><b>01</b><span>Identity<small>Verify your session</small></span></li><li data-step="1"><b>02</b><span>Server<small>Establish connection</small></span></li><li data-step="2"><b>03</b><span>Resources<small>Download &amp; verify</small></span></li><li data-step="3"><b>04</b><span>Character<small>Prepare your character</small></span></li><li data-step="4"><b>05</b><span>Night City<small>Load the world</small></span></li>
+</ol></section>
+<section class="tile recovery"><span class="eyebrow">SESSION CONTROLS</span><button id="retry" class="button" disabled>Retry connection <span aria-hidden="true">↗</span></button><p id="retryHint">No connection to retry yet.</p><button id="quit" class="text-button">Quit game</button></section>
+<section class="tile diagnostics" id="diagnostics" hidden><div class="diagnostic-heading"><div><span class="eyebrow">SUPPORT DETAILS</span><p id="failureCode"></p></div><div class="diagnostic-actions"><button class="button quiet" id="copy">Copy report</button><button class="text-button" id="toggleDetails" aria-expanded="false" aria-controls="details">Show details</button></div></div><div id="details" hidden><dl id="diagnosticRows"></dl><textarea id="report" readonly aria-label="Diagnostic report" hidden></textarea></div></section>
+</div><p id="actionError" class="action-error" role="alert" hidden></p><footer><span>OPEN//77 NETWORK</span><span id="footerStatus">The launcher handles servers. The game handles your session.</span></footer>
+</main>
+<div id="notice" class="notice"><span class="eyebrow">SESSION INTERRUPTED</span><p id="noticeMessage"></p><p>Press <b>Esc</b> to leave character creation. Your connection details will remain available.</p></div>
+<div id="virtualCursor" aria-hidden="true"><svg viewBox="0 0 24 30"><path d="M1 1v23l6-5 5 10 4-2-5-10h9Z" fill="var(--o-cyan-500)" stroke="var(--o-black)" stroke-width="2"/></svg></div>
+<section class="music-dock" aria-label="Lobby music">
+<button id="musicToggle" class="music-toggle" type="button" aria-label="Pause lobby music" title="Pause lobby music"><svg viewBox="0 0 24 24" aria-hidden="true"><path id="musicIcon" d="M7 5h3v14H7zM14 5h3v14h-3z"/></svg></button>
+<div class="music-track"><span class="eyebrow">LOBBY RADIO <i id="musicPlaying" aria-hidden="true"><b></b><b></b><b></b></i></span><strong>Lobby Server List</strong><small id="musicStatus" role="status">Loading preferences</small></div>
+<label class="music-volume" for="musicVolume"><span>VOLUME <output id="musicLevel">12%</output></span><input id="musicVolume" type="range" min="0" max="100" step="1" value="12" aria-label="Lobby music volume"></label>
+<small id="musicSaveError" class="music-save-error" role="status" hidden></small>
+</section><audio id="lobbyAudio" src="audio/lobby.mp3" preload="metadata" loop></audio>
+<script src="resource-errors.js"></script><script src="connection-errors.js"></script><script src="music.js"></script><script src="app.js"></script></body></html>

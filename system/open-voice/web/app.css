@@ -1,0 +1,195 @@
+/* OPEN//77 voice HUD — compact line, no panel.
+   A mic glyph, a twelve-segment input meter, the active range with its
+   distance and the cycle key, sitting straight on the game in the bottom-right
+   corner. Colours follow the design system; legibility comes from shadows, not
+   from a background block. */
+
+:root {
+  --o-text: #e6eaec;
+  --o-ink-100: #8a94a2;
+  --o-ink-300: #4c5563;
+  --o-cyan: #22d8e2;
+  --o-mint: #2be58b;
+  --o-amber: #ffb020;
+  --o-red: #ff3b4e;
+  --mode-color: var(--o-cyan);
+  --state-color: var(--o-ink-100);
+  --font-ui: "Chakra Petch", "Bahnschrift", "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Mono", "Consolas", monospace;
+  --shadow-text: 0 1px 2px rgba(0, 0, 0, 0.9), 0 0 6px rgba(0, 0, 0, 0.6);
+  --ease-out: cubic-bezier(0.16, 0.84, 0.44, 1);
+  --dur-fast: 90ms;
+  --dur-meter: 60ms;
+  --dur-panel: 200ms;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+  pointer-events: none;
+  user-select: none;
+  font-family: var(--font-ui);
+  color: var(--o-text);
+}
+
+.voice {
+  position: fixed;
+  right: 32px;
+  bottom: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity var(--dur-panel) var(--ease-out), transform var(--dur-panel) var(--ease-out);
+}
+.voice.visible { opacity: 1; transform: none; }
+.voice:not(.visible) .voice__talkers i { animation-play-state: paused; }
+
+.voice.state-idle     { --state-color: var(--o-ink-100); }
+.voice.state-detected { --state-color: var(--o-cyan); }
+.voice.state-talking  { --state-color: var(--o-mint); }
+.voice.state-muted    { --state-color: var(--o-red); }
+.voice.state-offline  { --state-color: var(--o-ink-300); }
+
+/* The line itself: everything on one baseline, 22px tall. */
+.voice__line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 22px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.85));
+}
+
+/* Mic glyph, tinted by state. Talking adds a soft pulse; muted draws the slash. */
+.voice__mic {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  color: var(--state-color);
+  transition: color var(--dur-fast) linear;
+}
+.voice__mic svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.voice.state-talking .voice__mic svg { filter: drop-shadow(0 0 5px rgba(43, 229, 139, 0.75)); }
+.voice__mute-line {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 24px;
+  height: 2px;
+  background: var(--o-red);
+  border-radius: 1px;
+  transform: translate(-50%, -50%) rotate(-45deg) scaleX(0);
+  transform-origin: center;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+.voice.state-muted .voice__mute-line,
+.voice.state-offline .voice__mute-line { transform: translate(-50%, -50%) rotate(-45deg) scaleX(1); }
+.voice.state-offline .voice__mute-line { background: var(--o-ink-300); }
+
+/* Input meter: twelve thin segments, lit from the left, the last two warmer. */
+.voice__meter {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 14px;
+}
+.voice__meter i {
+  display: block;
+  width: 4px;
+  height: 100%;
+  background: rgba(138, 148, 162, 0.28);
+  border-radius: 1px;
+  transition: background-color var(--dur-meter) linear, box-shadow var(--dur-meter) linear;
+}
+.voice__meter i:nth-child(-n+4)  { height: 60%; }
+.voice__meter i:nth-child(n+5):nth-child(-n+8) { height: 80%; }
+.voice__meter i.lit { background: var(--state-color); box-shadow: 0 0 4px var(--state-color); }
+.voice__meter i.lit.hot { background: var(--o-amber); box-shadow: 0 0 4px var(--o-amber); }
+.voice.state-muted .voice__meter i,
+.voice.state-offline .voice__meter i { background: rgba(138, 148, 162, 0.16); box-shadow: none; }
+
+/* Range name and distance, in the mode's colour. */
+.voice__range {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font: 600 13px / 1 var(--font-ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-shadow: var(--shadow-text);
+  white-space: nowrap;
+}
+.voice__range b { color: var(--mode-color); font-weight: 700; }
+.voice__sep { color: var(--o-ink-100); }
+.voice__distance {
+  color: var(--o-text);
+  font: 500 13px / 1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+.voice__distance span { color: var(--o-text); }
+.voice.mode-changing .voice__range b { animation: range-flash 320ms var(--ease-out); }
+@keyframes range-flash {
+  0%   { opacity: 0.2; transform: translateY(2px); }
+  100% { opacity: 1; transform: none; }
+}
+
+/* Cycle key: an outline only, no fill. */
+.voice__key {
+  padding: 3px 5px 2px;
+  border: 1px solid rgba(230, 234, 236, 0.35);
+  border-radius: 2px;
+  color: var(--o-ink-100);
+  font: 600 10px / 1 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-shadow: var(--shadow-text);
+}
+
+/* Players heard right now: shown only while someone is audible. */
+.voice__talkers {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--o-mint);
+  font: 600 11px / 1 var(--font-mono);
+  text-shadow: var(--shadow-text);
+}
+.voice__talkers[hidden] { display: none; }
+.voice__talkers i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--o-mint);
+  box-shadow: 0 0 6px var(--o-mint);
+  animation: rx-pulse 1.1s ease-in-out infinite;
+}
+@keyframes rx-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+/* Transient server rejection, above the line, red, no box. */
+.voice__error {
+  max-width: 340px;
+  color: var(--o-red);
+  font: 600 11px / 1.2 var(--font-mono);
+  letter-spacing: 0.04em;
+  text-align: right;
+  text-shadow: var(--shadow-text);
+  opacity: 0;
+  transition: opacity var(--dur-fast) linear;
+}
+.voice__error.active { opacity: 1; }

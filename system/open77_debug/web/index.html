@@ -1,0 +1,84 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Open77 Inspector</title>
+<link rel="stylesheet" href="open77-ui.css">
+  <link rel="stylesheet" href="app.css">
+
+<!-- A readout, not a menu. Nothing here is clickable and nothing takes focus:
+     the player is still walking around and looking at things while this is up,
+     so `pointer-events` stays off for the whole surface. -->
+<div class="hud is-hidden" id="hud" data-state="idle">
+  <div class="reticle" aria-hidden="true"></div>
+
+  <section class="card">
+    <header class="card__head">
+      <span class="dot"></span>
+      <span class="card__title">INSPECTOR</span>
+      <span class="card__kind" id="kind">—</span>
+    </header>
+
+    <p class="card__name" id="name">Nothing in view</p>
+
+    <dl class="rows">
+      <div class="row"><dt>ENGINE ID</dt><dd id="engineId">—</dd></div>
+      <div class="row"><dt>CLASS</dt><dd id="class">—</dd></div>
+      <div class="row"><dt>DISTANCE</dt><dd id="distance">—</dd></div>
+      <div class="row"><dt>POSITION</dt><dd id="position">—</dd></div>
+    </dl>
+  </section>
+</div>
+
+<script>
+  const el = id => document.getElementById(id);
+  const hud = el('hud');
+
+  const fields = {
+    kind: el('kind'),
+    name: el('name'),
+    engineId: el('engineId'),
+    class: el('class'),
+    distance: el('distance'),
+    position: el('position')
+  };
+
+  const EMPTY = '—';
+
+  function render(target) {
+    const valid = Boolean(target && target.valid);
+    hud.dataset.state = valid ? 'locked' : 'idle';
+
+    if (!valid) {
+      fields.name.textContent = 'Nothing in view';
+      fields.kind.textContent = EMPTY;
+      fields.engineId.textContent = EMPTY;
+      fields.class.textContent = EMPTY;
+      fields.distance.textContent = EMPTY;
+      fields.position.textContent = EMPTY;
+      return;
+    }
+
+    // The display name is often empty for scenery and devices, so the class is
+    // the fallback identity rather than a blank line.
+    fields.name.textContent = target.name && target.name.length
+      ? target.name
+      : (target.class || 'Unnamed');
+    fields.kind.textContent = (target.kind || 'unknown').toUpperCase();
+    fields.engineId.textContent = target.engineId || EMPTY;
+    fields.class.textContent = target.class || EMPTY;
+    fields.distance.textContent = `${Number(target.distance || 0).toFixed(2)} m`;
+
+    const p = target.position || {};
+    const axis = v => Number(v || 0).toFixed(2);
+    fields.position.textContent = `${axis(p.x)}, ${axis(p.y)}, ${axis(p.z)}`;
+  }
+
+  Open77.on('inspect:target', render);
+
+  // The surface stays visible for its whole life -- see `setShown` in the
+  // resource -- so showing and hiding the readout is the page's job.
+  Open77.on('inspect:show', () => hud.classList.remove('is-hidden'));
+  Open77.on('inspect:hide', () => hud.classList.add('is-hidden'));
+
+  render(null);
+  Open77.ready();
+</script>

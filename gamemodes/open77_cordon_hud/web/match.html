@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Open//77 — Cordon match</title>
+
+  <link rel="stylesheet" href="design-system.css">
+  <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="match.css">
+</head>
+
+<body data-phase="unknown" data-participant="false" data-alive="true" data-eliminated="false">
+  <main id="hud" aria-live="polite">
+
+    <header class="band" id="band">
+      <div class="mode">
+
+        <span class="eyebrow">
+          <span data-t="brand"></span>
+          <span class="dim" data-t="modeKind"></span>
+        </span>
+        <strong data-t="modeName"></strong>
+      </div>
+
+      <div class="count" id="squadsBlock">
+        <span class="tag" data-t="band.squads"></span>
+        <strong class="num" id="aliveSquads">--</strong>
+      </div>
+
+      <div class="count">
+        <span class="tag" data-t="band.players"></span>
+        <div class="count-value">
+          <strong class="num" id="alivePlayers">--</strong>
+
+          <span class="bot-tag num" id="botCount" hidden></span>
+        </div>
+      </div>
+
+      <div class="phase" id="phasePill"></div>
+      <div class="clock num" id="clock">--:--</div>
+
+      <div class="count">
+        <span class="tag" data-t="band.kills"></span>
+        <strong class="num" id="selfKills">0</strong>
+      </div>
+    </header>
+
+    <section class="cordon-strip" id="cordonStrip">
+      <span class="eyebrow" id="cordonPhaseLabel"></span>
+      <div class="cordon-clock">
+        <span class="tag" id="cordonClockLabel"></span>
+        <strong class="num" id="cordonClock">--:--</strong>
+      </div>
+      <span class="cordon-dps num" id="cordonDps"></span>
+    </section>
+
+    <aside class="feed" id="feed" aria-label="Eliminations"></aside>
+
+    <aside class="notices" id="notices" aria-label="Notifications"></aside>
+
+    <section class="squad" id="squadPanel" aria-label="Squad">
+      <header class="squad-head">
+        <span class="eyebrow" data-t="squad.title"></span>
+        <span class="tag num" id="squadId"></span>
+      </header>
+      <ul class="squad-list" id="squadList"></ul>
+      <p class="squad-empty" id="squadEmpty" data-t="squad.empty" hidden></p>
+    </section>
+
+    <section class="panel staging" id="stagingPanel">
+      <header class="panel-head">
+        <span class="eyebrow" data-t="staging.eyebrow"></span>
+        <strong class="terminated" data-t="modeName"></strong><span class="staging-kind" data-t="modeKind"></span>
+      </header>
+
+      <div class="countdown-row" id="stagingCountdown">
+        <span class="tag" data-t="staging.countdown"></span>
+        <strong class="num" id="stagingClock">--:--</strong>
+      </div>
+      <p class="waiting" id="stagingWaiting" data-t="staging.waiting" hidden></p>
+
+      <div class="join-row" id="joinRow"><kbd id="joinKey">--</kbd><div class="join-copy">
+        <span class="join-state" id="joinState"></span>
+        <span class="hint" id="joinHint"></span></div>
+      </div>
+
+      <div class="fields">
+        <div class="field">
+          <span class="tag" data-t="staging.queueLabel"></span>
+          <strong class="num" id="stagingQueue">0/0</strong>
+        </div>
+        <div class="field">
+          <span class="tag" data-t="staging.formatLabel"></span>
+          <strong id="stagingFormat">--</strong>
+        </div>
+        <div class="field">
+          <span class="tag" data-t="staging.squadLabel"></span>
+          <strong id="stagingSquad">--</strong>
+        </div>
+      </div>
+
+      <p class="hint" id="stagingBotFill" hidden></p>
+
+      <p class="panel-lead" data-t="staging.lead"></p><ol class="briefing"><li><b>01</b><span data-t="staging.stepDrop"></span></li><li><b>02</b><span data-t="staging.stepLoot"></span></li><li><b>03</b><span data-t="staging.stepSurvive"></span></li></ol>
+
+      <div class="watch" id="stagingWatch" hidden>
+        <span class="eyebrow" data-t="staging.watchEyebrow"></span>
+        <p data-t="staging.watchLead"></p>
+        <div class="watch-counts">
+          <div><span class="tag" data-t="band.squads"></span><b class="num" id="watchSquads">--</b></div>
+          <div><span class="tag" data-t="band.players"></span><b class="num" id="watchPlayers">--</b></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel deploy" id="deployPanel">
+      <header class="panel-head">
+        <span class="eyebrow" data-t="deploy.eyebrow"></span>
+        <strong id="deployTitle" data-t="deploy.title"></strong>
+      </header>
+      <p class="panel-lead" id="deployLead" data-t="deploy.lead"></p>
+      <p class="pin" id="deployPin"></p>
+      <div class="countdown-row">
+        <span class="tag" data-t="deploy.clock"></span>
+        <strong class="num" id="deployClock">--:--</strong>
+      </div>
+      <p class="hint" id="deployMapHint"></p>
+    </section>
+
+    <section class="panel result" id="resultPanel" data-ready="false" data-final="true">
+      <span class="eyebrow" id="resultEyebrow"></span>
+      <strong class="result-title terminated" id="resultTitle"></strong>
+      <p class="result-winner" id="resultWinner"></p>
+      <div class="result-stats">
+        <div><span class="tag" data-t="result.placement"></span><b class="num" id="resultPlacement">--</b></div>
+        <div><span class="tag" data-t="result.kills"></span><b class="num" id="resultKills">0</b></div>
+        <div><span class="tag" data-t="result.survived"></span><b class="num" id="resultSurvived">--:--</b></div>
+      </div>
+
+      <p class="result-next" id="resultNext" hidden></p>
+      <p class="unrated" id="resultUnrated" data-t="result.unrated" hidden></p>
+    </section>
+
+    <section class="standings" id="standingsPanel" data-empty="true">
+      <header class="standings-head">
+        <span class="eyebrow" data-t="result.standings"></span>
+      </header>
+      <div class="standings-cols">
+        <span data-t="result.columnPlace"></span>
+        <span data-t="result.columnPlayer"></span>
+        <span data-t="result.columnSquad"></span>
+        <span data-t="result.columnKills"></span>
+      </div>
+      <div class="standings-rows" id="standingsRows"></div>
+      <p class="standings-empty" id="standingsEmpty" data-t="result.standingsNone"></p>
+    </section>
+
+    <section class="inventory" id="inventoryStrip" aria-label="Kit">
+      <div class="slots" id="inventorySlots"></div>
+      <div class="consumables">
+        <div class="consumable">
+          <span class="tag" data-t="inventory.plates"></span>
+          <kbd id="plateUseKey">--</kbd>
+          <strong class="num" id="invPlates">0</strong>
+        </div>
+        <div class="consumable">
+          <span class="tag" data-t="inventory.heals"></span>
+          <kbd id="healUseKey">--</kbd>
+          <strong class="num" id="invHeals">0</strong>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="i18n.js"></script>
+  <script src="match.js"></script>
+</body>
+</html>

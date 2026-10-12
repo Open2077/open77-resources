@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Open//77 — Cordon boundary</title>
+
+  <link rel="stylesheet" href="design-system.css">
+  <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="wall.css">
+</head>
+
+<body>
+
+  <svg id="wall" class="wall" viewBox="0 0 1920 1080"
+       preserveAspectRatio="none" aria-hidden="true" focusable="false">
+    <defs>
+
+      <linearGradient id="wallCurtain" x1="0" y1="0" x2="0" y2="1">
+        <stop id="wallCurtainTop" offset="0"></stop>
+        <stop id="wallCurtainMid" offset="0.6"></stop>
+        <stop id="wallCurtainFoot" offset="1"></stop>
+      </linearGradient>
+    </defs>
+
+    <g id="panels"></g>
+  </svg>
+
+  <script src="wall.js"></script>
+</body>
+</html>

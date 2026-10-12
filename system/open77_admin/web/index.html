@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open77 Admin</title>
+<!-- The token file first, always. Never edit the copy in this folder: it is
+     mirrored byte-for-byte into every resource that owns a WebUI surface, and
+     `Get-FileHash resources\*\web\open77-ui.css` returning one unique hash is
+     the whole verification. -->
+<link rel="stylesheet" href="open77-ui.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<div class="scrim" aria-hidden="true"></div>
+
+<div class="panel" role="dialog" aria-label="Open77 administration">
+
+  <header class="bar">
+    <span class="brand">OPEN<i>//</i>77 <b>ADMIN</b></span>
+    <span class="tag" id="tag-build">2.31</span>
+    <span class="who" id="who">—</span>
+    <button class="x" id="close" type="button" aria-label="Close">ESC</button>
+  </header>
+
+  <div class="body">
+
+    <nav class="nav" id="nav">
+      <button type="button" data-tab="overview" class="on">Overview</button>
+      <button type="button" data-tab="players">Players</button>
+      <button type="button" data-tab="vehicles">Vehicles</button>
+      <button type="button" data-tab="world">World</button>
+      <button type="button" data-tab="props">Props</button>
+      <button type="button" data-tab="self">Self</button>
+      <button type="button" data-tab="console">Console</button>
+      <button type="button" data-tab="audit">Audit</button>
+    </nav>
+
+    <main class="main">
+
+      <!-- ============================ OVERVIEW -->
+      <section class="tab on" data-tab="overview">
+        <p class="eyebrow op77-eyebrow">Server</p>
+        <div class="stats" id="ov-stats"></div>
+        <p class="eyebrow op77-eyebrow">Recent actions</p>
+        <div class="rows" id="ov-audit"><p class="empty">Nothing yet this uptime.</p></div>
+        <p class="eyebrow op77-eyebrow">Resources</p>
+        <div class="chips" id="ov-res"></div>
+      </section>
+
+      <!-- ============================ PLAYERS -->
+      <section class="tab" data-tab="players">
+        <div class="bar2">
+          <input class="in" id="pl-search" type="text" placeholder="filter by name or id" autocomplete="off">
+          <button class="btn" type="button" data-cmd="admin.read.players">Refresh</button>
+          <span class="count" id="pl-count">—</span>
+        </div>
+        <div class="tablewrap">
+          <table class="grid" id="pl-table">
+            <thead><tr>
+              <th>ID</th><th>Name</th><th>State</th><th class="n">Health</th>
+              <th class="n">Bucket</th><th class="n">Dist</th><th>Position</th><th>Actions</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p class="note" id="pl-note"></p>
+      </section>
+
+      <!-- ============================ VEHICLES -->
+      <section class="tab" data-tab="vehicles">
+        <div class="bar2">
+          <input class="in" id="cat-search" type="text" placeholder="search 1,372 records" autocomplete="off">
+          <span class="seg" id="cat-groups"></span>
+          <button class="fac" id="cat-sort" type="button" data-sort="name">sort · name</button>
+        </div>
+        <div class="bar2 wrapline">
+          <span class="seg" id="cat-classes"></span>
+          <div class="fac-dropdown" id="cat-makers" data-value="">
+            <button class="fac fac-dropdown-trigger" id="cat-makers-trigger" type="button"
+                    aria-haspopup="listbox" aria-expanded="false" aria-controls="cat-makers-menu">
+              <span>every manufacturer</span><i aria-hidden="true"></i>
+            </button>
+            <div class="fac-dropdown-menu" id="cat-makers-menu" role="listbox"
+                 aria-label="Manufacturer"></div>
+          </div>
+          <button class="fac" id="cat-player" type="button">player variants</button>
+          <button class="fac" id="cat-police" type="button">police</button>
+        </div>
+
+        <div class="split">
+          <div class="pane">
+            <div class="tablewrap tall">
+              <table class="grid" id="cat-table">
+                <thead><tr><th>Vehicle</th><th>Class</th><th class="n">km/h</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <p class="note" id="cat-note"></p>
+
+            <p class="eyebrow op77-eyebrow">In the world</p>
+            <div class="tablewrap">
+              <table class="grid" id="veh-table">
+                <thead><tr><th>ID</th><th>Vehicle</th><th class="n">HP</th><th>Aboard</th><th>Cap</th><th>Actions</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+
+          <aside class="side" id="veh-side">
+            <div class="card">
+              <span class="cardk">Selected</span>
+              <span class="cardh" id="sel-name">Nothing selected</span>
+              <span class="mono dim tiny" id="sel-record">—</span>
+              <div class="btnrow">
+                <button class="btn prim" id="sel-spawn" type="button" disabled>Spawn here</button>
+                <button class="btn" id="sel-give" type="button" disabled>Give to…</button>
+              </div>
+            </div>
+
+            <div class="card tier-i" id="tier-instance">
+              <span class="cardk">This car only</span>
+              <span class="cardh" id="ti-title">No vehicle selected</span>
+              <div class="slider" data-tier="i" data-field="topSpeedKph">
+                <label>Top speed <b>—</b></label><input type="range" disabled>
+              </div>
+              <div class="slider" data-tier="i" data-field="accelerationScale">
+                <label>Throttle authority <b>—</b></label><input type="range" disabled>
+              </div>
+              <details class="adv"><summary>Advanced</summary>
+                <div class="slider" data-tier="i" data-field="taperKph">
+                  <label>Taper <b>—</b></label><input type="range" disabled>
+                </div>
+              </details>
+              <div class="btnrow">
+                <button class="btn" data-act="apply-instance" type="button" disabled>Apply</button>
+                <button class="btn" data-act="clear-instance" type="button" disabled>Back to stock</button>
+              </div>
+              <div class="btnrow">
+                <button class="btn prim" data-act="apply-here" type="button" disabled>Cap my car</button>
+                <button class="btn" data-act="clear-here" type="button" disabled>Uncap my car</button>
+              </div>
+              <p class="cardn" id="ti-note">Overrides the record cap below. "My car" is the one you
+                are in — or, on foot, the nearest spawned vehicle; the server resolves it.</p>
+            </div>
+
+            <div class="card tier-r" id="tier-record">
+              <span class="cardk">Every car of this model</span>
+              <span class="cardh" id="tr-title">No record selected</span>
+              <div class="slider" data-tier="r" data-field="topSpeedKph">
+                <label>Top speed <b>—</b></label><input type="range" disabled>
+              </div>
+              <div class="slider" data-tier="r" data-field="accelerationScale">
+                <label>Throttle authority <b>—</b></label><input type="range" disabled>
+              </div>
+              <details class="adv"><summary>Advanced</summary>
+                <div class="slider" data-tier="r" data-field="taperKph">
+                  <label>Taper <b>—</b></label><input type="range" disabled>
+                </div>
+              </details>
+              <div class="btnrow">
+                <button class="btn danger" data-act="apply-record" type="button" disabled>Hold to apply</button>
+                <button class="btn" data-act="clear-record" type="button" disabled>Back to stock</button>
+              </div>
+              <p class="cardn">Server-wide: every vehicle Open77 spawns of this model, now and later.
+                City traffic uses the same records but is not governed — the sweep only covers
+                entities Open77 spawned.</p>
+            </div>
+
+            <div class="card tier-g" id="tier-global">
+              <span class="cardk">Every spawned vehicle</span>
+              <span class="cardh">Global cap</span>
+              <div class="slider" data-tier="g" data-field="topSpeedKph">
+                <label>Top speed <b>—</b></label><input type="range" disabled>
+              </div>
+              <div class="slider" data-tier="g" data-field="accelerationScale">
+                <label>Throttle authority <b>—</b></label><input type="range" disabled>
+              </div>
+              <details class="adv"><summary>Advanced</summary>
+                <div class="slider" data-tier="g" data-field="taperKph">
+                  <label>Taper <b>—</b></label><input type="range" disabled>
+                </div>
+              </details>
+              <div class="btnrow">
+                <button class="btn danger" data-act="apply-global" type="button" disabled>Hold to apply</button>
+                <button class="btn" data-act="clear-global" type="button" disabled>Back to stock</button>
+              </div>
+              <p class="cardn">The weakest tier: it holds every spawned vehicle that has no
+                single-car or model cap of its own — present and future spawns alike. It is a
+                limiter, never a boost: a ceiling above a car's stock top speed changes nothing.</p>
+            </div>
+
+            <p class="unavail" id="gov-unavail" hidden></p>
+          </aside>
+        </div>
+      </section>
+
+      <!-- ============================ WORLD -->
+      <section class="tab" data-tab="world">
+        <p class="eyebrow op77-eyebrow">Time</p>
+        <div class="bar2">
+          <span class="seg" id="w-time"></span>
+          <button class="fac" type="button" data-cmd="weather.time.freeze">Freeze</button>
+          <button class="fac" type="button" data-cmd="weather.time.resume">Resume</button>
+        </div>
+        <p class="eyebrow op77-eyebrow">Weather</p>
+        <div class="bar2 wrapline"><span class="seg" id="w-weather"></span></div>
+
+        <p class="eyebrow op77-eyebrow">Destinations</p>
+        <div class="bar2">
+          <input class="in" id="w-locname" type="text" placeholder="name for this spot" autocomplete="off">
+          <button class="btn" id="w-locadd" type="button">Save here</button>
+        </div>
+        <div class="rows" id="w-locs"></div>
+
+        <p class="eyebrow op77-eyebrow">Broadcast</p>
+        <div class="bar2">
+          <input class="in" id="w-say" type="text" placeholder="message to every player" autocomplete="off">
+          <button class="btn prim" id="w-saygo" type="button">Announce</button>
+        </div>
+
+        <p class="eyebrow op77-eyebrow">Housekeeping</p>
+        <div class="bar2">
+          <button class="btn danger" type="button" data-cmd="admin.world.cleanup">Remove every empty spawned vehicle</button>
+        </div>
+      </section>
+
+      <!-- ============================ PROPS
+           Set dressing: props, lights and effects. Every control here ends in a
+           command, exactly like the rest of the panel — the props registry has
+           no net-event path and must not grow one. Every spawn lands in the
+           OPERATOR's routing bucket, which is why nothing on this screen offers
+           a bucket field: one that could be typed wrong would be a control for
+           making invisible props. -->
+      <section class="tab" data-tab="props">
+        <p class="eyebrow op77-eyebrow">Spawn a prop</p>
+        <div class="bar2">
+          <input class="in" id="pr-model" type="text" placeholder="model alias or depot path" autocomplete="off" spellcheck="false">
+          <input class="in" id="pr-yaw" type="text" placeholder="yaw" autocomplete="off">
+          <button class="btn prim" id="pr-here" type="button">At my feet</button>
+          <input class="in mono" id="pr-at" type="text" placeholder="x y z" autocomplete="off" spellcheck="false">
+          <button class="btn" id="pr-atgo" type="button">There</button>
+        </div>
+        <!-- The catalogue, as a searchable scrolling list rather than a wall of
+             chips: 184 aliases today and growing. Clicking a row only fills the
+             model box above — the deliberate two-step from the chips it
+             replaces, so reading the list can never spawn anything. -->
+        <div class="bar2">
+          <input class="in" id="pr-filter" type="text"
+                 placeholder="search props — name or family" autocomplete="off" spellcheck="false">
+          <span class="count" id="pr-filtercount">—</span>
+        </div>
+        <div class="proplist" id="pr-models" aria-label="Prop catalogue"></div>
+
+        <p class="eyebrow op77-eyebrow">Place a light</p>
+        <div class="bar2 wrapline">
+          <input class="in" id="pr-lint" type="text" placeholder="intensity 20" autocomplete="off">
+          <input class="in" id="pr-lrad" type="text" placeholder="radius 10" autocomplete="off">
+          <input class="in mono" id="pr-lrgb" type="text" placeholder="r g b · 0–1" autocomplete="off" spellcheck="false">
+          <button class="btn prim" id="pr-lighthere" type="button">At my feet</button>
+          <input class="in mono" id="pr-lightat" type="text" placeholder="x y z" autocomplete="off" spellcheck="false">
+          <button class="btn" id="pr-lightgo" type="button">There</button>
+        </div>
+
+        <p class="eyebrow op77-eyebrow">Around you</p>
+        <div class="bar2">
+          <input class="in" id="pr-radius" type="text" placeholder="radius, metres" autocomplete="off">
+          <button class="btn" id="pr-refresh" type="button">Refresh</button>
+          <span class="count" id="pr-count">—</span>
+          <button class="btn danger" type="button" data-cmd="admin.props.clear">Remove every prop this panel made</button>
+        </div>
+        <div class="tablewrap">
+          <table class="grid" id="pr-table">
+            <thead><tr>
+              <th>ID</th><th>Model</th><th>Kind</th><th class="n">Bucket</th>
+              <th class="n">Dist</th><th>Position</th><th>Actions</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p class="note" id="pr-note"></p>
+
+        <p class="eyebrow op77-eyebrow">Effects</p>
+        <div class="bar2">
+          <input class="in" id="pr-fx" type="text" placeholder="effect alias" autocomplete="off" spellcheck="false">
+          <button class="btn prim" id="pr-fxplay" type="button">Play once</button>
+          <button class="btn" id="pr-fxloop" type="button">Loop here</button>
+          <button class="btn" type="button" data-cmd="admin.fx.list">List loops</button>
+        </div>
+        <div class="bar2">
+          <button class="btn prim" type="button" data-cmd="admin.fx.fireworks">Fireworks show</button>
+          <button class="btn" type="button" data-cmd="admin.fx.show opening">Opening</button>
+          <button class="btn" type="button" data-cmd="admin.fx.show celebration">Celebration</button>
+          <button class="btn" type="button" data-cmd="admin.fx.show finale">Finale</button>
+          <button class="btn" type="button" data-cmd="admin.fx.show.stop">Stop the show</button>
+        </div>
+        <p class="eyebrow op77-eyebrow">Drone shows</p>
+        <div class="bar2">
+          <button class="btn prim" type="button" data-cmd="droneshow sign">OPEN//77 sign</button>
+          <button class="btn" type="button" data-cmd="droneshow parade">Parade</button>
+          <button class="btn" type="button" data-cmd="droneshow cut">Two figures</button>
+          <button class="btn" type="button" data-cmd="droneshow stop">Stop every show</button>
+          <span class="count">Needs the rp_drones resource; the buttons answer with its own usage line otherwise.</span>
+        </div>
+
+        <div class="bar2">
+          <button class="btn" type="button" data-cmd="admin.fx.stage">Raise the stage</button>
+          <button class="btn" type="button" data-cmd="admin.fx.stage.clear">Take it down</button>
+          <span class="count">Shows run where you stand and are seen by every player in range.</span>
+        </div>
+        <div class="chips" id="pr-fxaliases"></div>
+        <div class="rows" id="pr-fxrows"><p class="empty">No looping effects.</p></div>
+      </section>
+
+      <!-- ============================ SELF -->
+      <section class="tab" data-tab="self">
+        <div class="cards">
+          <div class="card">
+            <span class="cardk">Movement</span>
+            <div class="btnrow">
+              <button class="btn" type="button" data-cmd="admin.self.noclip">Noclip</button>
+              <button class="btn" type="button" data-cmd="admin.self.fly">Fly</button>
+            </div>
+            <div class="slider" id="self-speed">
+              <label>Noclip speed <b>8 m/s</b></label><input type="range" min="1" max="200" step="1" value="8">
+            </div>
+            <p class="cardn" id="self-mods">—</p>
+          </div>
+          <div class="card">
+            <span class="cardk">Condition</span>
+            <div class="btnrow">
+              <button class="btn" type="button" data-cmd="admin.self.god">God mode</button>
+              <button class="btn" type="button" data-cmd="admin.self.heal">Heal</button>
+              <button class="btn" type="button" data-cmd="admin.self.revive">Revive</button>
+            </div>
+          </div>
+          <div class="card">
+            <span class="cardk">Position</span>
+            <div class="btnrow">
+              <button class="btn" type="button" data-cmd="admin.self.pos">Copy my position</button>
+            </div>
+            <div class="bar2">
+              <input class="in" id="self-tp" type="text" placeholder="x y z [heading]" autocomplete="off">
+              <button class="btn prim" id="self-tpgo" type="button">Go</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================ CONSOLE -->
+      <section class="tab" data-tab="console">
+        <div class="bar2">
+          <input class="in mono" id="con-line" type="text" placeholder="type a command, e.g. pursuit.status" autocomplete="off" spellcheck="false">
+          <button class="btn prim" id="con-run" type="button">Run</button>
+        </div>
+        <div class="rows small" id="con-hints"></div>
+        <p class="eyebrow op77-eyebrow">Result log</p>
+        <div class="rows log" id="con-log"><p class="empty">Nothing run yet.</p></div>
+      </section>
+
+      <!-- ============================ AUDIT -->
+      <section class="tab" data-tab="audit">
+        <div class="bar2">
+          <button class="btn" type="button" data-cmd="admin.read.audit">Refresh</button>
+          <span class="count">this uptime only</span>
+        </div>
+        <div class="rows" id="au-rows"><p class="empty">Nothing yet.</p></div>
+        <p class="note">Actions taken through the Warden panel are kept in a durable trail this
+          page cannot read. Both histories are real; only this one is in the game.</p>
+      </section>
+
+    </main>
+  </div>
+
+  <footer class="foot">
+    <span id="f-catalog">—</span>
+    <span id="f-gov">—</span>
+    <span id="f-last" class="mono">—</span>
+  </footer>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

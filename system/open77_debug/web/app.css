@@ -1,0 +1,135 @@
+/* Debug inspector overlay.
+ *
+ * Tokens come from `open77-ui.css` — this file used to carry its own copy of
+ * six colours, and those six had drifted furthest of any surface: a near-black
+ * neutral panel (#0e0e10) and, worse, the game's own #FCEE0A yellow as the
+ * lock-on colour. The design system is explicit that the UI never borrows the
+ * game's palette ("Cyberpunk supplies the chaos. OPEN//77 supplies the
+ * signal."), so the lock state now uses --op77-accent and the idle state stays
+ * neutral. It reads as a developer tool belonging to this product rather than
+ * to Cyberpunk's HUD.
+ *
+ * The whole surface is inert. `pointer-events: none` is set on the root and
+ * never overridden, because this sits over a game the player is still driving —
+ * a readout that swallowed a mouse click would be worse than no readout.
+ */
+
+* { box-sizing: border-box; }
+html, body {
+  width: 100%; height: 100%; margin: 0;
+  overflow: hidden;
+  background: transparent;
+  color: var(--op77-text);
+  font-family: var(--op77-font-body);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+.hud {
+  position: fixed; inset: 0;
+  pointer-events: none;
+  transition: opacity var(--op77-dur) var(--op77-ease);
+}
+
+/* Hidden by fading the content, not by hiding the surface. The surface must
+ * stay visible from the moment it is created or it never paints — so "off" is
+ * a transparent page, which costs one composited quad and nothing else. */
+.hud.is-hidden { opacity: 0; }
+
+/* A small crosshair marks where the ray actually points, which is not always
+ * the centre of the screen once the camera is offset in third person. */
+.reticle {
+  position: fixed; left: 50%; top: 50%;
+  width: 14px; height: 14px;
+  margin: -7px 0 0 -7px;
+  opacity: 0.55;
+  transition: opacity var(--op77-dur) var(--op77-ease), border-color var(--op77-dur) var(--op77-ease);
+  border: 1px solid var(--op77-text-dim);
+  border-radius: 50%;
+}
+.hud[data-state="locked"] .reticle {
+  opacity: 1;
+  border-color: var(--op77-accent);
+}
+
+.card {
+  position: fixed;
+  top: var(--op77-inset-y);
+  right: var(--op77-inset-x);
+  width: 340px;
+  padding: var(--op77-space-4);
+  /* Opaque, and fully opaque even when idle. The old card sat at 0.82 over a
+     0.88 panel — roughly 0.72 effective — which is not enough to read mono
+     11px against a lit street. */
+  background: var(--op77-panel);
+  border: 1px solid var(--op77-line-hud);
+  border-left: var(--op77-rule) solid var(--op77-line-strong);
+  border-radius: var(--op77-radius-sm);
+  box-shadow: var(--op77-shadow);
+  transition: border-left-color var(--op77-dur) var(--op77-ease);
+}
+.hud[data-state="locked"] .card {
+  border-left-color: var(--op77-accent);
+}
+
+.card__head {
+  display: flex; align-items: center; gap: var(--op77-space-2);
+  margin-bottom: var(--op77-space-3);
+}
+.dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--op77-text-faint);
+  transition: background-color var(--op77-dur) var(--op77-ease), box-shadow var(--op77-dur) var(--op77-ease);
+}
+.hud[data-state="locked"] .dot { background: var(--op77-accent); box-shadow: var(--op77-glow); }
+
+.card__title {
+  font: 700 var(--op77-fs-micro) / 1 var(--op77-font-mono);
+  letter-spacing: var(--op77-track-micro);
+  text-transform: uppercase;
+  color: var(--op77-text-dim);
+}
+.card__title::before { content: "// "; color: var(--op77-accent); letter-spacing: -0.06em; }
+
+.card__kind {
+  margin-left: auto;
+  font: 700 var(--op77-fs-micro) / 1 var(--op77-font-mono);
+  letter-spacing: var(--op77-track-label);
+  text-transform: uppercase;
+  color: var(--op77-accent-deep);
+}
+
+.card__name {
+  margin: 0 0 var(--op77-space-3);
+  font-family: var(--op77-font-display);
+  font-size: var(--op77-fs-title);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: var(--op77-track-head);
+  /* A device name can be long; it wraps rather than pushing the card wider and
+   * making the panel jump about as the aim moves. */
+  overflow-wrap: anywhere;
+}
+.hud[data-state="idle"] .card__name { color: var(--op77-text-dim); font-weight: 400; }
+
+.rows { margin: 0; }
+.row {
+  display: flex; align-items: baseline; gap: var(--op77-space-3);
+  padding: var(--op77-space-1) 0;
+  border-top: 1px solid var(--op77-line);
+}
+.row dt {
+  flex: 0 0 78px;
+  font: 700 var(--op77-fs-micro) / 1.4 var(--op77-font-mono);
+  letter-spacing: var(--op77-track-label);
+  text-transform: uppercase;
+  color: var(--op77-text-dim);
+}
+.row dd {
+  margin: 0;
+  font: 400 var(--op77-fs-meta) / 1.4 var(--op77-font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--op77-text);
+  overflow-wrap: anywhere;
+}
+.hud[data-state="idle"] .row dd { color: var(--op77-text-faint); }

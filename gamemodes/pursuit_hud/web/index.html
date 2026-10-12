@@ -1,0 +1,550 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Pursuit HUD</title>
+<link rel="stylesheet" href="open77-ui.css">
+<style>
+  /* Pursuit HUD.
+     Tokens come from `open77-ui.css`.
+
+     Role colour is the one place this surface departs from the palette, and it
+     has to: cop and runner must be told apart instantly and cannot both be
+     cyan. Cop keeps the platform cyan (--op77-accent); runner takes the system
+     warning amber (--op77-warn), which is already in the token set. No third
+     hue is introduced. Separation and scan-age reuse --op77-ok / --op77-signal
+     with their normal meanings: safe, and live-and-closing. */
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%; margin: 0; overflow: hidden;
+    background: transparent; pointer-events: none; user-select: none;
+    font-family: var(--op77-font-body);
+  }
+
+  #root { position: absolute; inset: 0; }
+  #root[hidden] { display: none; }
+
+  /* Top-centre band, clear of the vanilla minimap (top right) and the
+     quickslots (bottom left). */
+  .band {
+    position: absolute; top: 8.5vh; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: stretch; gap: 0;
+    background: var(--op77-panel);
+    border: 1px solid var(--op77-line-hud);
+    box-shadow: var(--op77-shadow);
+    /* Chamfered corner: the house style across Open77 surfaces. */
+    clip-path: polygon(var(--op77-notch) 0, 100% 0, 100% calc(100% - var(--op77-notch)), calc(100% - var(--op77-notch)) 100%, 0 100%, 0 var(--op77-notch));
+  }
+  .cell { padding: var(--op77-space-2) var(--op77-space-4) var(--op77-space-2); text-align: center; min-width: 104px; }
+  .cell + .cell { border-left: 1px solid var(--op77-line); }
+  .label {
+    font: 700 var(--op77-fs-micro) / 1 var(--op77-font-mono);
+    letter-spacing: var(--op77-track-micro); text-transform: uppercase;
+    color: var(--op77-text-dim); margin-bottom: var(--op77-space-1);
+  }
+  .value {
+    font-family: var(--op77-font-display);
+    font-size: 24px; font-weight: 700; line-height: 1.05;
+    letter-spacing: var(--op77-track-head);
+    color: var(--op77-text); font-variant-numeric: tabular-nums;
+  }
+  .value.small { font-size: var(--op77-fs-lead); font-weight: 600; }
+
+  .role .value { letter-spacing: 0.06em; }
+  .role[data-role="cop"] .value { color: var(--op77-accent); }
+  .role[data-role="runner"] .value { color: var(--op77-warn); }
+
+  /* Separation is the runner's lifeline and the cop's pressure gauge, so it
+     carries the colour rather than a neutral readout. */
+  .sep .value.close { color: var(--op77-signal); }
+  .sep .value.safe  { color: var(--op77-ok); }
+
+  .stale .value.old { color: var(--op77-signal); }
+
+  /* The round and the scoreboard, hidden entirely in a one-round match so a
+     mode configured back to a single chase carries no dead furniture. */
+  .score .value { font-variant-numeric: tabular-nums; }
+
+  /* --------------------------------------------------------- the meter ----
+
+     The bust meter. It is the readout the whole rework exists to make
+     possible, and it is on screen for BOTH players -- the cop watching his own
+     progress and the runner watching the thing that is about to end his round
+     are looking at the same bar. A hold timer could never be drawn this way,
+     because it was only ever true for the instant you looked at it.
+
+     It hangs UNDER the band rather than inside it, full band width, because a
+     bar reads as a quantity and a cell reads as a number: the shape of "62%
+     and climbing" is the information, not the digits.
+
+     Colour follows the state and not the role: amber while it fills, red past
+     the point where the runner should be worried, and it dims to the panel line
+     while draining so that "losing him" is visible at a glance from either
+     seat. */
+  .meter {
+    position: absolute; top: 8.5vh; left: 50%; transform: translateX(-50%);
+    /* Sits directly below the band; the offset is applied by JS from the
+       band's measured height so it never overlaps a two-line cell. */
+    margin-top: 0;
+    background: var(--op77-panel);
+    border: 1px solid var(--op77-line-hud);
+    border-top: none;
+    box-shadow: var(--op77-shadow);
+    padding: var(--op77-space-2) var(--op77-space-3) var(--op77-space-2);
+  }
+  .meter .track {
+    position: relative; height: 10px; width: 100%;
+    background: var(--op77-line);
+    overflow: hidden;
+  }
+  .meter .fill {
+    position: absolute; inset: 0 auto 0 0; width: 0%;
+    background: var(--op77-warn);
+    transition: width 120ms linear, background-color 200ms linear;
+  }
+  /* Draining: the same value, visibly not being earned. */
+  .meter.draining .fill { background: var(--op77-text-dim); }
+  /* Contact without arrest -- the tailing state. The cop is on him but nobody
+     is stopped, so the meter only bleeds: the amber stays (this is still a
+     live contest, not a break) but at half strength, so "filling", "holding"
+     and "losing him" are three visibly different bars. */
+  .meter.contact .fill { background: var(--op77-warn); opacity: 0.55; }
+  /* A stalled engine is an alarm, whoever's it is. */
+  .meter.stalled .caption span:first-child { color: var(--op77-signal); }
+  /* Past two thirds the bust is the likely outcome, so it stops being a
+     status and starts being an alarm. */
+  .meter.critical .fill { background: var(--op77-signal); }
+  /* The escape window -- the runner is beyond `escapeDistance` and the bar is
+     the time the cop has left to pull him back. Same bar, opposite valence per
+     seat, so the colour follows the SEAT and not just the state: green for the
+     runner (his win filling up), signal-red for the cop (`threat`, his round
+     draining away). While the attempt is being clawed back -- the cop pulled
+     the gap under the line -- it dims like the bust meter's drain, so "still
+     escaping" and "being caught back" are two visibly different bars in the
+     same visual language. Order matters: draining is declared last so it wins
+     over the two seat colours. */
+  .meter.escape .fill { background: var(--op77-ok); }
+  .meter.escape.threat .fill { background: var(--op77-signal); }
+  .meter.escape.draining .fill { background: var(--op77-text-dim); }
+  .meter .caption {
+    display: flex; justify-content: space-between; gap: var(--op77-space-4);
+    font: 700 var(--op77-fs-micro) / 1 var(--op77-font-mono);
+    letter-spacing: var(--op77-track-micro); text-transform: uppercase;
+    color: var(--op77-text-dim); margin-bottom: var(--op77-space-1);
+  }
+  .meter .caption .pct { color: var(--op77-text); font-variant-numeric: tabular-nums; }
+
+  /* Countdown takes over the whole band: before the start nothing else matters.
+     It sits on bare game pixels, so it carries its own dark edge rather than a
+     cyan glow — a glow brightens the number against a dark street and does
+     nothing for it against a lit one. */
+  .countdown {
+    position: absolute; top: 16vh; left: 50%; transform: translateX(-50%);
+    text-align: center;
+  }
+  .countdown .n {
+    font-family: var(--op77-font-display);
+    font-size: 88px; font-weight: 700; line-height: 1;
+    letter-spacing: var(--op77-track-head);
+    color: var(--op77-text); font-variant-numeric: tabular-nums;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.9), 0 0 3px rgba(0, 0, 0, 0.9);
+  }
+  .countdown .sub {
+    font: 700 var(--op77-fs-label) / 1 var(--op77-font-mono);
+    letter-spacing: var(--op77-track-micro); text-transform: uppercase;
+    color: var(--op77-text-dim); margin-top: var(--op77-space-2);
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+  }
+
+  .hold {
+    margin-top: var(--op77-space-2);
+    font: 700 var(--op77-fs-label) / 1 var(--op77-font-mono);
+    letter-spacing: var(--op77-track-label);
+    text-transform: uppercase; color: var(--op77-warn);
+  }
+
+  .outcome {
+    position: absolute; top: 30vh; left: 50%; transform: translateX(-50%);
+    text-align: center; padding: var(--op77-space-5) var(--op77-space-7);
+    background: var(--op77-panel-raised);
+    border: 1px solid var(--op77-line-hud);
+    box-shadow: var(--op77-shadow);
+    clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+  }
+  .outcome .verdict {
+    font-family: var(--op77-font-display);
+    font-size: var(--op77-fs-hero); font-weight: 700;
+    letter-spacing: var(--op77-track-head); text-transform: uppercase;
+    color: var(--op77-text);
+  }
+  .outcome .verdict.win  { color: var(--op77-ok); }
+  .outcome .verdict.loss { color: var(--op77-signal); }
+  .outcome .why {
+    font: 700 var(--op77-fs-label) / 1 var(--op77-font-mono);
+    letter-spacing: var(--op77-track-micro); text-transform: uppercase;
+    color: var(--op77-text-dim); margin-top: var(--op77-space-2);
+  }
+  .outcome .why::before { content: "// "; color: var(--op77-accent); letter-spacing: -0.06em; }
+  .outcome .why:empty { display: none; }
+
+  /* "Get in your car."
+
+     A player who fades in beside a spawned car and walks up to it gets NOTHING
+     from the engine unless he is within about a metre of the driver door: no
+     prompt, no refusal, no message. Standing at the bonnet, at the boot or on
+     the passenger side is indistinguishable from a broken car, and it cost a
+     competent tester two full match cycles on 2026-08-26.
+
+     So this strip exists to answer the one question the engine will not: where
+     is the door, and am I getting closer to it.
+
+     Placement: 28vh, clear under the countdown, which starts at 16vh and runs
+     to roughly 26vh once its 88px numeral and sub-line are counted, and under
+     the band at 8.5vh -- so all three read as one column during the countdown,
+     which is the only phase in which all three exist. It shares 28-30vh with
+     `.outcome`, which is safe because the two are mutually exclusive by
+     construction: the server stops sending `boarding` before a match can
+     resolve.
+     It is deliberately NOT a takeover panel like `.outcome` -- the player is
+     supposed to be looking at his car, not at the HUD.
+
+     It is on screen for the opening of a match and nowhere else; the server
+     stops sending `boarding` the moment he is aboard, after 45 s of the
+     player's own usable time (the server anchors that clock on the end of the
+     respawn fade, not on the spawn event -- see `usableSince` in
+     pursuit/server/vehicles.lua), and when the match leaves countdown/active.
+     There is no client-side timer here, because a timer here would be a second
+     opinion about a decision the server has already made -- and the server is
+     the only side that can see when the fade lifted. */
+  .boarding {
+    position: absolute; top: 28vh; left: 50%; transform: translateX(-50%);
+    text-align: center; padding: var(--op77-space-2) var(--op77-space-5);
+    background: var(--op77-panel);
+    border: 1px solid var(--op77-line-hud);
+    box-shadow: var(--op77-shadow);
+    clip-path: polygon(var(--op77-notch) 0, 100% 0, 100% calc(100% - var(--op77-notch)), calc(100% - var(--op77-notch)) 100%, 0 100%, 0 var(--op77-notch));
+  }
+  .boarding .headline {
+    font-family: var(--op77-font-display);
+    font-size: var(--op77-fs-lead); font-weight: 700;
+    letter-spacing: var(--op77-track-head); text-transform: uppercase;
+    color: var(--op77-warn);
+  }
+  /* Within the engine's reach: the prompt the player has been hunting for is
+     on screen now, so the strip stops nagging and confirms. */
+  .boarding.reach .headline { color: var(--op77-ok); }
+  .boarding .detail {
+    font: 700 var(--op77-fs-label) / 1 var(--op77-font-mono);
+    letter-spacing: var(--op77-track-micro); text-transform: uppercase;
+    color: var(--op77-text-dim); margin-top: var(--op77-space-2);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .queue {
+    position: absolute; top: 8.5vh; left: 50%; transform: translateX(-50%);
+    padding: var(--op77-space-2) var(--op77-space-5);
+    background: var(--op77-panel);
+    border: 1px solid var(--op77-line-hud);
+    box-shadow: var(--op77-shadow);
+    text-align: center;
+    clip-path: polygon(var(--op77-notch) 0, 100% 0, 100% calc(100% - var(--op77-notch)), calc(100% - var(--op77-notch)) 100%, 0 100%, 0 var(--op77-notch));
+  }
+  [hidden] { display: none !important; }
+</style>
+
+<div id="root" hidden>
+  <div class="queue" id="queue" hidden>
+    <div class="label">Pursuit</div>
+    <div class="value small" id="queueText">In queue</div>
+  </div>
+
+  <div class="band" id="band" hidden>
+    <div class="cell role" id="roleCell"><div class="label">Role</div><div class="value" id="role">—</div></div>
+    <div class="cell score" id="roundCell" hidden><div class="label">Round</div><div class="value" id="round">1/2</div></div>
+    <div class="cell"><div class="label" id="clockLabel">Time</div><div class="value" id="clock">0:00</div></div>
+    <div class="cell score" id="scoreCell" hidden><div class="label">Score</div><div class="value" id="score">0–0</div></div>
+    <div class="cell sep" id="sepCell" hidden><div class="label">Separation</div><div class="value" id="sep">—</div></div>
+    <div class="cell stale" id="staleCell" hidden><div class="label">Scan</div><div class="value small" id="stale">—</div></div>
+  </div>
+
+  <div class="meter" id="meter" hidden>
+    <div class="caption"><span id="meterLabel">Pursuit</span><span class="pct" id="meterPct">0%</span></div>
+    <div class="track"><div class="fill" id="meterFill"></div></div>
+  </div>
+
+  <div class="countdown" id="countdown" hidden>
+    <div class="n" id="countdownN">10</div>
+    <div class="sub" id="countdownSub">Get ready</div>
+  </div>
+
+  <div class="boarding" id="boarding" hidden>
+    <div class="headline" id="boardingHeadline">Get in your car</div>
+    <div class="detail" id="boardingDetail">Driver's door — left side</div>
+  </div>
+
+  <div class="outcome" id="outcome" hidden>
+    <div class="verdict" id="verdict">—</div>
+    <div class="why" id="why"></div>
+  </div>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const root = $('root');
+
+  // Thresholds are presentation-only. The server owns the real rules.
+  //
+  // The two distance thresholds are DERIVED from the server's own rule
+  // distances, which ride on every payload (`bustDistance`, `escapeDistance`),
+  // rather than being literals here. That is not tidiness: the numbers moved on
+  // 2026-08-26 -- the bust radius from 5 m to 15 m, the escape from 300 m to
+  // 100 m -- and a hard-coded "safe at 100 m" would have been colouring the
+  // readout against rules that no longer existed. Every tunable of this mode
+  // now lives in pursuit/shared/config.lua, and the HUD follows it.
+  //
+  // The multipliers stay literal and are deliberately generous: `close` is
+  // twice the bust radius, so the runner sees amber before the meter can
+  // possibly fill, and `safe` is four fifths of the escape distance, so he sees
+  // green while breaking clear rather than after he already has.
+  const closeMetres = (s) => (s.bustDistance || 15) * 2;
+  const safeMetres = (s) => (s.escapeDistance || 100) * 0.8;
+  const STALE_MS = 6000;
+
+  function clock(ms) {
+    const total = Math.max(0, Math.ceil(ms / 1000));
+    const m = Math.floor(total / 60);
+    const s = total % 60;
+    return m + ':' + String(s).padStart(2, '0');
+  }
+
+  const OUTCOMES = {
+    runner_escaped: 'Runner escaped',
+    runner_busted: 'Runner busted',
+    runner_down: 'Runner down',
+    cop_down: 'Cop down',
+    time_expired: 'Time expired — runner survived',
+    runner_timed_out: "Time's up — runner caught",
+    opponent_left: 'Opponent left',
+    runner_out_of_bounds: 'Runner left the zone',
+    cop_out_of_bounds: 'Cop left the zone',
+  };
+
+  function render(s) {
+    root.hidden = !s.visible;
+    if (!s.visible) return;
+
+    const queued = s.phase === 'queued';
+    const counting = s.phase === 'countdown';
+    const resolved = s.phase === 'resolved';
+    const between = s.phase === 'intermission';
+    const active = s.phase === 'active';
+    const multi = (s.roundCount || 1) > 1;
+
+    $('queue').hidden = !queued;
+    if (queued) {
+      $('queueText').textContent = s.queueTotal
+        ? `In queue — ${s.queuePosition || 1}/${s.queueTotal}`
+        : 'In queue';
+    }
+
+    $('countdown').hidden = !counting;
+    if (counting) {
+      $('countdownN').textContent = Math.max(0, Math.ceil(s.remainingMs / 1000));
+      // The decider is named at the moment the player can still absorb it:
+      // the countdown is the one beat where he is reading the screen rather
+      // than the road, and "one round for the match" changes how both roles
+      // play it.
+      const who = s.role === 'cop' ? 'You are the COP' : 'You are the RUNNER';
+      $('countdownSub').textContent = s.role
+        ? (s.decider ? 'DECIDER — ' + who : who)
+        : 'Get ready';
+    }
+
+    $('band').hidden = !(active || counting);
+    if (active || counting) {
+      const roleCell = $('roleCell');
+      roleCell.dataset.role = s.role || '';
+      $('role').textContent = s.role ? s.role.toUpperCase() : '—';
+
+      // The timer names its stake. Since 2026-08-30 a timeout is the COP's
+      // round (the runner must actually escape), so the label says who the
+      // clock is working for — the server sends `timeoutWinner` on every
+      // push, and 'Time' remains the survival-rule wording. A round living
+      // past 0:00 is an attempt playing out in sudden death, and says so.
+      const overtime = active && s.remainingMs <= 0;
+      $('clockLabel').textContent = counting ? 'Starts in'
+        : overtime ? 'Overtime'
+        : (s.timeoutWinner === 'cop' ? 'Cop wins in' : 'Time');
+      $('clock').textContent = clock(s.remainingMs);
+
+      // The round and the running score, and only in a match that has more
+      // than one round -- a single-chase configuration draws neither.
+      $('roundCell').hidden = !multi;
+      $('scoreCell').hidden = !multi;
+      if (multi) {
+        // The cell relabels itself for the sudden-death round: "3/3" alone
+        // cannot say "this one decides the match", and that fact outranks
+        // which ordinal the round happens to carry.
+        $('roundCell').querySelector('.label').textContent = s.decider ? 'Decider' : 'Round';
+        $('round').textContent = `${s.round || 1}/${s.roundCount}`;
+        // En dash, and the player's own score first: this cell answers "how am
+        // I doing", not "what is the fixture".
+        $('score').textContent = `${s.scoreSelf || 0}–${s.scoreOpponent || 0}`;
+      }
+
+      // RUNNER ONLY, and enforced on the server: `separation` is simply not
+      // sent to a cop (see `separationFor` in pursuit/server/match.lua). The
+      // check below is therefore a consequence, not the gate -- a role test
+      // here would leave the number on the wire, where it could be read.
+      const hasSep = active && typeof s.separation === 'number';
+      $('sepCell').hidden = !hasSep;
+      if (hasSep) {
+        const el = $('sep');
+        el.textContent = Math.round(s.separation) + ' m';
+        el.classList.toggle('close', s.separation <= closeMetres(s));
+        el.classList.toggle('safe', s.separation >= safeMetres(s));
+      }
+
+      // Scanner staleness is the cop's mechanic: the blip is a last-known
+      // position, so how OLD it is matters more than where it is.
+      const hasScan = active && s.role === 'cop' && typeof s.scannerAgeMs === 'number';
+      $('staleCell').hidden = !hasScan;
+      if (hasScan) {
+        const el = $('stale');
+        el.textContent = (s.scannerAgeMs / 1000).toFixed(1) + 's ago';
+        el.classList.toggle('old', s.scannerAgeMs >= STALE_MS);
+      }
+    }
+
+    // The bust meter.
+    //
+    // One bar, two rules, and they cannot collide: separation cannot be at once
+    // below `bustDistance` and at or above `escapeDistance`, so an escape hold
+    // and a filling meter are mutually exclusive by construction. The escape
+    // takes the bar when it is running, because it is the shorter-lived and
+    // more urgent of the two.
+    //
+    // Present exactly while the server sends a value, which is exactly while
+    // the rule is running: not during the head start, not between rounds, not
+    // on the outcome card. Nothing here decides that -- see the assignment in
+    // pursuit_hud/client/main.lua.
+    const escaping = typeof s.escapeProgress === 'number' && s.escapeProgress > 0;
+    const metering = typeof s.bustMeter === 'number';
+    const showMeter = active && (escaping || metering);
+    $('meter').hidden = !showMeter;
+    if (showMeter) {
+      const value = escaping ? s.escapeProgress : s.bustMeter;
+      const pct = Math.max(0, Math.min(100, Math.round(value * 100)));
+      const el = $('meter');
+      // Three meter states since the 2026-08-28 arrest rework, not two:
+      // FILLING (arrest conditions met), CONTACT (inside the radius but
+      // nobody is stopped -- slow bleed), DRAINING (contact broken). The
+      // stall banner takes over the label: an engine that has just died is
+      // the one fact its owner needs before any tactics.
+      const stalled = typeof s.bustStalled === 'number' && s.bustStalled > 0;
+      const contact = !escaping && !s.bustClosing && s.bustContact === true;
+      // The escape window fills while the gap holds (`escapeFilling`) and
+      // drains while the cop has pulled it back under the line; both moments
+      // keep the bar on screen because a visibly fading attempt IS the cop's
+      // feedback that his comeback is working.
+      const escapeFading = escaping && s.escapeFilling !== true;
+      el.classList.toggle('escape', escaping);
+      el.classList.toggle('threat', escaping && s.role === 'cop');
+      el.classList.toggle('draining', (!escaping && !s.bustClosing && !contact) || escapeFading);
+      el.classList.toggle('contact', contact);
+      el.classList.toggle('critical', !escaping && pct >= 67);
+      el.classList.toggle('stalled', stalled);
+      // Wording from the reader's own side. The cop is doing something; the
+      // runner is having something done to him, and a shared label would leave
+      // one of the two guessing which of them the bar was about.
+      //
+      // The cop's escape warning deliberately carries the RULE distance
+      // (`escapeDistance`, static config) and never the live separation: a
+      // live number here would be the hot-and-cold rangefinder the stale
+      // scanner exists to deny him — see `separationFor` in
+      // pursuit/server/match.lua, which never sends a cop the number at all.
+      const escLine = Math.round(s.escapeDistance || 100) + ' m';
+      $('meterLabel').textContent = stalled
+        ? ('ENGINE STALLED — ' + (s.bustStalled / 1000).toFixed(1) + 's')
+        : escaping
+          ? (s.role === 'cop'
+              ? (s.escapeFilling ? 'He is past ' + escLine + ' — close the gap'
+                 : 'Escape fading — stay on him')
+              : (s.escapeFilling ? 'Breaking clear — keep the distance'
+                 : 'He is reeling you back'))
+          : (s.role === 'cop'
+              ? (s.bustClosing ? 'Bust — arresting'
+                 : (contact ? 'On him — make him stop' : 'Bust — losing him'))
+              : (s.bustClosing ? 'He has you — drive!'
+                 : (contact ? 'He is on you' : 'You are pulling away')));
+      $('meterPct').textContent = pct + '%';
+      $('meterFill').style.width = pct + '%';
+      // Park it just under the band, whatever height the band turned out to
+      // be: the band gains and loses cells with the phase and the config, so a
+      // fixed offset would overlap in one configuration and float in another.
+      const band = $('band');
+      el.style.top = (band.hidden ? 0 : band.getBoundingClientRect().bottom) + 'px';
+      el.style.width = (band.hidden ? 320 : band.getBoundingClientRect().width) + 'px';
+    }
+
+    // The boarding strip. Present exactly while the server sends `boarding`,
+    // and the server stops sending it the instant the occupancy ledger says the
+    // player is aboard, 45 s after he could first act on it, and when the match
+    // leaves countdown/active. Nothing here decides when it goes: a client-side
+    // timer would be a second opinion about a fact the server already holds --
+    // and it would repeat the original bug, which was a clock started at an
+    // event the player could not perceive.
+    const boarding = s.boarding;
+    const showBoarding = !!boarding && (active || counting);
+    $('boarding').hidden = !showBoarding;
+    if (showBoarding) {
+      const inReach = boarding.inReach === true;
+      $('boarding').classList.toggle('reach', inReach);
+      $('boardingHeadline').textContent = inReach ? 'Press F to get in' : 'Get in your car';
+      // The distance is to the DRIVER DOOR, not to the car: the difference is
+      // the entire bug. A player 2 m from the boot is 4 m from anything that
+      // will answer him, and a readout that said "2 m" would confirm his wrong
+      // belief that he is already there.
+      const metres = typeof boarding.distance === 'number'
+        ? ` — ${boarding.distance.toFixed(1)} m`
+        : '';
+      $('boardingDetail').textContent = `Driver's door · left side${metres}`;
+    }
+
+    // The outcome card serves two moments: the end of a ROUND (with the next
+    // one counting down under it) and the end of the MATCH.
+    $('outcome').hidden = !(resolved || between);
+    if (resolved || between) {
+      const v = $('verdict');
+      const drawn = s.matchResult === 'draw';
+      if (between) {
+        // A round result, said as a round result. "YOU WIN" at 1-1 with a round
+        // still to play would be a lie about the match.
+        v.textContent = s.won ? 'ROUND WON' : 'ROUND LOST';
+        v.classList.toggle('win', !!s.won);
+        v.classList.toggle('loss', !s.won);
+      } else {
+        v.textContent = drawn ? 'DRAW' : (s.won ? 'YOU WIN' : 'YOU LOSE');
+        v.classList.toggle('win', !drawn && !!s.won);
+        v.classList.toggle('loss', !drawn && !s.won);
+      }
+
+      const why = OUTCOMES[s.outcome] || (s.outcome || '');
+      const line = [why];
+      if (multi) line.push(`${s.scoreSelf || 0}–${s.scoreOpponent || 0}`);
+      if (between) {
+        // The beat is counted down rather than merely waited out: the roles are
+        // about to swap and both players are about to be moved, and a silent
+        // eight seconds reads as a hang.
+        const secs = Math.max(0, Math.ceil(s.remainingMs / 1000));
+        line.push(s.nextIsDecider
+          ? `Level — DECIDER, one round for the match · in ${secs}`
+          : `Roles swap · next round in ${secs}`);
+      }
+      $('why').textContent = line.join(' · ');
+    }
+  }
+
+  Open77.on('pursuit:hud', render);
+  Open77.ready();
+  Open77.emit('pursuit:hud:ready', {});
+</script>

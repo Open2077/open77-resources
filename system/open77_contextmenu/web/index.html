@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Open77 target actions</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <div id="workspace" hidden>
+    <div id="eye" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M2 12s3.4-6.5 10-6.5S22 12 22 12s-3.4 6.5-10 6.5S2 12 2 12Z" fill="currentColor"/><circle cx="12" cy="12" r="3.6" fill="#171b22"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/></svg>
+    </div>
+    <section id="menu" hidden role="dialog" aria-label="Target actions" aria-modal="true" tabindex="-1">
+      <div id="status" role="status" aria-live="polite"></div>
+      <div id="actions" role="menu" aria-label="Available actions"></div>
+    </section>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

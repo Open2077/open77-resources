@@ -1,0 +1,14 @@
+.address-privacy-toggle {
+  display: inline-flex; align-items: center; gap: 7px; flex-shrink: 0;
+  width: fit-content; margin: 8px 0; padding: 5px 7px;
+  color: var(--muted, #a6b7c5); font: 500 11px/1.4 sans-serif;
+  cursor: pointer; user-select: none; -webkit-app-region: no-drag;
+}
+.address-privacy-toggle:hover, .address-privacy-toggle:focus-within { color: var(--o-cyan-500, #0cdef1); }
+.address-privacy-toggle input[type="checkbox"] {
+  appearance: auto; -webkit-appearance: checkbox; accent-color: #05cddd;
+  width: 13px; height: 13px; min-width: 13px; margin: 0; padding: 0; cursor: pointer;
+}
+.address-privacy-toggle input:focus-visible { outline: 2px solid #05cddd; outline-offset: 3px; }
+/* Edge's native password reveal would otherwise bypass the shared checkbox. */
+input[data-private-address]::-ms-reveal { display: none; }

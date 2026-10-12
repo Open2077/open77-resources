@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Open77 Remote Camera Editor</title><link rel="stylesheet" href="open77-ui.css"><link rel="stylesheet" href="editor.css"></head>
+<body>
+<main id="editor" hidden>
+  <header id="bar">
+    <div class="brand"><p class="op77-eyebrow">OPEN//77 Remote Camera</p><h1>PLACEMENT<span>EDITOR</span></h1></div>
+    <div id="chips" aria-label="State">
+      <span class="chip" id="chip-source" data-state="unknown">SOURCE <b>—</b></span>
+      <span class="chip" id="chip-feed" data-state="unknown">FEED <b>—</b></span>
+      <span class="chip" id="chip-world" data-state="unknown">PREVIEW <b>—</b></span>
+      <span class="chip" id="chip-panel" data-state="unknown">PANEL <b>—</b></span>
+      <span class="chip" id="chip-budget" data-state="unknown">SLOTS <b>—</b></span>
+      <span class="chip" id="chip-bucket" data-state="unknown">BUCKET <b>—</b></span>
+    </div>
+    <div class="bar-actions">
+      <div id="live-mode" role="group" aria-label="What the live controls position">
+        <button id="live-off" class="seg selected" aria-pressed="true"
+                title="Neither live mode: the fields and the step buttons own the pose.">OFF</button>
+        <button id="live-camera" class="seg" aria-pressed="false"
+                title="Position the camera: it follows your own view while you walk, fly and look. The same key, or this button, freezes it.">CAMERA</button>
+        <button id="live-surface" class="seg" aria-pressed="false"
+                title="Position the surface: it keeps snapping to the centre of your view while you walk and aim. The same key, or this button, freezes it.">SURFACE</button>
+      </div>
+      <div id="step" role="group" aria-label="Step size">
+        <button id="step-fine" class="seg selected" aria-pressed="true" title="Fine step: 0.05 m, 1 deg, 1 FOV, 5 m range, 1 m radius">FINE</button>
+        <button id="step-coarse" class="seg" aria-pressed="false" title="Coarse step: 0.5 m, 15 deg, 10 FOV, 25 m range, 5 m radius">COARSE</button>
+      </div>
+      <button id="hide-ui" title="Hide the controls and leave only the preview and the status line">HIDE UI</button>
+      <button id="release" title="Give the mouse and keyboard back to the game so you can walk and aim">RELEASE CURSOR</button>
+      <button id="close" class="danger" title="Close the editor and discard the draft">ESC</button>
+    </div>
+  </header>
+
+  <section id="controls" aria-label="Placement controls">
+    <div class="scroll">
+      <section class="card" id="card-source">
+        <header><span class="op77-eyebrow">Feed source</span><span class="meta" id="source-meta">owned camera</span></header>
+        <div class="field"><span>Camera</span><div id="camera-select" class="dropdown" aria-label="Camera"></div></div>
+        <p class="note" id="camera-note">This placement's camera is created or updated at this pose on SAVE.</p>
+        <div class="grid" id="camera-pose">
+          <h4>Position (m)</h4>
+          <div class="num-row" id="row-camera-x"></div>
+          <div class="num-row" id="row-camera-y"></div>
+          <div class="num-row" id="row-camera-z"></div>
+          <h4>Rotation (deg)</h4>
+          <div class="num-row" id="row-camera-yaw"></div>
+          <div class="num-row" id="row-camera-pitch"></div>
+          <div class="num-row" id="row-camera-roll"></div>
+          <h4>Optics</h4>
+          <div class="num-row" id="row-camera-fov"></div>
+          <div class="num-row" id="row-camera-range"></div>
+        </div>
+        <div class="row-actions">
+          <button id="camera-from-view">CAMERA FROM PLAYER VIEW</button>
+          <button id="follow" class="toggle" aria-pressed="false"
+                  title="Position the camera: its pose follows your own view while you walk, fly and look, and the fields track you. The same key freezes it, and the step buttons still work for the last few centimetres.">POSITION CAMERA <span class="keycap" id="key-follow">F6</span></button>
+          <button id="camprop" class="toggle" aria-pressed="false"
+                  title="Preview a camera housing locally. SAVE adds it to the shared source; removing it and saving removes the shared housing. Standalone props take yaw only, so the preview cannot be pitched.">SHOW CAMERA PROP</button>
+        </div>
+      </section>
+
+      <section class="card" id="card-place">
+        <header><span class="op77-eyebrow">Surface</span><span class="meta" id="place-meta">no snap yet</span></header>
+        <div class="row-actions wide">
+          <button id="snap" class="primary">SNAP TO AIM</button>
+          <button id="livesnap" class="toggle" aria-pressed="false"
+                  title="Position the surface: it keeps snapping to whatever the centre of your view hits while you walk and aim. The same key freezes it.">POSITION SURFACE <span class="keycap" id="key-live">F7</span></button>
+          <button id="clear-parent" hidden>CLEAR PARENT</button>
+        </div>
+        <p class="note" id="parent-note">Not parented: the pose below is in world space. A surface hit on a player or a vehicle offers a parent that follows it.</p>
+        <div class="field"><span>Model</span><div id="model-select" class="dropdown" aria-label="Model"></div></div>
+        <div class="grid">
+          <h4 id="place-space-title">Position (world, m)</h4>
+          <div class="num-row" id="row-place-x"></div>
+          <div class="num-row" id="row-place-y"></div>
+          <div class="num-row" id="row-place-z"></div>
+          <h4 id="place-rot-title">Rotation (world, deg)</h4>
+          <div class="num-row" id="row-place-yaw"></div>
+          <div class="num-row" id="row-place-pitch"></div>
+          <div class="num-row" id="row-place-roll"></div>
+          <h4>Display (m)</h4>
+          <div class="num-row" id="row-place-width"></div>
+          <div class="num-row" id="row-place-height"></div>
+        </div>
+        <div class="row-actions">
+          <button id="aspect" aria-pressed="true" class="toggle selected" title="Keep the display aspect ratio">ASPECT LOCK</button>
+          <button id="flip" title="Turn the display to face the other way">FLIP FACE</button>
+          <button id="preview-toggle" aria-pressed="true" class="toggle selected" title="Draw this client's own preview of the placement in the world. It stands down while a saved service panel occupies the same pose.">LOCAL PREVIEW</button>
+          <button id="reset" title="Return the draft to how the session started">RESET DRAFT</button>
+        </div>
+        <div class="grid tight">
+          <h4>Depth offset (m)</h4>
+          <div class="num-row" id="row-depth"></div>
+        </div>
+      </section>
+
+      <section class="card" id="card-audience">
+        <header><span class="op77-eyebrow">Audience</span></header>
+        <div class="grid tight">
+          <h4>Panel radius (m)</h4>
+          <div class="num-row" id="row-radius"></div>
+        </div>
+        <div class="field"><span>Access</span><div id="access-select" class="dropdown" aria-label="Access"></div></div>
+      </section>
+
+      <section class="card" id="card-save">
+        <header><span class="op77-eyebrow">Save</span><span class="meta" id="save-meta">unsaved draft</span></header>
+        <label class="field"><span>Name</span><input id="name" maxlength="48" autocomplete="off" spellcheck="false" placeholder="downtown board"></label>
+        <p class="note" id="key-note">Key: allocated on save.</p>
+        <div class="row-actions wide">
+          <button id="save" class="primary">SAVE PLACEMENT</button>
+          <button id="delete" class="danger" hidden>DELETE</button>
+          <button id="cancel">CANCEL</button>
+        </div>
+      </section>
+
+      <section class="card" id="card-export">
+        <header><span class="op77-eyebrow">Export</span><span class="meta">clipboard</span></header>
+        <p class="note">Reproducible definition for this draft, exactly as it would be saved.</p>
+        <div class="row-actions wide">
+          <button id="copy-lua">COPY LUA</button>
+          <button id="copy-json">COPY JSON</button>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <section id="preview" aria-label="Camera preview">
+    <div id="hole"></div>
+    <div id="hint">
+      <p><b id="hint-title">Preview</b></p>
+      <p id="hint-body">The live feed is drawn by the game behind this hole, from this client's own streamed world.</p>
+      <p class="keys"><span class="keycap" id="hint-key">F4</span> SNAP TO AIM <span class="keycap" id="hint-follow">F6</span> POSITION CAMERA <span class="keycap" id="hint-live">F7</span> POSITION SURFACE <i></i><span class="keycap">ESC</span> CLOSE</p>
+    </div>
+  </section>
+
+  <aside id="saved" aria-label="Saved placements">
+    <header><span class="op77-eyebrow">Saved</span><span class="meta" id="saved-count">0 / 0</span></header>
+    <div id="saved-list" class="list"></div>
+  </aside>
+
+  <footer id="status" role="status" aria-live="polite">Opening editor…</footer>
+</main>
+<script src="editor.js"></script>
+</body></html>

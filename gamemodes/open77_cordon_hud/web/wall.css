@@ -1,0 +1,111 @@
+/* The Cordon boundary surface.
+ *
+ * WHAT THIS FILE IS ALLOWED TO DO, AND WHAT IT IS NOT.
+ *
+ * This is the only surface in the resource that repaints because the CAMERA
+ * moved rather than because a number changed, so its budget is different in
+ * kind from combat.css or match.css. `docs/research/battle-royale-and-scale.md`
+ * (2026-09-02) measured two clients dropping to 0.2 Hz and then disappearing
+ * with three full-screen surfaces up, one of them at 60 fps, and the fix was to
+ * lower refresh rates. This page is the fourth surface. It therefore carries:
+ *
+ *   NO filter, NO backdrop-filter, NO blur, NO box-shadow, NO drop-shadow.
+ *     A filter on a full-screen SVG is a full-surface offscreen pass every
+ *     frame. The glow below is a second, wider, translucent STROKE on the same
+ *     path -- a paint, not a pass.
+ *   NO keyframe animation and NO transition.
+ *     A transition on a `d` attribute that changes twenty times a second is
+ *     twenty interrupted interpolations a second, and would make the wall lag
+ *     the camera on top of the tick it already lags by.
+ *   NO text, NO font, NO image.
+ *
+ * The palette is one custom property, `--wall-ink`, which `wall.js` sets from
+ * the colour the gamemode published. The default below is `--op77-signal`
+ * (#ff5964), the design system's coral -- the same value open77_groundcircle
+ * uses for its `danger` style, so the two boundary primitives agree.
+ *
+ * Screen regions (docs/ui-design-system.md section 6.2): this surface draws in
+ * NONE of them, in the same way the outside-the-cordon vignette draws in none
+ * of them. It is a wash over the scene with no words in it, and it is the
+ * bottom-most surface of the four so nothing it paints can obscure a readout.
+ */
+
+:root {
+  --wall-ink: #ff5964;
+}
+
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+  pointer-events: none;
+  user-select: none;
+}
+
+.wall {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+}
+
+/* The curtain gradient. Transparent at the top so the wall dissolves into the
+   sky instead of ending in a hard line, and heaviest at the foot where the
+   player has to read where the ground stops being safe. Kept very low: this is
+   a full-screen fill and it is over live gameplay. */
+#wallCurtainTop  { stop-color: var(--wall-ink); stop-opacity: 0; }
+#wallCurtainMid  { stop-color: var(--wall-ink); stop-opacity: 0.07; }
+#wallCurtainFoot { stop-color: var(--wall-ink); stop-opacity: 0.26; }
+
+.wall-panel {
+  /* Per-panel distance fade, written by wall.js. Group opacity is a compositor
+     property, so fading a panel costs nothing beyond the paint it was already
+     doing. */
+  opacity: 1;
+}
+
+.wall-fill {
+  fill: url(#wallCurtain);
+  stroke: none;
+}
+
+/* THE GLOW. A wide, very translucent stroke under the base line, sharing its
+   path data. This is the bloom -- without it the boundary is legible at night
+   and washes out in daylight, which is exactly the failure the world-entity
+   edge was already suspected of. It is a plain stroke, so it costs one more
+   path fill and no offscreen pass. */
+.wall-glow {
+  fill: none;
+  stroke: var(--wall-ink);
+  stroke-width: 14;
+  stroke-opacity: 0.16;
+  stroke-linecap: round;
+}
+
+/* THE BASE. The brightest thing on the surface, and the only thing on it that
+   states a fact: this is the line on the ground. Everything else is there to
+   make it read as vertical. */
+.wall-base {
+  fill: none;
+  stroke: var(--wall-ink);
+  stroke-width: 3.5;
+  stroke-opacity: 0.95;
+  stroke-linecap: round;
+}
+
+/* THE RIBS AND THE TOP. Dashed and dim: they carry no information the base does
+   not, and a solid cage over the street would fight every readout on the three
+   surfaces above this one. The dash is in viewBox units, so it stretches with
+   the surface exactly as the strokes do. */
+.wall-rib {
+  fill: none;
+  stroke: var(--wall-ink);
+  stroke-width: 1.6;
+  stroke-opacity: 0.5;
+  stroke-dasharray: 12 16;
+  stroke-linecap: butt;
+}

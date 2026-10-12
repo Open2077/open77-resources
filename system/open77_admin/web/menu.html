@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open77 Admin Menu</title>
+<!-- The token file first, always. Never edit the copy in this folder: it is
+     mirrored byte-for-byte into every resource that owns a WebUI surface, and
+     `Get-FileHash resources\*\web\open77-ui.css` returning one unique hash is
+     the whole verification. -->
+<link rel="stylesheet" href="open77-ui.css">
+<link rel="stylesheet" href="menu.css">
+</head>
+<body>
+
+<!-- Lua owns navigation. Only the explicit text form captures input. -->
+<div class="strip" id="strip">
+
+  <header class="head">
+    <img class="mark" src="logo.png" alt="Open77">
+    <span class="title" id="title">ADMIN</span>
+  </header>
+
+  <div class="session"><span>// SERVER ADMIN</span><span id="roles"></span></div>
+  <p class="trail" id="trail"></p>
+
+  <ul class="list" id="list" role="listbox" aria-label="Admin actions"></ul>
+
+  <p class="more" id="more"></p>
+  <p class="detail" id="detail"></p>
+
+  <p class="status" id="status"></p>
+
+  <footer class="foot">
+    <span><b>&#8593;&#8595;</b> move</span>
+    <span><b>&#9166;</b> select</span>
+    <span><b>&#8592;&#8594;</b> value</span>
+    <span><b>&#9003;</b> back</span>
+  </footer>
+
+</div>
+
+<section class="input-panel" id="input-panel" role="dialog" aria-modal="true" aria-labelledby="input-title" hidden>
+  <span class="eyebrow">// CONFIRM DETAILS</span>
+  <h1 id="input-title"></h1>
+  <form id="input-form">
+    <label for="input-value" id="input-label">Reason</label>
+    <textarea id="input-value" rows="3" maxlength="256" required aria-describedby="input-hint input-error" spellcheck="false"></textarea>
+    <p id="input-hint"></p><p id="input-error" role="alert"></p>
+    <div class="input-actions"><button type="button" id="input-cancel">Cancel · Esc</button><button type="submit">Continue · Enter</button></div>
+  </form>
+</section>
+<aside id="announcement" class="announcement" role="status" hidden>
+  <span class="eyebrow" id="announcement-title">// SERVER ANNOUNCEMENT</span><p id="announcement-text"></p>
+</aside>
+<aside id="noclip-hud" class="noclip-hud" hidden aria-label="Noclip controls">
+  <header><span>// ADMIN FLIGHT</span><span id="noclip-mode">NOCLIP</span></header>
+  <div class="noclip-speed"><strong id="noclip-speed">60</strong><span>m/s</span><small id="noclip-base"></small></div>
+  <div class="noclip-controls"><span><b>WHEEL</b> speed</span><span><b>SHIFT</b> boost</span><span><b>ALT</b> precision</span></div>
+  <div class="noclip-controls"><span><b>SPACE / CTRL</b> up / down</span><span>Move with your usual keys</span></div>
+</aside>
+<script src="menu.js"></script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Open//77 — Watermark</title>
+  <link rel="stylesheet" href="open77-ui.css">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <section class="watermark" id="watermark" aria-label="Open77 session" data-online="false">
+    <div class="brandline">
+      <span class="logo-crop"><img src="open77.png" alt="Open//77"></span>
+      <span class="release"><i aria-hidden="true"></i> Open Stress Test</span>
+    </div>
+    <div class="telemetry">
+      <span class="player"><span id="player-name">Not connected</span><span class="player-id" id="player-id"></span></span>
+      <span class="build"><span class="label">Build</span> <span id="build-value">—</span></span>
+      <span class="session"><span class="label">Session</span> <span id="session-value">OFFLINE</span></span>
+    </div>
+  </section>
+  <script src="app.js"></script>
+</body>
+</html>

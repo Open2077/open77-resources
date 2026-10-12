@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Open77 Ground Circles</title>
+  <style>
+    /* The surface is a HUD overlay: it must never eat a click meant for the
+       game, and it must not paint a background over the frame behind it. */
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent;
+      pointer-events: none;
+    }
+
+    /* preserveAspectRatio="none" maps the 0..1 normalised coordinates Lua
+       sends straight onto the viewport at any aspect ratio. That would also
+       stretch the stroke, which vector-effect on each path prevents -- so line
+       weight stays in screen pixels while geometry stays in screen fractions. */
+    svg {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    path {
+      fill: none;
+      vector-effect: non-scaling-stroke;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+  </style>
+</head>
+<body>
+  <svg id="surface" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true"></svg>
+  <script>
+    (() => {
+      "use strict";
+      const SVG_NS = "http://www.w3.org/2000/svg";
+      const surface = document.getElementById("surface");
+
+      // Everything below arrives from Lua as JSON. It is trusted to be
+      // well-formed but not to be in range, so each field is clamped rather
+      // than asserted: one bad frame should degrade a circle, not blank the
+      // whole overlay.
+      const safeColor = value => /^#[0-9a-f]{6}$/i.test(String(value || ""))
+        ? String(value) : "#22D8E2";  // --op77-accent
+      const clamp = (value, low, high, fallback) => {
+        const number = Number(value);
+        return Number.isFinite(number) ? Math.max(low, Math.min(high, number)) : fallback;
+      };
+
+      // Lua sends each run as a flat [x0, y0, x1, y1, ...] array of normalised
+      // coordinates; the viewBox is 1000 units wide, so the scale is a plain
+      // multiply. Runs are already split wherever the ring crossed the camera
+      // plane, so a run is always a continuous stroke.
+      function pathData(runs, closed) {
+        const parts = [];
+        for (const run of runs) {
+          if (!Array.isArray(run) || run.length < 4) continue;
+          const points = [];
+          for (let i = 0; i + 1 < run.length; i += 2) {
+            const x = clamp(run[i], -6, 6, null);
+            const y = clamp(run[i + 1], -6, 6, null);
+            if (x === null || y === null) { points.length = 0; break; }
+            points.push(`${(x * 1000).toFixed(2)},${(y * 1000).toFixed(2)}`);
+          }
+          if (points.length < 2) continue;
+          parts.push(`M${points.join("L")}${closed ? "Z" : ""}`);
+        }
+        return parts.join(" ");
+      }
+
+      function update(payload = {}) {
+        const circles = Array.isArray(payload.circles) ? payload.circles : [];
+        const fragment = document.createDocumentFragment();
+
+        for (const circle of circles) {
+          if (!circle || !Array.isArray(circle.runs)) continue;
+          const closed = circle.closed === true;
+          const data = pathData(circle.runs, closed);
+          if (!data) continue;
+          const stroke = safeColor(circle.color);
+
+          // A filled disc only makes sense for a ring that closed; an open run
+          // would be filled across the chord that cut it.
+          const fill = closed ? clamp(circle.fill, 0, 0.6, 0) : 0;
+          if (fill > 0) {
+            const area = document.createElementNS(SVG_NS, "path");
+            area.setAttribute("d", data);
+            area.setAttribute("fill", stroke);
+            area.setAttribute("fill-opacity", String(fill));
+            area.setAttribute("stroke", "none");
+            fragment.append(area);
+          }
+
+          const line = document.createElementNS(SVG_NS, "path");
+          line.setAttribute("d", data);
+          line.setAttribute("stroke", stroke);
+          line.setAttribute("stroke-width", String(clamp(circle.width, 0.5, 8, 2)));
+          line.setAttribute("stroke-opacity", String(clamp(circle.opacity, 0.05, 1, 0.85)));
+          fragment.append(line);
+        }
+
+        surface.replaceChildren(fragment);
+      }
+
+      Open77.on("groundcircle:update", update);
+      Open77.ready();
+      Open77.emit("groundcircle:ready", {});
+    })();
+  </script>
+</body>
+</html>

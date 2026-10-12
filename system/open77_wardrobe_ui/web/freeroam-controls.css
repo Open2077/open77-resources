@@ -1,0 +1,66 @@
+/* Reused verbatim from freeroam/web/app.css: action controls and catalogue cards. */
+.catalog-card {
+  min-height: 62px;
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--line-hairline);
+  background: var(--surface-panel);
+  color: var(--text-primary);
+  clip-path: var(--cut-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: var(--t-hover);
+}
+.catalog-card:hover { border-color: var(--o-cyan-500); background: var(--surface-panel-hover); box-shadow: var(--glow-accent-soft); }
+.catalog-card.equipped { border-color: var(--o-cyan-500); background: rgba(34, 216, 226, 0.1); color: var(--o-cyan-400); }
+.catalog-card strong {
+  display: block;
+  overflow: hidden;
+  font: var(--fw-semibold) var(--size-body-sm) / 1.2 var(--font-ui);
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.catalog-card small {
+  display: block;
+  margin-top: 6px;
+  color: var(--text-muted);
+  font: var(--fw-medium) var(--size-data-sm) / 1 var(--font-mono);
+  letter-spacing: var(--ls-data);
+  text-transform: uppercase;
+}
+
+.btn { flex: 1; }
+.stack { display: flex; flex-direction: column; gap: var(--space-3); }
+.action-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-3); }
+.ammo-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: var(--space-3); }
+
+.btn {
+  min-height: var(--control-h);
+  padding: 0 var(--control-px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--text-primary);
+  clip-path: var(--cut-md);
+  font: var(--fw-semibold) var(--size-label-sm) / 1 var(--font-ui);
+  letter-spacing: var(--ls-label);
+  text-align: left;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: var(--t-hover), transform var(--dur-1) var(--ease-out);
+}
+.btn:hover { border-color: var(--o-cyan-500); background: rgba(34, 216, 226, 0.1); }
+.btn:active { transform: translateY(1px); }
+.btn small {
+  display: block;
+  margin: 4px 0 0 auto;
+  color: var(--text-muted);
+  font: var(--fw-medium) 13px / 1.2 var(--font-body);
+  letter-spacing: normal;
+  text-transform: none;
+}
+.btn.primary { justify-content: center; border-color: transparent; background: var(--o-cyan-500); color: var(--text-on-accent); }
+.btn.primary:hover { background: var(--o-cyan-400); box-shadow: var(--glow-accent-soft); }
+.btn.danger:hover { border-color: var(--o-red-500); background: rgba(255, 59, 78, 0.1); color: var(--o-red-500); }

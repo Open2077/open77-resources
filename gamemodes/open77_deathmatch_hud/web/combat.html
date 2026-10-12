@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Open//77 — Deathmatch combat</title>
+  <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="combat.css">
+</head>
+<!-- The 60 fps half of the HUD. It carries no text this page authored itself:
+     every label comes from shared/strings.lua through data-t. -->
+<body data-active="false" data-alive="true">
+  <!-- RETICLE region (50% +/- 3%): hitmarker and reticle only, nothing with
+       text, per docs/ui-design-system.md section 6.2. -->
+  <div class="reticle" id="reticle" aria-hidden="true">
+    <span class="tick tick-up"></span>
+    <span class="tick tick-down"></span>
+    <span class="tick tick-left"></span>
+    <span class="tick tick-right"></span>
+    <span class="dot"></span>
+  </div>
+
+  <div class="hitmarker" id="hitmarker" aria-hidden="true">
+    <span class="blade blade-tl"></span>
+    <span class="blade blade-tr"></span>
+    <span class="blade blade-bl"></span>
+    <span class="blade blade-br"></span>
+  </div>
+
+  <!-- Spawn protection. The ring is world-agnostic decoration around the
+       reticle; the countdown that carries the number sits below it, clear of
+       the reticle box, inside STAGE. -->
+  <div class="protection" id="protection" aria-hidden="true">
+    <svg class="protection-ring" viewBox="0 0 240 240" focusable="false">
+      <circle class="protection-track" cx="120" cy="120" r="104"></circle>
+      <circle class="protection-sweep" id="protectionSweep" cx="120" cy="120" r="104"></circle>
+    </svg>
+  </div>
+  <div class="protection-readout" id="protectionReadout" aria-hidden="true">
+    <span class="eyebrow" data-t="protection.eyebrow"></span>
+    <strong class="num" id="protectionCount">0.0</strong>
+  </div>
+
+  <!-- The whole-screen bite of taking a hit. Separate from the chevron: one
+       says "you were hit", the other says "from there". -->
+  <div class="damage-flash" id="damageFlash" aria-hidden="true"></div>
+
+  <!-- Directional damage. One rotated chevron per credited hit, kept alive for
+       as long as the indicator lasts and re-aimed on every push, so it tracks
+       while the player turns to find the shooter. -->
+  <div class="indicators" id="indicators" aria-hidden="true"></div>
+
+  <!-- Multi-kill, streak, first blood, revenge. STAGE region, transient. -->
+  <div class="callout" id="callout" aria-hidden="true">
+    <strong id="calloutTitle"></strong>
+    <span id="calloutSub"></span>
+  </div>
+
+  <!-- GAMEMODE_LOW, upper half (62-75% y). The centre is deliberately empty so
+       nothing competes with the middle of the screen, and the band stops well
+       short of the vanilla quickslots, control hints and subtitle areas. -->
+  <section class="dock" id="dock" aria-hidden="true">
+    <div class="vitals">
+      <div class="vitals-head">
+        <span class="tag" data-t="combat.health"></span>
+        <strong class="num" id="healthValue">0</strong>
+        <span class="armor-chip" id="armorChip">
+          <span class="tag" data-t="combat.armor"></span>
+          <b class="num" id="armorValue">0</b>
+        </span>
+      </div>
+      <div class="bar bar-health"><i id="healthFill"></i></div>
+      <div class="bar bar-armor" id="armorBar"><i id="armorFill"></i></div>
+    </div>
+
+    <div class="ammo" id="ammo">
+      <div class="ammo-read">
+        <strong class="num" id="magazineValue">--</strong>
+        <span class="ammo-sep">/</span>
+        <span class="num" id="reserveValue">--</span>
+      </div>
+      <span class="tag" data-t="combat.ammo"></span>
+    </div>
+  </section>
+
+  <script src="i18n.js"></script>
+  <script src="combat.js"></script>
+</body>
+</html>

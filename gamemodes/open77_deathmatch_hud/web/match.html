@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Open//77 — Deathmatch match</title>
+  <!-- The house token file first, always. It is MIRRORED, not shared: a
+       byte-identical copy lives in every resource that owns a WebUI surface,
+       because each surface runs on its own isolated virtual origin and cannot
+       load a stylesheet out of another resource's folder. Never edit this copy
+       alone -- `Get-FileHash resources\*\web\open77-ui.css` returning one
+       unique hash is the whole verification. See docs/ui-design-system.md.
+
+       This resource did not carry a copy until the weapon picker was rebuilt in
+       the /admin panel's language; theme.css below is the deathmatch's own
+       older token block and still owns the rest of the HUD. -->
+  <link rel="stylesheet" href="open77-ui.css">
+  <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="match.css">
+</head>
+<!-- The low-frequency half of the HUD: nothing here changes faster than a
+     human reads it. Every word comes from shared/strings.lua through data-t or
+     through DMStrings.fmt; this file holds structure only. -->
+<body>
+  <main id="hud" aria-live="polite">
+    <!-- MATCH_BAND (34-82% x, 7-20% y). Centre-anchored, immediately below the
+         platform watermark's CHROME_STRIP, which is bounded to the top 7%. -->
+    <header class="band" id="band">
+      <div class="mode">
+        <span class="eyebrow">
+          <span class="mark">//</span>
+          <span data-t="brand"></span>
+          <span class="dim" data-t="modeKind"></span>
+        </span>
+        <strong data-t="modeName"></strong>
+      </div>
+
+      <div class="instance" id="instanceBlock">
+        <span class="tag" data-t="band.instance"></span>
+        <div>
+          <strong id="instanceName">--</strong>
+          <span class="num" id="instanceCount"></span>
+        </div>
+      </div>
+
+      <div class="phase" id="phasePill"></div>
+      <div class="clock num" id="clock"></div>
+
+      <section class="self" id="selfScore">
+        <div><span class="tag" data-t="band.kills"></span><strong class="num" id="selfKills">0</strong></div>
+        <i></i>
+        <div><span class="tag" data-t="band.deaths"></span><strong class="num" id="selfDeaths">0</strong></div>
+        <i></i>
+        <div><span class="tag" data-t="band.ratio"></span><strong class="num" id="selfRatio">0.00</strong></div>
+      </section>
+    </header>
+
+    <!-- The shared weapon: the equalizer is the mode's clearest idea, so it
+         says so on screen. Left of the band, still inside MATCH_BAND's y. -->
+    <section class="weapon" id="weaponCard">
+      <span class="eyebrow" id="weaponEyebrow" data-t="weapon.eyebrow"></span>
+      <strong id="weaponName"></strong>
+      <span class="dim" id="weaponCategory"></span>
+    </section>
+
+    <!-- ARENA. The elimination formats' own surface, and the answer to a
+         question the free-for-all scoreboard cannot answer: how many of us are
+         left. It occupies the weapon card's half of MATCH_BAND/STAGE-top and
+         the weapon card is hidden while it is up, because the equalizer is a
+         free-for-all idea (decision 14) and an arena arms from a buy list -- a
+         card reading SHARED WEAPON over a 2v2 would be describing another mode.
+
+         Everything in it comes from `state.arena`, which server/arena.lua has
+         published since it was written and which nothing read until now.
+         Rendered from `--op77-*` tokens throughout, per docs/ui-design-system.md. -->
+    <section class="arena" id="arenaPanel" aria-label="Arena round">
+      <header class="arena-head">
+        <span class="arena-format" id="arenaFormat"></span>
+        <span class="arena-round" id="arenaRound"></span>
+      </header>
+
+      <!-- The round tally. In a best-of, this IS the score; the kill counts on
+           the standings are colour, not result. -->
+      <div class="arena-tally">
+        <div class="arena-side" id="arenaSideA">
+          <span class="arena-team" id="arenaNameA"></span>
+          <strong class="num" id="arenaWinsA">0</strong>
+        </div>
+        <span class="arena-target num" id="arenaTarget"></span>
+        <div class="arena-side arena-side-right" id="arenaSideB">
+          <strong class="num" id="arenaWinsB">0</strong>
+          <span class="arena-team" id="arenaNameB"></span>
+        </div>
+      </div>
+
+      <!-- The buy window is the one phase with a deadline the player has to act
+           inside, so it is the one line here allowed to be loud. Hidden in every
+           other phase rather than shown empty. -->
+      <p class="arena-buy" id="arenaBuy" hidden>
+        <span data-t="arena.buy"></span>
+        <b class="num" id="arenaBuyClock"></b>
+      </p>
+
+      <p class="arena-swap" id="arenaSwap"></p>
+
+      <div class="arena-rosters">
+        <ul class="arena-roster" id="arenaRosterA"></ul>
+        <ul class="arena-roster arena-roster-right" id="arenaRosterB"></ul>
+      </div>
+
+      <p class="arena-note" id="arenaNote" hidden data-t="arena.spectating"></p>
+    </section>
+
+    <!-- Kill feed. It used to sit at top-right, straight through the vanilla
+         MINIMAP (>= 82% x, <= 30% y) -- a known violation recorded in the
+         design system. It now hangs under the match band, inside the gamemode
+         area, and stops short of 82% x. -->
+    <aside class="feed" id="feed" aria-label="Eliminations"></aside>
+
+    <!-- Gamemode notices. The platform owns CHROME_TOASTS at middle-left, so
+         these stay centred in the gamemode area rather than borrowing it. -->
+    <aside class="notices" id="notices" aria-label="Notifications"></aside>
+
+    <!-- STAGE (25-75% x, 20-62% y): transient takeovers. -->
+    <section class="countdown" id="countdown">
+      <span class="eyebrow" id="countdownLabel"></span>
+      <strong class="num" id="countdownValue">3</strong>
+      <small data-t="countdown.getReady"></small>
+    </section>
+
+    <section class="result" id="resultBanner">
+      <span class="eyebrow" data-t="result.eyebrow"></span>
+      <strong id="resultTitle"></strong>
+      <p id="resultText"></p>
+    </section>
+
+    <!-- GAMEMODE_LOW, upper half. Only visible outside a round, so it never
+         shares the band with the combat surface's vitals dock. -->
+    <section class="lobby" id="lobbyDock">
+      <div class="signal"><span></span></div>
+      <div class="lobby-copy">
+        <span class="eyebrow" id="lobbyEyebrow"></span>
+        <strong id="lobbyTitle"></strong>
+        <p id="lobbyText"></p>
+      </div>
+      <div class="lobby-count">
+        <!-- A count of the players in combat, not a fraction of a minimum:
+             decision 2 deleted the minimum-players concept and free-for-all
+             never queues. -->
+        <strong class="num" id="combatCount">0</strong>
+        <span class="tag" data-t="lobby.players"></span>
+      </div>
+      <kbd data-t="lobby.keycap"></kbd>
+    </section>
+
+    <!-- Modal surfaces below. Section 6.2 exempts genuinely modal surfaces
+         from the region map: they take the screen and dim what is behind. -->
+    <section class="death" id="deathScreen" aria-live="assertive" aria-hidden="true">
+      <div class="death-card">
+        <span class="eyebrow" data-t="death.eyebrow"></span>
+        <strong data-t="death.killedBy"></strong>
+        <b id="deathKiller"></b>
+        <div class="death-timer">
+          <span data-t="death.respawnIn"></span>
+          <time class="num" id="deathCountdown">3.0</time>
+        </div>
+      </div>
+    </section>
+
+    <section class="board" id="scoreboard" aria-label="Deathmatch standings">
+      <div class="board-head">
+        <div>
+          <span class="eyebrow" data-t="board.eyebrow"></span>
+          <h1><span data-t="board.title"></span> <em data-t="board.titleAccent"></em></h1>
+        </div>
+        <div class="board-meta">
+          <span id="boardPhase"></span>
+          <strong class="num" id="boardClock"></strong>
+        </div>
+      </div>
+      <div class="columns">
+        <span data-t="board.columnRank"></span>
+        <span data-t="board.columnPlayer"></span>
+        <span data-t="board.columnScore"></span>
+        <span data-t="board.columnKills"></span>
+        <span data-t="board.columnDeaths"></span>
+        <span data-t="board.columnRatio"></span>
+        <span data-t="board.columnStreak"></span>
+      </div>
+      <div class="rows" id="rows"></div>
+      <div class="empty" id="emptyRows" data-t="board.empty"></div>
+      <footer>
+        <span id="boardLimit"></span>
+        <span id="boardHold"></span>
+      </footer>
+    </section>
+
+    <section class="panel" id="controlPanel" role="dialog" aria-label="Deathmatch lobby">
+      <button class="close" id="close" aria-label="Close">&times;</button>
+      <div class="panel-accent"></div>
+      <span class="eyebrow" data-t="panel.eyebrow"></span>
+      <h2 data-t="panel.title"></h2>
+      <p class="lead" data-t="panel.lead"></p>
+      <div class="panel-grid">
+        <div><span class="tag" data-t="panel.statusLabel"></span><strong id="panelPhase"></strong></div>
+        <div><span class="tag" data-t="panel.enrolledLabel"></span><strong id="panelFighting"></strong></div>
+        <div><span class="tag" data-t="panel.limitLabel"></span><strong id="panelLimit"></strong></div>
+        <div><span class="tag" data-t="panel.weaponLabel"></span><strong id="panelWeapon"></strong></div>
+      </div>
+      <div class="panel-actions">
+        <button class="primary" id="joinButton"></button>
+        <button class="secondary" id="leaveQueueButton" data-t="panel.cancel"></button>
+        <button class="danger" id="leaveMatchButton" data-t="panel.leave"></button>
+      </div>
+
+      <!-- The arena queue. This is what the queue station in the world opens:
+           the server answers `deathmatch:stationQueue` by pushing
+           `deathmatch:panel`, and before this row existed the panel it opened
+           offered no way to pick a size. Each button carries its own live depth,
+           because a queue you cannot see the length of is a queue nobody joins.
+           Free-for-all is deliberately not in the row -- it never queues, and
+           DEPLOY above is its button. -->
+      <div class="panel-queue" id="panelQueue">
+        <span class="tag" data-t="panel.queueLabel"></span>
+        <p class="queue-lead" data-t="panel.queueLead"></p>
+        <div class="queue-sizes" id="queueSizes"></div>
+        <p class="queue-note" id="queueNote"></p>
+      </div>
+      <p class="rules"><b data-t="panel.rulesLabel"></b> <span data-t="panel.rules"></span></p>
+    </section>
+
+    <!-- The weapon picker. Modal like the enrolment panel and exempt from the
+         region map for the same reason (section 6.2), but it is the ONE
+         surface in the resource that opens itself, so it is also the one that
+         has to be able to be ignored: it auto-opens inside spawn protection,
+         closes itself the moment that protection ends, and every route out --
+         a pick, ESC, the close button, the scrim -- is one action.
+
+         THE SHAPE IS open77_admin's `/admin` MENU, deliberately and part by
+         part: the OPEN//77 mark and one uppercase title on a hairline-ruled
+         header, a mono breadcrumb under it, a single vertical list of rows
+         where exactly one carries the accent, a right-hand mono value column, a
+         `n / total` position counter, one status line, and a mono key-hint
+         footer. The card grid that used to live here was a third visual
+         language in a product that already had two.
+
+         What is NOT copied is the admin menu's non-interactivity. That surface
+         is never focused and is driven entirely by Lua polling the keyboard;
+         this one takes focus while it is open, so the keys are read here and a
+         click on a row works. Everything else -- chrome, type, spacing, the
+         selection treatment -- is the same system, and every value in match.css
+         for this panel comes from open77-ui.css rather than theme.css.
+
+         No player-facing word appears below. Every one is filled from
+         shared/strings.lua, through data-t or through match.js. -->
+    <section class="guns" id="gunsPicker" role="dialog" aria-label="Weapon choice" aria-hidden="true">
+
+      <header class="guns-head">
+        <span class="guns-mark">OPEN<i>//</i>77</span>
+        <span class="guns-title" data-t="guns.title"></span>
+        <button class="guns-close" id="gunsClose" aria-label="Close">&times;</button>
+      </header>
+
+      <p class="guns-trail" data-t="guns.trail"></p>
+
+      <!-- Type-to-filter. NOT an <input>: the surface is focused as a whole and
+           the document-level key handler already has to exist for the arrows
+           and Enter, so a real field would be a second thing to focus and a
+           second place a keystroke could go. This is the rendered filter and
+           the caret is CSS. Forty-nine weapons is past the point where a player
+           inside a spawn-protection clock should be scrolling. -->
+      <p class="guns-filter" id="gunsFilter"></p>
+
+      <ul class="guns-list" id="gunsList"></ul>
+
+      <p class="guns-empty hidden" id="gunsEmpty"></p>
+      <p class="guns-more" id="gunsMore"></p>
+      <p class="guns-status" id="gunsNote"></p>
+      <footer class="guns-foot" id="gunsFoot"></footer>
+    </section>
+
+    <div class="scrim" id="scrim"></div>
+  </main>
+  <script src="i18n.js"></script>
+  <script src="match.js"></script>
+</body>
+</html>
