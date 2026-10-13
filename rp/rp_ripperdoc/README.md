@@ -111,7 +111,7 @@ Everything is in `shared/config.lua` (`RpRipperConfig`).
 | `clinics.viktor.chair.mode` | `placed` | `placed`: the `lie` action at the chair point; `seating`: a real furniture through open77_seating (`chair.furniture`, optional `chair.spot`) |
 | `clinics.viktor.chair.position`, `yaw`, `arrivalRadius` | `-1546.92, 1234.22, 11.6`, `145`, `1.0` | Vik's reclining chair; the body sits on it facing the clinic floor |
 | `clinics.viktor.chair.profiles`, `actionLabel` | `seatedsleep`, `seated`; `Sit in the operating chair` | the patient's posture (the first one the server knows is played) and the prompt; the bed postures `lie` / `bedsidelie` only suit a flat bed |
-| `clinics.viktor.station` | `-1547.991, 1229.0, 11.6`, yaw `0.5` | where the ripperdoc stands to operate |
+| `clinics.viktor.station` | `-1546.40, 1233.74, 11.6`, yaw `55` | where the ripperdoc stands to operate: on the patient's free left side, 0.7 m from the seat, facing them (the instrument cart is on the right) |
 | `clinics.viktor.zone`, `stockCapacityG` | `viktor_clinic`, `60000` | the zone to work in, the stash capacity (30 boxes) |
 | `supplier.position`, `yaw` | `-1172.45, 2024.30, 7.764`, `-60` | the chrome dealer, Kabuki Market |
 | `supplier.mode` | `mint` | `components`: each box burns its grade's `components` (a future techie's parts) from `componentsFrom` instead of money |
@@ -161,8 +161,10 @@ exports.rp_ripperdoc:procedure(playerId)     -- { id, state, action, implant, gr
   (installed: charged once under `rd.settle:<id>`; not installed after 30 s: released). A wallet that
   cannot pay at that point is logged as unpaid (the implant stays: it is the platform's record).
 - **One procedure per clinic** at a time; one stock per clinic.
-- **Prompts close together.** The chair and the station are 1 m apart: a card answers the nearest
-  player. Move `station` if the wrong card shows.
+- **Prompts close together.** The chair and the station are 0.7 m apart: a card answers the nearest
+  player. Move `station` if the wrong card shows. The ripperdoc is placed on the station while the
+  patient lies in the chair; open77_actions only refuses a placement onto another body
+  (`spot_taken`) when that body is not itself held in the chair's action.
 - **Seating mode** depends on a furniture id near the clinic (`chair.furniture`) and on
   open77_seating's lying prompt; until then the chair is `placed`.
 - **Hacking implants** need `open77_hacking`; the record shape of their slots is read loosely.
