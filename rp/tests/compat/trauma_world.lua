@@ -304,7 +304,23 @@ TW.startWith = startWith
 
 local function shim(name, source) return startWith(name, { { source = source, name = name .. "_shim.lua" } }) end
 
-function TW.startTrauma() return startWith("rp_trauma", SFW.scripts(ROOT_DIR .. "/rp_trauma")) end
+-- The test server's down rules (shared/config.lua ships the live ones, 600 s and no countdown with
+-- nobody on duty): a 60 s countdown that runs even with no medic, so a scenario sees it end.
+TW.DOWN_RULES = [[
+Config.downSeconds = 60
+Config.countdownWithoutMedics = true
+]]
+
+function TW.startTrauma()
+    local scripts = {}
+    for _, s in ipairs(SFW.scripts(ROOT_DIR .. "/rp_trauma")) do
+        scripts[#scripts + 1] = s
+        if type(s) == "string" and s:match("/shared/config%.lua$") then
+            scripts[#scripts + 1] = { source = TW.DOWN_RULES, name = "trauma_down_rules.lua" }
+        end
+    end
+    return startWith("rp_trauma", scripts)
+end
 
 function TW.startCoordinator()
     return startWith("open77_transactions", {

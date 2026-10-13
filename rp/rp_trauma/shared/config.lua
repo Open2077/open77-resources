@@ -9,14 +9,13 @@ Config.job = "trauma"
 Config.society = "trauma"
 
 -- How long a player stays "down" after death before /respawn is accepted while a
--- medic is on duty. Production value: 600 (10 min). This eval config uses 60 so the
--- whole flow can be tested with one player in a minute.
-Config.downSeconds = 60
+-- medic is on duty: 600 (10 min), time for a team to answer the call. A test server that
+-- wants the whole flow in a minute sets 60.
+Config.downSeconds = 600
 
--- /respawn is accepted after the countdown, or at once when no medic is on duty.
--- `true` keeps the countdown even with nobody on duty, so one tester alone can see it
--- (this eval config). Production: false.
-Config.countdownWithoutMedics = true
+-- /respawn is accepted after the countdown, or at once when no medic is on duty (false).
+-- `true` keeps the countdown even with nobody on duty, so one tester alone can see it.
+Config.countdownWithoutMedics = false
 
 -- The down state survives a disconnect and a restart (of this resource or of the server): while
 -- a player is down it is saved in this resource's kvp store under their durable subject. A player

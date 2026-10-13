@@ -52,21 +52,24 @@ C.autoRenew = { default = true, from = { "bank" }, sweepSeconds = 30 }
 C.payFrom = { "bank", "cash" }
 
 -- ---------------------------------------------------------------------------------------------
--- Kiosks: where plans are sold (open77_actions targets, one card each). A Trauma Team kiosk on the
--- street of the AV pad (the dispatch point of shared/config.lua `Config.av.pad`) and one in the
--- Kabuki Market hub. Both are estimates near measured points: walk them.
+-- Kiosks: where plans are sold (open77_actions targets, one card each). `landmark` is what players
+-- read in `/tti plans`: words a player can walk to, no notes. A Trauma Team kiosk on the street of
+-- the AV pad (the dispatch point of shared/config.lua `Config.av.pad`) and one in the Kabuki Market
+-- hub. The market kiosk was walked in game; the pad kiosk was not: it is placed 6.5 m west of the
+-- pad centre (-1370, 953, 23.5) and nobody has stood on it yet (`measured = false`).
 -- ---------------------------------------------------------------------------------------------
 C.kiosks = {
     {
         id = "tti_kiosk_pad", label = "Trauma Team kiosk", enabled = true, measured = false,
         position = { x = -1376.0, y = 950.5, z = 23.5 }, yaw = 90.0,
-        landmark = "Afterlife street, 6.5 m west of the Trauma Team AV pad centre (-1370, 953, 23.5)",
+        landmark = "Afterlife street, beside the Trauma Team AV pad",
     },
     {
+        -- Walked: the medical vending machine of The Stalls (the old point, 6 m from the market
+        -- centre, was a cafe table against a wall).
         id = "tti_kiosk_market", label = "Trauma Team kiosk", enabled = true, measured = true,
         position = { x = -1223.91, y = 1989.45, z = 7.98 }, yaw = -14.7,
-        landmark = "Kabuki Market, The Stalls: the medical vending machine beside Dr. Osei's Med-Point " ..
-            "(walked; the old point 6 m from the market centre was a cafe table against a wall)",
+        landmark = "Kabuki Market, The Stalls: the medical vending machine beside Dr. Osei's Med-Point",
     },
 }
 

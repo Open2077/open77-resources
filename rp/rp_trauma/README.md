@@ -4,7 +4,7 @@ Replaces the instant respawn with a roleplay death and runs Trauma Team Internat
 
 - **Docs:** [Build a job](https://open2077.net/docs/world-interaction), [Actions and carrying](https://open2077.net/docs/actions), [Durable transactions](https://open2077.net/docs/transactions), [UI kit](https://open2077.net/docs/ui-kit), [Player health and stamina](https://open2077.net/docs/player-stats)
 - **Starts:** on its own (`auto_start true`); the Trauma Team service (plans, calls, Stabilise and Evacuate, billing) starts once `open77_transactions`, `rp_inventory` and `open77_actions` run
-- **Needs:** `open77_uikit`, `open77_contextmenu`, `open77_notifications`, `open77_props`; for the service `open77_transactions`, `open77_actions` (with `open77_animations`, `open77_interactions`), `rp_inventory` (transactions backend), `rp_jobs`, `rp_economy`; `rp_identity` for names
+- **Needs:** `open77_uikit`, `open77_contextmenu`, `open77_notifications`, `open77_props`; for the service `open77_transactions`, `open77_actions` (with `open77_animations`, `open77_interactions`), `rp_inventory` (transactions backend), `rp_jobs`, `rp_economy`; `open77_pedestrians` to keep the crowd off a downed body (`patientTarget.keepCrowdOff`; without it the body's prompt still works, but passers-by may stand on the patient); `rp_identity` for names
 - **Runs on:** server and client
 
 It includes the medic commands of `rp_medic` (`/soin /reanimer /911 /medic`): run one or the other, a
@@ -43,10 +43,11 @@ fell, frozen, at 5 % health, inputs blocked except the chat, with a countdown hi
   the medics after 15 s.
 
 When a medic takes the call you read "Trauma Team medic <name> is responding to your call #3." Without
-a plan, a dialog asks you to accept the charges (stabilisation 400 and evacuation 800 eddies, bank,
-then cash, the rest invoiced): **Accept** lets the medic work, **Refuse** stops them for a minute. No
-answer within 15 s counts as unconscious: the medic treats you and you are billed after. With a plan
-there is no dialog: the plan's terms apply and you pay only the part it does not cover.
+a plan, a UI kit dialog (open77_uikit) asks you to accept the charges (stabilisation 400 and
+evacuation 800 eddies, bank, then cash, the rest invoiced): **Accept the charges** lets the medic
+work, **Refuse** stops them for a minute. No answer within 15 s counts as unconscious: the medic
+treats you and you are billed after. With a plan there is no dialog: the plan's terms apply and you
+pay only the part it does not cover.
 
 Once stable your hint reads "STABLE - Trauma Team is evacuating you". The evacuation fades your screen
 and you wake up at Vik's clinic at your plan's health, with a chat line listing the charges ("400 eddies
@@ -84,10 +85,14 @@ their plan covered, paid by the Trauma Team society while it can afford it. The 
 team (`/tti take`, `/tti assist`) on duty within 30 m of the patient share it evenly; you read "+N
 eddies to your account". The rest stays with the society (`soc:trauma`).
 
-The older acts remain: ALT+click a player or `/soin <id>` **Patch up** a hurt standing citizen (they
-accept the charges first; no answer is a no), ALT+click or `/reanimer <id>` **Revive** a down
-citizen where they lie (same rules as Stabilise). `/911 <message>` alerts Trauma Team and the NCPD,
-`/medic` lists the medics on duty, `/tti calls` and `/trauma` show the dispatch.
+The older acts remain: ALT+click a player or `/soin <id>` **Patch up** a hurt standing citizen (a
+5 s bar, the 100 eddies heal fee; they accept the charges in the same UI kit dialog first, no answer
+is a no), ALT+click or `/reanimer <id>` **Revive** a down citizen where they lie (an 8 s bar, the
+300 eddies revive fee, the consent rules of Stabilise). Patch up is not *Stabilise the patient*:
+its request and its bar keep the old name `stabilise` (`rp_trauma:action`, `Config.stabiliseMs`,
+`Config.Stage.stabilise`), but only the E act on a downed body fires the `stabilise` job event.
+`/911 <message>` alerts Trauma Team and the NCPD, `/medic` lists the medics on duty, `/tti calls`
+and `/trauma` show the dispatch.
 
 ### What everyone around sees
 
@@ -128,7 +133,7 @@ ensure rp_trauma
 Expected log lines:
 
 ```text
-[rp_trauma] started: down=60 s, hospital bill=500, fees heal=100 revive=300 stabilise=400 evacuate=800, plans silver/gold/platinum, ...
+[rp_trauma] started: down=600 s, hospital bill=500, fees heal=100 revive=300 stabilise=400 evacuate=800, plans silver/gold/platinum, ...
 [rp_trauma] coordinator ready (store=sql)
 [rp_trauma] items defined through rp_inventory: 2
 [rp_trauma] ready: 3 plans, 2 kiosk and patient targets, job trauma, society trauma
@@ -140,6 +145,8 @@ Expected log lines:
 Console (restricted, ACL `command.tti.*`): `tti.status` (counters and open calls), `tti.setup <id>`
 (the trauma job, on duty), `tti.act <medic> stabilise|evacuate <patient>` (the request the body's
 prompt makes), `tti.file <id>` (a holder's plan and invoices as the coordinator holds them).
+`trauma.release <id>`, from the server console only, gets a down player up where they lie at full
+health, with no bill and no call left open.
 
 ### rp_trauma 1.x servers
 
@@ -172,12 +179,15 @@ Kiosks (open77_actions targets; `measured = false` marks an estimate still to be
 
 | Id | Position | Landmark |
 |---|---|---|
-| `tti_kiosk_pad` | -1376.0, 950.5, 23.5 | Afterlife street, 6.5 m west of the Trauma Team AV pad centre |
+| `tti_kiosk_pad` | -1376.0, 950.5, 23.5 | Afterlife street, beside the Trauma Team AV pad (6.5 m west of its centre; not walked yet, `measured = false`) |
 | `tti_kiosk_market` | -1223.91, 1989.45, 7.98 | Kabuki Market, The Stalls: the medical vending machine beside Dr. Osei's Med-Point (walked) |
 
-`shared/config.lua` (`Config`, both sides) keeps the down state: `downSeconds` (60; 600 for a live
-server), `countdownWithoutMedics` (true; false for a live server: `/respawn` at once with nobody on
-duty), `hospitalBill`, `healFee`, `reviveFee`, the bars of the older acts, `downHealthFraction`
+The landmark is what players read in `/tti plans`.
+
+`shared/config.lua` (`Config`, both sides) keeps the down state: `downSeconds` (600; a test server
+may set 60), `countdownWithoutMedics` (false: `/respawn` at once with nobody on duty; `true` keeps the
+countdown for a lone tester), `hospitalBill`, `healFee`, `reviveFee`, the bars of the older acts
+(`stabiliseMs` 5 s is Patch up's, `reviveMs` 8 s Revive's), `downHealthFraction`
 (0.05), `reviveHealthFraction` (0.5), the hospital point (Vik's clinic, `-1546, 1231, 11.6`), the AV
 (`Vehicle.av_militech_manticore`: `Vehicle.av_trauma` never spawns on a 2.31 client; pad `-1370, 953, 23.5` r 12) and the staging poses.
 
@@ -200,7 +210,7 @@ exports.rp_trauma:heal(playerId, byId)    -- true | nil, reason (no fee)
 
 | Event (host bus) | Arguments |
 |---|---|
-| `rp:job:completed` | `{ job = "trauma", kind = "subscribe" \| "stabilise" \| "evacuate" \| "revive", playerId, ref, data }`: the buyer for `subscribe`, the medic otherwise; `ref` is the coordinator operation id |
+| `rp:job:completed` | `{ job = "trauma", kind = "subscribe" \| "stabilise" \| "evacuate" \| "revive", playerId, ref, data }`: the buyer for `subscribe`, the medic otherwise; `stabilise` is the E act on a downed body (Patch up fires nothing), `revive` the ALT+click or `/reanimer` revive once its charge is settled; `ref` is the coordinator operation id |
 | `rp_trauma:down` | `playerId, position` |
 | `rp_trauma:revived` | `playerId, byPlayerId \| nil` (a revive, an evacuation, a hospital respawn) |
 | `rp_trauma:call` | `callId, "open" \| "taken" \| "closed", patientId, medicId \| reason` |
