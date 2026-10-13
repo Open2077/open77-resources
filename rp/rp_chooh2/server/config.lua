@@ -114,6 +114,10 @@ C.intake = {
 -- The control station: the refining run, at the foot of the tank (yaw -90 faces it).
 C.control = {
     position = { x = -1472.6, y = 4013.5, z = 7.12 }, yaw = -90.0, measured = true, label = "Fermenter control station",
+    -- The card is drawn 0.8 m towards the tank: a batch places the operator ON the stand point, and
+    -- a card drawn there (1 m over it) sat inside her body, out of view until she stepped back
+    -- (measured live 2026-10-13).
+    promptAt = { x = -1471.8, y = 4013.5, z = 7.12 },
 }
 -- The output rack: operators take canisters from the output stash into their pockets.
 C.outputRack = {

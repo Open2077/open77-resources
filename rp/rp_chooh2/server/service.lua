@@ -227,6 +227,7 @@ function S:declare()
           label = cfg.intake.label, distance = 2.5, markerDistance = 15.0, requires = "carrying", data = { bay = "intake" },
           actions = { { action = "open77_actions:carry_putdown", label = "Empty into the intake" } } },
         { id = "control", position = cfg.control.position, yaw = cfg.control.yaw, bucket = cfg.bucket,
+          promptAt = cfg.control.promptAt,
           label = cfg.control.label, distance = 2.5, markerDistance = 15.0, requires = "empty", data = { station = "control" },
           actions = { { action = "refine", label = "Run a batch" }, { action = "gauges", label = "Read the gauges" } } },
         { id = "output_rack", position = cfg.outputRack.position, yaw = cfg.outputRack.yaw, bucket = cfg.bucket,
