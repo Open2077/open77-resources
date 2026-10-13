@@ -42,16 +42,15 @@ dependencies.
 [`rp/`](rp/) is a full Night City roleplay server: start with [rp/README.md](rp/README.md).
 
 The jobs built on the platform's job libraries need `open77_actions`, `open77_transactions`,
-`open77_furniture` and `open77_seating`. Those four are not in the current server release: they are
-on the `next` branch until the next one. This applies to:
+`open77_furniture` and `open77_seating`, which are in `system/` since server release
+2.31.21+op77.138. This applies to:
 
 - `rp_salvage` (scrapyard) and `rp_streetfood` (street-food stall);
 - `rp_ripperdoc`, `rp_chooh2`, `rp_techie`, `rp_netrunner`, `rp_fixer`, `rp_trauma` and
   `rp_nomade`, the [roleplay jobs](https://open2077.net/docs/rp-jobs).
 
-On a server from the current release, these jobs do not start: their dependencies are missing.
-They are tested only against `next`, so wait for the release that carries the libraries rather
-than copying them from `next` onto an older server.
+The libraries are experimental and not part of the default Freeroam selection: copy them from
+`system/` with the jobs and list them in `resources.load`.
 
 ## Where changes go
 
