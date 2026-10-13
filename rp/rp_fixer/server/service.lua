@@ -194,6 +194,11 @@ function S:viewer(pid)
     if not p then return nil, "not_loaded" end
     local rep = self.reps[p.subject]
     if not rep then return nil, "not_loaded" end
+    -- The character name is read again here: at the join rp_identity may not have the citizen
+    -- yet, and the board then named a player by their account (live 2026-10-13: "Posted by
+    -- WiFem", "taken by CyberwareA" for Mira Sato and Ada Kovac).
+    local okName, name = pcall(self.P.players.rpName, pid)
+    if okName and type(name) == "string" and name ~= "" then p.name = name end
     return { pid = pid, subject = p.subject, name = p.name, score = rep.score, held = #self:held(p.subject) }
 end
 
