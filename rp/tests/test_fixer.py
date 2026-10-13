@@ -169,6 +169,21 @@ class FixerSources(unittest.TestCase):
             for axis in range(3):
                 self.assertAlmostEqual(got[axis], want[axis], delta=0.02, msg=f"{key} axis {axis}")
 
+    def test_retrievals_ask_for_the_items_their_jobs_define(self):
+        """A retrieval of another job's item names that job's own item id: Regina's CHOOH2 is
+        rp_chooh2's refinery canister, Rogue's box is rp_ripperdoc's."""
+        config = (FIXER / "server" / "config.lua").read_text(encoding="utf-8")
+
+        def item_of(template):
+            return re.search(r"\n    " + template + r" = \{.*?item = \"([a-z0-9_]+)\"", config, re.S).group(1)
+
+        self.assertEqual(item_of("regina_chooh2"), "chooh2_canister")
+        chooh2 = (ROOT / "rp_chooh2" / "server" / "config.lua").read_text(encoding="utf-8")
+        self.assertRegex(chooh2, r"\n    chooh2_canister = \{ label = ")
+        self.assertEqual(item_of("afterlife_box"), "implant_box_arms")
+        ripper = (ROOT / "rp_ripperdoc" / "shared" / "config.lua").read_text(encoding="utf-8")
+        self.assertIn("implant_box_arms", ripper)
+
     def test_measured_false_points_are_listed_in_readme(self):
         text = (FIXER / "README.md").read_text(encoding="utf-8")
         for name in ("afterlife", "wakako", "regina", "kabuki_noodle_row", "vik_clinic", "japantown_ripperdoc",
@@ -252,6 +267,13 @@ class FixerLoop(unittest.TestCase):
         self.assertEqual((r["event_kind"], r["event_player"], r["event_contract_kind"]), ("contract_completed", "2", "job"))
         self.assertEqual((r["told_progress"], r["escrow_agrees"]), ("true", "true"))
         self.assertEqual(r["setrep"], "4/4")
+
+    def test_nomad_run_order_counts_the_whole_run(self):
+        r = self.run_ok("smuggle_order")
+        self.assertEqual(r["taken"], "taken")
+        # Two crates of three handed over: the run is not home yet, nothing counted.
+        self.assertEqual((r["after_two"], r["progress_two"]), ("taken", "0"))
+        self.assertEqual((r["state"], r["progress_end"], r["escrow_agrees"]), ("completed", "1", "true"))
 
     def test_cyberpsycho_bounties(self):
         r = self.run_ok("bounty")

@@ -173,7 +173,8 @@ C.psycho = {
 -- escrowed gross), hours (time to expiry), minRep, repGain, posters ({ npc, player }).
 --   delivery   from = a C.points key, to = a hub key or a C.drops key
 --   retrieval  item (an rp_inventory item id), count, drop = the hub where it is handed over
---   job        job, kinds = { ... }, count, match = { data field = value } (optional),
+--   job        job, kinds = { ... }, count, match = { data field = value } (optional: the event
+--              counts only when every field equals the event's `data` field, compared as text),
 --              countField = the data field holding a count (default: 1 per event)
 --   bounty     sighting = a C.sightings key, mode = "claimed" | "open" (a player fixer chooses
 --              in the post dialog), onForeignKill = "refund" | "respawn" (claimed mode: a kill
@@ -203,11 +204,13 @@ C.templates = {
         job = "ripperdoc", kinds = { "operation" }, match = { action = "install" }, count = 1,
         reward = { min = 1200, max = 1800 }, hours = 6, minRep = 3, repGain = 2,
     },
+    -- rp_nomade fires `deliver` once per crate handed over, with `data.complete = true` on the one
+    -- that empties the run: the order counts the run brought home, not its first crate.
     afterlife_smuggle = {
         kind = "job", title = "A nomad run", posters = { npc = true, player = true },
         brief = "Rogue has a buyer waiting for a load from the Badlands. Bring a nomad run home.",
-        job = "nomad", kinds = { "deliver" }, count = 1, reward = { min = 1500, max = 2500 }, hours = 8,
-        minRep = 3, repGain = 2,
+        job = "nomad", kinds = { "deliver" }, match = { complete = true }, count = 1,
+        reward = { min = 1500, max = 2500 }, hours = 8, minRep = 3, repGain = 2,
     },
     -- The box is rp_ripperdoc's graded item (Gorilla Arms, Street grade): without rp_ripperdoc
     -- running, the item is unknown and this contract is not posted.
@@ -258,11 +261,16 @@ C.templates = {
         brief = "A crate waits on Noodle Row. Regina wants it at her corner, unopened.",
         from = "kabuki_noodle_row", to = "regina", reward = { min = 400, max = 600 }, hours = 2, minRep = 0, repGain = 1,
     },
+    -- The canister is rp_chooh2's refinery output (`chooh2_canister`, not rp_inventory's `chooh2`
+    -- fuel can): without rp_chooh2 running, the item is unknown and this contract is not posted.
     regina_chooh2 = {
-        kind = "retrieval", title = "Two cans of CHOOH2", posters = { npc = true, player = true },
-        brief = "Regina's driver is dry. Two CHOOH2 fuel cans, at her corner.",
-        item = "chooh2", count = 2, drop = "regina", reward = { min = 500, max = 750 }, hours = 4, minRep = 0, repGain = 1,
+        kind = "retrieval", title = "Two canisters of CHOOH2", posters = { npc = true, player = true },
+        brief = "Regina's driver is dry. Two CHOOH2 canisters from the Petrochem refinery, at her corner.",
+        item = "chooh2_canister", count = 2, drop = "regina", reward = { min = 500, max = 750 }, hours = 4,
+        minRep = 0, repGain = 1,
     },
+    -- rp_trauma reports `stabilise` (E "Stabilise the patient", the 8 s act on a downed body) and
+    -- `revive` (ALT+click or /reanimer); Patch up on a standing citizen reports nothing.
     regina_patch_up = {
         kind = "job", title = "Keep them breathing", posters = { npc = true, player = true },
         brief = "The psychos leave bodies. Regina pays for every one a medic brings back: stabilise or revive two.",

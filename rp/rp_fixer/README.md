@@ -3,8 +3,8 @@
 Adds the fixers' contract board: fixer NPCs and fixers on duty post deliveries, retrievals, job orders and cyberpsycho bounties with an escrowed reward, runners take them at the Afterlife, Wakako's or Regina's corner, and get paid in one operation and build a reputation that unlocks better contracts.
 
 - **Docs:** [Build a job: prompts, animations, items and pay](https://open2077.net/docs/world-interaction), [Durable transactions](https://open2077.net/docs/transactions), [Server-owned NPCs](https://open2077.net/docs/npcs), [UI kit](https://open2077.net/docs/ui-kit)
-- **Starts:** when listed in `resources.load` (it declares `auto_start false`)
-- **Needs:** `open77_transactions`, `open77_actions`, `open77_uikit`, `rp_economy`, `rp_jobs`, `rp_inventory`, a SQL database
+- **Starts:** with `ensure rp_fixer` (it declares `auto_start false`)
+- **Needs:** `open77_transactions`, `open77_actions`, `open77_uikit`, `open77_notifications` (the toasts), `rp_economy`, `rp_bank` (the `fixer` society the cut lands in pays rp_jobs' payroll through it), `rp_jobs`, `rp_inventory`, a SQL database; `rp_identity` for character names (optional)
 - **Runs on:** server and client (the client only draws map pins)
 
 The board is the hub that ties the RP jobs together: a job order is satisfied by the
@@ -41,8 +41,8 @@ where to go next.
 | Kind | What you do | When you are paid |
 |---|---|---|
 | Delivery | A sealed crate appears at the pickup point (Vik's clinic, Noodle Row, the Japantown ripperdoc). Walk to it, **E Pick up**. Carry it on foot to the drop (a fixer point) and press **E Deliver the crate** there. Only you can lift it. A car, a drawn weapon or a fall drops it where you stand: pick it up again. | the crate touches the drop |
-| Retrieval | Bring the named goods (3 data chips, 4 components, 2 CHOOH2 cans, a boxed set of Gorilla Arms from the ripperdocs' stock) to the fixer point named in the contract and press **F Hand over the goods**. Without them nothing starts and you are told what is missing. | the hand-over bar ends |
-| Job order | Do the other job: refine CHOOH2 at the plant, breach a terminal, install an implant as a ripperdoc, assemble weapons at a techie bench, stabilise or revive patients, bring a nomad run home. Each step that job reports for you counts once; `/contract` shows `4 / 10`. | the count is reached |
+| Retrieval | Bring the named goods (3 data chips, 4 components, 2 CHOOH2 canisters from the Petrochem refinery, a boxed set of Gorilla Arms from the ripperdocs' stock) to the fixer point named in the contract and press **F Hand over the goods**. Without them nothing starts and you are told what is missing. | the hand-over bar ends |
+| Job order | Do the other job: refine CHOOH2 at the plant, breach a terminal, install an implant as a ripperdoc, assemble weapons at a techie bench, stabilise or revive downed patients as Trauma Team, bring a nomad run home (every crate of it). Each step that job reports for you counts once; `/contract` shows `4 / 10`. | the count is reached |
 | Bounty | A cyberpsycho waits at the sighting (Kabuki north-west of the market, Northside industrial, the Rancho Coronado junkyard). Kill it. | the kill is credited to you |
 
 Paid means: the contract's net reward lands in your cash in one operation, the fixers' cut goes to
@@ -126,8 +126,8 @@ Console commands (restricted: console or ACL `command.fixer.*`):
 | `fixer.list` | every contract in memory: number, id, state, template, poster, runner, time left, crate and NPC |
 | `fixer.post <template> [hub] [reward]` | a fixer NPC posts now |
 | `fixer.expire <n>` | contract `#n` runs out now (the next sweep refunds it) |
-| `fixer.job <playerId> <job> <kind> [count] [ref]` | fires the `rp:job:completed` event another job would fire |
-| `fixer.kill <n> <playerId>` | the cyberpsycho of `#n` dies credited to that player (the same path as a real kill) |
+| `fixer.job <playerId> <job> <kind> [count] [ref]` | for testing only: fires the `rp:job:completed` event another job would fire, with `data = { count }` (so it never satisfies a `match` field, and a `countField` order counts it as 1) |
+| `fixer.kill <n> <playerId>` | for testing only: the cyberpsycho of `#n` dies credited to that player (the same path as a real kill) |
 | `fixer.rep <playerId>` | a connected player's reputation |
 | `fixer.setrep <playerId> <score>` | sets a connected player's reputation (one logged change) |
 
@@ -206,8 +206,11 @@ the contract is taken. The shipped job orders read:
 | `afterlife_breach` | `netrunner` | `breach_success` | 1 |
 | `afterlife_implant` | `ripperdoc` | `operation` with `data.action = "install"` | 1 |
 | `wakako_hardware` | `techie` | `assemble` | 2 |
-| `regina_patch_up` | `trauma` | `stabilise` or `revive` | 2 |
-| `afterlife_smuggle` | `nomad` | `deliver` | 1 |
+| `regina_patch_up` | `trauma` | `stabilise` (E *Stabilise the patient* on a downed body) or `revive` (ALT+click or `/reanimer`) | 2 |
+| `afterlife_smuggle` | `nomad` | `deliver` with `data.complete = true` (the crate that empties the run) | 1 |
+
+`regina_chooh2` asks for `chooh2_canister`, rp_chooh2's refinery output (not rp_inventory's
+`chooh2` fuel can). Patch up on a standing citizen fires no event, so it never counts.
 
 ## Limits
 
@@ -223,8 +226,9 @@ the contract is taken. The shipped job orders read:
 - `rp:job:completed` for `contract_completed` is fired once, after the payout is saved; a crash in
   that instant loses the event, never the payment.
 - Contracts live in SQL. Without a database the board stays closed (`no database` in the log).
-- A retrieval of another job's item (the Gorilla Arms box is rp_ripperdoc's) is posted only while
-  that item is defined: without rp_ripperdoc the NPC fixer skips it and posts its other offers.
+- A retrieval of another job's item (the Gorilla Arms box is rp_ripperdoc's, the CHOOH2 canister
+  rp_chooh2's) is posted only while that item is defined: without that job the NPC fixer skips it
+  and posts its other offers, and a player fixer's post is refused.
 - Job orders count the events the other jobs fire with the names in the table above; a job that
   renames a `kind` or a `data` field needs the template changed with it.
 - The NPC fixers' rewards are new money (rp_economy's allowlist, 200 000 an hour for rp_fixer). A
