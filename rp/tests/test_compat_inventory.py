@@ -62,9 +62,9 @@ class B1Definitions(unittest.TestCase):
         # Every definer of the pack, with its real shared config, registers everything.
         for definer, expected in {"rp_bar": "7/0", "rp_crime": "1/0", "rp_ferrailleur": "1/0", "rp_fixer": "2/0",
                                   "rp_gangs": "1/0", "rp_mecano": "2/0", "rp_netrunner": "4/0",
-                                  "rp_nomade": "1/0", "rp_ripperdoc": "5/0"}.items():
+                                  "rp_nomade": "1/0", "rp_ripperdoc": "7/0"}.items():
             self.assertEqual(r["def_" + definer], expected, definer)
-        self.assertEqual(r["registry_count"], "41")
+        self.assertEqual(r["registry_count"], "43")   # rp_ripperdoc 2.0: two more implant boxes (Gorilla Arms, Reinforced Tendons)
         self.assertEqual(r["selftest"], "1/1")           # rp_selftest reads counts
         self.assertEqual(r["redefine_same_definer"], "1/0")
 

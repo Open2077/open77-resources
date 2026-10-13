@@ -1,47 +1,61 @@
--- rp_ripperdoc: a ripperdoc clinic for a Night City RP server.
--- The on-duty ripper installs and removes the implants this resource defines
--- through the platform's cyberware framework (open77_cyberware); the server owns
--- the catalogue, the quote, the money and the record.
+-- rp_ripperdoc: a ripperdoc clinic for a Night City RP server, on the world-interaction libraries.
+-- Quote with consent (Open77.playerInteractions) -> ONE coordinator hold (price + implant from the
+-- clinic's stock) -> the patient lies on the chair -> the ripperdoc's operate action (open77_actions)
+-- -> Open77.cyberware.install exactly once -> the hold commits. Restock at a chrome dealer or from
+-- players. Built offline; the live two-player script is in the README.
 resource "rp_ripperdoc"
-version "1.0.0"
+version "2.0.0"
 open77_version "*"
-auto_start true
 
--- Platform packages this resource drives. Every one of them ships a client
--- half, so a manifest delivered to clients may depend on them.
---   open77_cyberware           : Open77.cyberware.* (definitions, install, remove)
---   open77_player_interactions : the consent flow of the quote (Open77.playerInteractions)
---   open77_uikit               : server twins `context` (catalogue), `progress` (surgery), `close`
---   open77_worldui             : the chair ring + map pin + E prompt (client)
---   open77_contextmenu         : ALT+click "Operate" on a patient (client)
---   open77_notifications       : Open77.notifications.send (toasts)
-dependency "open77_cyberware >=0.1.0"
-dependency "open77_player_interactions >=1.0.0"
-dependency "open77_uikit >=1.0.0"
-dependency "open77_worldui >=0.1.0"
-dependency "open77_contextmenu"
-dependency "open77_notifications"
---   open77_props               : the client projection that draws the injector in the hand
-dependency "open77_props >=0.1.0"
+-- Opt-in: it needs open77_actions and open77_transactions, which an operator lists in resources.load.
+auto_start false
 
--- rp_jobs, rp_inventory, rp_bank, rp_economy and rp_zones are reached through
--- pcall'd synchronous exports and never declared: their READMEs ask a resource
--- with a client script not to depend on them (missing_dependency on the client).
+-- Platform packages this resource drives. Every one of them ships a client half, so a manifest
+-- delivered to clients may depend on them. open77_transactions (server only) is NOT a dependency:
+-- the boot waits for it (a client would refuse missing_dependency:open77_transactions). rp_jobs,
+-- rp_inventory, rp_economy, rp_zones, rp_identity and open77_seating are reached through pcall'd
+-- exports.
+dependency "open77_actions >=0.1.0"             -- prompts, claims, the operate / lie / restock actions
+dependency "open77_player_interactions >=1.0.0" -- the quote and the buy-back, with consent
+dependency "open77_cyberware >=0.1.0"           -- Open77.cyberware.* (definitions, install, remove)
+dependency "open77_uikit >=1.0.0"               -- the catalogue and order menus, the patient's bar
+dependency "open77_contextmenu"                 -- ALT+click "Quote" (client)
+dependency "open77_notifications"               -- toasts (chat works without them)
 
+-- Least privilege, native by native (wiki/data/api.json):
+--   network.events                RegisterNetEvent / TriggerClientEvent / Open77.notifications.send
+--   players.cyberware.define      Open77.cyberware.define
+--   players.cyberware.read        Open77.cyberware.current
+--   players.cyberware.manage      Open77.cyberware.install / remove / cancel
+--   players.hacking.define        Open77.hacking.define / defineIce / definePurge (the three hacking implants)
+--   players.interactions.control  Open77.playerInteractions.request / cancel
+--   players.interactions.read     Open77.playerInteractions.get / current
+--   players.screenfx              Open77.effects.screen (the cyberpsychosis overlay)
+--   players.life.read             Open77.players.get (alive, for an accepted patient)
+--   database.access               Open77.database.* (the 1.x history table rp_ripperdoc_operations)
+-- Animations are played by open77_actions (lie, operate, order) and by the platform (the buy-back
+-- hand-over), never by this resource: no players.animations.control. Value lives in
+-- open77_transactions, the in-flight journal in Open77.kvp, the history in SQL.
 permissions {
-    "network.events",              -- RegisterNetEvent / TriggerClientEvent / Open77.notifications.send (server), TriggerServerEvent / RegisterNetEvent (client)
-    "database.access",             -- Open77.database.* (rp_ripperdoc_operations)
-    "players.cyberware.define",    -- Open77.cyberware.define
-    "players.cyberware.read",      -- Open77.cyberware.current
-    "players.cyberware.manage",    -- Open77.cyberware.install / remove / newOperationId
-    "players.hacking.define",      -- Open77.hacking.define / defineIce / definePurge (the three hacking implants)
-    "players.animations.control",  -- Open77.animations.playAt / stopAt (the `lie` posture on the chair), play / stop (the restock gesture)
-    "world.props",                 -- Open77.props.create / attach / remove (the injector in the ripper's hand during surgery)
-    "players.interactions.control",-- Open77.playerInteractions.request / cancel (the quote)
-    "players.interactions.read",   -- Open77.playerInteractions.current (patient already reserved?)
-    "players.screenfx",            -- Open77.effects.screen (the cyberpsychosis overlay)
+    "network.events",
+    "players.cyberware.define",
+    "players.cyberware.read",
+    "players.cyberware.manage",
+    "players.hacking.define",
+    "players.interactions.control",
+    "players.interactions.read",
+    "players.screenfx",
+    "players.life.read",
+    "database.access",
 }
 
 shared_script "shared/config.lua"
 client_script "client/main.lua"
-server_script "server/main.lua"
+server_scripts {
+    "server/model.lua",
+    "server/ledger.lua",
+    "server/ports.lua",
+    "server/journal.lua",
+    "server/service.lua",
+    "server/main.lua",
+}
