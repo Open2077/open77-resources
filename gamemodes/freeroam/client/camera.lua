@@ -3,6 +3,9 @@
 local styles = { "classic", "shoulder", "centered" }
 local selected = 1
 local cinematic = false
+-- The view the player had before the first /camchange style ("fpp" or "tps"): reset gives it back
+-- (the style switch requests third person; releasing the style alone left the player in it).
+local viewBefore = nil
 local function report(message)
     TriggerEvent("chat:addMessage", { type = "system", author = "CAMERA", text = message, color = { 34, 216, 226 } })
 end
@@ -13,6 +16,10 @@ RegisterNetEvent("freeroam:camera:change", function(request)
     if name == "reset" then
         local ok, why = api.resetThirdPerson()
         if ok then selected = 1 end
+        if ok and viewBefore then
+            Open77.perspective.set(viewBefore == "tps" and "third" or "first")
+            viewBefore = nil
+        end
         return report(ok and "Camera style released; default framing restored." or tostring(why))
     end
     if name == "shake" then
@@ -29,6 +36,11 @@ RegisterNetEvent("freeroam:camera:change", function(request)
     if name == "" then nextIndex = selected % #styles + 1
     else for index, value in ipairs(styles) do if value == name then nextIndex = index end end end
     if not nextIndex then return report("/camchange [classic|shoulder|centered|left|right|shake|reset]") end
+    if viewBefore == nil then
+        local okState, state = pcall(Open77.perspective.state)
+        local mode = okState and type(state) == "table" and tostring(state.mode or ""):lower() or ""
+        viewBefore = (mode == "tps" or mode == "tpp" or mode == "third") and "tps" or "fpp"
+    end
     local ok, why = api.configureThirdPerson({ style = styles[nextIndex] })
     if not ok then return report(tostring(why)) end
     local enabled, reason = Open77.perspective.set("third")

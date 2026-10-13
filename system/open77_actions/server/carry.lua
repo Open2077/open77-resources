@@ -42,6 +42,7 @@ Carry.PICKUP_KEY, Carry.PUTDOWN_KEY = PICKUP_KEY, PUTDOWN_KEY
 local DEFAULT_PICKUP_MS, DEFAULT_PUTDOWN_MS = 1333, 2333   -- measured clipDurationsMs, wiki/rp-animations.md
 local SEQUENCE_MAX_MS = 600000                               -- a sequence's steps may not sum past this
 local MAX_ITEMS_PER_OWNER = 128
+local ITEM_TOP = 0.5                                          -- the pickup card clears an item this tall
 local PROJECTION_RETRIES = 3
 local RESUME_WINDOW_MS = 15000                               -- carrier briefly unavailable (teleport): hold resumes
 
@@ -113,7 +114,7 @@ function Carry:defineKind(owner, generation, def, internal)
         progress = false, claims = merge(kind.claims, { move = true }), cancelOn = cancelOn,
         markers = { { name = "grip", atMs = kind.gripMs } },
         hooks = { validate = kind.hooks.validate, commit = kind.hooks.pickup, cancel = kind.hooks.cancel },
-        eligibility = kind.eligibility, epochs = kind.epochs,
+        eligibility = kind.eligibility, epochs = kind.epochs, messages = kind.messages,
     }, true)
     if not pickup then return nil, why end
     local putdown
@@ -123,7 +124,7 @@ function Carry:defineKind(owner, generation, def, internal)
         progress = false, claims = merge(kind.claims, { move = true }), cancelOn = cancelOn,
         markers = { { name = "release", atMs = kind.releaseMs } },
         hooks = { validate = kind.hooks.validate, commit = kind.hooks.putdown, cancel = kind.hooks.cancel },
-        eligibility = kind.eligibility, epochs = kind.epochs,
+        eligibility = kind.eligibility, epochs = kind.epochs, messages = kind.messages,
     }, true)
     if not putdown then return nil, why end
     for _, a in ipairs({ pickup, putdown }) do
@@ -169,13 +170,16 @@ function Carry:event(phase, item, extra)
     end
 end
 
+-- The target stands on the item's base, the point the server measures the reach from; the card is
+-- lifted over the item's top (0.5 m) by the kind's `promptHeight`. The client's reach, sqrt(reach^2 +
+-- lift^2) from the feet to the card, then matches the server's reach from the feet to the base.
 function Carry:showTarget(item)
     local kind = item.kind
     return self.E:addTarget(item.owner, item.ownerGeneration, {
         id = "item_" .. item.id:gsub("[^%w_%.%-]", "_"),
-        position = { x = item.position.x, y = item.position.y, z = item.position.z + 0.5 },
+        position = { x = item.position.x, y = item.position.y, z = item.position.z },
         bucket = item.bucket, label = kind.label, distance = kind.reach, markerDistance = 10.0,
-        marker = "diamond", requires = "empty",
+        marker = "diamond", requires = "empty", promptHeight = ITEM_TOP + kind.promptHeight,
         actions = { { action = PICKUP_KEY, label = "Pick up " .. kind.label, key = "E" } },
     }, "item:" .. item.id)
 end
@@ -277,6 +281,12 @@ function Carry:pickup(initiator, pid, targetRef, options)
         supersede = options.supersede == true, initiator = initiator, trace = options.trace == true,
         check = function(op, read)
             if self.items[item.id] ~= item then return "item_unavailable" end
+            -- A drawn weapon (fists included) owns the arms: the carry pose would be interrupted
+            -- at once and the item dropped. Measured live 2026-10-12.
+            local flags = read.flags
+            if type(flags) == "table" and flags.weaponValid ~= false and flags.weaponEquipped == true then
+                return "weapon_drawn"
+            end
             local at, bucket = self:itemPosition(item)
             if at == nil then return "item_unavailable" end
             if read.bucket ~= bucket then return "wrong_bucket" end
@@ -384,17 +394,20 @@ function Carry:startSession(op, item)
     return session
 end
 
-function Carry:clearClient(pid, sessionId)
+-- `dropped`: { reason, label, message } when the item left the hands without a put-down, so the
+-- carrier's client says so in words (kind.dropMessage).
+function Carry:clearClient(pid, sessionId, dropped)
     self.P.toClient(pid, "open77:actions:carry", { generation = self.P.generation, itemId = false,
-        sessionId = sessionId })
+        sessionId = sessionId, dropped = dropped and dropped.reason or nil, label = dropped and dropped.label or nil,
+        message = dropped and dropped.message })
 end
 
-function Carry:endSession(session)
+function Carry:endSession(session, dropped)
     for _, token in ipairs(session.claimTokens or {}) do self.E.claims:release(token) end
     session.claimTokens = {}
     if session.playbackId then self.byPlayback[session.playbackId] = nil end
     if self.sessions[session.playerId] == session then self.sessions[session.playerId] = nil end
-    self:clearClient(session.playerId, session.sessionId)
+    self:clearClient(session.playerId, session.sessionId, dropped)
 end
 
 -- ---------------------------------------------------------------------------
@@ -412,9 +425,13 @@ function Carry:drop(pid, reason)
     if session.playbackId and self.P.connected(pid) then
         self.P.animStop(pid, session.playbackId, false)
     end
-    self:endSession(session)
+    self:endSession(session, item and { reason = tostring(reason), label = item.kind.label, message = item.kind.dropMessage })
     if item == nil then return true end
     local spot = at and M.offsetPoint(at, heading, item.kind.dropAhead, 0) or item.position
+    -- Dropped in the air (a jump): on the ground the carrier last stood on, not where they hang.
+    local flags = read and read.flags
+    local airborne = type(flags) == "table" and flags.animationValid == true and flags.grounded == false
+    if airborne and spot and session.lastGroundZ and session.lastGroundZ < spot.z then spot.z = session.lastGroundZ end
     self:ground(item, spot, heading)
     self:event("dropped", item, { playerId = pid, reason = reason, position = spot })
     local hook = item.kind.hooks.dropped
@@ -650,6 +667,10 @@ function Carry:tick(now)
                 if read and type(read.position) == "table" then
                     session.lastPosition = read.position
                     session.lastHeading = read.heading or read.yaw
+                    local flags = read.flags
+                    if type(flags) == "table" and flags.animationValid == true and flags.grounded == true then
+                        session.lastGroundZ = read.position.z
+                    end
                 end
                 for _, token in ipairs(session.claimTokens) do self.E.claims:renew(token, 120000) end
             end

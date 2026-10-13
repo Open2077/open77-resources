@@ -111,10 +111,20 @@ local function signature(seat)
     return table.concat({ seat.id, tostring(p.x), tostring(p.y), tostring(p.z), tostring(seat.label) }, "|")
 end
 
+-- The card is lifted above the seat and live whenever the player is in reach and the card is
+-- on screen, as open77_actions does: open77_interactions otherwise requires the crosshair on
+-- the card (requireLookAt), and a card at mattress or seat height sits at the bottom of the
+-- screen where E never reached it (a bed prompt was drawn, and E did nothing). The reach is
+-- measured to the lifted point, hence the hypotenuse.
+local PROMPT_LIFT = 0.8
+local PROMPT_REACH = 2.0
+
 local function promptDefinition(seat)
     return {
         id = ("seat:" .. seat.id):sub(1, 96),
-        position = seat.position, distance = 2.0, markerDistance = 4.0, marker = "dot",
+        position = seat.position, offset = { x = 0.0, y = 0.0, z = PROMPT_LIFT },
+        distance = math.sqrt(PROMPT_REACH * PROMPT_REACH + PROMPT_LIFT * PROMPT_LIFT),
+        markerDistance = 4.0, marker = "dot", requireLookAt = false,
         priority = 5,
         choices = { {
             id = "sit", label = seat.label or "Sit", key = "E",

@@ -51,6 +51,9 @@ CreateThread(function()
     end
 end)
 function CyberwareLabDash.operate(issuer,target,action,preset,mode)
+    -- Another player's Dash (install, remove, inspect, test) needs an operator (server/authority.lua).
+    local refused=CyberwareLabAuthority.refuse(issuer,target)
+    if refused then return false,CyberwareLabAuthority.message(refused) end
     target=id(target);issuer=tonumber(issuer) or 0
     if not target or Open77.players.name(target)==nil then return false,"player_unavailable" end
     if not Open77.dash then return false,"dash_unavailable" end

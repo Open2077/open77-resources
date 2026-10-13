@@ -9,22 +9,37 @@ Config.job = "trauma"
 Config.society = "trauma"
 
 -- How long a player stays "down" after death before /respawn is accepted while a
--- medic is on duty. Production value: 600 (10 min). This eval config uses 60 so the
--- whole flow can be tested with one player in a minute.
-Config.downSeconds = 60
+-- medic is on duty: 600 (10 min), time for a team to answer the call. A test server that
+-- wants the whole flow in a minute sets 60.
+Config.downSeconds = 600
 
--- /respawn is accepted after the countdown, or at once when no medic is on duty.
--- `true` keeps the countdown even with nobody on duty, so one tester alone can see it
--- (this eval config). Production: false.
-Config.countdownWithoutMedics = true
+-- /respawn is accepted after the countdown, or at once when no medic is on duty (false).
+-- `true` keeps the countdown even with nobody on duty, so one tester alone can see it.
+Config.countdownWithoutMedics = false
 
--- What the hospital charges for a /respawn (account -> society, then cash, then an
--- unpaid row in rp_trauma_bills).
+-- The down state survives a disconnect and a restart (of this resource or of the server): while
+-- a player is down it is saved in this resource's kvp store under their durable subject. A player
+-- who left while down, or whom a restart let go, is held down again at the same spot when they are
+-- back, with what their countdown had left. The countdown runs on while they are away: once it has
+-- run out, /respawn is open at once. `false`: the old rule, a disconnect or a restart frees the
+-- body (a restart at full health).
+Config.downPersist = true
+
+-- A saved down state older than this many seconds (counted from the fall) is dropped and the
+-- player comes back on their feet. Default 3 hours.
+Config.downPersistMaxSeconds = 3 * 60 * 60
+-- A held body found farther than this from its spot (metres, or as far below it: a floor that had
+-- not streamed in) is put back on it.
+Config.downSpotRadius = 3.0
+
+-- What the hospital charges for a /respawn before the patient's plan (bank, then cash,
+-- then an invoice).
 Config.hospitalBill = 500
 
--- Medic fees, charged to the patient and paid into the trauma society.
-Config.healFee = 100    -- Stabilise (ALT+click) / /soin
-Config.reviveFee = 300  -- Revive (ALT+click) / /reanimer; free for contract holders
+-- Medic fees before the patient's plan, charged through the coordinator and paid into the
+-- trauma society (the medic gets a cut, server/config.lua TraumaConfig.medicShare).
+Config.healFee = 100    -- Patch up (ALT+click) / /soin
+Config.reviveFee = 300  -- Revive (ALT+click) / /reanimer
 
 -- Progress bars shown to the medic (milliseconds), staged with Config.Stage below.
 Config.stabiliseMs = 5000
@@ -87,11 +102,8 @@ Config.medicCooldownSeconds = 10
 -- Reminder sent to a down player every N seconds (chat + toast).
 Config.downReminderSeconds = 30
 
--- Trauma Team contract: price per period, period length in minutes of server time,
--- and how many consecutive failed renewals cancel the contract.
-Config.contractPrice = 1000
-Config.contractMinutes = 30
-Config.contractMaxFailures = 2
+-- Trauma Team plans (Silver, Gold, Platinum), their kiosks, the response fees and the
+-- medics' cut live in server/config.lua (TraumaConfig): the server owns every price.
 
 -- "The hospital": where a /respawn puts the body. In the lore you wake up at Vik's, so
 -- it is Viktor Vektor's clinic (Little China, Watson; the rp_zones `viktor_clinic` zone,
@@ -104,12 +116,13 @@ Config.hospital = {
     heading = 180.0,
 }
 
--- The Trauma Team AV spawned by /trauma av (on-duty medic, standing on the pad).
--- `Vehicle.av_trauma` is the "AV Trauma" record of the 2.31 catalogue (class av,
--- 4 seats). No `_player` variant of any AV exists in the catalogue; if this record
--- refuses to spawn on your build, try `Vehicle.av_rayfield_excalibur`.
+-- The Trauma Team AV spawned by /trauma av (on-duty medic, standing on the pad), with the
+-- medic at the controls. No `_player` variant of any AV exists in the 2.31 catalogue.
 Config.av = {
-    record = "Vehicle.av_trauma",
+    -- Measured 2026-10-13 on 2.31: Vehicle.av_trauma and Vehicle.av_trauma_savable are accepted by
+    -- the server but never spawn on a client (the request registers and no entity follows), so the
+    -- medic sat in nothing. The Militech Manticore, the same AV-4 airframe, spawns in 130 ms and flies.
+    record = "Vehicle.av_militech_manticore",
     spawnDistance = 8.0,   -- metres in front of the medic
     spawnUp = 1.0,         -- metres above the medic's feet
     ttlMs = 30 * 60 * 1000,

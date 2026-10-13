@@ -1,6 +1,6 @@
 # open77_cyberware_lab
 
-A test arena for cyberware: an open `/cyberlab` panel and command set that installs and removes Gorilla Arms and double-jump legs, grants Dash, Ground Slam and Reflex Overdrive, and probes effects, stamina, life state and routing on any player. Every connected player can use it on anyone, so do not run it as a public mode without adding your own permission policy.
+A test arena for cyberware: a `/cyberlab` panel and command set that installs and removes Gorilla Arms and double-jump legs, grants Dash, Ground Slam and Reflex Overdrive, and probes effects, stamina, life state and routing. Every player may use it on themselves; acting on another player, or on the whole server, needs the server console or the `command.cyberlab.others` ACL right.
 
 - **Docs:** [Cyberware](https://open2077.net/docs/cyberware)
 - **Starts:** with `ensure open77_cyberware_lab` (it declares `auto_start false`)
@@ -20,23 +20,54 @@ on `open77_reflex`: that resource installs the X mapping and native boost;
 the lab UI alone cannot activate Overdrive. Existing Overdrive grants/presets
 are retained, and missing session grants are restored after lifecycle changes.
 
-This resource defines test grades and provides an open `/cyberlab` interface
-using public server APIs. Once the optional resource is started, every connected
-player can manage cyberware for themselves or another player, without an admin
-role or patient-consent gate. Server makers can adapt that policy in this resource.
-The separate [ripperdoc example](../open77_ripperdoc_example/) provides the
-consent/payment workflow.
+This resource defines test grades and provides a `/cyberlab` interface using
+public server APIs. Once the optional resource is started, every connected player
+can manage cyberware and run the probes on themselves. The separate
+[ripperdoc example](../open77_ripperdoc_example/) provides the consent/payment
+workflow between two players.
+
+## Who may act on whom
+
+`server/authority.lua` holds one rule, applied to every entry point:
+
+- **Yourself:** open to every player (the panel, `/cyberlab ui`, every text
+  command whose player is your own id, the `dash`, `slam` and `reflex`
+  subcommands without a player or with your id).
+- **Another player:** the server console (source 0) or a player holding the ACL
+  right `command.cyberlab.others`. This covers changes (install, remove, kill,
+  revive, bucket, health, stamina, knockdown, effects, grants) and reads (state,
+  stats, activity, the panel's view of that player).
+- **The whole server:** `pvp on|off` (friendly fire for everyone) and the `load`
+  fixture need the same authority.
+
+The `/cyberlab` command, its subcommands and the panel's request and action
+events all apply the rule, so a client cannot bypass it by sending an event
+itself. Refusals answer `operator_required: acting on another player needs the
+server console or the command.cyberlab.others right`. A player without the
+right sees only themselves in the panel's player list. The right is read live:
+granting or revoking it takes effect on the next request.
+
+Grant it in `acl.jsonc` (a principal or role holding `command.*` already has it):
+
+```json
+"permissions": [ "command.cyberlab.others" ]
+```
+
+The resource declares `acl.read` for this check. After updating an existing
+server, run `refresh` before `ensure open77_cyberware_lab` so the new
+permission is loaded.
 
 ## In-game interface
 
-Enter `/cyberlab` to open the panel with **your own character selected**. Choose a
-named player, then Gorilla Arms or Double Jump, a grade, and Install or Remove.
+Enter `/cyberlab` to open the panel with **your own character selected**. An
+operator may choose another named player; everyone else sees only themselves.
+Then choose Gorilla Arms or Double Jump, a grade, and Install or Remove.
 The panel shows the recipient and their current implants, keeps a staged
 operation pending until backend completion, and displays failures. Refresh reads
 the current roster and equipment. Escape or Close returns control to the game.
-`/cyberlab ui <player-id>` opens directly on a recipient. Existing text commands
-remain available and are also open by default; the explicit number is always
-the recipient, not the player sending the command.
+`/cyberlab ui <player-id>` opens directly on a recipient (operators, or your own
+id). Existing text commands remain available under the same rule; the explicit
+number is always the recipient, not the player sending the command.
 
 Implant choices and grades come from `server/config.lua`; the UI does not carry
 its own grade definitions or accept arbitrary native item records. Both slots
@@ -46,10 +77,10 @@ transaction names. Native readiness, supported grades, life state and concurrent
 operation checks remain enforced by the cyberware backend.
 
 The panel uses `client/panel.lua`, `server/panel.lua` and `web/`. Its request and
-action handlers intentionally have no role checks. Restricting only the text
-command would not restrict those handlers; server owners who want an authorization
-policy should apply it to both paths. This resource stays optional and does not
-change `/admin` or the doctor's permissions.
+action handlers apply the same authority rule as the text command (see
+[Who may act on whom](#who-may-act-on-whom)); a server owner who wants a stricter
+policy changes `server/authority.lua` once. This resource stays optional and does
+not change `/admin` or the doctor's permissions.
 
 For a throw test, distinguish a quick tap from a held-and-released charged
 punch. The training grade requests 3.5 m for a charged hit; industrial requests
@@ -80,8 +111,8 @@ cyberlab revive <player>
 `revive` uses the public authoritative `Open77.players.revive` API with full
 health (`1.0`) and a 3000 ms grace period. The resource declares
 `players.life.revive`; only a canonical
-`Dead` player is eligible. Run it from the server console or another authorized
-living client, not by sending gameplay input to the dead client. An alive or
+`Dead` player is eligible. Run it from the server console or a living operator
+client, not by sending gameplay input to the dead client. An alive or
 already recovering target is refused by the life service. There is no local
 native resurrection fallback or forced placement.
 
@@ -99,7 +130,7 @@ cyberlab kill <player>
 This optional command calls `Open77.players.kill(player,{cause="script"})`
 with the declared `players.life.kill` capability. It fabricates no attacker,
 impulse or melee contact and has no native fallback. Use the server console or
-another authorized living client. The authoritative life service owns the death
+an operator client (a player may also run it on themselves). The authoritative life service owns the death
 transition and forwards refusals such as `transition_in_progress`; an already
 Dead target is an idempotent success, not a new death event. Verify canonical
 Dead, cancellation/cleanup and observer state before requesting public revival.
@@ -244,7 +275,7 @@ instead of treating a request ID as visual proof. Maximum eight concurrent backu
 
 ### Load fixture
 
-The open load fixture (the resource itself remains `auto_start false`):
+The load fixture, for operators only (the resource itself remains `auto_start false`):
 
 ```text
 cyberlab load start 60000 1,2,3 visual fire.small
@@ -308,7 +339,7 @@ again before interpreting a refused activation.
 `GetPlayerRoutingBucket` / `SetPlayerRoutingBucket` and reports the previous and
 read-back current bucket. Player IDs must be positive integers; bucket IDs must
 be integers 0..4294967295. These public server routing bindings require no extra
-resource permission; the lab command is open by default.
+resource permission; moving another player needs an operator.
 
 Record the reported previous bucket, move one test player into a separately
 chosen test bucket, inspect actual observer proxy teardown, then return that
@@ -321,7 +352,7 @@ leave peers attached and is not stream-out evidence.
 ## Ground Slam / Quake controls
 
 The optional `/cyberlab` panel includes a Ground Slam session-ability card
-for the selected player, including yourself. Grant, revoke or cancel through the
+for the selected player: yourself, or any player for an operator. Grant, revoke or cancel through the
 same public `Open77.abilities` API as ordinary creator resources. It does not
 install/remove implants or provide a direct activation bypass.
 
@@ -345,7 +376,7 @@ All presets cost 20 stamina, have a five-second cooldown, allow ground/air and
 use a four-meter radius. Edit `server/ground-slam.lua` to configure the normal
 binding (`inputKey`, example default `l`) and example policy. Definitions use public
 `players.abilities.define`; grant/revoke/cancel use `.manage`; inspection uses
-`.read`. The lab is open by default, including other-player controls.
+`.read`. Other-player controls need an operator.
 
 Wait for ready projection, equip a blunt weapon, close the panel, then release
 and press L. Holding L through a grant or captured UI cannot activate it; an
@@ -360,7 +391,7 @@ copyable public API example, bounds, lifecycle and geometry trust contract.
 ## Dash / Air Dash controls
 
 Enable the optional lab and its `open77_dash` dependency, open `/cyberlab`, select
-yourself or another player, and use the toolbar's **Dash** shortcut. Choose a
+yourself (or, as an operator, another player), and use the toolbar's **Dash** shortcut. Choose a
 **Basic** or **Advanced** preset and **Ground**, **Air**, or **Combined** loadout.
 **Grant** requests a resource-owned session capability. It does not purchase,
 replace, or remove an implant. Combined requires installed, active double-jump

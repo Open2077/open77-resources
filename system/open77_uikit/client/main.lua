@@ -92,16 +92,19 @@ local CINEMATIC_MAX_HEIGHT_PCT = 40
 local CINEMATIC_DEFAULT_EASE_MS = 350
 local CINEMATIC_MAX_EASE_MS = 5000
 
--- `Movement` and `Attack` are the two that matter for a progress bar; the rest
--- are there so a dialog can also take the map and the RPG hub away. Every name
--- is from `Open77.input.blockableActions()`; an unblockable one is refused by
--- the platform with `action_not_blockable` rather than silently ignored.
+-- `Movement` and the combat pair are the ones that matter for a progress bar;
+-- the rest are there so a dialog can also take the map and the RPG hub away.
+-- `combat` is firing AND melee: since 2026-10-12 `Attack` names firing only and
+-- `Melee` is its own lever, and a bar that stops shooting but lets the player
+-- punch would read as a bug. Every name is from `Open77.input.blockableActions()`;
+-- an unblockable one is refused by the platform with `action_not_blockable`
+-- rather than silently ignored (an older client answers that for `Melee`).
 local DISABLE_ACTIONS = {
-    move = "Movement",
-    combat = "Attack",
-    map = "Map",
-    hub = "Hub",
-    fastTravel = "FastTravel",
+    move = { "Movement" },
+    combat = { "Attack", "Melee" },
+    map = { "Map" },
+    hub = { "Hub" },
+    fastTravel = { "FastTravel" },
 }
 
 local POSITIONS = { top = true, center = true, bottom = true }
@@ -316,23 +319,26 @@ local function applyBlocks(spec, delta)
         end
         return
     end
-    for key, action in pairs(DISABLE_ACTIONS) do
+    for key, actions in pairs(DISABLE_ACTIONS) do
         if spec[key] then
-            local count = (blockCounts[action] or 0) + delta
-            if count < 0 then count = 0 end
-            if count > 0 and (blockCounts[action] or 0) == 0 then
-                local ok, reason = Open77.input.setActionBlocked(action, true)
-                if not ok then
-                    -- `Attack` is `inferred` on 2.31 and `action_already_enforced`
-                    -- is a normal answer for something Open77 blocks anyway.
-                    -- Neither is fatal; the caller is told through `state()`.
-                    count = 0
-                    warn("block " .. action .. " refused (" .. tostring(reason) .. ")")
+            for _, action in ipairs(actions) do
+                local count = (blockCounts[action] or 0) + delta
+                if count < 0 then count = 0 end
+                if count > 0 and (blockCounts[action] or 0) == 0 then
+                    local ok, reason = Open77.input.setActionBlocked(action, true)
+                    if not ok then
+                        -- `Attack` and `Melee` are `inferred` on 2.31 and
+                        -- `action_already_enforced` is a normal answer for
+                        -- something Open77 blocks anyway. Neither is fatal; the
+                        -- caller is told through `state()`.
+                        count = 0
+                        warn("block " .. action .. " refused (" .. tostring(reason) .. ")")
+                    end
+                elseif count == 0 and (blockCounts[action] or 0) > 0 then
+                    Open77.input.setActionBlocked(action, false)
                 end
-            elseif count == 0 and (blockCounts[action] or 0) > 0 then
-                Open77.input.setActionBlocked(action, false)
+                blockCounts[action] = count
             end
-            blockCounts[action] = count
         end
     end
 end
@@ -535,10 +541,25 @@ local function normalizeText(definition)
     if definition.eyebrow ~= nil and not validText(definition.eyebrow, 24, true) then
         return nil, "invalid_eyebrow"
     end
+    -- Up to three key + label pairs under the text ("Y Accept  N Decline"). They only draw the keys:
+    -- the owner binds them (Open77.input.registerKeyMapping), as it does for `key`.
+    local actions
+    if definition.actions ~= nil then
+        if type(definition.actions) ~= "table" or #definition.actions < 1 or #definition.actions > 3 then
+            return nil, "invalid_actions"
+        end
+        actions = {}
+        for index, action in ipairs(definition.actions) do
+            if type(action) ~= "table" or not validText(action.key, 8, false) or not validText(action.label, 24, false) then
+                return nil, "invalid_actions"
+            end
+            actions[index] = { key = action.key, label = action.label }
+        end
+    end
     return {
         text = text, position = position, color = color,
         key = definition.key or "", icon = definition.icon or "",
-        eyebrow = definition.eyebrow,
+        eyebrow = definition.eyebrow, actions = actions,
     }
 end
 

@@ -54,6 +54,11 @@ local FURNITURE = {
     { flags = 32, poses = { { gid = "1008", x = 1.5, y = 1.5, z = 0, yaw = 0, kind = "chair", profile = "seated" } } },
     -- I: a measured wall lean.
     { poses = { { gid = "1009", x = -1, y = 2.5, z = 0, yaw = 180, kind = "lean_wall", profile = "lean" } } },
+    -- J: the measured bed resource (lie, arrival 1.0, approach "player"), away from the rest.
+    { poses = { { gid = "2001", x = -10, y = -10, z = 0, yaw = 90, kind = "bed", profile = "lie", arrival = 1.0 } } },
+    -- K: an unverified bed 5 m from J.
+    { poses = { { gid = "2002", x = -15, y = -10, z = 0, yaw = 90, kind = "bed", profile = "lie",
+        verification = "unverified" } } },
 }
 
 local function world()
@@ -68,7 +73,7 @@ local function world()
     core.version, core.versionCheckedAt, core.pedestrians = nil, -math.huge, "unknown"
     core.trace = true
     config.verification, config.exitMode, config.buckets = { measured = true }, "approach", nil
-    config.postures = { sit = true, lean = true }
+    config.postures = M.config().postures
     F.running = { open77_furniture = true, open77_actions = true, open77_pedestrians = true }
     F.installFurniture(FURNITURE, VERSION)
     F.installActions()
@@ -91,6 +96,10 @@ local function seated(pid) return core.byPlayer[pid] ~= nil and core.byPlayer[pi
 local function released()
     return next(core.byPlayer) == nil and next(core.groups) == nil and F.claims:count() == 0 and F.guard:count() == 0
 end
+
+-- The convar default (open77_seating_postures unset, "all") offers every posture, lying included.
+check(config.postures.sit == true and config.postures.lean == true and config.postures.lie == true,
+    "open77_seating_postures defaults to sit, lean and lie")
 
 -- ---------------------------------------------------------------------------
 -- The happy path
@@ -156,6 +165,77 @@ run("the barstool plays its promoted twin with arrivalRadius 1.0 and approaches 
     -- yaw 90 faces -X: behind is +X.
     local tp = F.teleports[1]
     check(tp and math.abs(tp.position.x - 4.2) < 1e-9 and math.abs(tp.position.y) < 1e-9, "approach behind the stool")
+end)
+
+run("lying is offered by default on the measured bed: prompt, intent, /sit, export", function()
+    world()
+    check(M.config().postures.lie == true and config.postures.lie == true, "lie is a default posture")
+    F.players[1].position = { x = -10, y = -9, z = 0 }
+    F.advance(300)
+    local seats = F.lastClient("open77:seating:seats", 1)
+    local bed = seats and seats.payload.seats[1]
+    check(bed and #seats.payload.seats == 1 and bed.id == "2001", "only the measured bed is offered: "
+        .. tostring(bed and bed.id))
+    check(bed and bed.label == "Lie down on the bed" and bed.posture == "lie" and bed.position.z == 0.6,
+        "a lie prompt: " .. tostring(bed and bed.label))
+    -- The prompt's intent: lies from where the player stands (approach "player"), arrival radius 1.0.
+    F.net("open77:seating:sit", 1, "2001")
+    local session = core.byPlayer[1]
+    check(seated(1) and session.posture == "lie" and session.kind == "bed", "lying on the bed")
+    check(#F.teleports == 0 and session.approach == nil and session.approachRule == "player", "no approach move")
+    local play = F.anim("playAt")[1]
+    check(play and play.profile == "lie" and play.options.arrivalRadius == 1.0 and play.yaw == 90,
+        "playAt lie with arrivalRadius 1.0")
+    local state = F.lastClient("open77:seating:state", 1)
+    check(state and state.payload.label == "Lie down on the bed" and state.payload.posture == "lie", "client told")
+    check(F.claims:holder(0, claimKey("2001")) ~= nil and F.guard:count() == 1, "claimed and held like a seat")
+    -- One body per bed.
+    F.player(3, -10.5, -9, 0)
+    F.net("open77:seating:sit", 3, "2001")
+    check(refusedReason(3) == "seat_taken", "a second player is refused")
+    -- Getting up: the body is put back where the player stood when asking.
+    F.players[1].position = { x = -10, y = -10.2, z = 0.4 }
+    F.net("open77:seating:stand", 1)
+    check(released(), "released")
+    F.advance(1600)
+    local back = F.teleports[1]
+    check(back and back.position.x == -10 and back.position.y == -9, "exit to the origin")
+    -- /sit and the export reach it too.
+    F.advance(1100)
+    F.players[1].position = { x = -10, y = -9, z = 0 }
+    F.command("sit", 1, {})
+    check(seated(1) and core.byPlayer[1].furnitureId == "2001", "/sit lies on the nearest bed")
+    F.call("rp_motel", "stand", 1)
+    F.advance(1600)
+    local seat = F.call("rp_motel", "sit", 1, "2001", { exit = "none" })
+    check(seat and seat.posture == "lie" and seat.profile == "lie", "export sit")
+end)
+
+run("lying keeps the verification and posture filters", function()
+    world()
+    -- The unverified bed is neither prompted nor taken by default.
+    F.players[1].position = { x = -15, y = -9, z = 0 }
+    F.advance(300)
+    local seats = F.lastClient("open77:seating:seats", 1)
+    check(seats == nil or #seats.payload.seats == 0, "no prompt for an unverified bed")
+    F.net("open77:seating:sit", 1, "2002")
+    check(refusedReason(1) == "no_playable_pose" and core.byPlayer[1] == nil, "unverified bed refused")
+    F.advance(1100)
+    F.command("sit", 1, {})
+    check(refusedReason(1) == "no_playable_pose" and core.byPlayer[1] == nil, "/sit does not take it either")
+    config.verification = { measured = true, unverified = true }
+    F.advance(3500)
+    seats = F.lastClient("open77:seating:seats", 1)
+    check(seats and #seats.payload.seats == 1 and seats.payload.seats[1].id == "2002", "offered once allowed")
+    -- An operator who turns lying off (open77_seating_postures sit,lean).
+    world()
+    config.postures = { sit = true, lean = true }
+    F.players[1].position = { x = -10, y = -9, z = 0 }
+    F.advance(300)
+    seats = F.lastClient("open77:seating:seats", 1)
+    check(seats == nil or #seats.payload.seats == 0, "no lie prompt when lying is off")
+    F.net("open77:seating:sit", 1, "2001")
+    check(refusedReason(1) == "no_playable_pose", "lie refused when lying is off")
 end)
 
 -- ---------------------------------------------------------------------------

@@ -52,6 +52,14 @@ local declaration = {
     writers = { value = "*", type = "string", apply = "live", label = "Writers", group = "Policy", order = 10,
         description = "* or a list of resources allowed to mutate, e.g. rp_inventory, rp_economy:cash+bank+soc" },
 }
+-- A text tunable holds at most 256 characters, and a server running the whole RP pack lists more
+-- writers than that: writers2..writers4 continue the list (joined with `writers`, same syntax).
+local WRITER_SLOTS = 4
+for i = 2, WRITER_SLOTS do
+    declaration["writers" .. i] = { value = "", type = "string", apply = "live", label = "Writers " .. i,
+        group = "Policy", order = 10,
+        description = "more entries for the writers list when it does not fit in one field (ignored while writers is *)" }
+end
 local MINT_SLOTS = 6
 for i = 1, MINT_SLOTS do
     declaration["mint" .. i] = { value = "", type = "string", apply = "live", label = "Mint rules " .. i,
@@ -61,8 +69,18 @@ end
 local tune = Open77.tunables.declare(declaration)
 
 local policy = Policy.new()
+local function writersList()
+    local first = tostring(tune.writers or "*")
+    if first:match("^%s*%*%s*$") then return "*" end
+    local parts = { first }
+    for i = 2, WRITER_SLOTS do
+        local more = tostring(tune["writers" .. i] or "")
+        if more:match("%S") then parts[#parts + 1] = more end
+    end
+    return table.concat(parts, ", ")
+end
 local function applyPolicy()
-    local writerProblems = policy:setWriters(tune.writers)
+    local writerProblems = policy:setWriters(writersList())
     local rules = {}
     for i = 1, MINT_SLOTS do rules[i] = tune["mint" .. i] end
     local ruleProblems = policy:setRules(rules)
@@ -72,7 +90,7 @@ end
 applyPolicy()
 
 AddEventHandler("onTunableChanged", function(key)
-    if key == "writers" or tostring(key):match("^mint%d$") then
+    if tostring(key):match("^writers%d?$") or tostring(key):match("^mint%d$") then
         applyPolicy()
         log("INF", "policy reloaded after a change to " .. tostring(key))
     elseif key == "store" or key == "serverTag" or key == "preloadWorld" then

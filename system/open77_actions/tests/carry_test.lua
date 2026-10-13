@@ -130,6 +130,20 @@ run("place: owned prop plus a pickup prompt in the bucket", function()
     check(push and push.payload.upsert[1].key == "item:" .. id, "pickup prompt pushed")
     check(push.payload.upsert[1].choices[1].action == "open77_actions:carry_pickup", "prompt offers the pickup")
     check(push.payload.upsert[1].requires == "empty", "prompt only for empty hands")
+    check(math.abs(push.payload.upsert[1].promptHeight - 0.7) < 1e-9, "the card sits just above the item, not at eye level")
+    check(push.payload.upsert[1].position.z == item.position.z, "the target stands on the item's base, where the server measures")
+end)
+
+run("place: a kind moves its pickup card", function()
+    world()
+    kind({ promptHeight = 0.6 })
+    local id = place()
+    local push = F.lastClient("open77:actions:targets", 1)
+    check(push and push.payload.upsert[1].key == "item:" .. id and math.abs(push.payload.upsert[1].promptHeight - 1.1) < 1e-9,
+        "the kind's promptHeight reaches the prompt")
+    local bad = F.call(JOB, "carryDefine", { id = "tall", model = "crate.small", promptHeight = 9 })
+    check(bad == nil, "a card above 2 m is refused")
+    kind()
 end)
 
 run("pickup: grip marker attaches, commit starts the session, the pose continues", function()
@@ -160,8 +174,9 @@ run("pickup: grip marker attaches, commit starts the session, the pose continues
     check(E.claims:count() == 1, "the item stays claimed while carried")
     local carryMsg = F.lastClient("open77:actions:carry", 1)
     check(carryMsg and carryMsg.payload.itemId == id and carryMsg.payload.claims.walkSpeed == 1.2 and
-        carryMsg.payload.claims.jump == true and carryMsg.payload.claims.attack == true,
-        "client told: walk mode, no jump, no attack")
+        carryMsg.payload.claims.jump == true and carryMsg.payload.claims.attack == true and
+        carryMsg.payload.claims.sprint == true,
+        "client told: walk mode, no jump, no attack, no sprint")
     local pub = F.call(JOB, "carrying", 1)
     check(pub and pub.itemId == id and pub.carrier == 1, "carrying() export")
     F.players[1].position = { x = 30, y = 0, z = 0 }
@@ -282,6 +297,23 @@ run("destination checks", function()
     check(session(1) ~= nil, "refusals leave the carry intact")
 end)
 
+-- Live 2026-10-13: a put-down refused `no_access` by its owner reached the carrier as nothing at
+-- all; the kind's `messages` now ride on its pickup and put-down actions.
+run("a refused putdown carries the kind's own words", function()
+    world()
+    kind({ messages = { no_access = "You hold no key for that truck." } })
+    local id = place()
+    pickUp(1, id)
+    behaviour.putdown = function() return nil, "no_access" end
+    F.net("open77:actions:putdown", 1)
+    F.advance(releaseMs() + 200)
+    local ended = F.lastClient("open77:actions:end", 1)
+    local payload = ended and ended.payload or {}
+    check(payload.state == "failed" and payload.reason == "no_access", "putdown failed no_access")
+    check(payload.message == "You hold no key for that truck.", "the kind's words reach the carrier")
+    check(session(1) ~= nil, "still carrying")
+end)
+
 run("refused putdown resumes the carry (custody unchanged)", function()
     world()
     local id = place()
@@ -300,6 +332,22 @@ run("refused putdown resumes the carry (custody unchanged)", function()
     F.net("open77:actions:putdown", 1)
     F.advance(putdownMs() + 200)
     check(session(1) == nil and C.items[id].state == "ground", "second attempt puts it down")
+end)
+
+run("pickup refused with a weapon drawn (fists included): weapon_drawn, nothing moves", function()
+    world()
+    local id = place()
+    F.players[1].flags.weaponValid, F.players[1].flags.weaponEquipped = true, true
+    F.net("open77:actions:intent", 1, "open77_actions:carry_pickup", "item:" .. id)
+    F.advance(pickupMs() + 200)
+    check(session(1) == nil and C.items[id].state == "ground", "not carried")
+    check(#calls.pickup == 0, "no pickup hook")
+    local refused = F.lastClient("open77:actions:refused", 1) or F.lastClient("open77:actions:end", 1)
+    check(refused and refused.payload.reason == "weapon_drawn", "told weapon_drawn (got " ..
+        tostring(refused and refused.payload.reason) .. ")")
+    F.players[1].flags.weaponEquipped = false
+    pickUp(1, id)
+    check(session(1) ~= nil, "picked up once the weapon is away")
 end)
 
 run("refused pickup: custody unchanged, item back where it was", function()
@@ -365,6 +413,9 @@ local function dropCase(name, expected, trigger)
         check(#calls.putdown == 0, name .. ": custody unchanged (no putdown commit)")
         local clear = F.lastClient("open77:actions:carry", 1)
         check(name == "disconnect" or (clear and clear.payload.itemId == false), name .. ": client claims released")
+        -- The carrier's client is told why, so it can say it in words (the item fell out of view).
+        check(name == "disconnect" or (clear and clear.payload.dropped == expected and clear.payload.label == "crate"),
+            name .. ": the client learns the drop and its reason")
     end)
 end
 
@@ -385,6 +436,43 @@ dropCase("carry pose interrupted", "animation_interrupted", function()
     F.animEnded(1, C.sessions[1].playbackId, "interrupted")
 end)
 dropCase("seated in a vehicle (sweep)", "vehicle", function() F.players[1].inVehicle = true end)
+
+-- Measured 2026-10-12: a punch while carrying (unarmed melee cannot be blocked on 2.31) dropped the
+-- crate; a drop in the middle of a jump must land on the ground the carrier last stood on.
+run("drop in the air: on the last ground, not where the carrier hangs", function()
+    world()
+    local id = place()
+    pickUp(1, id)
+    F.players[1].position = { x = 5, y = 5, z = 10 }
+    F.players[1].flags.animationValid, F.players[1].flags.grounded = true, true
+    F.advance(300)
+    F.players[1].position = { x = 5, y = 5, z = 10.8 }
+    F.players[1].flags.grounded = false
+    F.animEnded(1, C.sessions[1].playbackId, "interrupted")
+    F.advance(200)
+    local prop = C.items[id] and F.props[C.items[id].propId]
+    check(prop and math.abs(prop.position.z - 10) < 0.01, "on the ground it left (got " ..
+        tostring(prop and prop.position.z) .. ")")
+end)
+
+run("dropMessage: false leaves the words to the owner, a string rewords", function()
+    world()
+    kind({ dropMessage = false })
+    local id = place()
+    pickUp(1, id)
+    F.animEnded(1, C.sessions[1].playbackId, "interrupted")
+    F.advance(200)
+    local clear = F.lastClient("open77:actions:carry", 1)
+    check(clear and clear.payload.dropped == "animation_interrupted" and clear.payload.message == false,
+        "silenced by the kind")
+    kind({ dropMessage = "Your %s hit the dirt." })
+    id = place()
+    pickUp(1, id)
+    F.animEnded(1, C.sessions[1].playbackId, "interrupted")
+    F.advance(200)
+    clear = F.lastClient("open77:actions:carry", 1)
+    check(clear and clear.payload.message == "Your %s hit the dirt.", "reworded by the kind")
+end)
 
 -- Measured 2026-10-12: a Warden teleport ends the hold pose with `player_unavailable` while
 -- the carrier stays connected. The carry must survive the move, not drop as "disconnected".

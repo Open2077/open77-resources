@@ -45,7 +45,7 @@ M.REASONS = {
     -- actor state, re-derived on the server
     "player_unavailable", "player_not_ready", "player_not_alive", "player_in_vehicle",
     "position_unavailable", "position_stale", "wrong_bucket", "too_far", "in_combat",
-    "actor_busy", "carrying", "not_carrying",
+    "actor_busy", "carrying", "not_carrying", "weapon_drawn",
     -- shared targets
     "target_claimed", "claim_lost", "item_unavailable", "destination_invalid",
     "destination_too_far", "destination_claimed", "vehicle_unavailable",
@@ -243,7 +243,8 @@ end
 
 local function normalizeClaims(value, default)
     -- Client-side control claims for the duration of the presentation.
-    -- `move`: block Movement; `attack`: block Attack; `jump`: block jumping;
+    -- `move`: block Movement; `attack`: block Attack and Melee; `jump`: block jumping;
+    -- `sprint`: block Sprint (walk mode alone lets the player sprint out of its pace);
     -- `walkSpeed`: hold the walk-mode lease at that speed (m/s).
     if value == false then return {} end
     value = value or default or {}
@@ -252,6 +253,7 @@ local function normalizeClaims(value, default)
     if value.move ~= nil then out.move = value.move == true end
     if value.attack ~= nil then out.attack = value.attack == true end
     if value.jump ~= nil then out.jump = value.jump == true end
+    if value.sprint ~= nil then out.sprint = value.sprint == true end
     if value.walkSpeed ~= nil then
         out.walkSpeed = M.number(value.walkSpeed, 0.5, 2.5, nil)
         if out.walkSpeed == nil then return nil end
@@ -357,7 +359,31 @@ function M.normalizeAction(def, internal)
     a.epochs = M.normalizeEpochs(def.epochs or def.epoch)
     if a.eligibility == nil or a.epochs == nil then return nil, "invalid_definition" end
     a.data = M.copyData(def.data, 1024)
+    -- What the player reads when this action is refused or stops: a reason token -> plain text shown
+    -- instead of the library's default, or false to show nothing (the owner tells the player itself).
+    if def.messages ~= nil then
+        if type(def.messages) ~= "table" then return nil, "invalid_definition" end
+        local messages, n = {}, 0
+        for reason, text in pairs(def.messages) do
+            n = n + 1
+            if n > 96 or M.token(reason, nil) == nil then return nil, "invalid_definition" end
+            if text == false then
+                messages[reason] = false
+            elseif type(text) == "string" and #text >= 1 and #text <= 200 and not text:find("%c") then
+                messages[reason] = text
+            else
+                return nil, "invalid_definition"
+            end
+        end
+        a.messages = messages
+    end
     return a
+end
+
+-- The action's own text for a reason: a string, false (show nothing) or nil (the default text).
+function M.messageFor(action, reason)
+    if type(action) ~= "table" or type(action.messages) ~= "table" then return nil end
+    return action.messages[reason]
 end
 
 -- ---------------------------------------------------------------------------
@@ -422,6 +448,13 @@ end
 -- open77_worldui default (`labelHeight` 1.0), the shape of the rp_ferrailleur
 -- prompt that fired by key live on 2026-10-12.
 M.PROMPT_HEIGHT = 1.0
+-- An action that places its actor ON a target's stand point (animation `at = "target"`) is refused
+-- while another player stands within this many metres of it (planar, and within SPOT_HEIGHT up or
+-- down). Measured live 2026-10-13: a second operator placed on the CHOOH2 control while the first
+-- still stood there landed on top of her (settled 0.95 m up) and fell when she left. 0.45 m is
+-- inside a body's capsule; a neighbour half a metre off the point (a helper beside a bench) is not.
+M.SPOT_RADIUS = 0.45
+M.SPOT_HEIGHT = 2.0
 
 function M.normalizeTarget(def)
     if type(def) ~= "table" then return nil, "invalid_target" end
@@ -450,6 +483,15 @@ function M.normalizeTarget(def)
         -- packed closer than their reach. See client/main.lua promptDefinition.
         promptHeight = M.number(def.promptHeight, 0.0, 3.0, M.PROMPT_HEIGHT),
         lookAt = def.lookAt == true,
+        -- Where the card is drawn when it is not the stand point (then lifted `promptHeight` above
+        -- it): a ripperdoc's station shows its card over the patient, in front of the ripperdoc,
+        -- instead of at their own feet where it is off screen. At most 3 m from `position`.
+        promptAt = def.promptAt ~= nil and M.vector(def.promptAt) or nil,
+        -- Keep the crowd's pedestrians off this point for as long as the target exists (an
+        -- open77_pedestrians hold, refreshed): a bench or a counter set on a game workspot then is
+        -- not shared with an NPC. `true` = 0.8 m, or a radius 0.3-1.5 m.
+        keepCrowdOff = def.keepCrowdOff == true and 0.8 or (type(def.keepCrowdOff) == "number" and
+            M.number(def.keepCrowdOff, 0.3, 1.5, nil) or nil),
         -- Per-spot `playAt` arrival radius (0.5-1.5); an action's own wins.
         arrivalRadius = def.arrivalRadius ~= nil and M.number(def.arrivalRadius, 0.5, 1.5, nil) or nil,
         actions = {},
@@ -457,7 +499,26 @@ function M.normalizeTarget(def)
     }
     if t.distance == nil or t.markerDistance == nil or t.promptHeight == nil then return nil, "invalid_target" end
     if def.lookAt ~= nil and type(def.lookAt) ~= "boolean" then return nil, "invalid_target" end
+    if def.keepCrowdOff ~= nil and def.keepCrowdOff ~= false and t.keepCrowdOff == nil then return nil, "invalid_target" end
+    if def.promptAt ~= nil then
+        local p = t.promptAt
+        if p == nil then return nil, "invalid_target" end
+        local dx, dy, dz = p.x - position.x, p.y - position.y, p.z - position.z
+        if dx * dx + dy * dy + dz * dz > 9.0 then return nil, "invalid_target" end
+    end
     if def.arrivalRadius ~= nil and t.arrivalRadius == nil then return nil, "invalid_target" end
+    -- Players who are not shown the card (at most 8 ids). Presentation only: an intent from one of
+    -- them is still judged by the action's own rules. A downed patient is not offered the medic's
+    -- "Stabilise" card over their own body.
+    if def.hideFor ~= nil then
+        if type(def.hideFor) ~= "table" or #def.hideFor > 8 then return nil, "invalid_target" end
+        t.hideFor = {}
+        for _, id in ipairs(def.hideFor) do
+            local pid = M.integer(id, 1, 9007199254740991, nil)
+            if pid == nil then return nil, "invalid_target" end
+            t.hideFor[#t.hideFor + 1] = pid
+        end
+    end
     local actions = def.actions
     if type(actions) == "string" then actions = { actions } end
     if type(actions) ~= "table" or #actions < 1 or #actions > 4 then return nil, "invalid_target" end
@@ -484,25 +545,56 @@ end
 -- ---------------------------------------------------------------------------
 -- The default binding is the one measured on both clients with the `carry`
 -- layer (integrator, 2026-10-12; wiki/rp-animations.md "Carrying a box"):
--- Chest slot, hands midpoint, first-person placement low in the view. It was
--- tuned for `crate.small` (about 1.2 m tall); any other model needs its own
--- offsets.
+-- Chest slot, hands midpoint. It was tuned for `crate.small` (about 1.2 m
+-- tall); a model listed in M.MODEL_BINDINGS gets its own, any other model
+-- needs its own offsets.
+--
+-- First person: the Chest slot does not follow the view's pitch while V's
+-- first-person hands do, so a crate placed ahead of the chest floated in the
+-- middle of the screen as soon as the player looked down (owner's report,
+-- 2026-10-13). Both placements below were measured in game with the camera
+-- level and pitched 30 degrees down: the crate rests across the hands at the
+-- bottom of the view when looking down, and only its top edge shows when
+-- looking ahead, like a box held against the chest.
 M.DEFAULT_BINDING = {
     bone = "Chest",
     offset = { x = -0.135, y = -0.60, z = 0.008 },
     rotation = { x = 0.0, y = 90.0, z = 0.0 },
-    firstPerson = { offset = { x = -0.485, y = -0.75, z = 0.008 }, rotation = { x = 0.0, y = 90.0, z = 0.0 } },
+    firstPerson = { offset = { x = 0.10, y = -0.40, z = -0.40 }, rotation = { x = 0.0, y = 90.0, z = 90.0 } },
 }
+
+-- Measured bindings per model, used when a carry kind gives none (or leaves a
+-- field out). `crate.ammo_box` is the hand-scale box every RP job carries: it
+-- sits on the forearms against the chest in third person (measured with
+-- actions.lab.bind, 2026-10-12) and lies flat between the hands in first
+-- person (2026-10-13).
+M.MODEL_BINDINGS = {
+    ["crate.small"] = M.DEFAULT_BINDING,
+    ["crate.ammo_box"] = {
+        bone = "Chest",
+        offset = { x = -0.12, y = -0.42, z = -0.22 },
+        rotation = { x = 0.0, y = 90.0, z = 0.0 },
+        firstPerson = { offset = { x = 0.08, y = -0.32, z = -0.28 }, rotation = { x = 90.0, y = 0.0, z = 0.0 } },
+    },
+}
+
+-- A carry kind's dropMessage: false (silence), a string (at most 200 characters) or nil.
+function M.dropMessage(value)
+    if value == false then return false end
+    if type(value) == "string" then return value:sub(1, 200) end
+    return nil
+end
 
 local CARRY_HOOKS = { validate = true, pickup = true, putdown = true, dropped = true, cancel = true }
 
-local function normalizeBinding(value)
-    if value == nil then return M.DEFAULT_BINDING end
+local function normalizeBinding(value, model)
+    local base = (model ~= nil and M.MODEL_BINDINGS[model]) or M.DEFAULT_BINDING
+    if value == nil then return base end
     if type(value) ~= "table" then return nil end
-    local bone = value.bone or M.DEFAULT_BINDING.bone
+    local bone = value.bone or base.bone
     if type(bone) ~= "string" or #bone > 64 or (bone ~= "" and not bone:match("^[%w_%-]+$")) then return nil end
-    local offset = value.offset == nil and M.DEFAULT_BINDING.offset or M.vector(value.offset)
-    local rotation = value.rotation == nil and M.DEFAULT_BINDING.rotation or M.vector(value.rotation)
+    local offset = value.offset == nil and base.offset or M.vector(value.offset)
+    local rotation = value.rotation == nil and base.rotation or M.vector(value.rotation)
     if offset == nil or rotation == nil then return nil end
     local firstPerson
     if value.firstPerson == "hide" then
@@ -510,7 +602,7 @@ local function normalizeBinding(value)
     elseif value.firstPerson == false then
         firstPerson = nil
     elseif value.firstPerson == nil then
-        firstPerson = M.DEFAULT_BINDING.firstPerson
+        firstPerson = base.firstPerson
     elseif type(value.firstPerson) == "table" then
         local fo, fr = M.vector(value.firstPerson.offset), M.vector(value.firstPerson.rotation or { 0, 0, 0 })
         if fo == nil or fr == nil then return nil end
@@ -543,8 +635,18 @@ function M.normalizeCarryKind(def, internal)
         releaseMs = M.integer(def.releaseMs, 0, 10000, nil),
         vehicleReach = M.number(def.vehicleReach, 1.0, 8.0, 4.0),
         dropAhead = M.number(def.dropAhead, 0.0, 2.0, 0.7),
-        claims = normalizeClaims(def.claims, { walkSpeed = 1.2, jump = true, attack = true }),
-        binding = normalizeBinding(def.binding),
+        -- The pickup card sits this far above the item's top (its position + 0.5 m). Measured live
+        -- 2026-10-13: with the 1.0 m stand-point lift the card hung 1.5 m above a crate on the ground,
+        -- at eye level, so whoever stood over the crate and looked down at it saw no card at all.
+        promptHeight = M.number(def.promptHeight, 0.0, 2.0, 0.2),
+        -- What the carrier reads when the item leaves their hands without a put-down (a punch, a
+        -- vehicle, a teleport): nil = the library's words, a string = yours ("%s" is the label),
+        -- false = nothing (the owning resource tells the player itself).
+        dropMessage = M.dropMessage(def.dropMessage),
+        -- `sprint`: measured 2026-10-12, Shift+forward while carrying covered 31 m in
+        -- 4 s -- walk mode caps the pace, never the sprint.
+        claims = normalizeClaims(def.claims, { walkSpeed = 1.2, jump = true, attack = true, sprint = true }),
+        binding = normalizeBinding(def.binding, def.model),
         cancelOn = {
             combat = not (type(def.cancelOn) == "table" and def.cancelOn.combat == false),
             weaponDrawn = not (type(def.cancelOn) == "table" and def.cancelOn.weaponDrawn == false),
@@ -553,12 +655,17 @@ function M.normalizeCarryKind(def, internal)
         hooks = {},
         eligibility = def.eligibility,
         epochs = def.epochs or def.epoch,
+        -- The owner's words for a refused pickup or put-down (reason -> text, or false), the same
+        -- table an action takes. Live 2026-10-13: a crate loaded into a truck the carrier held no
+        -- key for was refused `no_access` at the commit, and the carrier read nothing at all.
+        messages = def.messages,
         data = M.copyData(def.data, 1024),
     }
     if M.normalizeEligibility(k.eligibility) == nil or M.normalizeEpochs(k.epochs) == nil then
         return nil, "invalid_definition"
     end
-    if k.reach == nil or k.vehicleReach == nil or k.dropAhead == nil or k.claims == nil or k.binding == nil then
+    if k.reach == nil or k.vehicleReach == nil or k.dropAhead == nil or k.claims == nil or k.binding == nil
+            or k.promptHeight == nil then
         return nil, "invalid_definition"
     end
     if def.hooks ~= nil then

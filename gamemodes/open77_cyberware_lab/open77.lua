@@ -4,6 +4,7 @@ open77_version ">=0.0.1"
 auto_start false
 reload_policy "reconnect"
 server_script "server/config.lua"
+server_script "server/authority.lua"
 server_script "server/jackets.lua"
 server_script "server/load.lua"
 server_script "server/main.lua"
@@ -20,7 +21,7 @@ client_script "client/panel.lua"
 web_ui_page "web/index.html"
 web_ui_auto_create false
 web_files { "web/**" }
-permissions { "local.events", "combat.config", "players.life.read", "players.life.control", "players.life.revive", "players.life.kill", "network.events", "world.effects",
+permissions { "acl.read", "local.events", "combat.config", "players.life.read", "players.life.control", "players.life.revive", "players.life.kill", "network.events", "world.effects",
     "player.cyberware.read", "player.cyberware.project", "players.cyberware.define",
     "players.cyberware.read", "players.cyberware.manage", "players.damage.read", "players.damage.apply", "players.motion.control", "players.motion.read",
     "players.stats.read", "players.stats.apply", "players.abilities.define", "players.abilities.manage", "players.abilities.read", "players.dash.define", "players.dash.manage", "players.dash.read",

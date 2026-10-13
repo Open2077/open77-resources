@@ -222,6 +222,14 @@ function Engine:addTarget(owner, generation, def, internalKey)
     end
     self.targets[key] = target
     self:noteOwner(owner, generation)
+    if existing and existing.keepCrowdOff and (not target.keepCrowdOff or existing.bucket ~= target.bucket) and
+        self.P.crowdRelease then
+        self.P.crowdRelease(existing.bucket, "act:" .. key)
+    end
+    if target.keepCrowdOff and self.P.crowdHold then
+        target.crowdHeld = self.P.crowdHold(target.bucket, "act:" .. key, target.position, target.keepCrowdOff)
+        target.crowdAt = self.P.now()
+    end
     if existing and existing.bucket ~= target.bucket then self.P.pushTargets(existing.bucket, nil, { key }) end
     self.P.pushTargets(target.bucket, { target }, nil)
     return key
@@ -232,6 +240,7 @@ function Engine:removeTarget(key)
     if target == nil then return false end
     self.targets[key] = nil
     self.targetCount = self.targetCount - 1
+    if target.keepCrowdOff and self.P.crowdRelease then self.P.crowdRelease(target.bucket, "act:" .. key) end
     if not target.internal then counts(self, target.owner).targets = counts(self, target.owner).targets - 1 end
     self.P.pushTargets(target.bucket, nil, { key })
     return true
@@ -387,6 +396,26 @@ function Engine:checkActor(op, read, phase)
         if d == nil or d > limit then return "too_far" end
     end
     return nil
+end
+
+-- A placed action (animation `at = "target"`) puts the actor on the target's stand point: refused
+-- while somebody else stands there, or the actor would be placed on top of them. Someone working
+-- this very target is left to the claim stage, whose `target_claimed` says more (an owner may claim
+-- under its own key). A player held in a placed action of another target (a patient lying in the
+-- chair beside the ripperdoc's station, 0.7 m away) is anchored to that target's own measured
+-- point and does not block.
+function Engine:checkSpot(op)
+    local an, target = op.action.animation, op.target
+    if an == nil or an.at ~= "target" or target == nil or self.P.playersNear == nil then return nil end
+    local near = self.P.playersNear(target.bucket, target.position, M.SPOT_RADIUS, M.SPOT_HEIGHT, op.playerId)
+    local blocked = false
+    for _, pid in ipairs(type(near) == "table" and near or {}) do
+        local other = self.active[pid]
+        local otherTarget = other ~= nil and other.target or nil
+        if otherTarget ~= nil and otherTarget.key == target.key then return nil end
+        if not (other ~= nil and other.placed and otherTarget ~= nil) then blocked = true end
+    end
+    return blocked and "spot_taken" or nil
 end
 
 -- Eligibility providers (rp_jobs:eligible and the like): synchronous exports
@@ -580,6 +609,8 @@ function Engine:start(spec)
         end
     end
     if bad == nil then bad = self:runValidateHook(op, "begin") end
+    -- After the job, duty and the owner's own checks: those say more than a body on the spot.
+    if bad == nil then bad = self:checkSpot(op) end
     if bad ~= nil then return refusal(bad, "validate") end
 
     -- Claims: the target (or the explicit key) first, then any extras. One
@@ -714,6 +745,7 @@ function Engine:endPresentation(op, reason)
     if op.clientShown then
         self.P.toClient(op.playerId, "open77:actions:end", {
             opId = op.opId, generation = self.P.generation, state = op.state, reason = reason or op.reason,
+            message = M.messageFor(op.action, reason or op.reason),
         })
     end
     if self.active[op.playerId] == op then self.active[op.playerId] = nil end

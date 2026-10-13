@@ -703,6 +703,10 @@ names, exports, refusal tokens and events. The wave-1 suite (§6) fails if any o
   give it a plate- and owner-aware path.
 - **C2:**
   - `rp_nomade` has no persistent cargo or contract to migrate; only `rp_nomade_contracts` history.
+    *Update 2026-10-13 (rp_nomade 2.0, W3-7):* the table is no longer written or read. Runs, crates and
+    payouts live in open77_transactions accounts and the resource kvp (`tally:<run>`); existing rows stay as
+    history. The `session:<id>` identifier and the `nomade:contract:<localId>` society note (section 1.3)
+    no longer occur. `activeContract` is still exported for `rp_crime`.
   - Keep `activeContract`, its only cross-resource API (`rp_crime`).
   - `rp_crime` steals from Nomade cargo without telling `rp_nomade` (sub-audit, verified at
     `rp_crime/server/main.lua:1086-1096`). C2 must close that, or the two economies double-count.
@@ -783,6 +787,12 @@ note, all additive consumers: `FROZEN_SURFACE["rp_economy"]` gained `walletStatu
 read-only HUD exports, consumed by `rp_hud`), `FROZEN_SURFACE["rp_jobs"]` gained `summary` (B4's, now consumed by
 `rp_hud`), and `FROZEN_SURFACE["rp_garage"]` gained `canAccessVehicle` (A9's, consumed by the `rp_inventory`
 panel's read-only cargo view). No schema change.
+
+**W3-4 netrunner contracts (`rp_netrunner` 2.0.0):** the netrunner keeps its durable state in
+`open77_transactions` (the contract board stash `stash:nr.board:contracts`, data shards in the pockets) and
+no longer creates or writes `rp_netrunner_log`. Existing rows stay in the database as a read-only archive;
+nothing reads them (the 1.x `trace` export is gone, traces are rp_ncpd record entries). One frozen value
+changed together with this note: `schema-snapshot.json` lost `rp_netrunner_log`. No table is dropped.
 
 ### 6.3 Wave-1 suite shape
 

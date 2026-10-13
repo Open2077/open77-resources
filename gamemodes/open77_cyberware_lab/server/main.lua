@@ -96,6 +96,21 @@ AddEventHandler("onCyberwareOperationCompleted", function(patient, ticket, encod
     print(("[cyberware lab] completed patient=%s ticket=%s result=%s"):format(patient, ticket, encoded))
 end)
 
+-- Actions whose second argument is the player they act on (or read). The
+-- issuer may run them on themselves; another target needs an operator
+-- (server/authority.lua).
+local TARGETED = {
+    bucket = true, jacket = true, jacketrestore = true, activity = true, activitywatch = true, state = true,
+    install = true, remove = true, installlegs = true, removelegs = true, motion = true, knock = true,
+    motionstop = true, profile = true, capabilities = true, jumpstate = true, action = true, heal = true,
+    kill = true, revive = true, health = true, stats = true, stamina = true, maxhealth = true, godmode = true,
+    staminaRegen = true, fxworld = true, fxevent = true, fxself = true, fxplayer = true, attachplayer = true,
+    soundplayer = true, localprobe = true, armsprobe = true,
+}
+-- Actions on the whole server (friendly fire for everyone, a load batch over
+-- many players): operators only.
+local SERVER_WIDE = { pvp = true, load = true }
+
 RegisterCommand("cyberlab", function(player, args, raw)
     local action, option = args[1], args[2]
     if action == "dash" then
@@ -121,6 +136,16 @@ RegisterCommand("cyberlab", function(player, args, raw)
     if (action == 'fx' or action == 'fxoff' or action == 'armsprobe') and not positivePlayer(player) then
         reply(player, raw, false, 'client_issuer_required')
         return
+    end
+    -- fx and fxoff act on the issuer's own client; effectremove checks the
+    -- effect's target below. A targeted action without a numeric target acts
+    -- on nobody: it answers its usage or positive_player_required.
+    if SERVER_WIDE[action] or (TARGETED[action] and tonumber(option) ~= nil) then
+        local refused = CyberwareLabAuthority.refuse(player, TARGETED[action] and option or nil)
+        if refused then
+            reply(player, raw, false, CyberwareLabAuthority.message(refused))
+            return
+        end
     end
     if action == 'load' then
         local ok, reason = CyberwareLabLoad(player,args)
@@ -288,10 +313,12 @@ RegisterCommand("cyberlab", function(player, args, raw)
                 slot="RightHand", localAnchor="weaponRight", localSlot="right_hand_start", ttlMs=ttl,
             })
             ok = id ~= nil
-            if id then attachedEffects[id] = true; reason = "effect_id=" .. id end
+            if id then attachedEffects[id] = tonumber(option); reason = "effect_id=" .. id end
         end
     elseif action == "effectremove" and type(option) == "string" and option:match("^%d+$") then
+        local refused = attachedEffects[option] and CyberwareLabAuthority.refuse(player, attachedEffects[option])
         if not attachedEffects[option] then ok, reason = false, "effect_not_owned_by_lab"
+        elseif refused then ok, reason = false, CyberwareLabAuthority.message(refused)
         else
             ok, reason = Open77.effects.remove(option)
             if ok or reason == "not_found" then attachedEffects[option] = nil end

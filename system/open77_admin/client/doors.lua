@@ -130,7 +130,6 @@ local function stop(name)
     stopped = true; disable()
 end
 AddEventHandler("onClientResourceStop", stop)
-AddEventHandler("onResourceStop", stop)
 CreateThread(function()
     while not stopped do
         if enabled then

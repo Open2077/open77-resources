@@ -48,6 +48,21 @@ local function parseVerification(value)
     return set
 end
 
+-- Which postures prompts, /sit and the exports offer: a comma list of sit,
+-- lean and lie, or "all" (the default). Lab commands ignore it.
+local function parsePostures(value)
+    local set = {}
+    for posture in tostring(value):gmatch("[^,%s]+") do
+        if posture == "all" then
+            set.sit, set.lean, set.lie = true, true, true
+        elseif posture == "sit" or posture == "lean" or posture == "lie" then
+            set[posture] = true
+        end
+    end
+    if next(set) == nil then return M.config().postures end
+    return set
+end
+
 local function parseBuckets(value)
     if value == nil or value == "" or value == "all" then return nil end
     local set = {}
@@ -60,6 +75,7 @@ end
 
 local config = M.config({
     verification = parseVerification(convar("open77_seating_verification", "measured")),
+    postures = parsePostures(convar("open77_seating_postures", "all")),
     buckets = parseBuckets(convar("open77_seating_buckets", "all")),
 })
 local exitMode = convar("open77_seating_exit", "approach")
@@ -426,11 +442,14 @@ RegisterCommand("seating.status", function()
     local states = {}
     for state in pairs(config.verification) do states[#states + 1] = state end
     table.sort(states)
-    say("STATUS version=%s indexed=%s sessions=%d groups=%d pedestrians=%s verification=%s exit=%s trace=%s "
-            .. "promptRadius=%.1f promptLimit=%d sitRange=%.1f separation=%.2f",
+    local postures = {}
+    for posture, on in pairs(config.postures) do if on then postures[#postures + 1] = posture end end
+    table.sort(postures)
+    say("STATUS version=%s indexed=%s sessions=%d groups=%d pedestrians=%s verification=%s postures=%s exit=%s "
+            .. "trace=%s promptRadius=%.1f promptLimit=%d sitRange=%.1f separation=%.2f",
         tostring(furniture.version), tostring(furniture.indexed), sessions, groups, core.pedestrians,
-        table.concat(states, ","), config.exitMode, tostring(core.trace), config.promptRadius, config.promptLimit,
-        config.sitRange, config.separation)
+        table.concat(states, ","), table.concat(postures, ","), config.exitMode, tostring(core.trace),
+        config.promptRadius, config.promptLimit, config.sitRange, config.separation)
 end, true)
 
 -- seating.near <playerId> [count=5] [radius=5]: the nearest furniture with a

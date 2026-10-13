@@ -32,6 +32,10 @@
 -- (0.18) of the screen centre -- which a point on the floor at the player's
 -- feet is only when the player stares straight down at it.
 --
+-- The same host also replays the carry's control claims (test 11): the
+-- 2026-10-12 live findings that `Attack` alone let an empty-handed carrier
+-- punch -- and drop the crate -- and that walk mode alone let him sprint.
+--
 -- Run from the repository root with a standalone Lua 5.4:
 --   lua resources/system/open77_actions/tests/prompt_test.lua
 -- or through ActionsLuaTests.ClientPromptSuitePasses.
@@ -77,9 +81,9 @@ local function newHost(options)
     local host = {
         now = 0.0, frame = 0, frameSeconds = options.frameSeconds or (1 / 30),
         tasks = {}, vms = {}, order = {}, errors = {}, intents = {}, serverEvents = {}, notices = {},
-        keys = {}, captured = false,
+        keys = {}, captured = false, blocks = {}, jumps = {},
         anchors = {}, nextAnchor = 1,
-        player = { x = 0, y = 0, z = 0 },
+        player = { x = 0, y = 0, z = 0 }, localId = options.localId or 7,
         camera = { yaw = 0, pitch = 0, eye = 1.5, vfov = 50, aspect = 16 / 9 },
     }
 
@@ -262,11 +266,17 @@ local function newHost(options)
             input = {
                 isDown = function(key) return host.keys[key] == true end,
                 isCaptured = function() return host.captured end,
-                setActionBlocked = function() return true end,
+                setActionBlocked = function(action, blocked)
+                    host.blocks[#host.blocks + 1] = { action = action, blocked = blocked }
+                    return true
+                end,
                 registerKeyMapping = function() return true end,
                 keyFor = function() return "G" end,
             },
-            players = { allowJump = function() return true end },
+            players = {
+                allowJump = function(allowed) host.jumps[#host.jumps + 1] = allowed; return true end,
+                localId = function() return host.localId end,
+            },
             movement = { setWalkMode = function() return true end },
             hud = { notify = function(text) host.notices[#host.notices + 1] = text end },
             resource = { generation = function(name) return host.vms[name] and host.vms[name].generation or nil end },
@@ -361,7 +371,7 @@ local function salvageNodeWire(extra, legacy)
         markerDistance = target.markerDistance, marker = target.marker, color = target.color,
         icon = target.icon, requires = target.requires, choices = target.actions,
     }
-    if not legacy then wire.promptHeight, wire.lookAt = target.promptHeight, target.lookAt end
+    if not legacy then wire.promptHeight, wire.lookAt, wire.hideFor = target.promptHeight, target.lookAt, target.hideFor end
     return wire
 end
 
@@ -374,7 +384,7 @@ local function newScene(options)
     host:emit("onClientResourceStart", "open77_actions")
     host:run(1.2)   -- the actions client's first Wait(1000), then its sync
     host:toClient("open77:actions:targets", { generation = 1, reset = true,
-        upsert = { salvageNodeWire(options.target, options.legacy) }, remove = {} })
+        upsert = options.targets or { salvageNodeWire(options.target, options.legacy) }, remove = {} })
     return host
 end
 
@@ -600,7 +610,8 @@ run("promptHeight and lookAt are carried and bounded", function()
         check(target == nil and reason == "invalid_target", "refused: " .. tostring(next(extra)))
     end
     local server = readFile("system/open77_actions/server/main.lua")
-    check(server:find("promptHeight = target.promptHeight, lookAt = target.lookAt", 1, true) ~= nil,
+    check(server:find("promptHeight = target.promptHeight, lookAt = target.lookAt", 1, true) ~= nil and
+        server:find("hideFor = target.hideFor", 1, true) ~= nil,
         "server/main.lua clientTarget sends the prompt fields this suite's wire copy sends")
 end)
 
@@ -619,6 +630,250 @@ run("a long reach still gets a prompt", function()
         check(mine[1].distance <= 25.0 and mine[1].showDistance >= mine[1].distance,
             "reach within the service's bound, marker distance at least the reach")
     end
+end)
+
+-- ---------------------------------------------------------------------------
+-- 11. The carry's control claims. `attack` is "no fighting": Attack (firing)
+--     AND Melee, claimed together and given back together. Measured live
+--     2026-10-12 before the Melee lever existed: an empty-handed carrier
+--     clicked, V drew his fists and punched, the crate fell
+--     (`animation_interrupted`).
+-- ---------------------------------------------------------------------------
+local function lastBlock(host, action)
+    for index = #host.blocks, 1, -1 do
+        if host.blocks[index].action == action then return host.blocks[index].blocked end
+    end
+    return nil
+end
+
+run("a carry claims Attack and Melee together and gives both back", function()
+    local host = newScene()
+    local mark = #host.blocks
+    host:toClient("open77:actions:carry", { generation = 1, itemId = "crate-1", sessionId = "carry-1",
+        label = "Scrap crate", claims = { walkSpeed = 1.2, jump = true, attack = true, sprint = true } })
+    host:run(0.2)
+    check(lastBlock(host, "Attack") == true, "carrying claims Attack")
+    check(lastBlock(host, "Melee") == true, "carrying claims Melee -- a punch drops the crate")
+    check(lastBlock(host, "Sprint") == true, "carrying claims Sprint -- walk mode alone does not cap it")
+    check(lastBlock(host, "Movement") == nil, "a carry leaves walking alone")
+    check(host.jumps[#host.jumps] == false, "carrying takes jumping away")
+    local claimed = #host.blocks - mark
+    check(claimed == 3, ("exactly three action claims on pickup, got %d"):format(claimed))
+
+    host:toClient("open77:actions:carry", { generation = 1, itemId = false, sessionId = "carry-1" })
+    host:run(0.2)
+    check(lastBlock(host, "Attack") == false, "putting down releases Attack")
+    check(lastBlock(host, "Melee") == false, "putting down releases Melee")
+    check(lastBlock(host, "Sprint") == false, "putting down releases Sprint")
+    check(host.jumps[#host.jumps] == true, "and gives jumping back")
+    check(#host.errors == 0, "no VM error: " .. table.concat(host.errors, " | "))
+end)
+
+-- The real pickup order (server/carry.lua startSession, engine.lua
+-- endPresentation): the pickup operation presents, the commit starts the carry
+-- session, then the operation ends. Until 2026-10-12 the end released every
+-- claim, the carry's included, because applyClaims walked `{ current, carry }`
+-- with ipairs and stopped at the nil operation slot.
+run("pickup order: the operation ends, the carry keeps its claims", function()
+    local host = newScene()
+    host:toClient("open77:actions:present", { generation = 1, opId = "act-00000001", claims = { move = true, attack = true } })
+    host:run(0.2)
+    host:toClient("open77:actions:carry", { generation = 1, itemId = "crate-1", sessionId = "act-00000001",
+        label = "Scrap crate", claims = { walkSpeed = 1.2, jump = true, attack = true, sprint = true } })
+    host:run(0.2)
+    local mark = #host.blocks
+    host:toClient("open77:actions:end", { generation = 1, opId = "act-00000001", state = "committed" })
+    host:run(0.2)
+    check(lastBlock(host, "Movement") == false, "the operation's Movement claim ends with it")
+    local touched = false
+    for index = mark + 1, #host.blocks do
+        local row = host.blocks[index]
+        if row.action == "Attack" or row.action == "Melee" or row.action == "Sprint" then touched = true end
+    end
+    check(not touched, "the carry still holds Attack, Melee and Sprint after the operation ends")
+    check(lastBlock(host, "Attack") == true and lastBlock(host, "Melee") == true and
+        lastBlock(host, "Sprint") == true, "Attack, Melee and Sprint stay claimed while carrying")
+    check(host.jumps[#host.jumps] == false, "jumping stays taken while carrying")
+    check(#host.errors == 0, "no VM error: " .. table.concat(host.errors, " | "))
+end)
+
+run("a carry kind claims Sprint by default, and a kind may opt out", function()
+    local kind = M.normalizeCarryKind({ id = "crate", model = "crate.small", label = "Small crate" })
+    check(type(kind) == "table" and type(kind.claims) == "table", "the minimal carry kind normalizes")
+    if type(kind) == "table" and type(kind.claims) == "table" then
+        check(kind.claims.sprint == true and kind.claims.walkSpeed == 1.2 and kind.claims.attack == true and
+            kind.claims.jump == true, "default carry claims: walk 1.2 m/s, no jump, no fighting, no sprint")
+    end
+    local relaxed = M.normalizeCarryKind({ id = "light", model = "crate.cardboard", label = "Light crate",
+        claims = { walkSpeed = 2.0, sprint = false } })
+    check(type(relaxed) == "table" and relaxed.claims.sprint == false, "an explicit sprint = false is kept")
+end)
+
+-- ---------------------------------------------------------------------------
+-- 12. `hideFor`: the listed players get no card and E does nothing for them;
+--     everyone else is offered it as before (live 2026-10-13: a downed patient
+--     saw the medic's "Stabilise the patient" card over her own body).
+-- ---------------------------------------------------------------------------
+run("hideFor hides the card from the listed players only", function()
+    local hidden = newScene({ target = { hideFor = { 7 } }, localId = 7 })
+    stand(hidden, 1.0, -30.0)
+    hidden:run(1.5)
+    local mine = hidden:invoke(hidden.vms.open77_actions, "open77_interactions", "all", table.pack())
+    check(type(mine) == "table" and #mine == 0, "hideFor: no prompt for the listed player")
+    local mark = #hidden.intents
+    hidden:press("E", 0.3)
+    check(#intentsSince(hidden, mark) == 0, "hideFor: E does nothing for the listed player")
+
+    local other = newScene({ target = { hideFor = { 7 } }, localId = 8 })
+    stand(other, 1.0, -30.0)
+    other:run(1.5)
+    mark = #other.intents
+    other:press("E", 0.3)
+    check(#intentsSince(other, mark) == 1, "hideFor: another player still fires")
+
+    local refused = { { hideFor = "7" }, { hideFor = { 0 } }, { hideFor = { 1.5 } },
+        { hideFor = { 1, 2, 3, 4, 5, 6, 7, 8, 9 } } }
+    for _, extra in ipairs(refused) do
+        local def = { id = "a", position = SPOT, actions = { "x" } }
+        for k, v in pairs(extra) do def[k] = v end
+        local target, reason = M.normalizeTarget(def)
+        check(target == nil and reason == "invalid_target", "refused hideFor shape")
+    end
+    check(#hidden.errors == 0 and #other.errors == 0, "no VM error")
+end)
+
+-- 13. A carry kind without a binding gets its model's measured one: crate.ammo_box
+--     (every RP job's crate) used the crate.small binding and floated in first person.
+run("the default binding follows the carried model", function()
+    local box = M.normalizeCarryKind({ id = "box", model = "crate.ammo_box", label = "Box" })
+    local small = M.normalizeCarryKind({ id = "small", model = "crate.small", label = "Small" })
+    local other = M.normalizeCarryKind({ id = "other", model = "crate.cargo", label = "Other" })
+    check(box and box.binding.firstPerson.offset.z == -0.28 and box.binding.offset.y == -0.42,
+        "crate.ammo_box: its own measured binding, both views")
+    check(small and small.binding == M.DEFAULT_BINDING, "crate.small: the default binding")
+    check(other and other.binding == M.DEFAULT_BINDING, "an unlisted model falls back to the default")
+    local partial = M.normalizeCarryKind({ id = "p", model = "crate.ammo_box", label = "P",
+        binding = { offset = { x = 0, y = -0.5, z = 0 } } })
+    check(partial and partial.binding.offset.y == -0.5 and partial.binding.firstPerson.offset.y == -0.32,
+        "a partial binding keeps the model's first-person placement")
+end)
+
+-- ---------------------------------------------------------------------------
+-- 14. Carry items stacked on one point. Live 2026-10-13, two lab clients: two
+--     nomad crates of different runs set down on the same loading point drew
+--     NO "Pick up" card at all, from any distance or angle, while a lone crate
+--     elsewhere drew its card and the server picked either one up from a lab
+--     command; with one of the two gone, the other drew its card again.
+--     The wire is server/carry.lua showTarget's, one target per item.
+--
+--     Before the stack rule this replay already drew the card and fired once,
+--     with TWO prompts registered on the point: the coincident pair works in
+--     the modelled host, so the live loss sits below what this host models
+--     (client/main.lua, the note above `STACK_RADIUS`). What the client now
+--     guarantees is that a stack is never two prompts on one point: ONE prompt
+--     (the smallest item key) carries it, E sends exactly one intent, and the
+--     next item takes the card when the first one leaves.
+-- ---------------------------------------------------------------------------
+local LOADING_POINT = { x = 1788.0, y = 2258.0, z = 180.3 }   -- rp_nomade loading point 2
+
+local function crateWire(itemId, at, label)
+    at = at or LOADING_POINT
+    label = label or "Nomad crate"
+    local target = assert(M.normalizeTarget({
+        id = "item_" .. itemId, position = { x = at.x, y = at.y, z = at.z + 0.5 },
+        bucket = 0, label = label, distance = 2.0, markerDistance = 10.0,
+        marker = "diamond", requires = "empty",
+        actions = { { action = "open77_actions:carry_pickup", label = "Pick up " .. label, key = "E" } },
+    }))
+    target.key = "item:" .. itemId     -- carry.lua: the internal key
+    return {
+        key = target.key, position = target.position, bucket = target.bucket,
+        label = target.label, description = target.description, distance = target.distance,
+        markerDistance = target.markerDistance, marker = target.marker, color = target.color,
+        icon = target.icon, requires = target.requires, choices = target.actions,
+        promptHeight = target.promptHeight, lookAt = target.lookAt, promptAt = target.promptAt,
+        hideFor = target.hideFor,
+    }
+end
+
+local function standNear(host, point, northOf, pitch)
+    host.player = { x = point.x, y = point.y + northOf, z = point.z }
+    host.camera.yaw, host.camera.pitch = 180.0, pitch
+end
+
+local function prompts(host)
+    local mine = host:invoke(host.vms.open77_actions, "open77_interactions", "all", table.pack())
+    return type(mine) == "table" and mine or {}
+end
+
+local function pickUp(host, where)
+    local mark = #host.intents
+    host:press("E", 0.3)
+    local sent = intentsSince(host, mark)
+    check(#sent == 1, where .. ": E sends exactly one intent, sent " .. #sent)
+    check(sent[1] == nil or sent[1].action == "open77_actions:carry_pickup",
+        where .. ": the intent is a pickup, got " .. tostring(sent[1] and sent[1].action))
+    return sent[1] and sent[1].target
+end
+
+run("two items on the same point: one prompt, one card, E picks up exactly one", function()
+    for _, view in ipairs({ { 1.2, -20.0 }, { 0.6, -10.0 }, { 4.0, -10.0 } }) do
+        -- Listed out of key order: the carrier is the smallest key, not the first to arrive.
+        local host = newScene({ targets = { crateWire("it-a1b2-2"), crateWire("it-a1b2-1") } })
+        standNear(host, LOADING_POINT, view[1], view[2])
+        host:run(1.5)
+        local where = ("stacked, %.1f m, pitch %d"):format(view[1], view[2])
+        check(#prompts(host) == 1, where .. ": the stack is one prompt, got " .. #prompts(host))
+        local card = host:card()
+        check(card ~= nil and card.label == "Pick up Nomad crate", where .. ": a card is drawn, got " ..
+            tostring(card and card.label))
+        if view[1] <= 1.5 then
+            check(card ~= nil and card.color == BRIGHT, where .. ": in reach the card is active, got " ..
+                tostring(card and card.color))
+            local picked = pickUp(host, where)
+            check(picked == "item:it-a1b2-1", where .. ": the smallest key carries the stack, got " ..
+                tostring(picked))
+        end
+        check(#host.errors == 0, where .. ": no VM error: " .. table.concat(host.errors, " | "))
+    end
+end)
+
+run("the next item of a stack takes the card when the first one leaves", function()
+    local host = newScene({ targets = { crateWire("it-a1b2-1"), crateWire("it-a1b2-2") } })
+    standNear(host, LOADING_POINT, 1.2, -20.0)
+    host:run(1.5)
+    check(pickUp(host, "first") == "item:it-a1b2-1", "the first E picks up the first item")
+    -- The server took it: carry.lua hideTarget removes its target.
+    host:toClient("open77:actions:targets", { generation = 1, upsert = {}, remove = { "item:it-a1b2-1" } })
+    host:run(1.5)
+    check(#prompts(host) == 1, "the second item has its prompt, got " .. #prompts(host))
+    local card = host:card()
+    check(card ~= nil and card.label == "Pick up Nomad crate" and card.color == BRIGHT,
+        "the second item's card is drawn and live")
+    check(pickUp(host, "second") == "item:it-a1b2-2", "the next E picks up the second item")
+    -- A crate of another run set down on the stack later joins it: still one prompt, still a card.
+    host:toClient("open77:actions:targets", { generation = 1, upsert = { crateWire("it-a1b2-0") }, remove = {} })
+    host:run(1.5)
+    check(#prompts(host) == 1, "a crate set down on the stack later joins it, got " .. #prompts(host))
+    check(host:card() ~= nil, "and the card is still drawn")
+    check(#host.errors == 0, "no VM error: " .. table.concat(host.errors, " | "))
+end)
+
+run("only a true stack is merged", function()
+    -- A metre apart: a prompt each, as before.
+    local apart = newScene({ targets = { crateWire("it-a1b2-1"),
+        crateWire("it-a1b2-2", { x = LOADING_POINT.x + 1.0, y = LOADING_POINT.y, z = LOADING_POINT.z }) } })
+    standNear(apart, LOADING_POINT, 1.2, -20.0)
+    apart:run(1.5)
+    check(#prompts(apart) == 2, "crates a metre apart keep a prompt each, got " .. #prompts(apart))
+    check(apart:card() ~= nil, "apart: a card is drawn")
+    -- The same point, not the same thing (the player can tell them apart): a prompt each.
+    local mixed = newScene({ targets = { crateWire("it-a1b2-1"), crateWire("it-a1b2-2", nil, "Medical crate") } })
+    standNear(mixed, LOADING_POINT, 1.2, -20.0)
+    mixed:run(1.5)
+    check(#prompts(mixed) == 2, "different items on one point keep a prompt each, got " .. #prompts(mixed))
+    check(mixed:card() ~= nil, "mixed: a card is drawn")
+    check(#apart.errors == 0 and #mixed.errors == 0, "no VM error")
 end)
 
 TestResult = { passed = passed, failed = #failures, failures = failures }

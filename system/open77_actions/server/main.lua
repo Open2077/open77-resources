@@ -77,7 +77,8 @@ local function clientTarget(target)
         label = target.label, description = target.description, distance = target.distance,
         markerDistance = target.markerDistance, marker = target.marker, color = target.color,
         icon = target.icon, requires = target.requires, choices = target.actions,
-        promptHeight = target.promptHeight, lookAt = target.lookAt,
+        promptHeight = target.promptHeight, lookAt = target.lookAt, promptAt = target.promptAt,
+        hideFor = target.hideFor,
     }
 end
 
@@ -123,6 +124,22 @@ local P = {
     log = log,
     connected = connected,
     readPlayer = readPlayer,
+    -- Players other than `except` standing within `radius` (planar) and `height` of `position`.
+    playersNear = function(bucket, position, radius, height, except)
+        local ok, ids = pcall(GetPlayersInBucket, bucket)
+        if not ok or type(ids) ~= "table" then return {} end
+        local near = {}
+        for _, id in ipairs(ids) do
+            local pid = M.playerId(id)
+            local read = pid and pid ~= except and readPlayer(pid)
+            local p = type(read) == "table" and read.position
+            if type(p) == "table" and math.abs((p.z or 0) - position.z) <= height then
+                local dx, dy = p.x - position.x, p.y - position.y
+                if dx * dx + dy * dy <= radius * radius then near[#near + 1] = pid end
+            end
+        end
+        return near
+    end,
     animPlay = function(pid, profile, options)
         return guarded("animations.play", Open77.animations.play, pid, profile, options)
     end,
@@ -163,6 +180,15 @@ local P = {
     end,
     callSync = function(resource, name, ...)
         return pcall(Open77.exports.callSync, resource, name, ...)
+    end,
+    -- open77_pedestrians (optional): keep the crowd off a target point. A missing resource is fine.
+    crowdHold = function(bucket, key, position, radius)
+        local ok, held = pcall(Open77.exports.callSync, "open77_pedestrians", "holdSeat", bucket, key, position,
+            { radius = radius, ttlMs = 45000, force = true })
+        return ok and held == true
+    end,
+    crowdRelease = function(bucket, key)
+        pcall(Open77.exports.callSync, "open77_pedestrians", "releaseSeat", bucket, key)
     end,
     ownerGeneration = function(owner)
         local ok, generation = pcall(Open77.resource.generation, owner)
@@ -427,7 +453,7 @@ end
 
 local function reportRefusal(pid, actionKey, reason, info)
     P.toClient(pid, "open77:actions:refused", { generation = GENERATION, action = actionKey, reason = reason,
-        stage = info and info.stage or nil })
+        stage = info and info.stage or nil, message = M.messageFor(engine.actions[actionKey], reason) })
     if engine.trace then
         log("info", ("[actions] op=%s state=refused reason=%s stage=%s action=%s player=%d"):format(
             info and info.opId or "-", tostring(reason), tostring(info and info.stage or "-"),
@@ -558,6 +584,26 @@ CreateThread(function()
         Wait(SWEEP_MS)
         local ok, err = pcall(engine.tick, engine)
         if not ok then log("error", "[actions] sweep raised: " .. tostring(err)) end
+    end
+end)
+
+-- Crowd holds (targets with keepCrowdOff) are refreshed well inside their 45 s lifetime; a hold
+-- lost to a pedestrians restart comes back on the next pass.
+CreateThread(function()
+    while true do
+        Wait(15000)
+        local now, due = P.now(), {}
+        for key, target in pairs(engine.targets) do
+            if target.keepCrowdOff and now - (target.crowdAt or 0) >= 14000 then due[#due + 1] = key end
+        end
+        for index, key in ipairs(due) do
+            local target = engine.targets[key]          -- re-read: it may be gone after a Wait
+            if target and target.keepCrowdOff then
+                target.crowdHeld = P.crowdHold(target.bucket, "act:" .. key, target.position, target.keepCrowdOff)
+                target.crowdAt = now
+            end
+            if index % 32 == 0 then Wait(0) end
+        end
     end
 end)
 
@@ -737,6 +783,59 @@ local function enableLab()
         if not pid then return end
         local op, reason, info = carry:pickup("console", pid, nil, { itemId = args[2], trace = true })
         report(pid, Carry.PICKUP_KEY, op, reason, info)
+    end, true)
+
+    -- actions.lab.items [pid]: every carry item, its state and where it is, beside the prop's
+    -- own transform (what clients draw), and the distance to that player when one is named.
+    RegisterCommand("actions.lab.items", function(_source, args)
+        local pid = M.playerId(args and args[1])
+        local read = pid and P.readPlayer(pid) or nil
+        local here = read and type(read.position) == "table" and read.position or nil
+        local function fmt(p) return p and ("%.2f,%.2f,%.2f"):format(p.x or 0, p.y or 0, p.z or 0) or "-" end
+        local n = 0
+        for id, item in pairs(carry.items) do
+            n = n + 1
+            local at = carry:itemPosition(item)
+            local ok, prop = pcall(Open77.props.get, item.propId)
+            local pp = ok and type(prop) == "table" and (type(prop.position) == "table" and prop.position or
+                (prop.x and { x = prop.x, y = prop.y, z = prop.z })) or nil
+            local d = here and at and M.distance(here, at)
+            say(("[actions] lab item=%s kind=%s state=%s carrier=%s at=%s prop=%s%s"):format(id, tostring(item.kind.key),
+                tostring(item.state), tostring(item.carrier or "-"), fmt(at), fmt(pp), d and (" d=%.2f"):format(d) or ""))
+        end
+        say(("[actions] lab items=%d%s"):format(n, here and (" player=" .. pid .. " at " .. fmt(here)) or ""))
+    end, true)
+
+    -- actions.lab.bind <pid> <tpp|fpp> <x> <y> <z> [rx ry rz]: re-attaches the carried item's prop with
+    -- that placement on the Chest slot (the other placement kept), to measure a model's binding in
+    -- game; the line it prints is the `binding` to put in the carry kind.
+    RegisterCommand("actions.lab.bind", function(_source, args)
+        local pid = M.playerId(args and args[1])
+        local session = pid and carry.sessions[pid]
+        local item = session and carry.items[session.itemId]
+        if not item then say("[actions] lab: that player carries nothing"); return end
+        local which = args[2]
+        local offset = { x = tonumber(args[3]), y = tonumber(args[4]), z = tonumber(args[5]) }
+        local rotation = { x = tonumber(args[6]) or 0.0, y = tonumber(args[7]) or 90.0, z = tonumber(args[8]) or 0.0 }
+        if (which ~= "tpp" and which ~= "fpp") or not (offset.x and offset.y and offset.z) then
+            say("[actions] lab: usage actions.lab.bind <pid> <tpp|fpp> <x> <y> <z> [rx ry rz]")
+            return
+        end
+        lab.bindings = lab.bindings or {}
+        local current = lab.bindings[item.id] or carry:binding(item.kind, pid, true)
+        current.parentType, current.parentId = "player", pid
+        if which == "tpp" then
+            current.offset, current.rotation = offset, rotation
+        else
+            current.firstPerson = { offset = offset, rotation = rotation }
+        end
+        lab.bindings[item.id] = current
+        local ok, why = P.props.attach(item.propId, current)
+        local fp = type(current.firstPerson) == "table" and current.firstPerson or nil
+        local function v(t) return t and ("{ x = %.3f, y = %.3f, z = %.3f }"):format(t.x, t.y, t.z) or "nil" end
+        say(("[actions] lab bind %s -> %s | binding = { bone = %q, offset = %s, rotation = %s, firstPerson = { offset = %s, rotation = %s } }")
+            :format(item.id, ok and "ok" or tostring(why), tostring(current.bone), v(current.offset), v(current.rotation),
+            v(fp and fp.offset), v(fp and fp.rotation)))
     end, true)
 
     -- actions.lab.putdown <pid> [ground | point x y z [yaw] | vehicle <vehicleId> [ox oy oz]] [claimKey]

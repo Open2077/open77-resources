@@ -66,10 +66,12 @@ M.DEFAULTS = {
     -- it back beside the stool). The exit never pulls such a body back.
     exitLeftM = 4.0,
     maxPositionAgeMs = 1500,
-    -- Which poses a player may take: verification states and postures. Beds
-    -- are refused in the catalogue itself (A1 id #9).
+    -- Which poses a player may take: verification states and postures. Lying
+    -- is offered like sitting and leaning: only on poses whose verification is
+    -- allowed (the measured bed resource by default, A1 id #9; other beds stay
+    -- unverified until walked). The `open77_seating_postures` convar narrows it.
     verification = { measured = true },
-    postures = { sit = true, lean = true },
+    postures = { sit = true, lean = true, lie = true },
     -- Furniture flags never offered (a dependent pose needs its master
     -- occupied first).
     excludeFlags = 32,
@@ -220,7 +222,7 @@ local NOUN = {
     bed = "bed", couch_lie = "couch", bench_lie = "bench", lean_wall = "wall", lean_rail = "rail",
     lean_bar = "counter", lean_table = "table",
 }
-local VERB = { sit = "Sit on the ", lean = "Lean on the ", lie = "Lie on the " }
+local VERB = { sit = "Sit on the ", lean = "Lean on the ", lie = "Lie down on the " }
 
 function M.label(kind, posture)
     return (VERB[posture] or "Use the ") .. (NOUN[kind] or "seat")

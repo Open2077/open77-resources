@@ -58,7 +58,7 @@ permissions {
     -- the carriable items this resource owns (a prop is mutable only by its owner).
     "world.props",
 
-    -- Client: Open77.input.setActionBlocked (Movement, Attack) for the running
+    -- Client: Open77.input.setActionBlocked (Movement, Attack, Melee, Sprint) for the running
     -- operation and Open77.input.registerKeyMapping for the put-down key.
     "input.actions",
 

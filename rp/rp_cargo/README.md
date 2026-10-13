@@ -55,7 +55,7 @@ Shipped (only the Mackinaw is `measured: true`, the other three are `measured: f
 
 | Record (aliases) | Slots × stack | Basis |
 |---|---|---|
-| `Vehicle.v_standard3_thorton_mackinaw_player` | 4 × 2 | the `rp_nomade` bed slots (`rp_nomade/shared/config.lua:128-141`), checked in game and set to `measured: true` |
+| `Vehicle.v_standard3_thorton_mackinaw_player` | 4 × 2 | the bed slots rp_nomade 1.x shipped as starting guesses (its `Truck.bed`; rp_nomade 2.0 keeps no bed layout of its own), checked in game on two clients with `crate.small` over two layers and set to `measured: true` |
 | `Vehicle.v_standard3_thorton_mackinaw_02_player` (`_ncu_player`) | 4 × 2 | copied; a **different** entity template from the Mackinaw, measure separately |
 | `Vehicle.v_utility4_chevalier_legatus_player` | 4 × 2 | copied; larger body, expect every offset to move |
 | `Vehicle.v_standard25_thorton_colby_pickup_player` (`_pickup_02_player`) | 4 × 2 | guess by analogy, smaller bed |
@@ -67,6 +67,20 @@ Validation refuses a whole layout (never half-loads it): duplicate slot ids, off
 
 Capacity (`capacityKg`) is a gameplay number enforced by the coordinator from item weights; the
 slot count bounds what is drawn.
+
+### Other box models (`shared/config.lua`)
+
+A slot's `z` and `stackHeight` are measured with `crate.small`. A smaller box drawn at those
+numbers floats, so two maps adapt them per model alias:
+
+| Key | Shipped | Meaning |
+|---|---|---|
+| `Config.seats` | `crate.ammo_box = -0.40` | how far that model's origin sits from a `crate.small`'s when both rest on the same floor (metres, added to the slot's `z`). Measured on a Mackinaw with the tailgate open, standing and crouched: an ammo box rests on the bed floor at slot `z` 0.5 where `crate.small` sits at 0.9; at 0.9 it hung at the height of the bed rails. |
+| `Config.stackHeights` | `crate.ammo_box = 0.32` | the height one box of that model takes in a stack (metres): a stack rises by the heights of the boxes under it, so a second ammo box rests on the first instead of a hand's width above it. |
+
+A model not listed uses the slot's own numbers (seat 0, the slot's `stackHeight`). The model of an
+object is the one its load named (rp_nomade and rp_chooh2 name `crate.ammo_box`), else
+`Config.models[item]`, else the layout's.
 
 ## Exports
 
@@ -97,7 +111,7 @@ exports.rp_cargo:projection(plate)   -- synchronous: { vehicleId, props = { { in
 Refusals (`nil, reason, info`): `invalid_player_id`, `invalid_vehicle_id`, `invalid_instance`,
 `invalid_op_id`, `invalid_source`, `invalid_destination`, `vehicle_not_found`,
 `vehicle_not_tracked` (no plate: no durable container), `no_cargo_layout`, `player_not_found`,
-`wrong_bucket`, `too_far` (`Config.reach` 5 m), `vehicle_moving`, every `rp_garage:canAccess`
+`wrong_bucket`, `too_far` (`Config.reach` 6 m), `vehicle_moving`, every `rp_garage:canAccess`
 reason (`no_access`, `impounded`, `warrant_required`, ...), `garage_unavailable`,
 `cargo_full`, `slot_full`, `invalid_slot`, `cargo_empty`, `not_in_cargo`, `busy`, and the
 coordinator's own (`capacity_exceeded`, `instance_unavailable`, `op_id_conflict`,

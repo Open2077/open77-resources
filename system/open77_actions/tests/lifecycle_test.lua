@@ -193,6 +193,7 @@ run("validation refusals", function()
         { "position_stale", function() F.player(1, 0, 0, 0, { ageMs = 9000 }) end },
         { "in_combat", function() F.player(1, 0, 0, 0, { flags = { combatValid = true, aiming = true } }) end },
         { "player_unavailable", function() F.players[1] = nil end },
+        { "spot_taken", function() F.player(2, 1.3, 0.2, 0.9) end },
         { "off_duty", function() behaviour.validate = function() return false, "off_duty" end end },
         { "refused_by_owner", function() behaviour.validate = function() return false, "a sentence, not a token" end end },
     }
@@ -224,6 +225,41 @@ run("validation refusals", function()
     F.generations[JOB] = 0
     _, why = request(1)
     check(why == "owner_unavailable", "a stopped owner's action refuses owner_unavailable")
+end)
+
+run("a placed action waits for its stand point; an unplaced one does not", function()
+    world()
+    F.player(2, 1.5, 0.0, 0.0)                         -- 0.5 m off the point: beside it, not on it
+    local op = request(1)
+    check(op ~= nil, "a player beside the stand point does not block it")
+    world()
+    F.player(2, 1.0, 0.0, 0.0)
+    local _, why = request(2)
+    check(why == nil or why ~= "spot_taken", "the actor's own body never blocks its own spot")
+    world()
+    F.player(2, 1.0, 0.0, 3.0)                         -- a floor above
+    op = request(1)
+    check(op ~= nil, "someone a floor above does not block it")
+    world()
+    define({ id = "inspect", animation = { profile = "examine" } })
+    target("node2", { x = 1, y = 0, z = 0 }, { "inspect" })
+    F.player(2, 1.0, 0.0, 0.0)
+    op = request(1, "inspect", "node2")
+    check(op ~= nil, "an action played where the actor stands is not refused")
+    world()
+    local working = request(2)
+    check(working ~= nil, "player 2 starts working the target")
+    F.player(2, 1.0, 0.0, 0.0)                         -- placed on the stand point
+    _, why = request(1)
+    check(why == "target_claimed", "someone working the target answers target_claimed, not spot_taken: got " .. tostring(why))
+    world()
+    target("chair", { x = 1.3, y = 0.3, z = 0 }, { "weld" })   -- a second station 0.42 m from node1
+    local lying = request(2, "weld", "chair")
+    check(lying ~= nil and E.active[2] ~= nil, "player 2 is placed at the chair")
+    F.run()
+    F.player(2, 1.3, 0.3, 0.0)
+    local op2 = request(1)
+    check(op2 ~= nil, "a player anchored in a placed action at another target does not block the spot")
 end)
 
 run("eligibility provider (rp_jobs:eligible) is asked at begin and before commit", function()
@@ -377,7 +413,7 @@ cancelCase("api cancel", "cancelled", function(op) F.call(JOB, "cancel", op.opId
 run("cancel: superseding action", function()
     world()
     define({ id = "inspect", supersede = true, durationMs = 3000 })
-    target("node2", { x = 0, y = 1, z = 0 }, { "inspect" })
+    target("node2", { x = 0, y = -1, z = 0 }, { "inspect" })
     local first = request(1)
     local busy, why = request(1, "weld", "node1")
     check(busy == nil and why == "actor_busy", "a non-superseding action is refused actor_busy")
@@ -489,7 +525,7 @@ run("stale completion: a late reserve answer cannot touch the replacement", func
     world()
     define({ hooks = { reserve = "r", commit = "c", cancel = "x" } })
     define({ id = "inspect" })
-    target("node2", { x = 0, y = 1, z = 0 }, { "inspect" })
+    target("node2", { x = 0, y = -1, z = 0 }, { "inspect" })
     F.deferred["job:r"] = true
     local first = request(1)
     check(stateOf(first) == "reserving", "first reserving")
@@ -513,7 +549,7 @@ end)
 run("stale completion: a replaced playback's end does not cancel the new op", function()
     world()
     define({ id = "inspect", supersede = true })
-    target("node2", { x = 0, y = 1, z = 0 }, { "inspect" })
+    target("node2", { x = 0, y = -1, z = 0 }, { "inspect" })
     local first = request(1)
     local oldPlayback = first.playbackId
     local second = request(1, "inspect", "node2")
@@ -743,6 +779,80 @@ run("lab commands drive an action end to end with explicit player ids", function
     F.commands["actions.lab.clear"](0, {})
     check(E.targets["open77_actions:lab_node_1"] == nil, "lab cleared")
     E.trace = false
+end)
+
+run("keepCrowdOff: the crowd is kept off the point while the target exists", function()
+    world()
+    local holds, releases = {}, {}
+    F.exportHandlers.open77_pedestrians = {
+        holdSeat = function(bucket, key, position, options)
+            holds[#holds + 1] = { bucket = bucket, key = key, x = position.x, radius = options.radius,
+                force = options.force }
+            return true
+        end,
+        releaseSeat = function(bucket, key) releases[#releases + 1] = key; return true end,
+    }
+    local key = F.call(JOB, "target", { id = "bench", position = { x = 4, y = 0, z = 0 }, bucket = 0,
+        actions = { "weld" }, keepCrowdOff = true })
+    check(key == "job:bench", "a target that keeps the crowd off is accepted")
+    check(#holds == 1 and holds[1].key == "act:job:bench" and holds[1].radius == 0.8 and holds[1].force == true,
+        "the hold is taken at once (0.8 m, forced)")
+    F.call(JOB, "untarget", "bench")
+    check(#releases == 1 and releases[1] == "act:job:bench", "the hold is released with the target")
+    local bad, why = F.call(JOB, "target", { id = "bad", position = { x = 4, y = 0, z = 0 }, bucket = 0,
+        actions = { "weld" }, keepCrowdOff = 9 })
+    check(bad == nil and why == "invalid_target", "a radius beyond 1.5 m is refused")
+    F.exportHandlers.open77_pedestrians = nil
+    local plain = F.call(JOB, "target", { id = "plain", position = { x = 4, y = 0, z = 0 }, bucket = 0,
+        actions = { "weld" }, keepCrowdOff = true })
+    check(plain == "job:plain", "without open77_pedestrians the target still works")
+end)
+
+run("promptAt: the card is drawn at another point than the stand point", function()
+    world()
+    local key = F.call(JOB, "target", { id = "station", position = { x = 1, y = 0, z = 0 }, bucket = 0,
+        actions = { "weld" }, promptAt = { x = 1.4, y = 0.3, z = 0 } })
+    check(key == "job:station", "a target with promptAt is accepted")
+    local push = F.lastClient("open77:actions:targets", 1)
+    local sent
+    for _, t in ipairs(push and push.payload.upsert or {}) do if t.key == "job:station" then sent = t end end
+    check(sent and sent.promptAt and sent.promptAt.x == 1.4 and sent.position.x == 1, "the client gets both points")
+    local far, why = F.call(JOB, "target", { id = "far", position = { x = 1, y = 0, z = 0 }, bucket = 0,
+        actions = { "weld" }, promptAt = { x = 5, y = 0, z = 0 } })
+    check(far == nil and why == "invalid_target", "a card more than 3 m from its stand point is refused")
+end)
+
+run("messages: a definition rewords or silences what the player reads", function()
+    world()
+    define({ id = "secret", messages = { invalid_target = "Not at this bench." } })
+    F.net("open77:actions:intent", 1, "job:secret", "job:node1")
+    local refused = F.lastClient("open77:actions:refused", 1)
+    check(refused and refused.payload.reason == "invalid_target" and refused.payload.message == "Not at this bench.",
+        "a refusal carries the action's own text")
+    world()
+    define({ messages = { vehicle = false } })
+    local op = request(1)
+    check(op ~= nil, "started")
+    F.advance(300)
+    F.fire("onPlayerEnteringVehicle", "1", 55, 0)
+    F.advance(200)
+    local ended = F.lastClient("open77:actions:end", 1)
+    check(ended and ended.payload.reason == "vehicle" and ended.payload.message == false,
+        "a silenced stop reason reaches the client as false")
+    world()
+    local op2 = request(1)
+    F.advance(300)
+    F.fire("onPlayerEnteringVehicle", "1", 55, 0)
+    F.advance(200)
+    ended = F.lastClient("open77:actions:end", 1)
+    check(op2 ~= nil and ended and ended.payload.message == nil, "no messages: the client's default text")
+    local base = { id = "bad", label = "Bad", durationMs = 2000, hooks = { commit = "c" } }
+    for _, messages in ipairs({ "text", { ["not a token"] = "x" }, { moved = 5 }, { moved = "two" .. string.char(10) .. "lines" },
+        { moved = string.rep("x", 201) } }) do
+        base.messages = messages
+        local key, why = F.call(JOB, "define", base)
+        check(key == nil and why == "invalid_definition", "malformed messages refused: " .. tostring(why))
+    end
 end)
 
 run("no scheduled thread raised during the suite", function()

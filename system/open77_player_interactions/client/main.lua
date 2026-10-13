@@ -6,6 +6,34 @@ local defaults = { give={'give','give'}, heal={'examine','wounded'} }
 local function message(text)
     TriggerEvent('chat:addMessage', {type='system',author='INTERACTIONS',text=text,color={0,229,255}})
 end
+-- The invited player's offer card: what is offered, a countdown and two rebindable keys (Y accept,
+-- N decline, Pause -> Settings -> KEY BINDINGS). /interaction accept | decline still works.
+local ACCEPT_ID, DECLINE_ID = 'open77_interactions_accept', 'open77_interactions_decline'
+local KIND_TEXT = { give='Someone wants to give you something.', heal='Someone offers to treat you.',
+    carry='Someone wants to carry you.', escort='Someone wants to escort you.', custom='Someone makes you an offer.' }
+local card, cardShownAt = nil, -1
+local function nowMs() return Open77.time.monotonic()*1000 end
+local function keyFor(id, fallback)
+    local ok, key = pcall(function() return Open77.input.keyFor(id) end)
+    return (ok and type(key) == 'string' and key ~= '') and key or fallback
+end
+local function uikit(name, ...) pcall(Open77.exports.call, 'open77_uikit', name, ...) end
+local function drawCard()
+    if not card then return end
+    local left = math.max(0, math.ceil((card.endsAt - nowMs())/1000))
+    cardShownAt = left
+    uikit('textUI', { text=card.text, eyebrow=('Offer - %d s'):format(left), position='center',
+        actions={ {key=keyFor(ACCEPT_ID,'Y'), label='Accept'}, {key=keyFor(DECLINE_ID,'N'), label='Decline'} } })
+end
+local function hideCard(id)
+    if card and (id == nil or card.id == id) then card=nil; cardShownAt=-1; uikit('hideTextUI') end
+end
+local function offerText(s)
+    local options = type(s.options) == 'table' and s.options or {}
+    local label = options.label or options.Label
+    if type(label) == 'string' and label ~= '' then return label:sub(1, 120) end
+    return KIND_TEXT[s.kind] or KIND_TEXT.custom
+end
 local function stop(key)
     local p=playing[key]
     if p then for _, actor in pairs(p) do animations.stop(actor.entity) end end
@@ -46,7 +74,15 @@ local controller = PlayerInteractionController.new({
     emit=function(name, ...)
         if name=='onPlayerInteractionOffered' then
             local state=...
-            message(('Player %s requests %s. /interaction accept or /interaction decline'):format(state.actor,state.kind))
+            local options = type(state.options) == 'table' and state.options or {}
+            local invite = tonumber(options.inviteTimeoutMs or options.InviteTimeoutMs) or 15000
+            card = { id=state.id, text=offerText(state), endsAt=nowMs()+invite }
+            drawCard()
+            message(('%s %s accept, %s decline (or /interaction accept | decline).'):format(card.text,
+                keyFor(ACCEPT_ID,'Y'), keyFor(DECLINE_ID,'N')))
+        elseif name=='onPlayerInteractionChanged' then
+            local state=...
+            if card and state and state.id == card.id and state.phase ~= 'offered' then hideCard(state.id) end
         elseif name=='onPlayerInteractionPresentationFailed' then
             local key,reason=...
             print(('Pair presentation failed: %s %s'):format(key,tostring(reason)))
@@ -70,9 +106,28 @@ end)
 for _,method in ipairs({'list','get','current','isReserved','respond','cancel','result'}) do exports(method,controller[method]) end
 exports('accept',function(id) return controller.respond(id,true) end)
 exports('decline',function(id) return controller.respond(id,false) end)
+local function answer(accepted)
+    if not card then return end
+    local id = card.id
+    hideCard(id)
+    local _, err = controller.respond(id, accepted)
+    if err then message(tostring(err)) end
+end
+pcall(Open77.input.registerKeyMapping, { id=ACCEPT_ID, name='Accept an offer from a player', key='Y',
+    onPressed=function() answer(true) end })
+pcall(Open77.input.registerKeyMapping, { id=DECLINE_ID, name='Decline an offer from a player', key='N',
+    onPressed=function() answer(false) end })
 AddEventHandler('onClientResourceStop',function(name)
-    if name==resource then running=false; controller.shutdown() end
+    if name==resource then running=false; hideCard(); controller.shutdown() end
 end)
 CreateThread(function()
-    while running do controller.tick(animations._context()); Wait(50) end
+    while running do
+        controller.tick(animations._context())
+        if card then
+            local left = math.ceil((card.endsAt - nowMs())/1000)
+            if left <= 0 or not controller.get(card.id) then hideCard()
+            elseif left ~= cardShownAt then drawCard() end
+        end
+        Wait(50)
+    end
 end)
