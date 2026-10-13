@@ -59,19 +59,15 @@ reported once with `playerId = nil` and `data.recovered = true`.
    `open77_actions`, `open77_containers`, `open77_fuel`, `rp_jobs`, `rp_inventory`, `rp_economy`,
    `rp_garage`, `rp_cargo`, `rp_chooh2`.
 2. Convar `rp_inventory_backend transactions` (canisters must live in coordinator pockets).
-3. The two jobs in rp_jobs (`rp_jobs/shared/config.lua`, `RpJobsConfig.Jobs`):
-
-   ```lua
-   { name = "farmhand", label = "Biotechnica farmhand", color = "#8BC34A", civil = true,  description = "Corn rows, crates and the farm truck.",   salary = { [0] = 150, [1] = 220, [2] = 300, [3] = 420 } },
-   { name = "refinery", label = "Petrochem operator",   color = "#E0A030", civil = true,  description = "Fermenters, CHOOH2 canisters and the depot.", salary = { [0] = 180, [1] = 260, [2] = 360, [3] = 500 } },
-   ```
-
-   Without them the start says `WARNING: rp_jobs has no job farmhand, refinery` and those steps
-   answer `unknown_job`. To use existing jobs instead, change `C.jobs` and `C.offices` in
-   `server/config.lua`.
-4. rp_economy mints the depot's money on this resource's behalf: add
-   `rp_chooh2 = 30000` to `EconomyConfig.mint.callers` (`rp_economy/server/config.lua`), or every
-   sale answers `mint_denied`. Optionally add `"refinery"` to `EconomyConfig.societies`.
+3. rp_jobs ships the two jobs (`rp_jobs/shared/config.lua`, `RpJobsConfig.Jobs`): `farmhand`
+   (Biotechnica farmhand) and `refinery` (Petrochem operator), both civil, joined at the agency.
+   A server with its own rp_jobs table needs them back, or the start says `WARNING: rp_jobs has no
+   job farmhand, refinery` and those steps answer `unknown_job`. To use existing jobs instead,
+   change `C.jobs` and `C.offices` in `server/config.lua`.
+4. rp_economy mints the depot's money on this resource's behalf: it ships `rp_chooh2 = 30000` in
+   `EconomyConfig.mint.callers` (`rp_economy/server/config.lua`; without it every sale answers
+   `mint_denied`). Optionally add `"refinery"` to `EconomyConfig.societies` (it is loaded on first
+   use otherwise).
 5. `open77_transactions` tunables (size the hourly caps to your population):
 
    ```text
@@ -132,7 +128,8 @@ Everything lives in `server/config.lua`:
 | `C.jobs`, `C.offices` | `farmhand`, `refinery`, haulers `farmhand`/`refinery`/`nomade` | who harvests, refines, hauls; who clocks in where |
 | `C.nodes`, `C.nodeDefaults` | 5 rows, 4 charges, 5 min regrowth | the corn rows (`containerKey` to give a closed row a new key) |
 | `C.harvest` | 3 to 5 corn | what one harvest yields, drawn from the operation id |
-| `C.crate` | 20 kg, 4 per player, 48 on the server | the crate's size and limits, `pickupBy` |
+| `C.crate` | 20 kg, 4 per player, 48 on the server; reach 2 m, `vehicleReach` 6 m | the crate's size and limits, `pickupBy`; `vehicleReach` is how far from the truck's origin a carried crate may be put in its bed (`/chooh2 load`) |
+| `C.truckNearM` | 6 m | how close `/chooh2 load`, `/chooh2 unload` and `/chooh2 refuel` look for a vehicle; keep it equal to `crate.vehicleReach`, or a truck the command finds refuses the crate as too far |
 | `C.refine`, `C.collectMax` | 10 corn to 2 canisters, 3 per take | the batch ratio |
 | `C.stashes` | intake 400 kg, rack 200 kg | the refinery's two stashes |
 | `C.prices`, `C.saleMax`, `C.societyShare`, `C.society` | 150 per canister, 10, 10 %, `refinery` | the depot sale |
@@ -140,8 +137,9 @@ Everything lives in `server/config.lua`:
 | `C.actions` | durations, labels, animation profiles | `scavenge`, `examine`, `tablet2`, `mechanic` |
 | places | see the file | farm office, rows, lane centre, farm bay; refinery office, unloading bay, intake, control station, output rack, depot, pump |
 
-Every place is marked `measured = false`: the heights come from the game's terrain proxies. Stand
-on each spot, read `/pos`, paste it and set `measured = true`.
+Every place is `measured = true`: each was walked in game (the corn rows, the farm office and
+bay, the refinery's office, unloading bay, intake, control station and rack, the depot and the
+pump). A place moved later goes back to `measured = false` until someone stands on it again.
 
 ## Limits
 

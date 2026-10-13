@@ -179,7 +179,10 @@ C.crate = {
     maxPerPlayer = 4,            -- open crates (ground, hands or bed) per subject
     maxOpen = 48,                -- open crates on the server (ground crates are carry items: <= 128)
     pickupBy = "crew",           -- "crew": anyone on duty in a haul job; "owner": the harvester only
-    reach = 2.0, vehicleReach = 4.5,
+    -- vehicleReach is measured to the truck's origin and matches C.truckNearM: a player behind a
+    -- Mackinaw's bed stands up to ~5.9 m from its origin (measured live by rp_nomade and rp_cargo,
+    -- where 4.5 refused them), and with 4.5 a truck `/chooh2 load` found within 6 m refused the crate.
+    reach = 2.0, vehicleReach = 6.0,
     binding = nil, gripMs = nil, releaseMs = nil,
     orphanAgeMs = 2 * 60 * 1000, -- an empty, tokenless crate older than this is closed by the sweep
 }
