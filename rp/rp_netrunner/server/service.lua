@@ -95,7 +95,13 @@ function S:refuseTo(pid, reason)
     self.P.tell(pid, self.M.textFor(reason), "warning")
 end
 
-function S:nameOf(pid) return self.P.players.name(pid) or ("player " .. tostring(pid)) end
+-- The character name (rp_identity) when it runs, else the account name. Live 2026-10-13: the fixer
+-- read "CyberwareA took your contract 5RJ6." for Ada Kovac.
+function S:nameOf(pid)
+    local ok, full = pcall(Open77.exports.callSync, "rp_identity", "fullName", pid)
+    if ok and type(full) == "string" and full ~= "" and full ~= "Unknown citizen" then return full end
+    return self.P.players.name(pid) or ("player " .. tostring(pid))
+end
 
 -- The connected player of a durable subject, or nil (subjects survive reconnects, ids do not).
 function S:pidOf(subject)

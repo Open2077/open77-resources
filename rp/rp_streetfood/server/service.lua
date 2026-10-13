@@ -99,7 +99,12 @@ function S:record(subject, entry)
     self.receipts[subject] = ring
 end
 
-function S:nameOf(pid) return self.P.players.name(pid) or ("player " .. tostring(pid)) end
+-- The character name (rp_identity) when it runs, else the account name: what other players read.
+function S:nameOf(pid)
+    local ok, full = pcall(Open77.exports.callSync, "rp_identity", "fullName", pid)
+    if ok and type(full) == "string" and full ~= "" and full ~= "Unknown citizen" then return full end
+    return self.P.players.name(pid) or ("player " .. tostring(pid))
+end
 
 -- ---------------------------------------------------------------------------------------------
 -- Boot steps (re-run whenever a library restarts)
