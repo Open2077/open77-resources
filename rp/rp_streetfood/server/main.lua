@@ -335,7 +335,8 @@ RegisterCommand("streetfood.lab.serve", function(source, args)
 end, true)
 
 -- streetfood.lab.offer <cookId> <customerId> <dish> [tip] [stall]: an order and its hand-over offer in
--- one step (no customer prompt needed). The customer still has to accept: /interaction accept.
+-- one step (no customer prompt needed). The customer still has to accept: Y on the offer card, or
+-- /interaction accept.
 RegisterCommand("streetfood.lab.offer", function(source, args)
     local cook = argPlayer(source, args[1])
     local customer = cook and argPlayer(source, args[2])
@@ -349,7 +350,7 @@ RegisterCommand("streetfood.lab.offer", function(source, args)
         if args[4] then Svc:setTip(customer, args[4]) end
         local ticket = Svc:openTicket(stall.key, customer, subject, dish)
         local o, why = Svc:offer(cook, stall, { ticket = ticket })
-        reply(source, o and ("offer %s: %s -> %s, %s, sale %s; the customer accepts with /interaction accept")
+        reply(source, o and ("offer %s: %s -> %s, %s, sale %s; the customer accepts with Y on the offer card, or /interaction accept")
             :format(o.id, tostring(cook), tostring(customer), dish, o.opId) or ("offer refused: " .. tostring(why)))
     end)
 end, true)

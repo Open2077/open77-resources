@@ -81,8 +81,9 @@ crowd (world suppression) for a test run. Nothing in this resource vetoes an NPC
   a progress bar (X cancels). The ingredients leave the pantry and the dish lands on the pass in
   **one** operation at the end; an empty pantry or a full pass is refused **before** the bar.
 - *Serve the next order* takes the oldest order whose customer stands within 3 m and whose portion
-  is ready, and offers it. The customer reads the price and accepts (`/interaction accept` or the
-  platform's invitation) or declines. A soda is drawn in the cook's hand while offered.
+  is ready, and offers it. The customer reads who offers what and the price on the offer card and
+  accepts (**Y**, or `/interaction accept`) or declines (**N**). A soda is drawn in the cook's hand
+  while offered.
 - *Stock the pantry* moves every ingredient you carry into the stall's pantry.
 
 **Customer**: at the counter, **E** shows *Order Grilled skewer (18 eddies)*, *Order Grill burger
