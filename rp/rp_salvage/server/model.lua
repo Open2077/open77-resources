@@ -312,7 +312,7 @@ M.ENDS = {
 
 function M.textFor(reason)
     reason = tostring(reason or "refused")
-    return M.TEXT[reason] or M.ENDS[reason] or ("Refused (" .. reason .. ").")
+    return M.TEXT[reason] or M.ENDS[reason] or "That did not work. Try again in a moment."   -- never the raw code on screen; the server log keeps it
 end
 
 -- Coordinator refusals of a work reservation, mapped to what the player did wrong.

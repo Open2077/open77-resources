@@ -161,7 +161,7 @@ C.crate = {
     maxOpen = 48,                -- open crates on the server (ground crates are carry items: <= 128)
     pickupBy = "crew",           -- "crew": anyone eligible (on duty as a scrapper); "owner": the filler only
     reach = 2.0, vehicleReach = 4.5,
-    binding = nil,               -- nil = open77_actions' measured Chest binding; tune after calibration
+    binding = nil,               -- nil = open77_actions' measured binding for this model (both views)
     gripMs = nil, releaseMs = nil,
     orphanAgeMs = 2 * 60 * 1000, -- an empty crate with no token older than this is closed by the sweep
 }
