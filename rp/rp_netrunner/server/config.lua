@@ -5,8 +5,9 @@
 -- Positions are catalogue anchors, never invented: the desk terminals are the vanilla AI spots of
 -- office workers typing at a real keyboard (open77_furniture, catalogue furniture-1-26de4c86091e,
 -- and open77_pedestrians spots-generated.lua, dataset cp2077-2310-9ff49a042f46aff01c17f276); the
--- others are vanilla tablet spots. Every point is `measured = false`: nobody has walked it with this
--- resource yet. Stand on it, read `/pos`, correct it here.
+-- others are vanilla tablet spots. A point is `measured = true` once a breach ran on it in game
+-- (the junction box over the Afterlife, the City Center lobby desk, the club back-office desk); the
+-- others are `measured = false`: nobody has breached there yet. Stand on it, read `/pos`, correct it.
 
 NetrunnerConfig = {}
 local C = NetrunnerConfig
@@ -84,8 +85,9 @@ C.sites = {
     {
         key = "watson_junction", label = "Junction box above the Afterlife", area = "Watson, the alley over the Afterlife",
         tier = 1, pose = "laptop", npc = true, enabled = true,
-        position = { x = -1434.631, y = 989.401, z = 23.260 }, yaw = -56.0, measured = false,
-        source = "open77_pedestrians spot row 3217 (amb_f8fa00_kneel_ground_tablet), street level above the club",
+        position = { x = -1434.631, y = 989.401, z = 23.260 }, yaw = -56.0, measured = true,
+        source = "open77_pedestrians spot row 3217 (amb_f8fa00_kneel_ground_tablet), street level above the club; " ..
+            "breached in game (laptop pose, success and a traced failure)",
     },
     {
         key = "den_node", label = "Market-hall netrunner den", area = "930 m south of NCPD HQ",
@@ -97,14 +99,16 @@ C.sites = {
     {
         key = "corp_lobby", label = "Corporate lobby terminal", area = "City Center, 310 m east of NCPD HQ",
         tier = 2, pose = "desk", npc = true, enabled = true,
-        position = { x = -1450.216, y = -1038.966, z = 9.281 }, yaw = -87.24, measured = false,
-        source = "furniture 4013872865819777899 = spot row 8594 (sit_chair_table_keyboard work), 310 m east of NCPD HQ",
+        position = { x = -1450.216, y = -1038.966, z = 9.281 }, yaw = -87.24, measured = true,
+        source = "furniture 4013872865819777899 = spot row 8594 (sit_chair_table_keyboard work), 310 m east of NCPD HQ; " ..
+            "breached in game at the desk",
     },
     {
         key = "club_office", label = "Club back-office terminal", area = "1.4 km south-west of the Afterlife",
         tier = 2, pose = "desk", npc = true, enabled = true,
-        position = { x = -2440.810, y = 51.412, z = 4.160 }, yaw = 0.0, measured = false,
-        source = "furniture 11181519055687801554 = spot row 25016 (sit_chair_table_keyboard work), under a bar",
+        position = { x = -2440.810, y = 51.412, z = 4.160 }, yaw = 0.0, measured = true,
+        source = "furniture 11181519055687801554 = spot row 25016 (sit_chair_table_keyboard work), under a bar; " ..
+            "breached in game at the desk (three traced failures)",
     },
     {
         key = "plaza_desk", label = "Plaza security desk", area = "610 m west of NCPD HQ",
@@ -123,7 +127,8 @@ C.maxDistance = 2.5        -- the server's distance check at the start and befor
 C.promptDistance = 2.0
 
 -- ---------------------------------------------------------------------------------------------
--- Fixer drops: where a netrunner browses the board (E) and drops a shard (F).
+-- Fixer drops: one E prompt, "Talk to the fixer": it opens the board, or hands the shard over when
+-- the netrunner carries the shard of a contract posted here.
 -- ---------------------------------------------------------------------------------------------
 C.fixers = {
     {
@@ -163,8 +168,8 @@ C.trace = {
 -- The kit a completed breach burns (success or failure). nil = free.
 C.breach = { item = "chip", count = 1 }
 
--- Delivery. drop: the F prompt at the fixer drop (NPC contracts, or a player's contract while its
--- fixer is away). handover: a consented hand-over to the player fixer who posted it.
+-- Delivery. drop: the fixer drop's E prompt (NPC contracts, or a player's contract while its fixer
+-- is away). handover: a consented hand-over to the player fixer who posted it.
 C.deliver = {
     durationMs = 2500,
     animation = { profile = "give", at = "self", loop = false, required = false },

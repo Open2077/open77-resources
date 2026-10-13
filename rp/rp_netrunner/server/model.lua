@@ -357,4 +357,87 @@ function M.textFor(reason)
     return M.TEXT[reason] or "That did not work. Try again in a moment."   -- never the raw code on screen; the server log keeps it
 end
 
+-- Reason tokens -> the words players read after "cancelled: ", "refused: ", "blocked: ". Exact
+-- tokens first, then families by substring; an unknown token reads `fallback`, never the token
+-- (the server log keeps it).
+local function worded(exact, families, fallback)
+    return function(reason)
+        reason = tostring(reason or "")
+        if exact[reason] then return exact[reason] end
+        for _, f in ipairs(families) do
+            if reason:find(f[1], 1, true) then return f[2] end
+        end
+        return fallback
+    end
+end
+
+-- Why a hand-over of the shard to a player fixer stopped (open77_player_interactions' reasons, the
+-- runner's rp_jobs refusal, or this resource's own).
+M.handoverText = worded({
+    declined = "the fixer declined", rejected = "the fixer declined",
+    timeout = "the fixer did not answer in time", invite_timeout = "the fixer did not answer in time",
+    expired = "the fixer did not answer in time",
+    too_far = "one of you walked away", moved = "one of you walked away", distance = "one of you walked away",
+    player_moving = "one of you moved during the hand-over",
+    cancelled = "it was called off", cancelled_by_player = "it was called off",
+    runner_gone = "the netrunner left the city", disconnected = "one of you left the city",
+    dead = "one of you went down", vehicle = "one of you got into a vehicle", combat = "a weapon came out",
+    animation_interrupted = "the hand-over was interrupted",
+    stale_job_epoch = "the netrunner's shift changed", off_duty = "the netrunner clocked off",
+    no_job = "the netrunner is no longer a netrunner", wrong_job = "the netrunner is no longer a netrunner",
+    not_eligible = "the netrunner cannot work right now",
+    lost = "the hand-over was lost on the way",
+    owner_stopped = "the contract board restarted", resource_stopping = "the contract board restarted",
+}, {
+    { "declin", "the fixer declined" }, { "reject", "the fixer declined" }, { "disconnect", "one of you left the city" },
+    { "timeout", "the fixer did not answer in time" }, { "alive", "one of you went down" },
+    { "far", "one of you walked away" }, { "jobs", "the jobs registry did not answer" },
+}, "it did not go through")
+
+-- Why an upload was refused (Open77.hacking.start) or stopped (onHackingTransition `blocked`,
+-- `interrupted`).
+M.hackText = worded({
+    range = "the target is out of range", out_of_range = "the target is out of range",
+    visibility_required = "no clear line of sight to the target", visibility_lost = "the line of sight was lost",
+    evidence_timeout = "no clear line of sight to the target", stale_evidence = "no clear line of sight to the target",
+    invalid_evidence = "no clear line of sight to the target",
+    insufficient_stamina = "not enough stamina", cooldown = "your deck is still cooling down",
+    recovery_protected = "the target is still recovering from the last hack",
+    self_ice = "their Self-ICE bounced it", safe_area = "the target is in a safe area",
+    combat_veto = "the city's combat rules protect that target", same_team = "the target is on your side",
+    frozen = "you are held in place", cyberware_suspended = "your cyberware is suspended",
+    hacker_damaged = "you took damage", hacker_busy = "you are already uploading",
+    busy = "you are already uploading", upload_limit = "you are already uploading",
+    action_owned = "another upload owns that target", cancelled = "it was cancelled",
+    implant_unavailable = "your deck is not ready", definition_unavailable = "your deck is not ready",
+    hacking_unavailable = "the hacking kit is offline", invalid_definition = "your deck is not ready",
+    resource_stop = "the netrunner kit restarted", resource_stopping = "the netrunner kit restarted",
+    owner_removed = "the netrunner kit restarted", lifecycle = "the target changed (death, respawn or reconnect)",
+    rate_limit = "too many uploads at once: try again in a moment",
+    operation_pending = "too many uploads at once: try again in a moment",
+    operation_limit = "too many uploads at once: try again in a moment",
+    operation_conflict = "too many uploads at once: try again in a moment",
+}, {
+    { "permission_denied", "this server does not allow it" }, { "target", "the target is out of reach" },
+    { "player", "the target is out of reach" }, { "incarnation", "the target changed (death, respawn or reconnect)" },
+    { "bucket", "the target is out of reach" },
+    { "evidence", "no clear line of sight to the target" }, { "stamina", "not enough stamina" },
+}, "the upload did not go through")
+
+-- Why the deck could not be loaded (Open77.cyberware.newOperationId / install, or the completion).
+M.deckText = worded({
+    cyberware_storage_unavailable = "the implant records are unavailable on this server",
+    player_unavailable = "your character is not ready yet", record_not_ready = "your character is not ready yet",
+    resource_stopping = "the netrunner kit is restarting",
+}, {
+    { "revision", "your implants changed meanwhile: run it again" }, { "conflict", "your implants changed meanwhile: run it again" },
+    { "permission_denied", "this server does not allow it" }, { "timeout", "the chair did not answer in time" },
+}, "try again in a moment")
+
+-- The platform's running gates on a hacked player (Open77.hacking.state), as players read them.
+M.GATE_LABEL = {
+    cyberwareSuspendedMs = "cyberware suspended", malfunctionMs = "malfunction", frozenMs = "frozen",
+    crippledMs = "crippled", blindedMs = "blinded", weaponGlitchedMs = "weapon jammed",
+}
+
 return M

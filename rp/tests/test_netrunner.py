@@ -82,6 +82,10 @@ def spot_rows(path, rows):
     return {r: (x[r - 1], y[r - 1], z[r - 1], yaw[r - 1], profiles[int(prof[r - 1]) - 1]) for r in rows}
 
 
+# The terminals a breach ran on in game (the W3-4 passes): every other point is `measured = false`.
+WALKED_SITES = ("watson_junction", "corp_lobby", "club_office")
+
+
 def config_sites():
     """{key: (x, y, z, yaw, pose, measured)} from rp_netrunner/server/config.lua."""
     text = (RESOURCE / "server" / "config.lua").read_text(encoding="utf-8")
@@ -160,13 +164,16 @@ class NetrunnerSources(unittest.TestCase):
             self.assertAlmostEqual(got[2], z, places=3)
             self.assertAlmostEqual(got[3], yaw, places=2)
             self.assertEqual(got[4], pose, key)
-            self.assertFalse(got[5], f"{key} must stay measured = false until walked")
+            self.assertEqual(got[5], key in WALKED_SITES, f"{key}: measured only once a breach ran there in game")
 
-    def test_every_point_is_unmeasured(self):
+    def test_only_walked_terminals_are_measured(self):
         text = (RESOURCE / "server" / "config.lua").read_text(encoding="utf-8")
         code = "\n".join(line for line in text.splitlines() if not line.lstrip().startswith("--"))
-        self.assertNotIn("measured = true", code)
-        self.assertEqual(code.count("measured = false"), 7)   # six sites, one fixer drop
+        self.assertEqual(code.count("measured = true"), len(WALKED_SITES))
+        self.assertEqual(code.count("measured = false"), 7 - len(WALKED_SITES))   # six sites, one fixer drop
+        readme = (RESOURCE / "README.md").read_text(encoding="utf-8")
+        for key in WALKED_SITES:
+            self.assertRegex(readme, r"\| `" + key + r"` \|[^\n]*\| walked \|", key)
 
     def test_prompt_labels_are_plain_ascii(self):
         for path in (RESOURCE / "server" / "config.lua", RESOURCE / "server" / "service.lua",
@@ -366,6 +373,8 @@ class NetrunnerLoop(unittest.TestCase):
     def test_handover_withdrawn_on_clock_off(self):
         r = self.run_ok("handover_epoch")
         self.assertEqual((r["offered"], r["withdrawn"], r["reason"]), ("true", "true", "stale_job_epoch"))
+        # Both players read why in words, never the platform's token.
+        self.assertEqual((r["told_runner"], r["told_fixer"], r["raw_shown"]), ("true", "true", "false"))
         self.assertEqual((r["shard"], r["cash_a_same"], r["cash_b_same"], r["still_breached"]),
                          ("char:acct-a", "true", "true", "breached"))
         self.assertEqual(r["unbalanced"], "nil")

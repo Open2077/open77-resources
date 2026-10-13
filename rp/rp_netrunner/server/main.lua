@@ -199,10 +199,10 @@ local function fixerNear(pid, radius)
     return nil
 end
 
-local HELP = "Netrunner: /netrun (status), /netrun contracts, /netrun take <code>, /netrun abandon, /breach at the " ..
-    "terminal, /netrun deliver [fixer id], /netrun deck <short_circuit|overheat>. Fixers: /netrun sites, " ..
-    "/netrun post <site> [reward] [minutes], /netrun cancel <code>. Quickhacks: /ping, /court_circuit, " ..
-    "/surchauffe, /brouiller."
+local HELP = "Netrunner: /netrun (status), /netrun contracts, /netrun board (at a fixer drop), /netrun take <code>, " ..
+    "/netrun abandon, /breach at the terminal, /netrun deliver [fixer id], /netrun deck <short_circuit|overheat>. " ..
+    "Fixers: /netrun sites, /netrun post <site> [reward] [minutes], /netrun cancel <code>. Quickhacks: /ping, " ..
+    "/court_circuit, /surchauffe, /brouiller. /netrun help shows this line."
 
 RegisterCommand("netrun", function(source, args)
     if not fromGame(source, "netrun") then return end

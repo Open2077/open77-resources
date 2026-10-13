@@ -840,10 +840,11 @@ function scenarios.quickhacks()
     local starts = #MH.shared.nr.hackStarts
     local scAfterUpload = NRW.count("char:" .. A, "qh_short_circuit")
     MH.run(31)
-    MH.shared.nr.hackRefuse = "target_protected"
+    MH.shared.nr.hackRefuse = "self_ice"
     MH.command("court_circuit", 1, { "2" })
     MH.run(2)
-    local refusedTold = NRW.told(1, "Short Circuit refused: target_protected")
+    local refusedTold = NRW.told(1, "Short Circuit refused: their Self%-ICE bounced it%.")
+        and not NRW.told(1, "self_ice")
     local scAfterRefusal = NRW.count("char:" .. A, "qh_short_circuit")
     -- Jammer
     give(1, "qh_jammer", 1)
@@ -989,6 +990,9 @@ function scenarios.handover_epoch()
     for _, e in ipairs(MH.shared.world.ixLog) do if e.op == "cancelled" then reason = e.reason end end
     return NRW.result({
         offered = offered, withdrawn = withdrawn, reason = tostring(reason),
+        told_runner = NRW.told(1, "The hand%-over was cancelled: the netrunner's shift changed%. You keep the shard%."),
+        told_fixer = NRW.told(2, "The hand%-over was cancelled: the netrunner's shift changed%."),
+        raw_shown = NRW.told(1, "stale_job_epoch") or NRW.told(2, "stale_job_epoch"),
         shard = tostring(NRW.whereIs("nrs." .. s.id)), cash_a_same = NRW.balance("cash:" .. A) == cashA0,
         cash_b_same = NRW.balance("cash:" .. B) == cashB0, still_breached = NRW.boardContract(s.id).state,
         unbalanced = tostring(NRW.unbalanced()),

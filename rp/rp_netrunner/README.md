@@ -3,8 +3,8 @@
 Adds the netrunner job: fixers post breach contracts on a board, a netrunner takes one, jacks into a real Night City terminal for a timed breach that NCPD can trace, and is paid when the data shard reaches the fixer; plus the Ping, Short Circuit, Overheat and NCPD radio jammer quickhacks.
 
 - **Docs:** [Build a job: prompts, animations, items and pay](https://open2077.net/docs/world-interaction), [Actions and carrying](https://open2077.net/docs/actions), [Durable transactions](https://open2077.net/docs/transactions), [Player interactions](https://open2077.net/docs/player-interactions), [Hacking and counterplay](https://open2077.net/docs/hacking)
-- **Starts:** when listed in `resources.load` (it declares `auto_start false`)
-- **Needs:** `open77_transactions`, `open77_actions`, `open77_uikit`, `open77_contextmenu`, `open77_player_interactions`, `open77_hacking`, `rp_jobs`, `rp_inventory`, `rp_economy`, `rp_ncpd`
+- **Starts:** with `ensure rp_netrunner` (it declares `auto_start false`)
+- **Needs:** `open77_transactions`, `open77_actions`, `open77_uikit`, `open77_contextmenu`, `open77_player_interactions`, `open77_hacking`, `rp_jobs`, `rp_inventory`, `rp_economy`, `rp_ncpd`; `open77_pedestrians` keeps the crowd off the terminals (optional)
 - **Runs on:** server and client
 
 Every step that moves value is one `open77_transactions` operation: the contract is an item on a
@@ -71,6 +71,8 @@ and `/casier` shows the record entry.
 | Command | What it does |
 |---|---|
 | `/netrun` | Status: job and duty, your contract and where to go, the deck, quickhacks and chips in your pockets, cooldowns, hacks on you. |
+| `/netrun board` | Opens the contract board menu, within 15 m of a fixer drop (what **E** *Talk to the fixer* opens). |
+| `/netrun help` | Every `/netrun` command and quickhack in one chat line. |
 | `/netrun deck <short_circuit\|overheat>` | Loads that grade into your operating system (the cyberdeck the uploads need). |
 | `/ping <id>` | Burns a `qh_ping`: a pin follows that player on your map for 60 s (50 m). |
 | `/court_circuit <id>` | Burns a `qh_short_circuit` when the platform accepts the upload: Short Circuit, 25 m, line of sight. |
@@ -90,11 +92,14 @@ and record, no heat). Each kind has a 30 s cooldown.
 2. Convar `rp_inventory_backend transactions` (chips, quickhacks and shards are coordinator items).
 3. The coordinator's tunables, once, in the server console. `writers` lists every job of the
    server; add `rp_netrunner:char+stash/contracts` to yours. The mint rule lets rp_netrunner create
-   contract records and shards (300 an hour; add it to a free `mintN`, or append it with `;`):
+   contract records and shards (300 an hour). `tunable.set` replaces the whole value of a slot:
+   put the rule in a `mintN` (1 to 6) no other job uses, as `mint2` below, or append it with `;` to
+   the slot that already holds your rules. The money the client pays is rp_economy's own rule
+   (`rp_economy sys:* money <cap>`), which the server sets once for every job:
 
    ```text
    tunable.set open77_transactions writers rp_netrunner:char+stash/contracts, rp_economy:cash+bank+soc, rp_inventory
-   tunable.set open77_transactions mint1 rp_netrunner sys:netrunner * 300; rp_inventory sys:* * 2000; rp_economy sys:* money 2000000
+   tunable.set open77_transactions mint2 rp_netrunner sys:netrunner * 300
    ensure open77_transactions
    ensure open77_actions
    ensure rp_netrunner
@@ -122,7 +127,7 @@ ids, each on the same server path as the prompts:
 | `netrun.status` | counters, every contract on the board |
 | `netrun.setup <id> [netrunner\|fixer] [grade]` | the job, the grade (0 to 3) and duty |
 | `netrun.give <id> <item> [count]` | items into a player's pockets (`chip`, `qh_*`) |
-| `netrun.post <site> [reward] [minutes] [fixer id]` | posts a contract (as the NPC fixer, or as that player fixer) |
+| `netrun.post <site> [reward] [minutes] [fixer id]` | posts a contract as that player fixer, or without a fixer id as the board itself: the row then reads `posted by console` |
 | `netrun.take <id> <code>` | the board's take |
 | `netrun.breach <id> [site]` | the terminal's prompt (the player stands there) |
 | `netrun.talk <id>` | the fixer drop's prompt (board, or the delivery) |
@@ -151,20 +156,23 @@ client).
 | `deliver` | 2.5 s, drop when the fixer is away, hand-over 3 m | the delivery |
 | `cooldownMs`, `traceChance`, `hacks`, `ping`, `jam`, `deck` | 30 s, 50 %, ... | the quickhacks (`shared/config.lua`) |
 
-The terminals. Every point is `measured = false`: stand on it, read `/pos`, correct it.
+The terminals. A terminal a breach ran on in game is `measured = true` (walked); the others are
+`measured = false`: stand on it, read `/pos`, correct it.
 
-| Site | Tier | Pose | Position, yaw | Landmark | Source |
-|---|---|---|---|---|---|
-| `watson_junction` | 1 | laptop | -1434.631, 989.401, 23.260, -56 | junction box in the alley over the Afterlife, Watson | pedestrian spot row 3217 (a kneeling tablet worker) |
-| `den_node` | 2 | tablet | -1907.820, -1927.096, 48.903, -24 | netrunner den in a market hall, 930 m south of NCPD HQ | spot row 2869, 4.8 m from two netrunner chairs (furniture 16528104635163718811, 16528105734675347022) |
-| `corp_lobby` | 2 | desk | -1450.216, -1038.966, 9.281, -87.24 | corporate lobby terminal, City Center, 310 m east of NCPD HQ | desk furniture 4013872865819777899, spot row 8594 |
-| `club_office` | 2 | desk | -2440.810, 51.412, 4.160, 0 | club back-office terminal, 1.4 km south-west of the Afterlife | desk furniture 11181519055687801554, spot row 25016 |
-| `plaza_desk` | 3 | desk | -2364.606, -927.932, 12.266, 96 | plaza security desk, 610 m west of NCPD HQ | desk furniture 4080162105142424950, spot row 8727 |
-| `office_workstation` | 3 | desk | -2413.342, 400.497, 11.827, 2 | corporate office workstation, 1.1 km west of the Afterlife | desk furniture 14274856704730037017, spot row 31673 |
-| fixer drop `afterlife` | | | -1419.9, 989.4, 16.6, 0 | the Afterlife back room | rp_netrunner 1.x access point, 21 m from rp_fixer's booth |
+| Site | Tier | Pose | Position, yaw | Landmark | Source | In game |
+|---|---|---|---|---|---|---|
+| `watson_junction` | 1 | laptop | -1434.631, 989.401, 23.260, -56 | junction box in the alley over the Afterlife, Watson | pedestrian spot row 3217 (a kneeling tablet worker) | walked |
+| `den_node` | 2 | tablet | -1907.820, -1927.096, 48.903, -24 | netrunner den in a market hall, 930 m south of NCPD HQ | spot row 2869, 4.8 m from two netrunner chairs (furniture 16528104635163718811, 16528105734675347022) | not yet |
+| `corp_lobby` | 2 | desk | -1450.216, -1038.966, 9.281, -87.24 | corporate lobby terminal, City Center, 310 m east of NCPD HQ | desk furniture 4013872865819777899, spot row 8594 | walked |
+| `club_office` | 2 | desk | -2440.810, 51.412, 4.160, 0 | club back-office terminal, 1.4 km south-west of the Afterlife | desk furniture 11181519055687801554, spot row 25016 | walked |
+| `plaza_desk` | 3 | desk | -2364.606, -927.932, 12.266, 96 | plaza security desk, 610 m west of NCPD HQ | desk furniture 4080162105142424950, spot row 8727 | not yet |
+| `office_workstation` | 3 | desk | -2413.342, 400.497, 11.827, 2 | corporate office workstation, 1.1 km west of the Afterlife | desk furniture 14274856704730037017, spot row 31673 | not yet |
+| fixer drop `afterlife` | | | -1419.9, 989.4, 16.6, 0 | the Afterlife back room | rp_netrunner 1.x access point, 21 m from rp_fixer's booth | used for deliveries, still `measured = false` |
 
 The desks are vanilla office workstations (an NPC types there in the base game; the pose is the
-same workspot). The crowd may book some of them: stop the crowd for a test run.
+same workspot). Each terminal keeps the server crowd off its point while it exists (`keepCrowdOff`,
+through open77_pedestrians; `keepCrowdOff = false` on a site turns it off), so an office worker
+does not sit at a desk a netrunner needs.
 
 ### For other resources
 

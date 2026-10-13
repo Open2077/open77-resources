@@ -52,7 +52,8 @@ function Q:gate(pid)
         elseif why == "off_duty" then
             self:warn(pid, "Off duty. /service to jack in first.")
         else
-            self:warn(pid, ("The jobs registry is offline (%s). No quickhack can be checked."):format(tostring(why)))
+            self:log("quickhack gate for player %d: rp_jobs answered %s", pid, tostring(why))
+            self:warn(pid, "The jobs registry is offline. No quickhack can be checked.")
         end
         return false
     end
@@ -103,14 +104,16 @@ local function burnText(self, item, why)
     if why == "insufficient_items" or why == "unknown_account" then
         return ("No %s in your pockets. Buy one on the black market."):format(self:itemLabel(item))
     end
-    return ("Could not burn a %s (%s)."):format(self:itemLabel(item), tostring(why))
+    self:log("burning a %s refused: %s", item, tostring(why))
+    return ("Could not burn a %s. %s"):format(self:itemLabel(item), self.M.textFor(why))
 end
 
 -- One quickhack burned at once (a ping, a jammer). Returns the receipt or nil (the player was told).
 function Q:burn(pid, item, kind)
     local subject, swhy = self.L.subjectOf(pid)
     if not subject then
-        self:warn(pid, ("Your pockets are unreadable (%s)."):format(tostring(swhy)))
+        self:log("pockets of player %d unreadable: %s", pid, tostring(swhy))
+        self:warn(pid, self.M.textFor("no_pockets"))
         return nil
     end
     local receipt, why = self.L.transfer({ opId = self.L.newOpId("qh"), kind = "netrunner.quickhack",
@@ -124,7 +127,8 @@ end
 function Q:hold(pid, item, kind)
     local subject, swhy = self.L.subjectOf(pid)
     if not subject then
-        self:warn(pid, ("Your pockets are unreadable (%s)."):format(tostring(swhy)))
+        self:log("pockets of player %d unreadable: %s", pid, tostring(swhy))
+        self:warn(pid, self.M.textFor("no_pockets"))
         return nil
     end
     local opId = self.L.newOpId("qh")
@@ -161,7 +165,11 @@ function Q:resolveTarget(pid, raw, range)
     if not P.players.name(target) then self:warn(pid, ("No player #%d on this server."):format(target)) return nil end
     if P.players.isDead(target) then self:warn(pid, "That choom is already flatlined.") return nil end
     local metres, reason = P.players.distance(pid, target)
-    if not metres then self:warn(pid, "Cannot place the target (" .. tostring(reason) .. ").") return nil end
+    if not metres then
+        self:log("no distance to player %d: %s", target, tostring(reason))
+        self:warn(pid, "Cannot place the target right now: try again in a moment.")
+        return nil
+    end
     if metres > range then
         self:warn(pid, ("Out of range (%.0f m). Get within %d m."):format(metres, range))
         return nil
@@ -241,7 +249,11 @@ function Q:loadDeck(pid, gradeId, record)
         local receipt, why = P.economy.charge({ opId = charge, from = { player = pid }, amount = C.deck.price,
             instrument = "cash", to = { society = C.job }, reason = "netrunner deck" })
         if not receipt then
-            self:warn(pid, ("Loading a grade costs %d eddies (%s)."):format(C.deck.price, tostring(why)))
+            self:log("deck charge for player %d refused: %s", pid, tostring(why))
+            self:warn(pid, why == "insufficient_funds"
+                and ("Loading a grade costs %d eddies in cash: you are short."):format(C.deck.price)
+                or ("Loading a grade costs %d eddies and the payment did not go through. %s"):format(C.deck.price,
+                    self.M.textFor(why)))
             return false
         end
     end
@@ -251,14 +263,16 @@ function Q:loadDeck(pid, gradeId, record)
     local operationId, err = P.cyberware.newOperationId()
     if not operationId then
         refund()
-        self:warn(pid, "No operation id (" .. tostring(err) .. ").")
+        self:log("cyberware operation id for player %d refused: %s", pid, tostring(err))
+        self:warn(pid, ("The ripper's chair did not answer: %s."):format(self.M.deckText(err)))
         return false
     end
     local result, reason = P.cyberware.install(pid, C.deck.id, gradeId,
         { expectedRevision = record.revision, operationId = operationId })
     if not result then
         refund()
-        self:warn(pid, ("The ripper's chair refused the deck (%s)."):format(tostring(reason)))
+        self:log("deck install for player %d refused: %s", pid, tostring(reason))
+        self:warn(pid, ("The ripper's chair refused the deck: %s."):format(self.M.deckText(reason)))
         return false
     end
     if result.ticket then
@@ -280,7 +294,8 @@ function Q:onCyberwareCompleted(playerId, ticket, encoded)
         self:say(pid, ("Deck ready: %s loaded."):format(self.C.hacks[pending.grade].label))
         self:log("player %d deck grade=%s installed", pid, pending.grade)
     else
-        self:warn(pid, ("Deck load failed: %s."):format(tostring(result.error)))
+        self:log("deck load for player %d failed: %s", pid, tostring(result.error))
+        self:warn(pid, ("Deck load failed: %s."):format(self.M.deckText(result.error)))
         if pending.charge then
             self.P.spawn(function() self.P.economy.refund({ of = pending.charge, reason = "netrunner deck failed" }) end)
         end
@@ -294,12 +309,14 @@ function Q:ensureDeck(pid, kind)
         if detail == "record_not_ready" then
             self:warn(pid, "Your implant record is not ready: the character adapter (open77_appearance) has not bound you yet, or no database runs. Try again in a moment.")
         else
-            self:warn(pid, ("Cyberdeck framework offline (%s): the operating-system implant cannot be read, so the kit refuses every upload."):format(tostring(detail)))
+            self:log("deck of player %d unavailable: %s", pid, tostring(detail))
+            self:warn(pid, "The cyberdeck framework is offline: the operating-system implant cannot be read, so the kit refuses every upload.")
         end
         return false
     end
     if st == "foreign" then
-        self:warn(pid, ("Your operating system slot holds %s, not the netrunner deck. /netrun deck %s replaces it."):format(tostring(detail), kind))
+        self:log("player %d OS slot holds %s", pid, tostring(detail))
+        self:warn(pid, ("Your operating system slot holds another implant, not the netrunner deck. /netrun deck %s replaces it."):format(kind))
         return false
     end
     if st == "loaded" and detail == kind then return true end
@@ -371,7 +388,8 @@ function Q:doHack(pid, kind, rawTarget)
     local result, reason = P.hacking.start(pid, target, C.deck.id, kind, { operationId = operationId })
     if not result then
         L.cancel(held, "upload_refused")
-        self:warn(pid, ("%s refused: %s."):format(hack.label, tostring(reason)))
+        self:log("quickhack %s by player %d refused: %s", kind, pid, tostring(reason))
+        self:warn(pid, ("%s refused: %s."):format(hack.label, self.M.hackText(reason)))
         return
     end
     local receipt, why = L.commit(held)
@@ -396,7 +414,8 @@ function Q:onHackingTransition(encoded)
     if t.phase == "impact" then
         self:say(entry.player, ("%s landed on %s."):format(label, entry.name))
     elseif t.phase == "blocked" or t.phase == "interrupted" then
-        self:warn(entry.player, ("%s %s (%s)."):format(label, t.phase, tostring(t.reason or "?")))
+        self:log("quickhack %s %s: %s", tostring(t.actionId), t.phase, tostring(t.reason))
+        self:warn(entry.player, ("%s %s: %s."):format(label, t.phase, self.M.hackText(t.reason)))
         self.uploads[t.actionId] = nil
     elseif t.phase == "status_expired" or t.phase == "status_purged" or t.phase == "completed" then
         self.uploads[t.actionId] = nil
@@ -458,16 +477,16 @@ function Q:statusLines(pid)
     local lines = {}
     local ok, why = P.jobs.eligible(pid, { job = C.job, duty = true })
     lines[#lines + 1] = ok and "NETRUN - netrunner on duty." or ("NETRUN - " .. ((why == "no_job" or why == "wrong_job")
-        and "not a netrunner" or why == "off_duty" and "netrunner, off duty" or ("jobs offline: " .. tostring(why))) .. ".")
+        and "not a netrunner" or why == "off_duty" and "netrunner, off duty" or "jobs registry offline") .. ".")
     for _, line in ipairs(self.svc:contractLines(pid)) do lines[#lines + 1] = line end
 
     local st, detail = self:deckState(pid)
     if st == "unavailable" then
-        lines[#lines + 1] = ("Implant: cyberdeck framework unavailable (%s). Uploads are refused."):format(tostring(detail))
+        lines[#lines + 1] = "Implant: cyberdeck framework unavailable. Uploads are refused."
     elseif st == "none" then
         lines[#lines + 1] = "Implant: no operating system. /netrun deck short_circuit loads one."
     elseif st == "foreign" then
-        lines[#lines + 1] = ("Implant: %s in the OS slot (not the netrunner deck)."):format(tostring(detail))
+        lines[#lines + 1] = "Implant: another implant in the OS slot (not the netrunner deck)."
     else
         lines[#lines + 1] = ("Implant: netrunner deck loaded with %s.%s"):format(C.hacks[detail] and C.hacks[detail].label
             or tostring(detail), self.pendingDeck[pid] and " (reloading...)" or "")
@@ -484,9 +503,10 @@ function Q:statusLines(pid)
     lines[#lines + 1] = "Pockets: " .. table.concat(pockets, ", ")
 
     local cds = {}
+    local labels = { ping = "Ping", short_circuit = "Short Circuit", overheat = "Overheat", jam = "Jammer" }
     for _, kind in ipairs({ "ping", "short_circuit", "overheat", "jam" }) do
         local left = self:cooldownLeft(pid, kind)
-        if left > 0 then cds[#cds + 1] = ("%s %s"):format(kind, fmtSeconds(left)) end
+        if left > 0 then cds[#cds + 1] = ("%s %s"):format(labels[kind], fmtSeconds(left)) end
     end
     lines[#lines + 1] = "Cooldowns: " .. (#cds > 0 and table.concat(cds, ", ") or "all clear")
 
@@ -496,7 +516,7 @@ function Q:statusLines(pid)
         local gates = {}
         for _, field in ipairs({ "cyberwareSuspendedMs", "malfunctionMs", "frozenMs", "crippledMs", "blindedMs", "weaponGlitchedMs" }) do
             local ms = tonumber(state[field]) or 0
-            if ms > 0 then gates[#gates + 1] = ("%s %s"):format((field:gsub("Ms$", "")), fmtSeconds(ms / 1000)) end
+            if ms > 0 then gates[#gates + 1] = ("%s %s"):format(self.M.GATE_LABEL[field] or "hacked", fmtSeconds(ms / 1000)) end
         end
         if #gates > 0 then lines[#lines + 1] = "Kit: hacked - " .. table.concat(gates, ", ") end
     end
@@ -516,7 +536,8 @@ function Q:netrunDeck(pid, kind)
     end
     local st, detail, record = self:deckState(pid)
     if st == "unavailable" then
-        self:warn(pid, ("Cyberdeck framework offline (%s)."):format(tostring(detail)))
+        self:log("deck of player %d unavailable: %s", pid, tostring(detail))
+        self:warn(pid, "The cyberdeck framework is offline: no grade can be loaded right now.")
         return
     end
     if st == "loaded" and detail == kind then

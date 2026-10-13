@@ -545,7 +545,7 @@ function S:breachProblem(c, siteKey, phase)
     return nil
 end
 
--- What stops a drop at `point` (the F prompt / talk at a fixer drop).
+-- What stops a drop at `point` (the fixer drop's one E prompt, Talk to the fixer, when it delivers).
 function S:dropProblem(c, point)
     if not c then return "no_contract" end
     if c.state ~= "breached" then return "not_breached" end
@@ -966,11 +966,12 @@ function S:dropOffer(o, reason)
     self.offers[o.id] = nil
     if self.offerOf[o.runner] == o.id then self.offerOf[o.runner] = nil end
     self:log("hand-over %s dropped: %s (nothing moved)", tostring(o.id), tostring(reason))
+    local why = self.M.handoverText(reason)
     local text = reason == "declined" and "The fixer declined the hand-over: you keep the shard." or
-        ("The hand-over was cancelled (%s): you keep the shard."):format(tostring(reason))
+        ("The hand-over was cancelled: %s. You keep the shard."):format(why)
     if self:isSubject(o.runner, o.runnerSubject) then self:tell(o.runner, text, "warning") end
     if self:isSubject(o.fixer, o.fixerSubject) and reason ~= "declined" then
-        self:tell(o.fixer, ("The hand-over was cancelled (%s)."):format(tostring(reason)), "warning")
+        self:tell(o.fixer, ("The hand-over was cancelled: %s."):format(why), "warning")
     end
 end
 
