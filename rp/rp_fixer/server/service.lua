@@ -202,6 +202,15 @@ function S:viewer(pid)
     return { pid = pid, subject = p.subject, name = p.name, score = rep.score, held = #self:held(p.subject) }
 end
 
+-- The name to show for a contract party: the character name when that player is here now, else
+-- the one stored on the contract (a contract keeps the name it was taken under).
+function S:liveName(party)
+    if type(party) ~= "table" then return "?" end
+    local pid = party.subject and self.pidOf[party.subject]
+    local v = pid and self:viewer(pid)
+    return (v and v.name) or party.name or "?"
+end
+
 -- Loads the reputation of a player when it is missing (yields).
 function S:ensureViewer(pid)
     local v, why = self:viewer(pid)
@@ -684,7 +693,7 @@ function S:take(pid, ref)
     self:log("contract %s taken by player %d (%s)", c.id, v.pid, v.subject)
     self:tell(v.pid, ("Contract taken: %s"):format(M.progressLine(c, self.cfg, self.P.unix())), "success")
     self:sendObjectives(v.subject)
-    self:tellSubject(c.poster.subject, ("Your contract %s was taken by %s."):format(M.code(c), v.name), "info")
+    self:tellSubject(c.poster.subject, ("Your contract %s was taken by %s."):format(M.code(c), self:liveName(v)), "info")
     self.P.emit("rp_fixer:contract", c.id, "taken", v.pid, M.summary(c))
     self.P.emit("rp_fixer:gig", c.seq, "accepted", v.pid)
     return c
@@ -887,7 +896,7 @@ function S:finish(c, receipt)
             c.payee.subject, c.cut, self.cfg.cutSociety, tostring(receipt.opId), receipt.replay and ", replay" or "")
         self:tellSubject(c.payee.subject, ("Contract %s done: %s in cash. Reputation %d (%s)."):format(M.code(c),
             M.money(c.net), rep and rep.score or 0, tier.name), "success")
-        self:tellSubject(c.poster.subject, ("Your contract %s was completed by %s."):format(M.code(c), c.payee.name), "info")
+        self:tellSubject(c.poster.subject, ("Your contract %s was completed by %s."):format(M.code(c), self:liveName(c.payee)), "info")
         self:sendObjectives(c.payee.subject)
         self.P.emit("rp:job:completed", { job = "fixer", kind = "contract_completed", playerId = pid or 0,
             ref = M.payOpId(c), data = { contract = c.id, seq = c.seq, contractKind = c.kind, template = c.template,
@@ -1335,7 +1344,7 @@ function S:boardRows(v, hubKey)
         local locked = c.state == "open" and not posted and c.mode ~= "open" and v.score < (c.minRep or 0)
         local status
         if mine then status = "Yours: " .. M.progressLine(c, cfg, now):gsub("^#%d+ ", ""):sub(1, 60)
-        elseif posted then status = c.state == "taken" and ("Posted by you, taken by " .. c.runner.name) or ("Posted by you (" .. c.state .. ")")
+        elseif posted then status = c.state == "taken" and ("Posted by you, taken by " .. self:liveName(c.runner)) or ("Posted by you (" .. c.state .. ")")
         elseif c.mode == "open" then status = "Open bounty: the kill pays"
         else status = "Open" end
         local tier = M.tierFor(c.minRep, cfg.tiers)
@@ -1345,7 +1354,7 @@ function S:boardRows(v, hubKey)
             description = M.ascii(c.brief, 240), disabled = locked or nil, tone = mine and "success" or nil,
             metadata = {
                 { label = "Pays", value = M.money(c.net) },
-                { label = "Fixer", value = M.ascii(("%s, %s"):format(c.poster.name or "?", hub and hub.label or "?"), 64) },
+                { label = "Fixer", value = M.ascii(("%s, %s"):format(c.poster.kind == "npc" and (c.poster.name or "?") or self:liveName(c.poster), hub and hub.label or "?"), 64) },
                 { label = "Time left", value = M.duration(c.expiresAt - now) },
                 { label = locked and "Rep needed" or "Status",
                   value = M.ascii(locked and ("%s (%d+)"):format(tier.name, c.minRep) or status, 64) },
@@ -1397,7 +1406,7 @@ function S:contractDialog(pid, id, hubKey)
     local M, cfg, now = self.M, self.cfg, self.P.unix()
     local hub = cfg.hubs[c.hub]
     local lines = { c.brief, "", ("Pays %s (reward %s, the fixers keep %s)."):format(M.money(c.net), M.money(c.reward), M.money(c.cut)),
-        ("Posted by %s at %s. Time left: %s."):format(c.poster.name or "?", hub.label, M.duration(c.expiresAt - now)) }
+        ("Posted by %s at %s. Time left: %s."):format(c.poster.kind == "npc" and (c.poster.name or "?") or self:liveName(c.poster), hub.label, M.duration(c.expiresAt - now)) }
     if c.kind == "delivery" then
         local drop = cfg.hubs[c.route.to] or cfg.drops[c.route.to]
         lines[#lines + 1] = ("Pick the crate up at %s, carry it on foot to %s."):format(cfg.points[c.route.from].label, drop.label)
