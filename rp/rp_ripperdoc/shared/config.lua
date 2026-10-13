@@ -36,9 +36,10 @@ C.clinics = {
         zoneRadius = 12.0,               -- used only when rp_zones is not running (distance to the chair)
         stockCapacityG = 60000,          -- 30 boxed implants of 2 kg
         chair = {
-            -- "placed": the patient lies through this resource's `lie` action (Open77.animations.playAt
-            -- at the chair point, through open77_actions). "seating": the patient lies on a real
-            -- furniture through open77_seating (its own prompt, or /ripper lie), `furniture` below.
+            -- "placed": the patient sits through this resource's chair action (its id is still `lie`;
+            -- Open77.animations.playAt at the chair point, through open77_actions). "seating": the
+            -- patient sits or lies on a real furniture through open77_seating (its own prompt, or
+            -- /ripper lie), `furniture` below.
             mode = "placed",
             -- Vik's white reclining chair, walked in game with the posture playing: the body sits on
             -- the seat, back to the backrest, facing the clinic floor (yaw 145). z is the floor.
