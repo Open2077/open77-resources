@@ -352,7 +352,7 @@ end
 function scenarios.refusals()
     NRW.boot()
     NRW.join(1, A, "Runner", JUNCTION)
-    NRW.join(3, C, "Citizen", JUNCTION)
+    NRW.join(3, C, "Citizen", NEAR_JUNCTION)        -- not on the stand point: the runner is placed there
     NRW.join(4, D, "Runner two", NEAR_JUNCTION)
     NRW.join(5, "acct-e", "Runner three", NEAR_JUNCTION)
     setupRunner(1)
