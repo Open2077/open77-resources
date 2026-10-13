@@ -287,9 +287,18 @@ RegisterCommand("techie.status", function(source)
         s.shopSales, s.trades, s.menus, s.declined, s.dropped, s.refusals, s.doubts, offers, doubts, sales))
 end, true)
 
--- techie.mintrules: the coordinator mint rules this configuration needs (one tunable value).
-RegisterCommand("techie.mintrules", function(source)
-    reply(source, "tunable.set open77_transactions mintN " .. table.concat(M.mintRules(cfg, RESOURCE), "; "))
+-- techie.mintrules [first slot]: the coordinator mint rules this configuration needs, one
+-- `tunable.set` line per slot (a tunable holds 256 characters), numbered from `first slot`
+-- (default 3): pick slots no other job uses.
+RegisterCommand("techie.mintrules", function(source, args)
+    local first = math.tointeger(tonumber(args and args[1] or "")) or 3
+    local slots = M.mintSlots(M.mintRules(cfg, RESOURCE))
+    if first < 1 or first + #slots - 1 > 6 then
+        return reply(source, ("%d slot(s) needed: give a first slot from 1 to %d"):format(#slots, 7 - #slots))
+    end
+    for i, value in ipairs(slots) do
+        reply(source, ("tunable.set open77_transactions mint%d %s"):format(first + i - 1, value))
+    end
 end, true)
 
 -- techie.lab.setup <playerId> [grade]: the techie job at that grade + duty.

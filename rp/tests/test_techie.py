@@ -130,33 +130,38 @@ class TechieSources(unittest.TestCase):
 
     def test_readme_tunables_parse_and_match_the_config(self):
         """The README's writers and mint lines parse with the coordinator's own policy parser (no
-        ignored entry) and the mint rules are exactly what techie.mintrules prints from the config."""
+        ignored entry), each fits a tunable (256 characters), and they are exactly the slots
+        techie.mintrules prints from the config."""
         if luahost.unavailable():
             self.skipTest(luahost.unavailable())
         policy = tx_dir() / "server" / "policy.lua"
         if not policy.is_file():
             self.skipTest(f"no coordinator policy at {policy}")
         readme = (RESOURCE / "README.md").read_text(encoding="utf-8")
-        mint = re.findall(r"tunable\.set open77_transactions mint[34] (.+)", readme)
+        mint = re.findall(r"tunable\.set open77_transactions mint[345] (.+)", readme)
         writers = re.findall(r"tunable\.set open77_transactions writers (.+)", readme)
-        self.assertEqual((len(mint), len(writers)), (2, 1))
+        self.assertEqual((len(mint), len(writers)), (3, 1))
+        for value in mint:
+            self.assertLessEqual(len(value), 256, value)
         lua = luahost.new_state()
         try:
             for path in (policy, RESOURCE / "server" / "config.lua", RESOURCE / "server" / "model.lua"):
                 lua.execute(path.read_text(encoding="utf-8"), "@" + path.name)
             lua.execute(f"""
-                local rules, problems = Open77TxPolicy.parseRules({{ {luahost.lua_string(mint[0])}, {luahost.lua_string(mint[1])} }})
+                local rules, problems = Open77TxPolicy.parseRules({{ {', '.join(luahost.lua_string(m) for m in mint)} }})
                 local _, wproblems = Open77TxPolicy.parseWriters({luahost.lua_string(writers[0])})
                 local got = {{}}
                 for _, r in ipairs(rules) do got[#got + 1] = r.resource .. " " .. r.account .. " " .. r.asset .. " " .. r.cap end
                 RESULT = #problems .. "|" .. #wproblems .. "|" .. table.concat(got, "; ") .. "|" ..
-                    table.concat(TechieModel.mintRules(TechieConfig, "rp_techie"), "; ")
+                    table.concat(TechieModel.mintRules(TechieConfig, "rp_techie"), "; ") .. "|" ..
+                    table.concat(TechieModel.mintSlots(TechieModel.mintRules(TechieConfig, "rp_techie")), " // ")
             """, "=policy")
-            problems, wproblems, got, want = lua.global_string("RESULT").split("|")
+            problems, wproblems, got, want, slots = lua.global_string("RESULT").split("|")
         finally:
             lua.close()
         self.assertEqual((problems, wproblems), ("0", "0"))
         self.assertEqual(got, want)
+        self.assertEqual(" // ".join(mint), slots)
 
     def test_bench_and_counter_anchors_come_from_the_catalogue(self):
         """The benches and the dealer stand on vanilla AI spots of the pedestrian catalogue (walked
@@ -328,8 +333,11 @@ class TechieLoop(unittest.TestCase):
         for key in ("s1", "s2", "s3", "a1", "b1", "shop"):
             self.assertEqual(r[key], "committed", key)
         self.assertEqual((r["sold"], r["sights_b"]), ("true", "1"))
-        for key in ("state_line", "receipt_line", "tray_line", "bench_line", "status_line", "mint_line", "clock_line"):
+        for key in ("state_line", "receipt_line", "tray_line", "bench_line", "status_line", "mint_line", "mint_last",
+                    "clock_line"):
             self.assertNotEqual(r[key], "0", key)
+        # techie.mintrules prints one tunable line per slot: none longer than a tunable holds.
+        self.assertLessEqual(int(r["mint_longest"]), 256)
         self.assertEqual(r["unbalanced"], "nil")
 
     def test_catalogue_exports_and_parts_ownership(self):

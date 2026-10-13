@@ -12,7 +12,7 @@ Adds the techie job: buy salvage parts from a scrapper or a parts dealer, strip 
 **The techie** (rp_jobs job `techie`, on duty with `/service`) works at the Kabuki west workshop,
 on the upper floor west of Kabuki Market.
 
-1. **Get parts.** At Sparks' counter (the parts dealer, 4 m from the workbench) **E**, **F** and
+1. **Get parts.** At Sparks' counter (the parts dealer, 4.2 m from the workbench) **E**, **F** and
    **R** read *Buy 3 Scrap metal (75 eddies)*, *Buy 2 Copper wire (90 eddies)*, *Buy 1 Data chip
    (220 eddies)*: a 2 second hand gesture, the parts land in your pockets and the price leaves your
    cash. Or buy from a scrapper standing next to you: `/techie buy <their id> scrap_metal 3 66`
@@ -45,9 +45,11 @@ A success reads *Cut scrap into alloy plates: 2 Alloy plate on the tray of Kabuk
 **A scrapper** (any player) sells salvage from their pockets to an on-duty techie:
 `/techie sell <techie id> scrap_metal 3 66`, or accepts the techie's `/techie buy` offer.
 
-**A buyer** (any player, a ripperdoc too) reads *Tech offers to sell you 1 Suppressor kit for 300
-eddies* on the offer card, accepts with **Y** (or `/interaction accept`) or declines with **N**; on
-accept both play the hand-over and the item lands in their pockets as the cash leaves. Declining,
+**A buyer** (any player, a ripperdoc too) sees the offer card *Tech: 1 Suppressor kit for 300
+eddies* (and reads in chat *Tech offers to sell you 1 Suppressor kit for 300 eddies. Y to take it
+and pay, N to decline.*), accepts with **Y** (or `/interaction accept`) or declines with **N**; on
+accept both play the hand-over and the item lands in their pockets as the cash leaves. A techie's
+`/techie buy` shows the scrapper *Tech: buys 3 Scrap metal from you for 66 eddies*. Declining,
 walking away or letting the invitation run out moves nothing.
 
 **Someone watching** sees the techie kneel or stand at the bench while the stage runs. A second
@@ -59,15 +61,11 @@ Other commands: `/techie` (help), `/techie recipes`, `/techie craft <recipe>` (a
 
 ## Setup
 
-1. **rp_jobs knows the job.** Add the `techie` job to `rp_jobs/shared/config.lua`
-   (`RpJobsConfig.Jobs`):
-
-   ```lua
-   { name = "techie", label = "Techie", color = "#E8B44A", civil = true, description = "Workbenches, weapon mods and cyberware parts.", salary = { [0] = 180, [1] = 260, [2] = 360, [3] = 500 } },
-   ```
-
-   Until then, `rp_techie_job` runs the job under an existing rp_jobs job (below). The boot logs
-   `rp_jobs does not know the job 'techie'` when the job is missing.
+1. **rp_jobs knows the job.** rp_jobs ships the `techie` job (`rp_jobs/shared/config.lua`,
+   `RpJobsConfig.Jobs`: civil, joined at the agency, 180 / 260 / 360 / 500 per payroll). A server
+   with its own rp_jobs table adds it back, or runs the job under an existing rp_jobs job with the
+   convar `rp_techie_job` (below). The boot logs `rp_jobs does not know the job 'techie'` when the
+   job is missing.
 
 2. **resources.load**, in this order (`rp_salvage` before `rp_techie` when it runs: it owns
    `scrap_metal` and `copper_wire`; without it rp_techie defines them itself):
@@ -85,22 +83,29 @@ Other commands: `/techie` (help), `/techie recipes`, `/techie craft <recipe>` (a
    tunable.set open77_transactions writers rp_techie:stash/tray+char+cash, rp_economy:cash+bank+soc, rp_inventory
    ```
 
-   Mint rules (append to a free `mintN`; `techie.mintrules` on the console prints them from the
-   config). One per stage output, one per dealer part; the cap per hour is the supply:
+   Mint rules: one per stage output, one per dealer part; the cap per hour is the supply. A
+   tunable holds at most 256 characters, so the twelve rules take three slots. Use three `mintN`
+   no other job uses (here 3, 4 and 5); `techie.mintrules [first slot]` on the console prints these
+   lines from the config, numbered from the slot you give:
 
    ```text
-   tunable.set open77_transactions mint3 rp_techie sys:techie.workshop tch_alloy_plate 400; rp_techie sys:techie.workshop tch_wire_loom 200; rp_techie sys:techie.workshop tch_mod_suppressor 60; rp_techie sys:techie.workshop tch_mod_magazine 60; rp_techie sys:techie.workshop tch_mod_sight 40; rp_techie sys:techie.workshop tch_logic_board 100; rp_techie sys:techie.workshop tch_cw_servo 40; rp_techie sys:techie.workshop tch_cw_neural_link 30; rp_techie sys:techie.workshop tch_cw_optic 30
-   tunable.set open77_transactions mint4 rp_techie sys:techie.dealer scrap_metal 300; rp_techie sys:techie.dealer copper_wire 200; rp_techie sys:techie.dealer chip 40
+   tunable.set open77_transactions mint3 rp_techie sys:techie.workshop tch_alloy_plate 400; rp_techie sys:techie.workshop tch_wire_loom 200; rp_techie sys:techie.workshop tch_mod_suppressor 60; rp_techie sys:techie.workshop tch_mod_magazine 60; rp_techie sys:techie.workshop tch_mod_sight 40
+   tunable.set open77_transactions mint4 rp_techie sys:techie.workshop tch_logic_board 100; rp_techie sys:techie.workshop tch_cw_servo 40; rp_techie sys:techie.workshop tch_cw_neural_link 30; rp_techie sys:techie.workshop tch_cw_optic 30; rp_techie sys:techie.dealer scrap_metal 300
+   tunable.set open77_transactions mint5 rp_techie sys:techie.dealer copper_wire 200; rp_techie sys:techie.dealer chip 40
    ```
 
+   A server short of slots caps each account once instead, in one slot:
+   `rp_techie sys:techie.workshop * 960; rp_techie sys:techie.dealer * 540` (the sums of the caps
+   above; a `*` cap is shared by every item of the account, so one output can use all of it).
+
    Shop sales go through rp_economy, which needs its usual coordinator rule
-   (`rp_economy sys:* money <cap>`) and **a money budget for rp_techie** in
-   `rp_economy/server/config.lua`, `EconomyConfig.mint.callers`: `rp_techie = 30000,`. Without it a
-   shop sale is refused and the techie reads *The shop cannot pay yet (operator: rp_economy mint
-   budget for rp_techie, README Setup).* A server that cannot change rp_economy yet pays the shops
-   through the coordinator instead: convar `rp_techie_shop_payment ledger`, writers
-   `rp_techie:stash/tray+char+cash+soc`, and
-   `tunable.set open77_transactions mint5 rp_techie sys:techie.shop money 60000`.
+   (`rp_economy sys:* money <cap>`) and a money budget for rp_techie: rp_economy ships it
+   (`EconomyConfig.mint.callers`, `rp_techie = 30000`). Without it a shop sale is refused and the
+   techie reads *The shop cannot pay yet (operator: rp_economy mint budget for rp_techie, README
+   Setup).* A server that cannot change rp_economy pays the shops through the coordinator instead:
+   convar `rp_techie_shop_payment ledger`, writers `rp_techie:stash/tray+char+cash+soc`, and the rule
+   `rp_techie sys:techie.shop money 60000` appended with `;` to the last techie slot (`techie.mintrules`
+   prints it there once the convar is set).
 
 4. **Convars.** `rp_inventory_backend transactions` (pockets must be coordinator accounts).
    Optional: `rp_techie_job <job>` (default `techie`), `rp_techie_society <society>` (default
@@ -120,7 +125,7 @@ Other commands: `/techie` (help), `/techie recipes`, `/techie craft <recipe>` (a
 | Command | Effect |
 |---|---|
 | `techie.status` | counters, open offers, operations still settling |
-| `techie.mintrules` | the mint rules of the current config, as one tunable value |
+| `techie.mintrules [first slot]` | the mint rules of the current config, one `tunable.set` line per slot (256 characters each), numbered from the first slot (default 3) |
 | `techie.lab.setup <pid> [grade]` | job `techie` at that grade, duty on |
 | `techie.lab.clock <pid> on\|off` | duty |
 | `techie.lab.give <pid> <item> <count>` | items into the pockets (rp_inventory `addAsync`) |
@@ -201,9 +206,10 @@ tunable lines parsed by the coordinator's own policy parser.
 
 ## Limits
 
-- Poses at the benches, the hand-over presentation and the prompts are checked on the server only;
-  the bench spots are anchor data (`measured = false`) and the crowd may stand on them: turn the
-  crowd down there.
+- Poses at the benches, the hand-over presentation and the prompts are checked on the server only.
+  The benches and Sparks' counter were walked in game (`measured = true`) and keep the server crowd
+  off their points while they exist (`keepCrowdOff`, through open77_pedestrians); the Gallery
+  workshop (off) is still anchor data.
 - The tray is per workshop and shared: any on-duty techie may assemble from what another one
   stripped.
 - A scrapper sells to a techie what is in their pockets. rp_salvage keeps its materials in crate
@@ -212,7 +218,10 @@ tunable lines parsed by the coordinator's own policy parser.
   with the goods): rp_economy offers no sale between two players' pockets that works under a
   writers list, and no purchase from an NPC seller. Shop sales go through rp_economy.
 - Mods and cyberware components are RP items: nothing here fits a mod to a game weapon or installs
-  a component; the ripperdoc job consumes them.
+  a component, and nothing consumes them yet. A ripperdoc buys them as any player does (a
+  techie's `/techie sell`; the `offer` export allows rp_ripperdoc, which does not call it yet), and
+  rp_ripperdoc's `supplier.mode = "components"` is the hook that would burn them for implant boxes,
+  but no grade of its catalogue lists components today.
 - A restart between a commit and its messages skips that step's chat line and `rp:job:completed`
   event, never doubles them. Open offers are forgotten on a restart; nothing is paid.
 - A bench shows four choices; the rest of its recipes are in the bench menu and `/techie craft`.

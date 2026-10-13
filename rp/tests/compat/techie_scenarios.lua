@@ -696,7 +696,16 @@ function scenarios.lab_console()
         tray_line = TW.printed("workshop kabuki_west tray stash:tch%.kabuki_west:tray"),
         bench_line = TW.printed("bench kabuki_west_kneel Workbench %(workbench%) at %-1238%.890,1998%.180,12%.010 yaw 155%.00"),
         status_line = TW.printed("ready=true targets=5 shopPayment=economy"),
-        mint_line = TW.printed("rp_techie sys:techie%.workshop tch_alloy_plate 400; .*rp_techie sys:techie%.dealer chip 40"),
+        mint_line = TW.printed("tunable%.set open77_transactions mint3 rp_techie sys:techie%.workshop tch_alloy_plate 400; "),
+        mint_last = TW.printed("tunable%.set open77_transactions mint5 [^\n]*rp_techie sys:techie%.dealer chip 40$"),
+        mint_longest = (function()
+            local longest = 0
+            for _, line in ipairs(MH.logs) do
+                local value = line:match("^%[rp_techie%] tunable%.set open77_transactions mint%d (.+)$")
+                if value and #value > longest then longest = #value end
+            end
+            return longest
+        end)(),
         clock_line = TW.printed("duty 1 off: true"),
         unbalanced = tostring(SFW.unbalanced()),
     })

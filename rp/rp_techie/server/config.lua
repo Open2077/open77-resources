@@ -188,8 +188,8 @@ C.recipeOrder = {
 C.workshops = {
     -- Upper floor west of Kabuki Market (z 12, 4 m above the market, inside the kabuki_market
     -- zone), 48 m from the freeroam spawn. The game kneels a worker with a tool here and stands
-    -- another with a tablet 8.7 m away; card players and loungers fill the rest of the floor (the
-    -- crowd may book these spots: turn it down for a lab run).
+    -- another with a tablet 8.7 m away; card players and loungers fill the rest of the floor. Each
+    -- bench keeps the crowd off its point while it exists (`keepCrowdOff`, open77_pedestrians).
     kabuki_west = {
         enabled = true, label = "Kabuki west workshop", trayCapacityG = 30000,
         benches = {
@@ -226,7 +226,7 @@ C.dealers = {
     kabuki_west = {
         enabled = true, label = "Sparks, parts dealer", name = "Sparks",
         position = { x = -1235.566, y = 2000.680, z = 12.077 }, yaw = -151.0,
-        measured = true, source = "walked in game: by the dumpster 3.8 m from the workbench (spots row 32163)",
+        measured = true, source = "walked in game: by the dumpster, 4.2 m from the workbench point and 3.8 m from the game's kneeling worker (spots row 32163)",
         lots = {
             { item = "scrap_metal", count = 3, price = 75 },
             { item = "copper_wire", count = 2, price = 90 },

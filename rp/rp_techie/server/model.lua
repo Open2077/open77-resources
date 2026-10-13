@@ -282,6 +282,25 @@ function M.mintRules(cfg, resource)
     return rules
 end
 
+-- A server tunable holds at most 256 characters (the platform's ResourceTunables.MaximumTextLength),
+-- so one `mintN` value cannot carry every rule: they are packed, in order, into as few values as fit.
+M.TUNABLE_TEXT_MAX = 256
+function M.mintSlots(rules, max)
+    max = max or M.TUNABLE_TEXT_MAX
+    local slots, current = {}, nil
+    for _, rule in ipairs(rules) do
+        local joined = current and (current .. "; " .. rule) or rule
+        if current and #joined > max then
+            slots[#slots + 1] = current
+            current = rule
+        else
+            current = joined
+        end
+    end
+    if current then slots[#slots + 1] = current end
+    return slots
+end
+
 -- ASCII only: prompt cards and chat replace a non-ASCII glyph with "?".
 function M.money(n) return ("%d eddies"):format(math.tointeger(n) or 0) end
 
