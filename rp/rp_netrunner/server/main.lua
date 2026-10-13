@@ -484,7 +484,7 @@ RegisterCommand("netrun.deliver", function(source, args)
             local fixer = argPlayer(source, args[2])
             if not fixer then return end
             local o, why = Svc:handover(pid, fixer)
-            reply(source, o and ("hand-over %s offered: the fixer accepts with /interaction accept"):format(o.id)
+            reply(source, o and ("hand-over %s offered: the fixer accepts with Y on the offer card, or /interaction accept"):format(o.id)
                 or ("hand-over refused: " .. tostring(why)))
             return
         end

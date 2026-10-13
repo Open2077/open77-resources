@@ -647,6 +647,7 @@ function S:offer(cook, stall, opts)
         end
     end
     if not chosen then return nil, "no_order_ready" end
+    local cookName = self:nameOf(cook)
     if self.offerOf[cook] then return nil, "player_reserved" end   -- a concurrent offer won while reading
     local customer = chosen.pid
     local holdKey = source .. "|" .. entry.item
@@ -654,9 +655,12 @@ function S:offer(cook, stall, opts)
     -- The portion in the cook's hand while offered: drinks only (a native record the platform
     -- documents); this resource owns that hand item, the coordinator owns the portion.
     if entry.hand then self:hold(cook, entry.item, entry.hand) end
+    -- The offer card says who offers what for how much (Y / N answer it); without a label it read
+    -- "Someone wants to give you something.".
     local state, why = P.interactions.request(cook, customer, "give", {
         durationMs = cfg.serve.durationMs, startDistance = cfg.serve.startDistance,
         breakDistance = cfg.serve.breakDistance, inviteTimeoutMs = cfg.serve.inviteTimeoutMs, consent = true,
+        label = ("%s: a %s for %s"):format(cookName, entry.label, M.money(entry.price + (chosen.tip or 0))):sub(1, 120),
     })
     if type(state) ~= "table" or not state.id then
         self:promise(holdKey, -1)
@@ -674,8 +678,8 @@ function S:offer(cook, stall, opts)
     self.offerOf[cook] = o.id
     chosen.offerId = o.id            -- no second cook offers this order meanwhile
     local total = o.price + o.tip
-    self:tell(customer, ("%s offers you a %s: %s%s = %s. Accept the hand-over to pay (/interaction accept), or decline it.")
-        :format(self:nameOf(cook), entry.label, M.money(o.price), o.tip > 0 and (" + tip " .. M.money(o.tip)) or "",
+    self:tell(customer, ("%s offers you a %s: %s%s = %s. Y to take it and pay, N to decline.")
+        :format(cookName, entry.label, M.money(o.price), o.tip > 0 and (" + tip " .. M.money(o.tip)) or "",
         M.money(total)), "info")
     self:tell(cook, ("Offer sent to %s: %s for %s."):format(self:nameOf(customer), entry.label, M.money(total)), "info")
     self:log("offer %s: %s -> %s, %s %d+%d, sale %s", o.id, tostring(o.cookSubject), tostring(o.customerSubject),

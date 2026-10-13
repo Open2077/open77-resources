@@ -46,9 +46,9 @@ A success reads *Cut scrap into alloy plates: 2 Alloy plate on the tray of Kabuk
 `/techie sell <techie id> scrap_metal 3 66`, or accepts the techie's `/techie buy` offer.
 
 **A buyer** (any player, a ripperdoc too) reads *Tech offers to sell you 1 Suppressor kit for 300
-eddies*, accepts with the invitation (`/interaction accept`) or declines; on accept both play the
-hand-over and the item lands in their pockets as the cash leaves. Declining, walking away or
-letting the invitation run out moves nothing.
+eddies* on the offer card, accepts with **Y** (or `/interaction accept`) or declines with **N**; on
+accept both play the hand-over and the item lands in their pockets as the cash leaves. Declining,
+walking away or letting the invitation run out moves nothing.
 
 **Someone watching** sees the techie kneel or stand at the bench while the stage runs. A second
 techie who presses **E** on that bench is told *Someone is already working at that bench.*; the

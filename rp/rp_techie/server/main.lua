@@ -34,7 +34,7 @@ exports("isComponent", function(item) return M.contains(cfg.cyberwareComponents,
 
 -- offer({ seller, buyer, item, count?, price?, initiator = "seller" | "buyer" }) ->
 -- { interaction, sale } | nil, reason. Starts a consented trade between two connected players
--- (the responder accepts with /interaction accept). Callers: cfg.trade.offerCallers.
+-- (the responder accepts with Y on the offer card, or /interaction accept). Callers: cfg.trade.offerCallers.
 exports("offer", function(spec)
     local caller = GetInvokingResource()
     if not caller or not cfg.trade.offerCallers[caller] then return nil, "caller_not_allowed" end
@@ -365,7 +365,8 @@ RegisterCommand("techie.lab.shop", function(source, args)
 end, true)
 
 -- techie.lab.offer <sellerId> <buyerId> <item> [count] [price] [seller|buyer]: a consented trade
--- (the responder accepts with /interaction accept). The last word says who asked (default seller).
+-- (the responder accepts with Y on the offer card, or /interaction accept). The last word says who
+-- asked (default seller).
 RegisterCommand("techie.lab.offer", function(source, args)
     local seller = argPlayer(source, args[1])
     local buyer = seller and argPlayer(source, args[2])
@@ -373,7 +374,7 @@ RegisterCommand("techie.lab.offer", function(source, args)
     CreateThread(function()
         local o, why = Svc:startTrade({ seller = seller, buyer = buyer, item = args[3], count = tonumber(args[4] or "1"),
             price = args[5] and tonumber(args[5]) or nil, initiator = args[6] == "buyer" and "buyer" or "seller", via = "lab" })
-        reply(source, o and ("trade %s: %d -> %d, %d %s for %d, sale %s; the responder accepts with /interaction accept")
+        reply(source, o and ("trade %s: %d -> %d, %d %s for %d, sale %s; the responder accepts with Y on the offer card, or /interaction accept")
             :format(o.id, seller, buyer, o.count, o.item, o.price, o.opId) or ("trade refused: " .. tostring(why)))
     end)
 end, true)

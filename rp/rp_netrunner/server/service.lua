@@ -938,10 +938,14 @@ function S:handover(pid, fixerArg)
     if self.offerOf[pid] then return nil, "player_reserved" end
     local pockets = L.read(L.pocketsOf(subject))
     if not L.hasInstance(pockets, c.shard) then return nil, "no_shard" end
+    local runnerName = self:nameOf(pid)
     if self.offerOf[pid] then return nil, "player_reserved" end
     local h = cfg.deliver.handover
+    -- The offer card says who hands what (Y / N answer it); without a label it read "Someone wants
+    -- to give you something.".
     local state, why = P.interactions.request(pid, fixer, "give", { durationMs = h.durationMs,
-        startDistance = h.startDistance, breakDistance = h.breakDistance, inviteTimeoutMs = h.inviteTimeoutMs, consent = true })
+        startDistance = h.startDistance, breakDistance = h.breakDistance, inviteTimeoutMs = h.inviteTimeoutMs, consent = true,
+        label = ("%s: the data shard of contract %s"):format(runnerName, c.code):sub(1, 120) })
     if type(state) ~= "table" or not state.id then
         return nil, (why == "too_far") and "fixer_far" or (why or "interactions_unavailable")
     end
@@ -951,8 +955,8 @@ function S:handover(pid, fixerArg)
     self.offers[o.id] = o
     self.offerOf[pid] = o.id
     local net = c.reward - (c.cut or 0)
-    self:tell(fixer, ("%s hands you the data shard of contract %s. Accept the hand-over (/interaction accept) to pass it to your client: %s to them, %s to you."):format(
-        self:nameOf(pid), c.code, M.money(net), M.money(c.cut or 0)), "info")
+    self:tell(fixer, ("%s hands you the data shard of contract %s. Y to take it and pass it to your client (%s to them, %s to you), N to decline."):format(
+        runnerName, c.code, M.money(net), M.money(c.cut or 0)), "info")
     self:tell(pid, ("Hand-over offered to %s: they have to accept."):format(self:nameOf(fixer)), "info")
     self:log("hand-over %s: contract %s, runner %d -> fixer %d", o.id, c.code, pid, fixer)
     return o

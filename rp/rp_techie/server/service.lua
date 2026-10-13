@@ -774,12 +774,19 @@ function S:startTrade(spec)
     if not sellerSubject or not buyerSubject then return nil, swhy or bwhy or "subject_unavailable" end
     local snap = L.read("char:" .. sellerSubject)
     if M.available(snap, item) - self:promiseOf(sellerSubject, item) < count then return nil, "seller_lacks_items" end
+    local goods, money = ("%d %s"):format(count, self:labelOf(item)), M.money(price)
+    local sellerName, buyerName = self:nameOf(seller), self:nameOf(buyer)
     if self.offerOf[seller] or self.offerOf[buyer] then return nil, "player_reserved" end   -- a concurrent offer won
     local initiator = spec.initiator == "buyer" and buyer or seller
     local responder = initiator == seller and buyer or seller
+    -- The offer card says who offers what for how much (Y / N answer it); without a label it read
+    -- "Someone wants to give you something.".
+    local label = responder == buyer and ("%s: %s for %s"):format(sellerName, goods, money)
+        or ("%s: buys %s from you for %s"):format(buyerName, goods, money)
     local state, why = P.interactions.request(initiator, responder, "give", {
         durationMs = cfg.trade.durationMs, startDistance = cfg.trade.startDistance,
         breakDistance = cfg.trade.breakDistance, inviteTimeoutMs = cfg.trade.inviteTimeoutMs, consent = true,
+        label = label:sub(1, 120),
     })
     if type(state) ~= "table" or not state.id then return nil, why or "interactions_unavailable" end
     local now = P.now()
@@ -791,13 +798,12 @@ function S:startTrade(spec)
     self.offers[o.id] = o
     self.offerOf[seller], self.offerOf[buyer] = o.id, o.id
     self:promise(sellerSubject, item, count)
-    local goods, money = ("%d %s"):format(count, self:labelOf(item)), M.money(price)
     if responder == buyer then
-        self:tell(buyer, ("%s offers to sell you %s for %s. Accept the hand-over to pay (/interaction accept), or decline it.")
-            :format(self:nameOf(seller), goods, money), "info")
+        self:tell(buyer, ("%s offers to sell you %s for %s. Y to take it and pay, N to decline.")
+            :format(sellerName, goods, money), "info")
     else
-        self:tell(seller, ("%s wants to buy %s from you for %s. Accept the hand-over to sell (/interaction accept), or decline it.")
-            :format(self:nameOf(buyer), goods, money), "info")
+        self:tell(seller, ("%s wants to buy %s from you for %s. Y to sell, N to decline.")
+            :format(buyerName, goods, money), "info")
     end
     self:tell(initiator, ("Offer sent to %s: %s for %s."):format(self:nameOf(responder), goods, money), "info")
     self:log("trade offer %s: %s -> %s, %d %s for %d (%s, techie %d), sale %s", o.id, tostring(sellerSubject),
