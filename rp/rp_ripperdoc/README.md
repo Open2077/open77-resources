@@ -25,8 +25,9 @@ zone `viktor_clinic`.
    implant are put on hold (nothing is paid yet) and the station next to the chair now offers the
    procedure: **E Install Gorilla Arms (Street)**.
 3. **Operate.** Once the patient sits in the chair, stand at the station and press **E** (or
-   `/ripper operate`). The ripperdoc plays the drill workspot at the station and a bar runs on both
-   screens (12 to 22 s by grade). **X** stops it: nothing is charged. When the bar ends the implant is
+   `/ripper operate`). The ripperdoc kneels at the patient's side with a screwdriver (`repair`;
+   `examine`, then `tablet2`, when the server lacks it) and a bar runs on both screens (12 to 22 s
+   by grade). **X** stops it: nothing is charged. When the bar ends the implant is
    installed, then the hold is paid: the price to the `ripper` society, the box out of the stock.
 4. **Restock.** At the chrome dealer in Kabuki Market, **E Buy chrome for the clinic** opens the order
    menu (or `/ripper restock arms industrial 2`). The boxes are delivered to the clinic's stash in the
@@ -43,9 +44,9 @@ zone `viktor_clinic`.
    toast (implant, grade, price, time, cyberpsychosis risk), and the platform's offer card opens in the
    middle of the screen: accept with **Y**, refuse with **N** (30 s; the keys are rebindable, and `/interaction accept` or
    `decline` also work).
-2. Sit in Vik's operating chair: **E Sit in the operating chair** (or `/ripper lie`). Walk away to get
-   up. A patient already seated when the quote comes is stood up for the answer and seated again
-   after accepting.
+2. Sit in Vik's operating chair: **E Sit in the operating chair** (or `/ripper lie`, which keeps
+   its old name: you sit, you do not lie down). Walk away to get up. A patient already seated when
+   the quote comes is stood up for the answer and seated again after accepting.
 3. During the operation a bar shows the time under the knife. **X** stops it: nothing is charged.
 4. Done: chat, toast, `/implants` lists the chrome as the platform reports it. A patient past the
    cyberpsychosis threshold (4 implants) gets a 60 s `drugged` overlay and a warning.
@@ -108,7 +109,7 @@ Everything is in `shared/config.lua` (`RpRipperConfig`).
 | Key | Default | Meaning |
 |---|---|---|
 | `job`, `society`, `fixerJob` | `ripper`, `ripper`, `ripperdoc` | the rp_jobs job, the society paid, the job id in `rp:job:completed` |
-| `clinics.viktor.chair.mode` | `placed` | `placed`: the `lie` action at the chair point; `seating`: a real furniture through open77_seating (`chair.furniture`, optional `chair.spot`) |
+| `clinics.viktor.chair.mode` | `placed` | `placed`: this resource's own chair action (its id is still `lie`) plays `chair.profiles` at the chair point; `seating`: a real furniture through open77_seating (`chair.furniture`, optional `chair.spot`) |
 | `clinics.viktor.chair.position`, `yaw`, `arrivalRadius` | `-1546.92, 1234.22, 11.6`, `145`, `1.0` | Vik's reclining chair; the body sits on it facing the clinic floor |
 | `clinics.viktor.chair.profiles`, `actionLabel` | `seatedsleep`, `seated`; `Sit in the operating chair` | the patient's posture (the first one the server knows is played) and the prompt; the bed postures `lie` / `bedsidelie` only suit a flat bed |
 | `clinics.viktor.station` | `-1546.40, 1233.74, 11.6`, yaw `55` | where the ripperdoc stands to operate: on the patient's free left side, 0.7 m from the seat, facing them (the instrument cart is on the right) |
@@ -117,7 +118,7 @@ Everything is in `shared/config.lua` (`RpRipperConfig`).
 | `supplier.mode` | `mint` | `components`: each box burns its grade's `components` (a future techie's parts) from `componentsFrom` instead of money |
 | `supplier.payFrom`, `priceFactor`, `maxCount`, `durationMs` | `society, cash`, `0.6`, `5`, `6000` | who pays an order, the wholesale share, boxes per order, the bar |
 | `quote.distance`, `inviteTimeoutMs`, `validMs`, `leashM` | `4.0`, `30000`, `180000`, `25.0` | consent reach and time, how long an accepted quote waits, how far the patient may walk |
-| `operation.profiles`, `installTimeoutMs`, `holdTtlMs` | driller, tablet, examine; `20000`; `600000` | the ripperdoc's pose, the cyberware answer, the coordinator hold |
+| `operation.profiles`, `installTimeoutMs`, `holdTtlMs` | `repair`, `examine`, `tablet2`; `20000`; `600000` | the ripperdoc's pose at the station (the first one the server knows: kneeling with a screwdriver, kneeling, a tablet; no drill workspot), the cyberware answer, the coordinator hold |
 | `payFrom` | `cash, bank` | the patient's wallets in order |
 | `removalPriceFactor` | `0.5` | a removal's price share; it returns nothing to the stock |
 | `buyback.ratio`, `maxCount`, `payFrom` | `0.5`, `5`, `society, cash` | buying boxes from players |
@@ -163,12 +164,14 @@ exports.rp_ripperdoc:procedure(playerId)     -- { id, state, action, implant, gr
 - **One procedure per clinic** at a time; one stock per clinic.
 - **Prompts close together.** The chair and the station are 0.7 m apart: a card answers the nearest
   player. Move `station` if the wrong card shows. The ripperdoc is placed on the station while the
-  patient lies in the chair; open77_actions only refuses a placement onto another body
+  patient sits in the chair; open77_actions only refuses a placement onto another body
   (`spot_taken`) when that body is not itself held in the chair's action.
 - **Seating mode** depends on a furniture id near the clinic (`chair.furniture`) and on
-  open77_seating's lying prompt; until then the chair is `placed`.
+  open77_seating's own prompt; until then the chair is `placed`.
 - **Hacking implants** need `open77_hacking`; the record shape of their slots is read loosely.
-- **Postures.** `lie` and the driller workspot ship in the RP archive; a server that does not know a
-  profile runs the action without it (logged once at start).
+- **Postures.** The patient plays `seatedsleep` (else `seated`) in the chair, the ripperdoc
+  `repair` (else `examine`, then `tablet2`) at the station: each list plays the first profile the
+  server's catalogue knows, and a server that knows none runs the action without a pose (logged
+  once at start).
 - **No society refunds.** A procedure that ends without the implant releases the hold: nothing was
   paid, so nothing is refunded.
