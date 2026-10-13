@@ -295,7 +295,7 @@ FXW.MINT_RULES = "rp_economy sys:* money 100000000; rp_inventory sys:* * 100000"
 FXW.ITEMS = {
     chip = { label = "Data chip", weight = 0.05 },
     component = { label = "Component", weight = 0.5 },
-    chooh2 = { label = "CHOOH2 fuel can", weight = 5.0 },
+    chooh2_canister = { label = "CHOOH2 canister", weight = 5.0 },   -- rp_chooh2's refinery output
     implant_box_arms = { label = "Implant box: Gorilla Arms (Street)", weight = 2.0 },
 }
 

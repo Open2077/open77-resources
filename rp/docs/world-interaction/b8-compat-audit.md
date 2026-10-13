@@ -703,6 +703,10 @@ names, exports, refusal tokens and events. The wave-1 suite (§6) fails if any o
   give it a plate- and owner-aware path.
 - **C2:**
   - `rp_nomade` has no persistent cargo or contract to migrate; only `rp_nomade_contracts` history.
+    *Update 2026-10-13 (rp_nomade 2.0, W3-7):* the table is no longer written or read. Runs, crates and
+    payouts live in open77_transactions accounts and the resource kvp (`tally:<run>`); existing rows stay as
+    history. The `session:<id>` identifier and the `nomade:contract:<localId>` society note (section 1.3)
+    no longer occur. `activeContract` is still exported for `rp_crime`.
   - Keep `activeContract`, its only cross-resource API (`rp_crime`).
   - `rp_crime` steals from Nomade cargo without telling `rp_nomade` (sub-audit, verified at
     `rp_crime/server/main.lua:1086-1096`). C2 must close that, or the two economies double-count.
