@@ -275,7 +275,8 @@ setOpen = function(value, immediate, errorMessage)
     local generation = menuGeneration
     if value then
         -- The WebUI owns input without entering a vanilla pause scenario.
-        menu:setFocus(true, true)
+        menu:show()
+        if not menu:setFocus(true, true) then open = false; menu:hide(); return end
         publishState()
         menu:send("pause:open", {generation=generation, error=errorMessage})
         startStateLoop()
@@ -284,10 +285,11 @@ setOpen = function(value, immediate, errorMessage)
         menu:send("pause:close", {generation=generation,immediate=immediate == true})
         -- Session/world transitions must not carry a modal or delayed focus
         -- release into the next world. Ordinary close retains its animation.
-        if immediate then menu:setFocus(false, false);return end
+        if immediate then menu:setFocus(false, false);menu:hide();return end
         SetTimeout(260, function()
             if not open and generation == menuGeneration then
                 menu:setFocus(false, false)
+                menu:hide()
             end
         end)
     end
@@ -885,8 +887,9 @@ AddEventHandler("onClientResourceStart", function(name)
     startVoiceRestoreLoop()
 
     local errorMessage
-    -- Keep the transparent surface alive: DOM transitions own visibility.
-    -- Recreating/revealing an idle CEF surface used to leave a stale first frame.
+    -- Create once, then suspend the closed menu after its transition. The host
+    -- now revalidates/repaints hidden views on reveal; a transparent fullscreen
+    -- quad need not be blended over every game/frame-generation presentation.
     menu, errorMessage = WebUI.create({
         entry = "web/index.html", layer = "system", policy = "images",
         width = 1920, height = 1080, fps = 144,
@@ -899,7 +902,14 @@ AddEventHandler("onClientResourceStart", function(name)
     -- Consume both keyboard streams, including the closing Escape's release.
     menu:setConsumedKeys({"escape"})
 
+    menu:on("webui:host-lost", function()
+        setOpen(false, true)
+        Open77.session.setMenuReady(false)
+    end)
     menu:on("pause:ready", function()
+        -- A replacement document starts closed; discard any interrupted capture
+        -- or modal state held by the old page before accepting Escape again.
+        setOpen(false, true)
         TriggerEvent("open77:privacy:request")
         -- The string table FIRST: everything sent after it is rendered with it,
         -- and the page paints its static labels the moment it arrives.
@@ -935,6 +945,7 @@ AddEventHandler("onClientResourceStart", function(name)
         stateLoopGeneration = stateLoopGeneration + 1
         Open77.voice.setMicrophoneTest(false)
         menu:setFocus(false, false)
+        menu:hide()
     end)
 
     menu:on("settings:closed", function()
