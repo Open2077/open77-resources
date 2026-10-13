@@ -34,6 +34,14 @@ Config.stackHeights = {
     ["crate.ammo_box"] = 0.32,
 }
 
+-- Model alias -> how far that model's origin sits from a crate.small's when both rest on the same
+-- floor (metres; a layout's slot z is measured with crate.small). Measured live 2026-10-13 on a
+-- Mackinaw with the tailgate open, standing and crouched: an ammo box rests on the bed floor at slot
+-- z 0.5 where crate.small is at 0.9; at 0.9 it hung at the height of the bed rails.
+Config.seats = {
+    ["crate.ammo_box"] = -0.40,
+}
+
 -- Optional allowlist of the resources that may call load / unload (GetInvokingResource()).
 -- nil = any server resource (they are trusted code; players never reach these exports).
 Config.callers = nil

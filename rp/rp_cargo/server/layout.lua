@@ -229,14 +229,19 @@ end
 -- `heights` (optional): model alias -> the height a box of that model takes in a stack. A slot's
 -- `stackHeight` was measured with one model (crate.small); a shorter box stacked at that height
 -- floats above the one under it. A stack then rises by the heights of the boxes below.
-function L.placements(layout, occupants, heights)
+-- `seats` (optional): model alias -> how far that model's origin sits from a crate.small's when both
+-- rest on the same floor (a slot's z is measured with crate.small). Without it, a box whose origin
+-- is at its base hangs above the bed by the difference.
+function L.placements(layout, occupants, heights, seats)
     local slots, loose = bySlot(layout, occupants)
     local placements, count, hidden, top = {}, {}, {}, {}
     local function place(s, o, reassigned)
         count[s.id] = count[s.id] + 1
         local offset, rotation = L.offset(layout, s.id, 1)
-        offset.z = s.z + (top[s.id] or 0.0)
-        local h = type(heights) == "table" and tonumber(heights[o.model or layout.model or ""]) or nil
+        local model = o.model or layout.model or ""
+        local seat = type(seats) == "table" and tonumber(seats[model]) or 0.0
+        offset.z = s.z + seat + (top[s.id] or 0.0)
+        local h = type(heights) == "table" and tonumber(heights[model]) or nil
         top[s.id] = (top[s.id] or 0.0) + (h or s.stackHeight)
         placements[o.instance] = { slot = s.id, rank = count[s.id], offset = offset, rotation = rotation,
             reassigned = reassigned or nil }

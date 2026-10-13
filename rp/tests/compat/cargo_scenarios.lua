@@ -218,6 +218,9 @@ function scenarios.layouts()
     r.stack_z = ("%.2f/%.2f/%.2f"):format(p.a.offset.z, p.b.offset.z, p.c.offset.z)
     local q = L.placements(two, occ)
     r.stack_z_default = ("%.2f/%.2f/%.2f"):format(q.a.offset.z, q.b.offset.z, q.c.offset.z)
+    -- A model seated lower than crate.small rests on the floor; what stacks on it rises from there.
+    local s = L.placements(two, occ, { ["crate.ammo_box"] = 0.32 }, { ["crate.ammo_box"] = -0.40 })
+    r.stack_z_seated = ("%.2f/%.2f/%.2f"):format(s.a.offset.z, s.b.offset.z, s.c.offset.z)
     return r
 end
 
