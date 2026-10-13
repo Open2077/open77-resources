@@ -1637,9 +1637,13 @@ function S:requestSearch(pid)
     local consenter = self:consenterOf(target, pos)
     if not consenter then return nil, "consent_needed" end
     local cfg = self.cfg.officer
+    local officer = self.P.players.displayName(pid) or ("officer " .. pid)
+    -- Live 2026-10-13: the card read "Someone makes you an offer." and the chat line told the driver
+    -- to type /interaction accept; the card now says who asks what (Y / N answer it).
     local state, why = self.P.interactions.request(pid, consenter, "custom", {
         durationMs = 500, startDistance = cfg.consentDistance, breakDistance = cfg.consentDistance + 2.0,
         inviteTimeoutMs = cfg.inviteTimeoutMs, consent = true,
+        label = ("NCPD %s: search your truck %s"):format(officer, target.plate):sub(1, 120),
     })
     if type(state) ~= "table" or not state.id then
         if why == "player_in_vehicle" then
@@ -1651,8 +1655,8 @@ function S:requestSearch(pid)
     target.authority = "consent"
     target.consenter = consenter
     self.searches[state.id] = { officer = pid, target = target }
-    self:tell(consenter, ("NCPD: %s asks to search the truck %s. Accept (/interaction accept) or refuse (/interaction decline).")
-        :format(self.P.players.name(pid) or ("officer " .. pid), target.plate), "warning")
+    self:tell(consenter, ("NCPD: %s asks to search the truck %s. Y to let them search, N to refuse.")
+        :format(officer, target.plate), "warning")
     self:tell(pid, "Waiting for the driver's consent.", "info")
     self:log("officer %d asks %d to search %s (interaction %s)", pid, consenter, target.plate, state.id)
     return { pending = state.id }
@@ -1814,9 +1818,11 @@ function S:offerCrate(seller, buyer, price)
     local run = self.runs[best.run]
     local live = self:runLive(run) and self:isCrew(seller)
     local q = M.playerQuote(price, live, cfg.campCut)
+    local sellerName = self.P.players.displayName(seller) or ("player " .. seller)
     local state, why = self.P.interactions.request(seller, buyer, "give", {
         durationMs = cfg.playerSale.durationMs, startDistance = cfg.playerSale.startDistance,
         breakDistance = cfg.playerSale.breakDistance, inviteTimeoutMs = cfg.playerSale.inviteTimeoutMs, consent = true,
+        label = ("%s: a crate of %s for %s"):format(sellerName, cfg.items[cfg.goodsItem].label:lower(), M.money(price)):sub(1, 120),
     })
     if type(state) ~= "table" or not state.id then return nil, why or "interactions_unavailable" end
     local o = { id = state.id, seller = seller, buyer = buyer, crate = best.id, price = price, live = live,
@@ -1826,8 +1832,8 @@ function S:offerCrate(seller, buyer, price)
     o.quote.op = o.opId
     self.offers[o.id] = o
     best.offer = o.id
-    self:tell(buyer, ("%s offers you a crate of %s for %s. Accept the hand-over to pay (/interaction accept), or decline it.")
-        :format(self.P.players.name(seller) or ("player " .. seller), cfg.items[cfg.goodsItem].label:lower(), M.money(price)), "info")
+    self:tell(buyer, ("%s offers you a crate of %s for %s. Y to take it and pay, N to decline.")
+        :format(sellerName, cfg.items[cfg.goodsItem].label:lower(), M.money(price)), "info")
     self:tell(seller, ("Offer sent: the crate for %s."):format(M.money(price)), "info")
     self:log("offer %s: crate %s from %s to %s for %d (sale %s, live=%s)", o.id, best.id, sellerSubject, buyerSubject,
         price, o.opId, tostring(live))

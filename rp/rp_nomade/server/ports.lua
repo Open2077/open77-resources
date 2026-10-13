@@ -156,6 +156,14 @@ P.players = {
         return nil
     end,
     name = function(pid) return Open77.players.name(pid) end,
+    -- The character's full name from rp_identity (optional), else the account name.
+    displayName = function(pid)
+        if P.running("rp_identity") then
+            local name = sync("rp_identity", "fullName", pid)
+            if type(name) == "string" and name ~= "" then return name end
+        end
+        return Open77.players.name(pid)
+    end,
     all = function() return Open77.players.all() or {} end,
     -- players.wanted
     setWanted = function(pid, level)
