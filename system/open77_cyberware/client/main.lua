@@ -390,7 +390,7 @@ CreateThread(function()
     end
 end)
 
-AddEventHandler("onResourceStop", function(name)
+AddEventHandler("onClientResourceStop", function(name)
     if name == GetCurrentResourceName() then
         generation = generation + 1
         pendingJump, legsIncarnation, legsRequest = nil, nil, nil

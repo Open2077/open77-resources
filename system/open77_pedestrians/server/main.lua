@@ -64,8 +64,72 @@ local api = {
     log = function(fmt, ...) print(string.format(fmt, ...)) end,
 }
 
+-- Seats players hold (row B6, open77_seating): both schedulers keep their pedestrians off them.
+local guard = Open77PedestrianSeatGuard.new(api.now)
+api.seatBlocked = function(bucket, x, y, z) return guard:blocks(bucket, x, y, z) ~= nil end
+
 seated = Open77PedestrianScheduler.new(Open77PedestrianSpotCatalog, Open77PedestrianConfig, api)
 crowd = Open77CrowdScheduler.new(Open77CrowdLaneCatalog, Open77CrowdSpotCatalog, Open77PedestrianConfig, api)
+
+-- ---------------------------------------------------------------------------
+-- Seat holds for other resources (row B6, docs/world-interaction/b6-seating.md)
+-- ---------------------------------------------------------------------------
+-- The pedestrian holding a seat near a point: a seated (or returning) one at its spot, a corpse where it
+-- lies, of either scheduler. Before the schedulers have indexed there is none.
+local function occupantNear(bucket, x, y, z, radius)
+    return seated:occupantNear(bucket, x, y, z, radius) or crowd:occupantNear(bucket, x, y, z, radius)
+end
+
+local function invoker()
+    local owner = GetInvokingResource and GetInvokingResource() or nil
+    if type(owner) ~= "string" or owner == "" then return nil end
+    return owner
+end
+
+-- holdSeat(bucket, key, position, options?) -> true[, overlap] | nil, reason[, occupant]
+--   options: radius (0.3-1.5 m, default 0.6), ttlMs (1000-600000, default 30000), force.
+-- Atomic: refused with "npc_occupied" (and the occupant: npc, state, source, spot, distance) when a
+-- pedestrian holds a seat within the radius, else the hold is registered or refreshed. From then on no
+-- pedestrian spawns, visits or walks back within the radius until it is released, lapses or its owner
+-- stops. `force` registers it anyway and returns the overlapping pedestrian second: the owner refreshes
+-- a seat its player already sits on (this resource may have restarted in between).
+exports("holdSeat", function(bucket, key, position, options)
+    local owner = invoker()
+    if not owner then return nil, "owner_unavailable" end
+    local request, reason = Open77PedestrianSeatGuard.parse(bucket, key, position, options)
+    if not request then return nil, reason end
+    local occupant = occupantNear(request.bucket, request.x, request.y, request.z, request.radius)
+    if occupant and not request.force then return nil, "npc_occupied", occupant end
+    local entry, why = guard:hold(owner, request)
+    if not entry then return nil, why end
+    return true, occupant
+end)
+
+-- releaseSeat(bucket, key) -> boolean: drops the caller's own hold.
+exports("releaseSeat", function(bucket, key)
+    local owner = invoker()
+    if not owner then return false end
+    return guard:release(owner, bucket, key)
+end)
+
+-- seatOccupants(bucket, points, radius?) -> list aligned with `points` (at most 8 `{ x, y, z }`): false, or
+-- the pedestrian holding a seat there. A read for prompts; `holdSeat` decides.
+exports("seatOccupants", function(bucket, points, radius)
+    bucket = math.tointeger(tonumber(bucket))
+    if bucket == nil or type(points) ~= "table" or #points > 8 then return nil, "invalid_request" end
+    radius = tonumber(radius) or Open77PedestrianSeatGuard.DEFAULT_RADIUS
+    if radius ~= radius or radius < Open77PedestrianSeatGuard.MIN_RADIUS or
+        radius > Open77PedestrianSeatGuard.MAX_RADIUS then
+        return nil, "invalid_request"
+    end
+    local out = {}
+    for i, point in ipairs(points) do
+        local x, y, z = type(point) == "table" and tonumber(point.x), type(point) == "table" and tonumber(point.y),
+            type(point) == "table" and tonumber(point.z)
+        out[i] = (x and y and z) and occupantNear(bucket, x, y, z, radius) or false
+    end
+    return out
+end)
 local stopping = false
 -- A fault that lasts would fill the log four times a second: the first failure of a scheduler is
 -- printed, then one line a minute with the number of its failures since the previous line.
@@ -90,6 +154,7 @@ CreateThread(function()
     local budget = { work = 0, slices = 0 }
     while not stopping do
         budget.work, budget.slices = 0, 0
+        guard:sweep()
         -- An error in one pass (the instruction quota included) costs that pass, not the loop:
         -- the platform drops a thread that errors, and pedestrians would stop for good.
         reportSeated(pcall(seated.tick, seated, budget))
@@ -99,7 +164,12 @@ CreateThread(function()
 end)
 
 AddEventHandler("onResourceStop", function(name)
-    if name == GetCurrentResourceName() then stopping = true end
+    if name == GetCurrentResourceName() then
+        stopping = true
+    else
+        -- A resource that held seats is gone: its players no longer sit there.
+        guard:releaseOwner(name)
+    end
 end)
 -- Each scheduler ignores the NPCs it does not own.
 AddEventHandler("onNpcDamaged", function(npcId, source)
@@ -158,6 +228,20 @@ RegisterCommand("pedestrians.status", function(source, _, raw)
     output(source, raw, true, string.format("pedestrians crowd cooldowns=%d", walking.cooldowns))
     for reason, count in pairs(walking.failures) do
         output(source, raw, true, string.format("pedestrians crowd failure=%s count=%d", reason, count))
+    end
+end, true)
+RegisterCommand("pedestrians.seats", function(source, _, raw)
+    local holds = guard:list()
+    output(source, raw, true, string.format("pedestrians seat holds=%d", #holds))
+    for _, hold in ipairs(holds) do
+        output(source, raw, true, string.format(
+            "pedestrians seat owner=%s bucket=%d key=%s at=%.3f,%.3f,%.3f radius=%.2f remainingMs=%d",
+            hold.owner, hold.bucket, hold.key, hold.x, hold.y, hold.z, hold.radius, hold.remainingMs))
+    end
+    for reason, count in pairs(seated:status().failures) do
+        if reason == "seat_held" then
+            output(source, raw, true, string.format("pedestrians seat returnsDiverted=%d", count))
+        end
     end
 end, true)
 RegisterCommand("pedestrians.reset", function(source, _, raw)

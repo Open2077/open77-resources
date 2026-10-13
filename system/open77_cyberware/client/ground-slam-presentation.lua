@@ -190,4 +190,3 @@ local function shutdown(name)
     seen={};presentations={};currentByPlayer={};bodyEpochs={}
 end
 AddEventHandler("onClientResourceStop",shutdown)
-AddEventHandler("onResourceStop",shutdown)

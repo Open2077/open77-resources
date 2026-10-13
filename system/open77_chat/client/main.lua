@@ -3,6 +3,8 @@ local enabled = true
 local opened = false
 local lastSuggestionRequest = -1000
 local suggestionCount = 0
+local messageHistory, messageHistoryBytes = {}, 0
+local connectedOnce = false
 
 -- Parses `/command "an argument" plain\ value` into the exact string array
 -- expected by the server's authenticated command dispatcher.
@@ -113,7 +115,6 @@ local function openChat()
         print("[open77_chat] open ignored: already open")
         return
     end
-    opened = true
     -- Focus BEFORE the page is told to open, and that order is the point.
     -- `setFocus` reaches the WebHost as `CefBrowserHost::SetFocus`, while
     -- `chat:open` reaches the page as a script that ends up calling
@@ -122,8 +123,10 @@ local function openChat()
     -- it, instead of racing a browser that does not yet.
     local focused = chat:setFocus(true, false)
     if not focused then
-        print("[open77_chat] keyboard focus was refused; the box will take no text")
+        print("[open77_chat] open deferred: WebUI is unavailable")
+        return
     end
+    opened = true
     send("chat:open", {})
     TriggerEvent("open77:chat:visibility", true)
     requestSuggestions()
@@ -132,6 +135,16 @@ end
 local function addMessage(message)
     if type(message) == "string" then message = { text = message } end
     if type(message) ~= "table" then return false end
+    -- Keep the same 48-message window as the page, with an additional byte
+    -- bound. The Lua owner survives a browser crash; the lost DOM does not.
+    local ok, encoded = pcall(Open77.json.encode, message)
+    if ok and type(encoded) == "string" and #encoded <= 262144 then
+        messageHistory[#messageHistory + 1] = encoded
+        messageHistoryBytes = messageHistoryBytes + #encoded
+        while #messageHistory > 48 or messageHistoryBytes > 262144 do
+            messageHistoryBytes = messageHistoryBytes - #table.remove(messageHistory, 1)
+        end
+    end
     send("chat:addMessage", message)
     return true
 end
@@ -157,7 +170,11 @@ RegisterNetEvent("chat:clearSuggestions", function() send("chat:clearSuggestions
 RegisterNetEvent("chat:addTemplate", function(id, template)
     send("chat:addTemplate", { id = tostring(id or ""), template = tostring(template or "") })
 end)
-RegisterNetEvent("chat:clear", function() send("chat:clear", {}) end)
+local function clearMessages()
+    messageHistory, messageHistoryBytes = {}, 0
+    send("chat:clear", {})
+end
+RegisterNetEvent("chat:clear", clearMessages)
 RegisterNetEvent("chat:setEnabled", function(value)
     enabled = value ~= false
     if not enabled then closeChat() end
@@ -199,7 +216,7 @@ AddEventHandler("chat:open", openChat)
 AddEventHandler("chat:close", closeChat)
 
 exports("addMessage", addMessage)
-exports("clear", function() send("chat:clear", {}) return true end)
+exports("clear", function() clearMessages() return true end)
 exports("addSuggestion", function(command, help, parameters)
     send("chat:addSuggestion", {
         command = tostring(command or ""),
@@ -240,14 +257,20 @@ AddEventHandler("onClientResourceStart", function(name)
         return
     end
 
+    chat:on("webui:host-lost", closeChat)
     chat:on("chat:ready", function()
+        closeChat()
         send("chat:state", { enabled = enabled })
-        addMessage({
+        for _, encoded in ipairs(messageHistory) do
+            send("chat:addMessage", Open77.json.decode(encoded))
+        end
+        if not connectedOnce then addMessage({
             type = "system",
             author = "OPEN77",
             text = "Chat connected — press T to type",
             color = { 0, 229, 255 }
-        })
+        }) end
+        connectedOnce = true
         requestSuggestions()
         SetTimeout(1000, requestSuggestions)
     end)

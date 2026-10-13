@@ -328,7 +328,7 @@ CreateThread(function()
         Wait(0)
     end
 end)
-AddEventHandler("onResourceStop",function(name)
+AddEventHandler("onClientResourceStop",function(name)
     if name~=GetCurrentResourceName() then return end
     stopped=true;clear();markerAllOff()
 end)

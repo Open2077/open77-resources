@@ -784,13 +784,26 @@ menuActions.suicide = function(playerId)
     return true, "see you in a moment"
 end
 
-menuActions.revive = function(playerId)
+-- Revive a dead player; a living one (an RP "down" state keeps the body alive at low health,
+-- frozen) is healed to full instead, which such a resource reads as being patched up.
+local function reviveOrHeal(playerId)
+    if not Open77.players.isDead(playerId) then
+        local health = Open77.players.getHealth(playerId)
+        if health == nil then return false, "health state unavailable" end
+        local ok, reason = Open77.players.setHealth(playerId, health.maxHealth)
+        if not ok then return false, "health restore rejected: " .. tostring(reason) end
+        return true, "not down: health restored"
+    end
     local ok, reason = Open77.players.revive(playerId, {
         health = Config.spawn.health,
         graceMs = Config.spawn.graceMs,
     })
     if not ok then return false, "rejected: " .. tostring(reason) end
     return true, "revive in progress"
+end
+
+menuActions.revive = function(playerId)
+    return reviveOrHeal(playerId)
 end
 
 menuActions.restore = function(playerId)
@@ -990,12 +1003,8 @@ end, restricted)
 RegisterCommand("revive", function(source, args, raw)
     if not requirePlayer(source, raw) then return end
     if args.n ~= 0 then return output(source, raw, false, "usage: revive") end
-    local ok, reason = Open77.players.revive(source, {
-        health = Config.spawn.health,
-        graceMs = Config.spawn.graceMs,
-    })
-    if not ok then return output(source, raw, false, "rejected: " .. tostring(reason)) end
-    output(source, raw, true, "revive in progress")
+    local ok, text = reviveOrHeal(source)
+    output(source, raw, ok, text)
 end, restricted)
 
 RegisterCommand("players", function(source, _, raw)

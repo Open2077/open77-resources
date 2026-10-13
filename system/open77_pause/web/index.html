@@ -203,6 +203,7 @@
   var visibilityToken = 0;
   var commandGeneration = 0;
   function open(payload) {
+    cancelKeybindCapture();
     if (payload && Number.isInteger(payload.generation)) commandGeneration = payload.generation;
     var token = ++visibilityToken;
     body.classList.remove('confirming');
@@ -223,6 +224,8 @@
   }
 
   function close(payload) {
+    cancelKeybindCapture();
+    window.clearTimeout(refreshTimer);
     if (payload && Number.isInteger(payload.generation)) commandGeneration = payload.generation;
     var token = ++visibilityToken;
     var generation = commandGeneration;
@@ -351,6 +354,7 @@
     tabs.forEach(function (tab) {
       var button = document.createElement('button');
       button.className = 'tab' + (tab.id === activeTab ? ' tab--active' : '');
+      button.dataset.tab = tab.id;
       button.textContent = tabLabel(tab);
       button.setAttribute('aria-pressed', tab.id === activeTab ? 'true' : 'false');
       if (tab.enabled === false) {
@@ -370,6 +374,7 @@
   }
 
   function selectTab(id) {
+    cancelKeybindCapture();
     closeSelect();
     activeTab = id;
     var tab = currentTab();
@@ -821,6 +826,54 @@
   }
 
   var capturingKeybind = null;
+  var suppressedMouseButtons = {};
+
+  function cancelKeybindCapture() {
+    if (!capturingKeybind) { return; }
+    capturingKeybind.button.classList.remove('keybind--capture');
+    capturingKeybind.button.textContent = capturingKeybind.value;
+    capturingKeybind = null;
+  }
+
+  function captureKeybind(key) {
+    if (!capturingKeybind || !key) { return; }
+    var capture = capturingKeybind;
+    cancelKeybindCapture();
+    capture.button.textContent = key;
+    apply(capture.group, capture.name, key);
+  }
+
+  // DOM buttons are left/middle/right/back/forward; binding names use
+  // left/right/middle/back/forward. Arm on click, capture the NEXT press.
+  function mouseKey(button) {
+    return ['MOUSE1', 'MOUSE3', 'MOUSE2', 'MOUSE4', 'MOUSE5'][button] || null;
+  }
+  document.addEventListener('pointerdown', function (event) {
+    delete suppressedMouseButtons[event.button];
+    if (!capturingKeybind || !mouseKey(event.button)) { return; }
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    suppressedMouseButtons[event.button] = performance.now() + 1000;
+    captureKeybind(mouseKey(event.button));
+  }, true);
+  ['mousedown', 'mouseup', 'click', 'auxclick'].forEach(function (name) {
+    document.addEventListener(name, function (event) {
+      if (!(suppressedMouseButtons[event.button] > performance.now())) { return; }
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }, true);
+  });
+  document.addEventListener('contextmenu', function (event) {
+    if (body.classList.contains('open')) { event.preventDefault(); }
+  });
+  window.addEventListener('blur', cancelKeybindCapture);
+  // CEF only has native click enums for the first three buttons. WebHost
+  // forwards the two side buttons through this event instead of a left click.
+  Open77.on('webui:mouse-button', function (event) {
+    if (event && !event.mouseUp && (event.button === 3 || event.button === 4)) {
+      captureKeybind(mouseKey(event.button));
+    }
+  });
 
   function keyName(event) {
     // Match the native logical-key registry, not the US physical KeyQ/KeyA
@@ -872,10 +925,7 @@
     button.dataset.focus = focusKey(group, entry.name, 'keybind');
     button.textContent = String(entry.value || T('settings.blank'));
     button.addEventListener('click', function () {
-      if (capturingKeybind && capturingKeybind.button !== button) {
-        capturingKeybind.button.classList.remove('keybind--capture');
-        capturingKeybind.button.textContent = capturingKeybind.value;
-      }
+      cancelKeybindCapture();
       capturingKeybind = {
         group: group, name: entry.name, button: button,
         value: button.textContent
@@ -996,6 +1046,10 @@
       currentSections = payload.sections || [];
       currentDone = payload.done !== false;
     }
+    // Incremental settings reads must not discard the active capture target.
+    // Reconnect it to the new row after the list has been rebuilt.
+    var capture = capturingKeybind;
+    cancelKeybindCapture();
     // Any open dropdown is anchored to a trigger this call is about to discard,
     // so it must go with it rather than float over the rebuilt list.
     closeSelect();
@@ -1056,6 +1110,17 @@
     }
 
     applyFilter();
+    if (capture) {
+      var captureButton = Array.prototype.find.call(settingsList.querySelectorAll('.keybind'),
+        function (button) { return button.dataset.focus === focusKey(capture.group, capture.name, 'keybind'); });
+      if (captureButton && !captureButton.disabled) {
+        capture.button = captureButton;
+        capture.value = captureButton.textContent;
+        capturingKeybind = capture;
+        captureButton.classList.add('keybind--capture');
+        captureButton.textContent = T('keybind.press');
+      }
+    }
     settingsList.scrollTop = scrollTop;
     if (restoreKey) {
       var again = settingsList.querySelector('[data-focus="' +
@@ -1078,6 +1143,7 @@
   }
 
   function closeSettings() {
+    cancelKeybindCapture();
     closeSelect();
     window.clearTimeout(refreshTimer);
     body.classList.remove('settings-open');
@@ -1119,15 +1185,10 @@
       event.preventDefault();
       event.stopPropagation();
       if (event.key === 'Escape') {
-        capturingKeybind.button.textContent = capturingKeybind.value;
+        cancelKeybindCapture();
       } else {
-        var captured = keyName(event);
-        if (!captured) { return; }
-        capturingKeybind.button.textContent = captured;
-        apply(capturingKeybind.group, capturingKeybind.name, captured);
+        captureKeybind(keyName(event));
       }
-      capturingKeybind.button.classList.remove('keybind--capture');
-      capturingKeybind = null;
       return;
     }
     if (event.key === 'Escape') {

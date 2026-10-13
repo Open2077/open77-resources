@@ -55,6 +55,9 @@ CreateThread(function()
     end
 end)
 function CyberwareLabReflex.operate(issuer,target,action,preset)
+    -- Another player's Overdrive needs an operator (server/authority.lua).
+    local refused=CyberwareLabAuthority.refuse(issuer,target)
+    if refused then return false,CyberwareLabAuthority.message(refused) end
     target=id(target);issuer=tonumber(issuer) or 0
     if not target or Open77.players.name(target)==nil then return false,"player_unavailable" end
     if not Open77.reflex then return false,"reflex_unavailable" end
@@ -152,6 +155,8 @@ RegisterNetEvent("open77:cyberlab:reflex:request",function(payload)
     if not issuer or type(payload)~="table" then return end
     local target=payload.target==nil and issuer or connected(payload.target)
     if not target then return end
+    local refused=CyberwareLabAuthority.refuse(issuer,target)
+    if refused then send(issuer,"result",{target=target,ok=false,message=CyberwareLabAuthority.message(refused)});return end
     local t=GetGameTimer();if reads[issuer] and t-reads[issuer]<100 then return end;reads[issuer]=t
     send(issuer,"data",panelSnapshot(target))
 end)
@@ -160,6 +165,8 @@ RegisterNetEvent("open77:cyberlab:reflex:action",function(payload)
     if not issuer or type(payload)~="table" then return end
     local target=payload.target==nil and issuer or id(payload.target)
     if not target then return end
+    local refused=CyberwareLabAuthority.refuse(issuer,target)
+    if refused then send(issuer,"result",{target=target,ok=false,message=CyberwareLabAuthority.message(refused)});return end
     local t=GetGameTimer();if panelActions[issuer] and t-panelActions[issuer]<200 then return end;panelActions[issuer]=t
     local ok,reason=CyberwareLabReflex.operate(issuer,target,payload.action,payload.preset)
     send(issuer,"result",{target=target,ok=ok,message=ok and tostring(reason) or tostring(reason)})

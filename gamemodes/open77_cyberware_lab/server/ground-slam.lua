@@ -127,6 +127,9 @@ function CyberwareLabSlam.command(issuer,args)
     local action=args[1] or "state"
     local target=args[2]~=nil and id(args[2]) or id(issuer)
     if not target then return false,"positive_player_required" end
+    -- Another player's slam (grant, revoke, cancel, state, diagnostics, activity) needs an operator.
+    local refused=CyberwareLabAuthority.refuse(issuer,target)
+    if refused then return false,CyberwareLabAuthority.message(refused) end
     if action=="diagnostics" then
         if not connected(target) then return false,"player_unavailable" end
         local grant=Open77.abilities.current(target)
@@ -163,6 +166,8 @@ RegisterNetEvent("open77:cyberlab:slam:request",function(payload)
     if not issuer or type(payload)~="table" then return end
     local target=payload.target==nil and issuer or connected(payload.target)
     if not target then return end
+    local refused=CyberwareLabAuthority.refuse(issuer,target)
+    if refused then send(issuer,"result",{target=target,ok=false,message=CyberwareLabAuthority.message(refused)});return end
     local t=GetGameTimer();if reads[issuer] and t-reads[issuer]<100 then return end;reads[issuer]=t
     send(issuer,"data",snapshot(target))
 end)
@@ -170,6 +175,8 @@ RegisterNetEvent("open77:cyberlab:slam:action",function(payload)
     local issuer=connected(source)
     if not issuer or type(payload)~="table" then return end
     local target=payload.target==nil and issuer or id(payload.target)
+    local refused=CyberwareLabAuthority.refuse(issuer,target)
+    if refused then send(issuer,"result",{target=target,ok=false,message=CyberwareLabAuthority.message(refused)});return end
     local t=GetGameTimer();if actions[issuer] and t-actions[issuer]<200 then return end;actions[issuer]=t
     local ok,reason=operate(issuer,target,payload.action,payload.preset)
     send(issuer,"result",{target=target,ok=ok,message=not ok and tostring(reason) or

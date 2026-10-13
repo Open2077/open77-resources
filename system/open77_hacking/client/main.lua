@@ -774,4 +774,4 @@ CreateThread(function()
         Wait(100)
     end
 end)
-AddEventHandler("onResourceStop",function(name) if name==GetCurrentResourceName() then clear() end end)
+AddEventHandler("onClientResourceStop",function(name) if name==GetCurrentResourceName() then clear() end end)

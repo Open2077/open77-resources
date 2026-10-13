@@ -167,6 +167,12 @@ end
 -- clip the walker's body fits.
 function Open77CrowdScheduler:spotFree(walker, s, now)
     if self.spotOccupant[s] then return false end
+    -- A player sits there (open77_seating through the seat guard, row B6): the visit is refused like one
+    -- to a held spot, and the walker goes on.
+    local held = self.api.seatBlocked
+    if held and held(walker.bucket, self.spots.spotX[s], self.spots.spotY[s], self.spots.spotZ[s]) == true then
+        return false
+    end
     local cooling = self.spotCooldown[s]
     if cooling then
         if cooling > now then return false end
@@ -175,6 +181,31 @@ function Open77CrowdScheduler:spotFree(walker, s, now)
     local spots = self.spots
     local profile = spots.spotProfile[s]
     return #S.clipsFor(self.bodyClips, spots.clipBodies, profile, walker.body, self.clips[profile]) > 0
+end
+
+-- The walker seated on (or a corpse lying) within `radius` (on the ground, 1 m in height) of (x, y, z) in
+-- `bucket`, or nil: a player may not sit there (row B6).
+function Open77CrowdScheduler:occupantNear(bucket, x, y, z, radius)
+    local spots, r2 = self.spots, radius * radius
+    for _, walker in pairs(self.walkers) do
+        if walker.bucket == bucket then
+            local ox, oy, oz
+            if walker.state == "seated" and walker.spot then
+                ox, oy, oz = spots.spotX[walker.spot], spots.spotY[walker.spot], spots.spotZ[walker.spot]
+            elseif walker.state == "dead" then
+                ox, oy, oz = walker.x, walker.y, walker.z
+            end
+            if ox then
+                local dx, dy = ox - x, oy - y
+                local d2 = dx * dx + dy * dy
+                if d2 <= r2 and abs(oz - z) <= 1.0 then
+                    return { npc = walker.npc, state = walker.state, source = "crowd", spot = walker.spot,
+                        distance = math.floor(sqrt(d2) * 1000 + 0.5) / 1000 }
+                end
+            end
+        end
+    end
+    return nil
 end
 
 -- The free spot nearest to the walker within SPOT_MATCH_M (and SPOT_VERTICAL_M in height), if any.

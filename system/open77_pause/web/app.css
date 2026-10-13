@@ -203,10 +203,17 @@ body.settings-open .panel { width: var(--panel-w-settings); }
 }
 body.open .item { opacity: 1; transform: translateX(0); transition-delay: var(--delay, 0ms); }
 .item i {
-  flex: none; width: 3px; height: 22px;
+  flex: none; width: 24px; height: 24px;
   background: var(--o-ink-300);
-  transition: background var(--dur-1) linear, height var(--dur-1) var(--ease-out);
+  -webkit-mask: var(--menu-icon) center / contain no-repeat;
+  mask: var(--menu-icon) center / contain no-repeat;
+  transition: background var(--dur-1) linear;
 }
+.item[data-action="resume"] { --menu-icon: url('icons/play.svg'); }
+.item[data-action="map"] { --menu-icon: url('icons/map.svg'); }
+.item[data-action="settings"] { --menu-icon: url('icons/settings.svg'); }
+.item[data-action="quit-session"] { --menu-icon: url('icons/log-out.svg'); }
+.item[data-action="quit-game"] { --menu-icon: url('icons/power.svg'); }
 .item span { flex: 1; }
 .item small {
   display: inline-grid; place-items: center;
@@ -222,11 +229,11 @@ body.open .item { opacity: 1; transform: translateX(0); transition-delay: var(--
   border-color: rgba(var(--pause-accent-rgb), .28);
   color: var(--o-cyan-400);
 }
-.item:hover i, .item:focus-visible i { background: var(--o-cyan-500); height: 34px; box-shadow: 0 0 10px rgba(var(--pause-accent-rgb), .6); }
+.item:hover i, .item:focus-visible i { background: var(--o-cyan-500); }
 .item:active { transform: translateY(1px); }
 .item:disabled { opacity: .35; }
 .item:disabled:hover { background: none; border-color: transparent; color: var(--text-primary); }
-.item:disabled:hover i { background: var(--o-ink-300); height: 22px; box-shadow: none; }
+.item:disabled:hover i { background: var(--o-ink-300); }
 .item--danger { color: var(--text-primary); }
 .item--danger:hover, .item--danger:focus-visible {
   background: rgba(255, 59, 78, .08); border-color: rgba(255, 59, 78, .35); color: var(--o-red-500);
@@ -312,6 +319,19 @@ body.settings-open .settings {
 .settings-note--ok { color: var(--o-mint-500) !important; }
 .settings-note--error { color: var(--o-red-500) !important; }
 
+.tab::before {
+  content: ''; flex: none; width: 20px; height: 20px; margin-right: 12px;
+  background: currentColor;
+  -webkit-mask: var(--tab-icon) center / contain no-repeat;
+  mask: var(--tab-icon) center / contain no-repeat;
+}
+.tab[data-tab="video"] { --tab-icon: url('icons/monitor.svg'); }
+.tab[data-tab="graphics"] { --tab-icon: url('icons/clapperboard.svg'); }
+.tab[data-tab="audio"] { --tab-icon: url('icons/volume-2.svg'); }
+.tab[data-tab="voice"] { --tab-icon: url('icons/mic.svg'); }
+.tab[data-tab="controls"] { --tab-icon: url('icons/mouse.svg'); }
+.tab[data-tab="keybinds"] { --tab-icon: url('icons/keyboard.svg'); }
+.tab[data-tab="gameplay"] { --tab-icon: url('icons/gamepad-2.svg'); }
 .tabs {
   grid-area: tabs;
   display: flex; flex-direction: column; gap: var(--space-2);

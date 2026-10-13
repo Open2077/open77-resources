@@ -120,6 +120,15 @@
       const copy = el("div", "copy");
       if (slot.eyebrow) copy.append(el("span", "eyebrow", slot.eyebrow));
       copy.append(el("span", "body", slot.text));
+      if (Array.isArray(slot.actions) && slot.actions.length > 0) {
+        const row = el("span", "actions");
+        for (const action of slot.actions.slice(0, 3)) {
+          const item = el("span", "action");
+          item.append(el("kbd", "keycap", text(action && action.key)), el("span", "label", text(action && action.label)));
+          row.append(item);
+        }
+        copy.append(row);
+      }
       hint.append(copy);
       if (slot.key) hint.append(el("kbd", "keycap", slot.key));
       stack.append(hint);

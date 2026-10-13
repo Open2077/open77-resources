@@ -1,5 +1,10 @@
 resource "open77_interactions"
-version "0.1.0"
+-- 0.1.0 client interactions and client targets; 0.2.0 server `define`
+-- declarations (shipped while the manifest still said 0.1.0, which is why
+-- wiki/interactions.md asked for ">=0.2.0" against a 0.1.0 resource); 0.3.0
+-- `prop` targets and the cross-resource prop grant contract
+-- (grantProp / requestProp / answerPropRequest / propAccess).
+version "0.3.0"
 open77_version ">=0.0.1"
 auto_start true
 
@@ -22,10 +27,17 @@ web_files { "web/**" }
 -- vehicles.read   `Open77.vehicles.all`, which is what `globalVehicle` targets
 --                 enumerate -- with the vehicle's TweakDB record and door mask.
 -- npcs.read       `Open77.npcs.all`, the Open77-managed half of `globalNpc`.
+-- world.props     server: `Open77.props.get` (who owns a prop a `prop` target
+--                 names) and `onPropRemoved`. Read only: this resource creates
+--                 no prop. Prop targets resolve positions on the client from the
+--                 `open77_props` projection mirror (its `get` export), which is
+--                 deliberately NOT a dependency: without it, prop targets
+--                 simply match nothing.
 permissions {
     "input.actions",
     "network.events",
     "world.query",
     "vehicles.read",
     "npcs.read",
+    "world.props",
 }

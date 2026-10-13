@@ -8,6 +8,12 @@ the top-left corner, while opening chat unfolds the full channel panel and comma
 requests the runtime's maximum 240 fps cadence for uncapped-feeling input and transitions; an idle
 page is damage-driven and does not repaint continuously.
 
+If the client WebHost restarts, the chat resource restores its last 48 messages
+in order (at most 256 KiB of serialized history). The composer closes and releases
+input; press `T` to reopen it after recovery. `chat:clear` and the `clear` export
+also clear the retained history. This recovery state belongs to the running Lua
+resource and is not retained across resource stops or game restarts.
+
 - **Docs:** [Chat, slash commands, and completion](https://open2077.net/docs/chat)
 - **Starts:** on its own
 - **Needs:** nothing

@@ -1,5 +1,6 @@
--- Open-by-default example policy. Server owners may replace this resource or
--- add their own authorization here; native lifecycle/revision checks still apply.
+-- Example policy: every player may manage their own implants; another player's
+-- panel (read or change) needs an operator (server/authority.lua). Server owners
+-- may replace this resource; native lifecycle/revision checks still apply.
 CyberwareLabPanel = {}
 local pendingByTarget, pendingByTicket = {}, {}
 local lastRead = {}
@@ -24,10 +25,12 @@ local function definitionFor(slot)
 end
 
 local function snapshot(issuer, target)
+    -- A player who may not act on others is offered only themselves.
+    local operator = CyberwareLabAuthority.isOperator(issuer)
     local roster = {}
     for _, rawId in ipairs(Open77.players.all()) do
         local id = connected(rawId)
-        if id then roster[#roster + 1] = { id = id, name = Open77.players.name(id) } end
+        if id and (operator or id == issuer) then roster[#roster + 1] = { id = id, name = Open77.players.name(id) } end
     end
     table.sort(roster, function(a, b) return a.id < b.id end)
     local catalog = {}
@@ -45,7 +48,7 @@ local function snapshot(issuer, target)
     return {
         you = { id = issuer, name = Open77.players.name(issuer) },
         target = { id = target, name = available and Open77.players.name(target) or "Disconnected player" },
-        players = roster, catalog = catalog, record = record,
+        players = roster, catalog = catalog, record = record, canTargetOthers = operator,
         dash = available and CyberwareLabDash and CyberwareLabDash.snapshot(target) or nil,
         effective = available and Open77.cyberware.effective(target) or nil,
         ready = record ~= nil, pending = pendingByTarget[target] ~= nil,
@@ -63,6 +66,8 @@ function CyberwareLabPanel.open(issuer, target)
     if not issuer then return false, "client_issuer_required" end
     target = target == nil and issuer or playerId(target)
     if not target then return false, "positive_player_required" end
+    local refused = CyberwareLabAuthority.refuse(issuer, target)
+    if refused then return false, CyberwareLabAuthority.message(refused) end
     send(issuer, "open", snapshot(issuer, target))
     return true
 end
@@ -74,6 +79,10 @@ RegisterNetEvent("open77:cyberlab:panel:request", function(payload)
     if type(payload) == "table" then target = payload.target end
     target = target == nil and issuer or playerId(target)
     if not target then return end
+    local refused = CyberwareLabAuthority.refuse(issuer, target)
+    if refused then
+        result(issuer, target, nil, false, "failed", CyberwareLabAuthority.message(refused)); return
+    end
     local now = GetGameTimer()
     if lastRead[issuer] and now - lastRead[issuer] < 100 then return end
     lastRead[issuer] = now
@@ -88,6 +97,10 @@ RegisterNetEvent("open77:cyberlab:panel:action", function(payload)
     end
     local target = payload.target == nil and issuer or playerId(payload.target)
     local slot, action, grade = payload.slot, payload.action, payload.grade
+    local refused = CyberwareLabAuthority.refuse(issuer, target)
+    if refused then
+        result(issuer, target, slot, false, "failed", CyberwareLabAuthority.message(refused)); return
+    end
     if not target or not connected(target) then
         result(issuer, target, slot, false, "failed", "player_unavailable"); return
     end
@@ -169,6 +182,6 @@ end)
 
 RegisterNetEvent("chat:ready", function()
     if connected(source) then TriggerClientEvent("chat:addSuggestions", source, {
-        { command = "/cyberlab", help = "Open cyberware controls for yourself or another player.", parameters = {} },
+        { command = "/cyberlab", help = "Open your cyberware controls (operators may pick any player).", parameters = {} },
     }) end
 end)

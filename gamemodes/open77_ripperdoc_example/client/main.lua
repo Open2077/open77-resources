@@ -35,6 +35,6 @@ end)
 AddEventHandler("open77:ripperdoc:decline", function()
     if offerId then TriggerServerEvent("open77:ripperdoc:answer", offerId, false) end
 end)
-AddEventHandler("onResourceStop", function(name)
+AddEventHandler("onClientResourceStop", function(name)
     if name == GetCurrentResourceName() then offerId = nil end
 end)

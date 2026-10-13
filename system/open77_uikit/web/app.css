@@ -165,6 +165,14 @@ html, body {
   animation: rise var(--op77-dur) var(--op77-ease) both;
 }
 .hint .copy { display: flex; flex-direction: column; gap: 2px; }
+.hint .actions { display: flex; flex-wrap: wrap; gap: var(--op77-space-3); margin-top: var(--op77-space-1); }
+.hint .action { display: inline-flex; align-items: center; gap: 6px; }
+.hint .action .label {
+  font: 700 var(--op77-fs-label) / 1 var(--op77-font-mono);
+  letter-spacing: var(--op77-track-label);
+  text-transform: uppercase;
+  color: var(--op77-text-dim, var(--op77-text));
+}
 .hint .body {
   font: 400 var(--op77-fs-body) / 1.35 var(--op77-font-body);
   color: var(--op77-text);

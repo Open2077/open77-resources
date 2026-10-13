@@ -196,7 +196,7 @@ exports("requestOpen",function(id,open)
     end
     return TriggerServerEvent("open77:doors:request",id,open)
 end)
-AddEventHandler("onResourceStop",function(name)
+AddEventHandler("onClientResourceStop",function(name)
     if name~=GetCurrentResourceName() then return end
     clear();D.setNetworkEnabled(false)
 end)
