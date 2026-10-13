@@ -218,7 +218,8 @@ function M.inZone(zone, point)
 end
 
 -- ---------------------------------------------------------------------------------------------
--- Refusals a player reads. An unknown token is shown verbatim so nothing is silent.
+-- Refusals a player reads. An unknown token reads "That did not work. Try again in a moment."
+-- (never the raw code on screen); the server log keeps it.
 -- ---------------------------------------------------------------------------------------------
 M.TEXT = {
     -- this resource

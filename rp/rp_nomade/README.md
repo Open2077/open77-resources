@@ -34,16 +34,19 @@ Adds Aldecaldos smuggling runs for the nomad job: take a run at the camp's board
    Rook*. The fence pays the crate's price in one operation: the camp keeps its cut, the rest goes
    to the nomad who took the run. The crate is gone.
 5. **Or sell to a player.** Put a crate down next to a player (**G**) and `/nomad sell <id>
-   <price>`. They accept the hand-over (`/interaction accept`) and pay: the goods land in their
-   pockets, the price is split the same way.
+   <price>`. They see the offer card (*Ada Kovac: a crate of smuggled goods for 500 eddies*) and
+   accept it with **Y** (**N** declines): they pay, the goods land in their pockets, and the price
+   is split the same way.
 
 **What can go wrong.** The deadline passes (the run is off: the fence still pays, but only the
 hot price, and the camp gets nothing; the pin and route turn back to the camp, where **E** *Return
 to the stash* puts the goods back). Somebody outside the crew lifts one of your crates (the run is
 off; they can fence it hot). The truck is wrecked, impounded or lost (the run is off; the crates
 keep their goods in the bed). A disconnect drops a carried crate where you stood; the run goes on
-and the pins come back when you return. A server restart brings every crate back where it was:
-on the ground, in a bed, and a crate that was being carried at its last put-down spot.
+and the pins come back when you return. When `rp_nomade` restarts, a carried crate is dropped at
+the carrier's feet (`owner_stopped`) and rebuilt on the ground there; crates on the ground and in a
+bed come back where they were. After a server crash, a crate that was being carried comes back at
+its last put-down spot.
 
 **The NCPD officer** (job `ncpd`, on duty): `/nomad search` next to a truck. With a warrant on its
 plate (rp_garage) the search starts at once; otherwise the driver, or the nomad whose run rides
@@ -72,9 +75,14 @@ prompt library's own notice.
 tunable.set open77_transactions writers rp_nomade:world+stash+char, rp_cargo:veh/cargo, rp_economy:cash+bank+soc, rp_inventory, open77_containers:world
 tunable.set open77_transactions mint1 rp_nomade sys:nomad nomad_crate 500; rp_nomade sys:nomad.supplier nomad_contraband 2000; rp_economy sys:* money 2000000
 ensure open77_transactions
+ensure open77_actions
 ensure open77_containers
+ensure rp_cargo
 ensure rp_nomade
 ```
+
+`open77_transactions`, `open77_actions`, `open77_containers` and `rp_cargo` all declare
+`auto_start false`: each needs its `ensure` before `rp_nomade`.
 
 - `rp_nomade:world+stash+char`: the crates, the camp's stash and the evidence stash, and the one
   operation grants it gives rp_cargo (a crate into a bed) and rp_economy (a sale out of a crate,
@@ -155,7 +163,10 @@ Everything is in `server/config.lua`:
 | `playerSale` | price limits and the hand-over distances |
 | `navigation` | pins, sprites, when the GPS route starts |
 
-Where things are (every point `measured = false`):
+Where things are. The Afterlife drop (unload bay and fence) is `measured = true`. The camp's
+points (the board, the loading points, the truck bay with its tailgate prompt, the stash) were
+used in live runs and keep `measured = false` until someone confirms each with `/pos`; the Kabuki
+drop and the checkpoints have not been walked:
 
 | Point | Position | Landmark |
 |---|---|---|
@@ -185,8 +196,8 @@ drive the GPS route and move each one onto the road where it really crosses into
 - The NCPD wanted level and the police it sends are the driver's own game (per-client heat).
 - The officer's search knows only the camp's crates: a truck carrying none is reported clean.
 - The ambush of rp_nomade 1.0 is gone; the risk on the road is the NCPD.
-- Positions, the carried crate's binding and the bed slots of other trucks than the Mackinaw are
-  not measured in game.
+- The Kabuki drop, the checkpoints and the bed slots of other trucks than the Mackinaw are not
+  measured in game. The carried crate's binding was measured in both views.
 
 ## Tests
 

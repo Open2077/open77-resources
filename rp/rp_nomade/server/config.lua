@@ -3,10 +3,12 @@
 -- Places. The camp points come from rp_nomade 1.0 (the Aldecaldos camp around V's nomad tent in
 -- the north-eastern Badlands, AMM ground + 0.1, run in game with that version) and the
 -- destinations from points other RP resources drive to (rp_delamain presets, the rp_nomade 1.0
--- Afterlife street drop). They are reused as DATA only. Every point here is `measured = false`:
--- nobody has walked it with THIS resource yet. Stand on the spot, read `/pos`, paste it here and
--- flip the flag. The NCPD checkpoints are placed by arithmetic on the camp -> city corridor: drive
--- the GPS route and move each one onto the road where it really crosses into the city.
+-- Afterlife street drop). They are reused as DATA only. The Afterlife drop (unload bay and fence)
+-- was walked with THIS resource and is flagged as measured; the camp's points worked in live runs
+-- and keep their unmeasured flag, like the Kabuki drop, until someone confirms them. Stand on the
+-- spot, read `/pos`, paste it here and flip the flag. The NCPD checkpoints are placed by
+-- arithmetic on the camp -> city corridor: drive the GPS route and move each one onto the road where
+-- it really crosses into the city.
 
 NomadConfig = {}
 local C = NomadConfig
@@ -34,7 +36,9 @@ C.policeEligibility = { resource = "rp_jobs", export = "eligible", args = { job 
 --   nomad_crate       the crate's custody token: one unique instance per crate. It sits in the
 --                     crate while the crate is on the ground or carried, and in the truck bed
 --                     (veh:<plate>:cargo) while it rides; rp_cargo moves instances, so the token is
---                     what a truck carries. rp_cargo draws `nomad_crate` as crate.small by default.
+--                     what a truck carries. A load names `crate.bedModel` (crate.ammo_box) for the
+--                     bed; rp_cargo's own default for the item (crate.small) only draws a token
+--                     another resource moved into a bed.
 -- ---------------------------------------------------------------------------------------------
 C.items = {
     nomad_contraband = { label = "Smuggled goods", weight = 2.5, usable = false, illegal = true, category = "material" },
