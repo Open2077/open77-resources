@@ -12,6 +12,7 @@ libraries and a complete Night City roleplay pack. Read them, copy them, change 
 | [`examples/`](examples/) | small resources that each show one feature |
 | [`standalone/`](standalone/) | optional resources that work on any server: icons, free camera, wardrobe, equipment, sky ads |
 | [`libraries/`](libraries/) | shared code: PolyZone zones, the ArchiveXL and TweakXL loaders |
+| [`tools/`](https://github.com/Open2077/open77-resources/tree/next/tools) | build tools for content packs: the vehicle customization pipeline (on `next` until the next server release) |
 
 Each folder has an index, and each resource has a short README: what it does, what it needs, how
 to turn it on, and a link to its documentation on [open2077.net/docs](https://open2077.net/docs).
@@ -52,10 +53,25 @@ The jobs built on the platform's job libraries need `open77_actions`, `open77_tr
 The libraries are experimental and not part of the default Freeroam selection: copy them from
 `system/` with the jobs and list them in `resources.load`.
 
+## Vehicle customization packs
+
+Rims, body kits, liveries, stickers, performance stages, plates and window tint come as content
+packs: resources with a `preload_mod` ZIP that the launcher mounts before the game starts. They
+need the Open77 server and client release that brings the vehicle customization natives.
+
+- **Use ready-made packs.** The Light RP server publishes the packs it runs in
+  [`resources/assets/models`](https://github.com/Open2077/light-rp/tree/main/resources/assets/models)
+  (`lightrp_vk_*`, `lightrp_vehicle_*`, `open77_vehicle_plates`). Its
+  `lightrp_vehicle_kit/README.md` says how to turn them on.
+- **Make your own.** [`tools/vehicle-kit`](https://github.com/Open2077/open77-resources/tree/next/tools/vehicle-kit)
+  is the pipeline that built them: a JSON spec goes in, and a resource ready to copy comes out. It
+  is on `next` until the next server release. The rules and limits are in
+  [Vehicle customization content packs](https://open2077.net/docs/vehicle-customization-packs).
+
 ## Where changes go
 
-- `system/`, `gamemodes/`, `examples/`, `standalone/` and `libraries/` are exported from the Open77
-  platform at each release. Report problems in this repository's issues; fixes land through the
+- `system/`, `gamemodes/`, `examples/`, `standalone/`, `libraries/` and `tools/` are exported from
+  the Open77 platform at each release. Report problems in this repository's issues; fixes land through the
   platform and arrive with the next export.
 - `rp/` is developed here: pull requests are welcome.
 
