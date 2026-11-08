@@ -1,0 +1,280 @@
+{
+  "schema": "open77.vehicle-kit/1",
+  "resource": "lightrp_vk_rims",
+  "archiveName": "LightRPVehicleKitRims",
+  "description": "Light RP rim catalogue: eighteen original script-made rim designs (scripts/vehicle-kit/blender/make_rim.py), six finishes each, rim only on the stock tyre. Fit per dealer model in lightrp-rims-fit.json (measure-wheels.ps1); see docs/rims.md.",
+  "native": {
+    "autoHideDistance": 150
+  },
+  "palette": {
+    "chrome":       { "color": [0.66, 0.67, 0.69],    "metalness": 1.0,  "roughness": 0.1 },
+    "gunmetal":     { "color": [0.16, 0.17, 0.19],    "metalness": 0.9,  "roughness": 0.32 },
+    "gloss_black":  { "color": [0.015, 0.015, 0.017], "metalness": 0.0,  "roughness": 0.22 },
+    "dark_metal":   { "color": [0.05, 0.05, 0.055],   "metalness": 0.6,  "roughness": 0.4 },
+    "satin_bronze": { "color": [0.42, 0.29, 0.13],    "metalness": 1.0,  "roughness": 0.35 },
+    "gloss_white":  { "color": [0.82, 0.82, 0.8],     "metalness": 0.0,  "roughness": 0.25 },
+    "satin_black":  { "color": [0.02, 0.02, 0.022],   "metalness": 0.0,  "roughness": 0.55 },
+    "silver":       { "color": [0.7, 0.71, 0.73],     "metalness": 1.0,  "roughness": 0.30 },
+    "gold":         { "color": [0.8, 0.57, 0.22],     "metalness": 1.0,  "roughness": 0.24 },
+    "candy_red":    { "color": [0.42, 0.015, 0.02],   "metalness": 0.0,  "roughness": 0.18 }
+  },
+  "fitPolicy": {
+    "exclude": {
+      "kusanagi": "Front rim is a hubless ring (stock rim radius 0.182-0.231 m) around a hub-centre steering assembly that fills the wheel centre; a spoked rim would run through it. The back rim alone could take one, but a mismatched front/back set is not offered."
+    }
+  },
+  "parts": [
+    {
+      "id": "rim_classic",
+      "kind": "rim",
+      "label": "Classic 10",
+      "params": { "style": "classic", "seed": 11, "radius": 0.28, "face_x": -0.208, "width": 0.30 },
+      "finishes": {
+        "chrome":       { "rim_main": "chrome",      "rim_lip": "chrome",      "rim_detail": "dark_metal" },
+        "black":        { "rim_main": "gloss_black", "rim_lip": "gloss_black", "rim_detail": "chrome" },
+        "white":        { "rim_main": "gloss_white", "rim_lip": "chrome",      "rim_detail": "chrome" },
+        "alu":          { "rim_main": "silver",      "rim_lip": "chrome",      "rim_detail": "dark_metal" },
+        "gold":         { "rim_main": "gold",        "rim_lip": "chrome",      "rim_detail": "gloss_black" },
+        "black_chrome": { "rim_main": "gloss_black", "rim_lip": "chrome",      "rim_detail": "chrome" }
+      }
+    },
+    {
+      "id": "rim_lattice",
+      "kind": "rim",
+      "label": "Lattice",
+      "params": { "style": "lattice", "seed": 12, "radius": 0.28, "face_x": -0.208, "width": 0.30 },
+      "finishes": {
+        "chrome": { "rim_main": "chrome",       "rim_lip": "chrome",      "rim_detail": "dark_metal" },
+        "black":  { "rim_main": "gloss_black",  "rim_lip": "gloss_black", "rim_detail": "chrome" },
+        "bronze": { "rim_main": "satin_bronze", "rim_lip": "chrome",      "rim_detail": "gloss_black" },
+        "gold":   { "rim_main": "gold",         "rim_lip": "chrome",      "rim_detail": "gloss_black" },
+        "alu":    { "rim_main": "silver",       "rim_lip": "chrome",      "rim_detail": "dark_metal" },
+        "matte":  { "rim_main": "satin_black",  "rim_lip": "satin_black", "rim_detail": "chrome" }
+      }
+    },
+    {
+      "id": "rim_dish",
+      "kind": "rim",
+      "label": "Deep Dish 8",
+      "params": { "style": "dish", "seed": 13, "radius": 0.28, "face_x": -0.208, "width": 0.30 },
+      "finishes": {
+        "chrome":       { "rim_main": "chrome",      "rim_lip": "chrome",      "rim_detail": "dark_metal" },
+        "black":        { "rim_main": "gloss_black", "rim_lip": "gloss_black", "rim_detail": "chrome" },
+        "gunmetal":     { "rim_main": "gunmetal",    "rim_lip": "chrome",      "rim_detail": "gloss_black" },
+        "black_chrome": { "rim_main": "gloss_black", "rim_lip": "chrome",      "rim_detail": "chrome" },
+        "gold":         { "rim_main": "gold",        "rim_lip": "chrome",      "rim_detail": "gloss_black" },
+        "white":        { "rim_main": "gloss_white", "rim_lip": "chrome",      "rim_detail": "chrome" }
+      }
+    },
+    {
+      "id": "rim_fork",
+      "kind": "rim",
+      "label": "Fork 5",
+      "params": { "style": "fork", "seed": 14, "radius": 0.28, "face_x": -0.208, "width": 0.30 },
+      "finishes": {
+        "chrome":   { "rim_main": "chrome",       "rim_lip": "chrome",       "rim_detail": "dark_metal" },
+        "black":    { "rim_main": "gloss_black",  "rim_lip": "gloss_black",  "rim_detail": "chrome" },
+        "bronze":   { "rim_main": "satin_bronze", "rim_lip": "satin_bronze", "rim_detail": "gloss_black" },
+        "alu":      { "rim_main": "silver",       "rim_lip": "silver",       "rim_detail": "dark_metal" },
+        "matte":    { "rim_main": "satin_black",  "rim_lip": "satin_black",  "rim_detail": "dark_metal" },
+        "gunmetal": { "rim_main": "gunmetal",     "rim_lip": "chrome",       "rim_detail": "gloss_black" }
+      }
+    },
+    {
+      "id": "rim_blade",
+      "kind": "rim",
+      "label": "Blade 12",
+      "params": { "style": "blade", "seed": 15, "radius": 0.28, "face_x": -0.208, "width": 0.30 },
+      "finishes": {
+        "chrome":   { "rim_main": "chrome",      "rim_lip": "chrome",      "rim_detail": "dark_metal" },
+        "black":    { "rim_main": "gloss_black", "rim_lip": "gloss_black", "rim_detail": "chrome" },
+        "white":    { "rim_main": "gloss_white", "rim_lip": "gloss_white", "rim_detail": "gloss_black" },
+        "gunmetal": { "rim_main": "gunmetal",    "rim_lip": "gunmetal",    "rim_detail": "chrome" },
+        "matte":    { "rim_main": "satin_black", "rim_lip": "satin_black", "rim_detail": "gunmetal" },
+        "gold":     { "rim_main": "gold",        "rim_lip": "gold",        "rim_detail": "gloss_black" }
+      }
+    },
+    {
+      "id": "rim_beadlock",
+      "kind": "rim",
+      "label": "Beadlock 6",
+      "params": { "style": "beadlock", "seed": 16, "radius": 0.28, "face_x": -0.208, "width": 0.30 },
+      "finishes": {
+        "chrome":   { "rim_main": "chrome",       "rim_lip": "chrome",      "rim_detail": "dark_metal" },
+        "black":    { "rim_main": "gloss_black",  "rim_lip": "gloss_black", "rim_detail": "chrome" },
+        "gunmetal": { "rim_main": "gunmetal",     "rim_lip": "gloss_black", "rim_detail": "chrome" },
+        "matte":    { "rim_main": "satin_black",  "rim_lip": "satin_black", "rim_detail": "chrome" },
+        "bronze":   { "rim_main": "satin_bronze", "rim_lip": "gloss_black", "rim_detail": "chrome" },
+        "white":    { "rim_main": "gloss_white",  "rim_lip": "gloss_black", "rim_detail": "chrome" }
+      }
+    },
+    {
+      "id": "rim_aero",
+      "kind": "rim",
+      "label": "Aero Disc",
+      "params": { "style": "aero", "seed": 17, "radius": 0.28, "face_x": -0.208, "width": 0.30 },
+      "finishes": {
+        "chrome":       { "rim_main": "chrome",      "rim_lip": "chrome",      "rim_detail": "dark_metal" },
+        "black":        { "rim_main": "gloss_black", "rim_lip": "gloss_black", "rim_detail": "chrome" },
+        "white":        { "rim_main": "gloss_white", "rim_lip": "chrome",      "rim_detail": "gloss_black" },
+        "alu":          { "rim_main": "silver",      "rim_lip": "chrome",      "rim_detail": "dark_metal" },
+        "gold":         { "rim_main": "gold",        "rim_lip": "chrome",      "rim_detail": "gloss_black" },
+        "black_chrome": { "rim_main": "gloss_black", "rim_lip": "chrome",      "rim_detail": "chrome" }
+      }
+    },
+    {
+      "id": "rim_tech",
+      "kind": "rim",
+      "label": "Tri-Blade",
+      "params": { "style": "tech", "seed": 18, "radius": 0.28, "face_x": -0.208, "width": 0.30 },
+      "finishes": {
+        "chrome":   { "rim_main": "chrome",      "rim_lip": "chrome",      "rim_detail": "dark_metal" },
+        "black":    { "rim_main": "gloss_black", "rim_lip": "gloss_black", "rim_detail": "chrome" },
+        "gunmetal": { "rim_main": "gunmetal",    "rim_lip": "chrome",      "rim_detail": "satin_bronze" },
+        "matte":    { "rim_main": "satin_black", "rim_lip": "satin_black", "rim_detail": "candy_red" },
+        "white":    { "rim_main": "gloss_white", "rim_lip": "chrome",      "rim_detail": "gloss_black" },
+        "gold":     { "rim_main": "gold",        "rim_lip": "gloss_black", "rim_detail": "gloss_black" }
+      }
+    },
+    {
+      "id": "rim_star",
+      "kind": "rim",
+      "label": "Star 5",
+      "params": { "style": "star", "seed": 19, "radius": 0.28, "face_x": -0.208, "width": 0.30 },
+      "finishes": {
+        "chrome":       { "rim_main": "chrome",       "rim_lip": "chrome",       "rim_detail": "dark_metal" },
+        "black":        { "rim_main": "gloss_black",  "rim_lip": "gloss_black",  "rim_detail": "chrome" },
+        "alu":          { "rim_main": "silver",       "rim_lip": "silver",       "rim_detail": "dark_metal" },
+        "gunmetal":     { "rim_main": "gunmetal",     "rim_lip": "chrome",       "rim_detail": "gloss_black" },
+        "bronze":       { "rim_main": "satin_bronze", "rim_lip": "satin_bronze", "rim_detail": "gloss_black" },
+        "black_chrome": { "rim_main": "gloss_black",  "rim_lip": "chrome",       "rim_detail": "chrome" }
+      }
+    },
+    {
+      "id": "rim_twin",
+      "kind": "rim",
+      "label": "Twin 6",
+      "params": { "style": "twin", "seed": 20, "radius": 0.28, "face_x": -0.208, "width": 0.30 },
+      "finishes": {
+        "chrome":   { "rim_main": "chrome",      "rim_lip": "chrome",      "rim_detail": "dark_metal" },
+        "black":    { "rim_main": "gloss_black", "rim_lip": "gloss_black", "rim_detail": "chrome" },
+        "alu":      { "rim_main": "silver",      "rim_lip": "silver",      "rim_detail": "dark_metal" },
+        "gunmetal": { "rim_main": "gunmetal",    "rim_lip": "chrome",      "rim_detail": "gloss_black" },
+        "white":    { "rim_main": "gloss_white", "rim_lip": "chrome",      "rim_detail": "chrome" },
+        "gold":     { "rim_main": "gold",        "rim_lip": "chrome",      "rim_detail": "gloss_black" }
+      }
+    },
+    {
+      "id": "rim_yspoke",
+      "kind": "rim",
+      "label": "Y-Spoke 6",
+      "params": { "style": "yspoke", "seed": 21, "radius": 0.28, "face_x": -0.208, "width": 0.30 },
+      "finishes": {
+        "chrome":       { "rim_main": "chrome",       "rim_lip": "chrome",      "rim_detail": "dark_metal" },
+        "black":        { "rim_main": "gloss_black",  "rim_lip": "gloss_black", "rim_detail": "chrome" },
+        "alu":          { "rim_main": "silver",       "rim_lip": "silver",      "rim_detail": "dark_metal" },
+        "matte":        { "rim_main": "satin_black",  "rim_lip": "satin_black", "rim_detail": "dark_metal" },
+        "bronze":       { "rim_main": "satin_bronze", "rim_lip": "chrome",      "rim_detail": "gloss_black" },
+        "black_chrome": { "rim_main": "gloss_black",  "rim_lip": "chrome",      "rim_detail": "chrome" }
+      }
+    },
+    {
+      "id": "rim_vortex",
+      "kind": "rim",
+      "label": "Vortex 7",
+      "params": { "style": "vortex", "seed": 22, "radius": 0.28, "face_x": -0.208, "width": 0.30 },
+      "finishes": {
+        "chrome":   { "rim_main": "chrome",      "rim_lip": "chrome",      "rim_detail": "dark_metal" },
+        "black":    { "rim_main": "gloss_black", "rim_lip": "gloss_black", "rim_detail": "chrome" },
+        "gunmetal": { "rim_main": "gunmetal",    "rim_lip": "chrome",      "rim_detail": "gloss_black" },
+        "matte":    { "rim_main": "satin_black", "rim_lip": "satin_black", "rim_detail": "dark_metal" },
+        "red":      { "rim_main": "candy_red",   "rim_lip": "chrome",      "rim_detail": "chrome" },
+        "gold":     { "rim_main": "gold",        "rim_lip": "gold",        "rim_detail": "gloss_black" }
+      }
+    },
+    {
+      "id": "rim_threepiece",
+      "kind": "rim",
+      "label": "Three-Piece 10",
+      "params": { "style": "threepiece", "seed": 23, "radius": 0.28, "face_x": -0.208, "width": 0.30 },
+      "finishes": {
+        "chrome":       { "rim_main": "chrome",       "rim_lip": "chrome", "rim_detail": "gunmetal" },
+        "black_chrome": { "rim_main": "gloss_black",  "rim_lip": "chrome", "rim_detail": "chrome" },
+        "gold":         { "rim_main": "gold",         "rim_lip": "chrome", "rim_detail": "chrome" },
+        "bronze":       { "rim_main": "satin_bronze", "rim_lip": "chrome", "rim_detail": "chrome" },
+        "white":        { "rim_main": "gloss_white",  "rim_lip": "chrome", "rim_detail": "chrome" },
+        "red":          { "rim_main": "candy_red",    "rim_lip": "chrome", "rim_detail": "chrome" }
+      }
+    },
+    {
+      "id": "rim_wire",
+      "kind": "rim",
+      "label": "Wire 64",
+      "params": { "style": "wire", "seed": 24, "radius": 0.28, "face_x": -0.208, "width": 0.30 },
+      "finishes": {
+        "chrome":   { "rim_main": "chrome",      "rim_lip": "chrome", "rim_detail": "chrome" },
+        "gold":     { "rim_main": "gold",        "rim_lip": "chrome", "rim_detail": "gold" },
+        "black":    { "rim_main": "gloss_black", "rim_lip": "chrome", "rim_detail": "chrome" },
+        "red":      { "rim_main": "candy_red",   "rim_lip": "chrome", "rim_detail": "chrome" },
+        "white":    { "rim_main": "gloss_white", "rim_lip": "chrome", "rim_detail": "chrome" },
+        "gunmetal": { "rim_main": "gunmetal",    "rim_lip": "chrome", "rim_detail": "chrome" }
+      }
+    },
+    {
+      "id": "rim_turbofan",
+      "kind": "rim",
+      "label": "Turbofan",
+      "params": { "style": "turbofan", "seed": 25, "radius": 0.28, "face_x": -0.208, "width": 0.30 },
+      "finishes": {
+        "chrome":   { "rim_main": "chrome",      "rim_lip": "chrome", "rim_detail": "gloss_black" },
+        "black":    { "rim_main": "gloss_black", "rim_lip": "chrome", "rim_detail": "gunmetal" },
+        "white":    { "rim_main": "gloss_white", "rim_lip": "chrome", "rim_detail": "gloss_black" },
+        "alu":      { "rim_main": "silver",      "rim_lip": "silver", "rim_detail": "gloss_black" },
+        "gunmetal": { "rim_main": "gunmetal",    "rim_lip": "chrome", "rim_detail": "gloss_black" },
+        "red":      { "rim_main": "candy_red",   "rim_lip": "chrome", "rim_detail": "gloss_black" }
+      }
+    },
+    {
+      "id": "rim_steelie",
+      "kind": "rim",
+      "label": "Steelie",
+      "params": { "style": "steelie", "seed": 26, "radius": 0.28, "face_x": -0.208, "width": 0.30 },
+      "finishes": {
+        "black":  { "rim_main": "gloss_black", "rim_lip": "gloss_black", "rim_detail": "chrome" },
+        "white":  { "rim_main": "gloss_white", "rim_lip": "gloss_white", "rim_detail": "chrome" },
+        "red":    { "rim_main": "candy_red",   "rim_lip": "candy_red",   "rim_detail": "chrome" },
+        "chrome": { "rim_main": "chrome",      "rim_lip": "chrome",      "rim_detail": "dark_metal" },
+        "matte":  { "rim_main": "satin_black", "rim_lip": "satin_black", "rim_detail": "dark_metal" },
+        "alu":    { "rim_main": "silver",      "rim_lip": "silver",      "rim_detail": "chrome" }
+      }
+    },
+    {
+      "id": "rim_offroad",
+      "kind": "rim",
+      "label": "Off-Road 8",
+      "params": { "style": "offroad", "seed": 27, "radius": 0.28, "face_x": -0.208, "width": 0.30 },
+      "finishes": {
+        "black":    { "rim_main": "gloss_black",  "rim_lip": "gloss_black", "rim_detail": "chrome" },
+        "matte":    { "rim_main": "satin_black",  "rim_lip": "satin_black", "rim_detail": "dark_metal" },
+        "gunmetal": { "rim_main": "gunmetal",     "rim_lip": "gunmetal",    "rim_detail": "gloss_black" },
+        "alu":      { "rim_main": "silver",       "rim_lip": "silver",      "rim_detail": "dark_metal" },
+        "chrome":   { "rim_main": "chrome",       "rim_lip": "chrome",      "rim_detail": "dark_metal" },
+        "bronze":   { "rim_main": "satin_bronze", "rim_lip": "gloss_black", "rim_detail": "gloss_black" }
+      }
+    },
+    {
+      "id": "rim_hex",
+      "kind": "rim",
+      "label": "Hex Mesh",
+      "params": { "style": "hex", "seed": 28, "radius": 0.28, "face_x": -0.208, "width": 0.30 },
+      "finishes": {
+        "chrome":   { "rim_main": "chrome",      "rim_lip": "chrome",      "rim_detail": "gloss_black" },
+        "black":    { "rim_main": "gloss_black", "rim_lip": "gloss_black", "rim_detail": "chrome" },
+        "gunmetal": { "rim_main": "gunmetal",    "rim_lip": "chrome",      "rim_detail": "gloss_black" },
+        "matte":    { "rim_main": "satin_black", "rim_lip": "satin_black", "rim_detail": "candy_red" },
+        "white":    { "rim_main": "gloss_white", "rim_lip": "chrome",      "rim_detail": "gloss_black" },
+        "red":      { "rim_main": "candy_red",   "rim_lip": "gloss_black", "rim_detail": "gloss_black" }
+      }
+    }
+  ]
+}

@@ -1,0 +1,93 @@
+{
+  "schema": "open77.vehicle-kit.archivexl/1",
+  "experiment": "E0.7",
+  "summary": "Route W: a WorldWidgetComponent over the rear plate of the Thorton Galena (player record). A vanilla screen quad is bound to the rear plate and a vanilla .inkwidget holding a text widget is rendered on it; the text is then set at runtime (lab REDscript).",
+  "resource": "open77_vehicle_plate_test",
+  "archiveName": "open77_vehicle_plate_test",
+  "record": "Vehicle.v_standard2_thorton_galena_player",
+  "entity": "base\\vehicles\\standard\\v_standard2_thorton_galena_01__basic_01.ent",
+  "appearanceResource": "base\\vehicles\\appearances\\standard\\thorton_galena__basic.app",
+  "baseEntry": "thorton_galena__basic_player_01",
+  "baseDefinition": "player_01",
+  "outputs": {
+    "app": "thorton_galena_e07.app",
+    "entPatch": "thorton_galena_e07.ent"
+  },
+  "entityVisualTags": [],
+  "entityBindNames": [ "vehicle_slots" ],
+  "screenMesh": {
+    "path": "base\\environment\\decoration\\electronics\\entertainment\\television\\television_neokitsch_21x9_screen_a.mesh",
+    "appearance": "interactive_screen",
+    "note": "4-vertex two-sided quad in the mesh XZ plane; appearance interactive_screen uses base\\materials\\screen\\screen_ui.mi, the stock world-UI material (default uses screen_advert.mi). Its UVs read correctly from +Y (u grows towards -X), so a yaw of 180 degrees makes it read like the plate's own holo layer (u grows towards +X, seen from -Y)."
+  },
+  "plate": {
+    "component": "license_plate_01",
+    "note": "Rear plate of player_01, bound to bumper_b_01. Rectangle of the plate's holo layer (license_plate.mesh chunk 1) in the plate component frame, measured 2026-11-05; the plate's outer face is y = -0.021 and faces -Y (rearwards).",
+    "rect": { "xMin": -0.1601, "xMax": 0.1616, "zMin": -0.1495, "zMax": -0.0298 },
+    "faceY": -0.024
+  },
+  "components": {
+    "screen_sign": {
+      "type": "plateScreen",
+      "name": "open77_plate_screen",
+      "aspect": 3.3,
+      "yawDegrees": 180
+    },
+    "screen_sign_flip": {
+      "type": "plateScreen",
+      "name": "open77_plate_screen",
+      "aspect": 3.3,
+      "yawDegrees": 0
+    },
+    "screen_lcd": {
+      "type": "plateScreen",
+      "name": "open77_plate_screen",
+      "aspect": 10.0,
+      "yawDegrees": 180
+    },
+    "text_sign": {
+      "type": "WorldWidgetComponent",
+      "name": "open77_plate_text",
+      "screen": "open77_plate_screen",
+      "widget": "base\\gameplay\\gui\\world\\street_signs\\generic_street_name\\generic_street_name_sign.inkwidget",
+      "item": "Root",
+      "textPath": "StreetNameContainer/StreetName",
+      "note": "Root canvas 660x200; StreetName is an inkText whose authored text is 'Example street name'. The library carries the native inkStreetNameSignLogicController, which may write the street name itself."
+    },
+    "text_lcd": {
+      "type": "WorldWidgetComponent",
+      "name": "open77_plate_text",
+      "screen": "open77_plate_screen",
+      "widget": "base\\gameplay\\gui\\world\\street_signs\\generic_screens\\lcdscreen_10x1.inkwidget",
+      "item": "Root",
+      "textPath": "default_ui/messege_text",
+      "note": "Root canvas 1500x150; messege_text is an empty inkText driven by the scripted LcdScreenILogicController, which only acts when a device feeds it."
+    }
+  },
+  "appearances": [
+    {
+      "entry": "open77_e07_plate",
+      "definition": "open77_e07_plate",
+      "add": [ "screen_sign", "text_sign" ],
+      "expect": "a lit street-sign panel over the rear plate, text readable from behind the car"
+    },
+    {
+      "entry": "open77_e07_plate_flip",
+      "definition": "open77_e07_plate_flip",
+      "add": [ "screen_sign_flip", "text_sign" ],
+      "expect": "the same panel with the quad turned the other way: predicted to read mirrored (orientation control)"
+    },
+    {
+      "entry": "open77_e07_plate_lcd",
+      "definition": "open77_e07_plate_lcd",
+      "add": [ "screen_lcd", "text_lcd" ],
+      "expect": "a thin LCD strip over the plate, empty until the lab REDscript writes the text"
+    },
+    {
+      "entry": "open77_e07_quad",
+      "definition": "open77_e07_quad",
+      "add": [ "screen_sign" ],
+      "expect": "the bare screen quad with no widget: placement control"
+    }
+  ]
+}

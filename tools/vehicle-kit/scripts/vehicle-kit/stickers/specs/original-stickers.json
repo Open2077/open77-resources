@@ -1,0 +1,140 @@
+{
+  "schema": "open77.vehicle-original-stickers/1",
+  "note": [
+    "Original sticker sets (themes) for the Light RP dealer models. Every motif is our own artwork: drawn by st_draw.py (no font file, no game asset) or a committed PNG under art/<theme>/ (source.png). One set = one theme on one model: one decal per placement zone the motif names, hung on the panel the zone finds on that model (st_place.py), so a set's decal count is known per model, at most maxDecalsPerSet (9: a light livery still fits beside it) and never over maxDecalsPerCar (12, the engine cap).",
+    "Adding a theme is data only: a themes[] entry and its motif PNGs (source.png, RGBA, any resolution, the motif filling the image). Each theme is its own catalogue group. Zones: hood, roof, trunk, rear, door_l, door_r, door2_l, door2_r (a rear door entirely behind the front one), sill_l, sill_r, wing_fl, wing_fr, wing_rl, wing_rr (st_place.ZONES). A motif with mirror = true is drawn flipped on the right side so it points the same way relative to the car (stripes, flags, tags, waves); mirror = false keeps it readable (numbers, words). Motifs sharing a scaleGroup take the same scale on a model (stripes that run hood, roof, trunk). A centre-zone motif with crop = \"v\" keeps its width and follows the panel's length along v; a side-zone motif with crop = \"u\" keeps its height and runs along the car (bands, pinstripe segments), cropKeep naming the part kept when the panel is shorter than the art (start = the front end, middle, end = the rear end): crop is only for art that is uniform where it is cut or stretched. Between minLength and maxLength cm; longer than the art: stretched.",
+    "A crop \"u\" motif may set anchorZ = \"belt\" (+ anchorOffset cm): it prefers the height of the top of the front door's paint; alignTo = <an earlier motif of the theme>: it prefers the height of that motif's decal on the same side; anchorWeight: centimetres of length one centimetre off that height costs; alignTolerance (cm): a segment that continues another (alignTo, or the motif's own rear-door unit after the front one) is never farther than that from its height, or it is left out (a pinstripe that jumps height reads as a mistake). fallback = {motif, minScale}: where the motif has no room even at its minScale (a bike's side panels take no long side motif), that unit takes the named motif's art instead (an emblem already in the pack), mirrored as the motif is, down to that minScale. optional = true: when a set is over maxDecalsPerSet, the optional motifs are left out, the last one first. texelsPerCm on a motif overrides the spec's (fine lines).",
+    "kitFits lists the body-kit fit tables whose parts can hide stock components: a zone never takes such a component as its host, or the motif would float where the part was. minDecalsPerSet: a model that can carry fewer decals of a theme fails the build. overviewModels: the models of each theme's overview image (preview/overview/<theme>.png), the picture to show before the boards.",
+    "extendedModels: every other vanilla player body of the installed game (docs/generated/vehicle-player-scope-2.50.json, cars and bikes, trims grouped), placed leniently: a zone the body cannot carry is left out with its mirror partner, a set left under minDecalsPerSet is dropped (placements.json droppedSets), and a body no theme fits takes no sticker (modelsWithoutSets). models keep the strict rule. A set lists every trim record of the body whose appearance carries each panel it hangs on with the same mesh and binding (records, from the component table's trims).",
+    "Theme 03 (Sponsors) of the concept boards is not here: its invented brand names are not cleared (docs/research/vehicle-wave2-packs.md)."
+  ],
+  "resource": "lightrp_vehicle_original_stickers",
+  "archiveName": "Open77LightRPOriginalStickers",
+  "idPrefix": "os",
+  "decalPrefix": "Vehicle.o77_os_",
+  "stickerPrefix": "Vehicle.o77_sticker_",
+  "command": "osticker",
+  "maxDecalsPerCar": 12,
+  "maxDecalsPerSet": 9,
+  "minDecalsPerSet": 2,
+  "kitFits": ["../../specs/lightrp-bodykit-fit.json"],
+  "texelsPerCm": 4,
+  "maxTexture": 2048,
+  "models": ["hella", "galena", "colby", "quartz", "hozuki", "supron", "columbus", "cortes", "merrimac", "semimaru", "maimai",
+             "thrax", "bandit", "apollo", "kusanagi", "caliburn"],
+  "extendedModels": ["shion", "type66", "911turbo", "911turbo_cabrio", "aerondight", "alvarado", "alvarado_hearse",
+                     "alvarado_valentinos", "colby_nomad", "colby_pickup", "colby_pickup_kurtz", "cortes_cab",
+                     "deleon", "emperor", "galena_nomad", "hellhound", "legatus", "mackinaw", "mackinaw_bmf",
+                     "mackinaw_ncu", "nazare", "nazare_linas", "outlaw", "outlaw_heist", "quartz_nomad", "riptide",
+                     "shion_nomad", "sport_r7", "supron_kurtz", "tanishi", "tanishi_mr_hands", "turbo", "type66_nomad"],
+  "overviewModels": ["thrax", "quartz", "galena", "kusanagi"],
+  "themes": [
+    {
+      "id": "course",
+      "label": "Race",
+      "group": "Original: Race",
+      "board": "01 Course: stripes and race number, light-car colourway",
+      "preview": {"paint": "#ecece6"},
+      "palette": {"stripe": "#d22b32", "pin": "#16181d", "disc": "#ffffff", "num": "#16181d"},
+      "motifs": [
+        {"id": "hood", "label": "Double stripe (hood)", "size": [48, 144], "zones": ["hood"], "scaleGroup": "stripes", "minScale": 0.4, "crop": "v", "minLength": 24, "maxLength": 176,
+         "source": {"draw": "stripes"}},
+        {"id": "roof", "label": "Double stripe (roof)", "size": [48, 84], "zones": ["roof"], "scaleGroup": "stripes", "minScale": 0.4, "crop": "v", "minLength": 24, "maxLength": 120,
+         "source": {"draw": "stripes"}},
+        {"id": "trunk", "label": "Double stripe (trunk)", "size": [48, 48], "zones": ["trunk"], "scaleGroup": "stripes", "minScale": 0.4, "crop": "v", "minLength": 24, "maxLength": 72,
+         "source": {"draw": "stripes"}},
+        {"id": "roundel", "label": "Number 77 roundel", "size": [46, 46], "zones": ["door_l", "door_r"], "mirror": false, "minScale": 0.35,
+         "source": {"draw": "roundel", "text": "77"}},
+        {"id": "sill", "label": "Chequered sill stripe", "size": [192, 12], "zones": ["sill_l", "sill_r"], "mirror": true, "minScale": 0.4,
+         "source": {"draw": "sill"}},
+        {"id": "flag", "label": "Chequered flag", "size": [26, 22], "zones": ["wing_fl", "wing_fr"], "mirror": true, "minScale": 0.5,
+         "source": {"draw": "flag"}}
+      ]
+    },
+    {
+      "id": "graffiti",
+      "label": "Graffiti",
+      "group": "Original: Graffiti",
+      "board": "02 Rue / graffiti: abstract bubble tags (no letters, no crew name), drips, burst, throw-up, arrows; dark-car colourway",
+      "preview": {"paint": "#1f2125"},
+      "palette": {"f1": "#ff3e9a", "f2": "#b8f02a", "outline": "#f4f4f2", "shadow": "#3a2bb8", "hi": "#ffffff"},
+      "motifs": [
+        {"id": "tag", "label": "Bubble tag (doors)", "size": [132, 58], "zones": ["door_l", "door_r"], "mirror": true, "minScale": 0.3,
+         "fallback": {"motif": "burst", "minScale": 0.15}, "source": {"draw": "g_tag"}},
+        {"id": "drips", "label": "Drips (sills)", "size": [192, 15], "zones": ["sill_l", "sill_r"], "mirror": true, "crop": "u", "minScale": 0.4, "minLength": 40, "maxLength": 200,
+         "source": {"draw": "g_drips"}},
+        {"id": "burst", "label": "Burst (hood)", "size": [96, 96], "zones": ["hood"], "minScale": 0.3,
+         "source": {"draw": "g_burst"}},
+        {"id": "throwup", "label": "Throw-up (rear)", "size": [76, 28], "zones": ["rear"], "minScale": 0.3,
+         "source": {"draw": "g_throwup"}},
+        {"id": "arrows", "label": "Arrows (rear wings)", "size": [59, 28], "zones": ["wing_rl", "wing_rr"], "mirror": true, "minScale": 0.35,
+         "source": {"draw": "g_arrows"}}
+      ]
+    },
+    {
+      "id": "tech",
+      "label": "Circuit",
+      "group": "Original: Circuit",
+      "board": "04 Tech / circuit: printed-circuit traces and a data bar; dark-car colourway",
+      "preview": {"paint": "#17191d"},
+      "palette": {"trace": "#2fe6ff", "accent": "#e8f1f5"},
+      "motifs": [
+        {"id": "circuit", "label": "Side circuit (doors)", "size": [156, 53], "zones": ["door_l", "door_r"], "mirror": true, "minScale": 0.3,
+         "fallback": {"motif": "roofchip", "minScale": 0.25}, "source": {"draw": "t_circuit"}},
+        {"id": "data", "label": "Data bar (sills)", "size": [192, 8.5], "zones": ["sill_l", "sill_r"], "mirror": true, "crop": "u", "minScale": 0.5, "minLength": 40, "maxLength": 200,
+         "source": {"draw": "t_data"}},
+        {"id": "chip", "label": "Central chip (hood)", "size": [128, 128], "zones": ["hood"], "minScale": 0.3,
+         "source": {"draw": "t_chip"}},
+        {"id": "bus", "label": "Rear bus (rear)", "size": [142, 18], "zones": ["rear"], "minScale": 0.3,
+         "source": {"draw": "t_bus"}},
+        {"id": "roofchip", "label": "Roof chip (roof)", "size": [60, 60], "zones": ["roof"], "minScale": 0.35,
+         "source": {"draw": "t_roofchip"}}
+      ]
+    },
+    {
+      "id": "vague",
+      "label": "Wave and sun",
+      "group": "Original: Wave and sun",
+      "board": "05 Vague et soleil: a great wave and a banded sun, no kanji, no rays; light-car colourway",
+      "preview": {"paint": "#f1eadb"},
+      "palette": {"mass": "#1e3a6e", "band": "#4d7db8", "foam": "#ffffff", "sun": "#d9452b", "petal": "#f2a2b5"},
+      "motifs": [
+        {"id": "wave", "label": "Great wave and sun (doors)", "size": [202, 56], "zones": ["door_l", "door_r"], "mirror": true, "minScale": 0.3,
+         "fallback": {"motif": "sunsea", "minScale": 0.2}, "source": {"draw": "v_wave"}},
+        {"id": "scales", "label": "Wave scales (sills)", "size": [192, 10.5], "zones": ["sill_l", "sill_r"], "mirror": true, "crop": "u", "minScale": 0.5, "minLength": 40, "maxLength": 200,
+         "source": {"draw": "v_scales"}},
+        {"id": "sunsea", "label": "Sun over the sea (hood)", "size": [72, 70], "zones": ["hood"], "minScale": 0.35,
+         "source": {"draw": "v_sunsea"}},
+        {"id": "surf", "label": "Surf (rear)", "size": [128, 13], "zones": ["rear"], "minScale": 0.3,
+         "source": {"draw": "v_surf"}},
+        {"id": "petals", "label": "Petals (front wings)", "size": [33, 23], "zones": ["wing_fl", "wing_fr"], "mirror": true, "minScale": 0.4,
+         "source": {"draw": "v_petals"}}
+      ]
+    },
+    {
+      "id": "filet",
+      "label": "Pinstripe",
+      "group": "Original: Pinstripe",
+      "board": "06 Filet minimal: coachbuilder's pinstripes, the belt line cut per panel; dark-car colourway",
+      "preview": {"paint": "#111215"},
+      "palette": {"line": "#c9a45c", "thin": "#ede6d6"},
+      "motifs": [
+        {"id": "belt", "label": "Belt pinstripe (doors)", "size": [60, 10], "zones": ["door_l", "door_r", "door2_l", "door2_r"], "mirror": true,
+         "crop": "u", "minScale": 1, "minLength": 15, "maxLength": 200, "anchorZ": "belt", "anchorOffset": -6, "anchorWeight": 5, "alignTolerance": 1, "texelsPerCm": 8,
+         "source": {"draw": "f_belt"}},
+        {"id": "beltfront", "label": "Belt pinstripe (front wings)", "size": [90, 10], "zones": ["wing_fl", "wing_fr"], "mirror": true,
+         "crop": "u", "cropKeep": "start", "minScale": 1, "minLength": 25, "maxLength": 160, "alignTo": "belt", "alignTolerance": 1, "anchorZ": "belt", "anchorOffset": -6, "anchorWeight": 10, "texelsPerCm": 8,
+         "source": {"draw": "f_belt_front"}},
+        {"id": "beltrear", "label": "Belt pinstripe (rear wings)", "size": [90, 10], "zones": ["wing_rl", "wing_rr"], "mirror": true,
+         "crop": "u", "cropKeep": "end", "minScale": 1, "minLength": 25, "maxLength": 160, "alignTo": "belt", "alignTolerance": 1, "anchorZ": "belt", "anchorOffset": -6, "anchorWeight": 10, "texelsPerCm": 8,
+         "source": {"draw": "f_belt_rear"}},
+        {"id": "hood", "label": "Hood pinstripes (hood)", "size": [100, 126], "zones": ["hood"], "minScale": 0.35,
+         "source": {"draw": "f_hood"}},
+        {"id": "rear", "label": "Rear pinstripe (rear)", "size": [152, 7], "zones": ["rear"], "minScale": 0.5, "optional": true, "texelsPerCm": 5,
+         "source": {"draw": "f_rear"}},
+        {"id": "sill", "label": "Sill line (sills)", "size": [184, 3], "zones": ["sill_l", "sill_r"], "mirror": true, "minScale": 0.6, "optional": true, "texelsPerCm": 5,
+         "source": {"draw": "f_sill"}}
+      ]
+    }
+  ]
+}

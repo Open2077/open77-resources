@@ -1,0 +1,3 @@
+# Build output and Python caches.
+/artifacts/
+__pycache__/

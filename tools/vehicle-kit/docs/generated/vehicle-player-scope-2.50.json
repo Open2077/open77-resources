@@ -1,0 +1,1329 @@
+{
+ "generatedBy": "scripts/vehicle-kit/inventory/player_scope.py",
+ "gameVersion": "2.50",
+ "source": "r6/cache/tweakdb.bin + tweakdb_ep1.bin of the installed game (tdb.py)",
+ "rule": "Vehicle.*_player* records, Car and Bike only, no panzer, no quest variant (Vehicle.q<digits>_*), with an entity template; grouped by entity",
+ "counts": {
+  "vehicleRecords": 1379,
+  "playerRecords": 88,
+  "inScope": 86,
+  "excluded": 2,
+  "bodies": 49,
+  "vehiclesTxtPlayerNames": 88
+ },
+ "vehiclesTxtNotInThisGame": [],
+ "notInVehiclesTxt": [],
+ "excluded": [
+  {
+   "record": "Vehicle.q000_hym_player_car",
+   "reason": "quest variant (Vehicle.q<digits>_*), excluded by the owner"
+  },
+  {
+   "record": "Vehicle.q304_songbird_escape_player",
+   "reason": "quest variant (Vehicle.q<digits>_*), excluded by the owner"
+  }
+ ],
+ "bodies": [
+  {
+   "key": "apollo",
+   "primary": "Vehicle.v_sportbike3_brennan_apollo_player",
+   "vehicleType": "Bike",
+   "entity": "base\\vehicles\\sportbike\\v_sportbike3_brennan_apollo_basic_01.ent",
+   "inLightRpCatalogue": true,
+   "records": [
+    {
+     "record": "Vehicle.v_sportbike3_brennan_apollo_player",
+     "appearance": "brennan_apollo_basic_player_01",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "brennan.apollo",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 1
+    },
+    {
+     "record": "Vehicle.v_sportbike3_brennan_apollo_player_02",
+     "appearance": "brennan_apollo_basic_player_02",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "brennan.apollo",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 1
+    },
+    {
+     "record": "Vehicle.v_sportbike3_brennan_apollo_nomad_player",
+     "appearance": "brennan_apollo_basic_scorpion",
+     "hasVisualCustomization": false,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "brennan.apollo",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 1
+    }
+   ]
+  },
+  {
+   "key": "bandit",
+   "primary": "Vehicle.v_standard2_archer_bandit_player",
+   "vehicleType": "Car",
+   "entity": "base\\vehicles\\standard\\v_standard2_archer_bandit_01.ent",
+   "inLightRpCatalogue": true,
+   "records": [
+    {
+     "record": "Vehicle.v_standard2_archer_bandit_player",
+     "appearance": "",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "archer.quartz.bandit",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 1
+    }
+   ]
+  },
+  {
+   "key": "caliburn",
+   "primary": "Vehicle.v_sport1_rayfield_caliburn_player",
+   "vehicleType": "Car",
+   "entity": "base\\vehicles\\sport\\v_sport1_rayfield_caliburn__basic_01.ent",
+   "inLightRpCatalogue": true,
+   "records": [
+    {
+     "record": "Vehicle.v_sport1_rayfield_caliburn_player",
+     "appearance": "rayfield_caliburn__basic_player_01",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "rayfield.caliburn",
+     "customizableAppearance": "rayfield_caliburn__basic_player_01_customizable",
+     "uniqueTemplates": 6,
+     "profiles": 6
+    },
+    {
+     "record": "Vehicle.v_sport1_rayfield_caliburn_02_player",
+     "appearance": "rayfield_caliburn__basic_ma_bls_ina_se1_40",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "rayfield.caliburn",
+     "customizableAppearance": "rayfield_caliburn__basic_ma_bls_ina_se1_40",
+     "uniqueTemplates": 6,
+     "profiles": 6
+    },
+    {
+     "record": "Vehicle.v_sport1_rayfield_caliburn_mordred_player",
+     "appearance": "rayfield_caliburn__basic_mordred",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "rayfield.caliburn",
+     "customizableAppearance": "",
+     "uniqueTemplates": 6,
+     "profiles": 6
+    }
+   ]
+  },
+  {
+   "key": "colby",
+   "primary": "Vehicle.v_standard2_thorton_colby_player",
+   "vehicleType": "Car",
+   "entity": "base\\vehicles\\standard\\v_standard2_thorton_colby__basic_01.ent",
+   "inLightRpCatalogue": true,
+   "records": [
+    {
+     "record": "Vehicle.v_standard2_thorton_colby_player",
+     "appearance": "thorton_colby__basic_player_01",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "thorton.colby.basic",
+     "customizableAppearance": "",
+     "uniqueTemplates": 8,
+     "profiles": 16
+    },
+    {
+     "record": "Vehicle.v_standard2_thorton_colby_gt_player",
+     "appearance": "thorton_colby__basic_urban_01_1",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "thorton.colby.basic",
+     "customizableAppearance": "",
+     "uniqueTemplates": 8,
+     "profiles": 16
+    }
+   ]
+  },
+  {
+   "key": "columbus",
+   "primary": "Vehicle.v_standard25_villefort_columbus_player",
+   "vehicleType": "Car",
+   "entity": "base\\vehicles\\standard\\v_standard25_villefort_columbus_01__basic_01.ent",
+   "inLightRpCatalogue": true,
+   "records": [
+    {
+     "record": "Vehicle.v_standard25_villefort_columbus_player",
+     "appearance": "villefort_columbus__basic_player_01",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "villefort.columbus",
+     "customizableAppearance": "",
+     "uniqueTemplates": 6,
+     "profiles": 12
+    }
+   ]
+  },
+  {
+   "key": "cortes",
+   "primary": "Vehicle.v_standard2_villefort_cortes_player",
+   "vehicleType": "Car",
+   "entity": "base\\vehicles\\standard\\v_standard2_villefort_cortes_01__basic_01.ent",
+   "inLightRpCatalogue": true,
+   "records": [
+    {
+     "record": "Vehicle.v_standard2_villefort_cortes_player",
+     "appearance": "villefort_cortes__basic_player_01",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "villefort.cortes",
+     "customizableAppearance": "",
+     "uniqueTemplates": 10,
+     "profiles": 20
+    }
+   ]
+  },
+  {
+   "key": "galena",
+   "primary": "Vehicle.v_standard2_thorton_galena_player",
+   "vehicleType": "Car",
+   "entity": "base\\vehicles\\standard\\v_standard2_thorton_galena_01__basic_01.ent",
+   "inLightRpCatalogue": true,
+   "records": [
+    {
+     "record": "Vehicle.v_standard2_thorton_galena_player",
+     "appearance": "thorton_galena__basic_player_01",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "thorton.galena.basic",
+     "customizableAppearance": "",
+     "uniqueTemplates": 4,
+     "profiles": 24
+    },
+    {
+     "record": "Vehicle.v_standard2_thorton_galena_gt_player",
+     "appearance": "thorton_galena__basic_gt_02",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "thorton.galena.basic",
+     "customizableAppearance": "",
+     "uniqueTemplates": 4,
+     "profiles": 24
+    },
+    {
+     "record": "Vehicle.v_standard2_thorton_galena_bobas_player",
+     "appearance": "thorton_galena__basic_q000_galena_bobas",
+     "hasVisualCustomization": false,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "thorton.galena.basic",
+     "customizableAppearance": "",
+     "uniqueTemplates": 4,
+     "profiles": 24
+    }
+   ]
+  },
+  {
+   "key": "hella",
+   "primary": "Vehicle.v_standard2_archer_hella_player",
+   "vehicleType": "Car",
+   "entity": "base\\vehicles\\standard\\v_standard2_archer_hella__basic_01.ent",
+   "inLightRpCatalogue": true,
+   "records": [
+    {
+     "record": "Vehicle.v_standard2_archer_hella_player",
+     "appearance": "archer_hella__basic_player_01",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "archer.hella",
+     "customizableAppearance": "",
+     "uniqueTemplates": 12,
+     "profiles": 26
+    }
+   ]
+  },
+  {
+   "key": "hozuki",
+   "primary": "Vehicle.v_standard2_mizutani_hozuki_player",
+   "vehicleType": "Car",
+   "entity": "ep1\\vehicles\\standard\\v_standard2_mizutani_hozuki__basic_01.ent",
+   "inLightRpCatalogue": true,
+   "records": [
+    {
+     "record": "Vehicle.v_standard2_mizutani_hozuki_player",
+     "appearance": "mizutani_hozuki__basic_player_01",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "mizutani.hozuki",
+     "customizableAppearance": "",
+     "uniqueTemplates": 14,
+     "profiles": 39
+    },
+    {
+     "record": "Vehicle.v_standard2_mizutani_hozuki_gt_player",
+     "appearance": "mizutani_hozuki__basic_urban_05",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "mizutani.hozuki",
+     "customizableAppearance": "",
+     "uniqueTemplates": 14,
+     "profiles": 39
+    }
+   ]
+  },
+  {
+   "key": "kusanagi",
+   "primary": "Vehicle.v_sportbike1_yaiba_kusanagi_player",
+   "vehicleType": "Bike",
+   "entity": "base\\vehicles\\sportbike\\v_sportbike1_yaiba_kusanagi_basic_01.ent",
+   "inLightRpCatalogue": true,
+   "records": [
+    {
+     "record": "Vehicle.v_sportbike1_yaiba_kusanagi_player",
+     "appearance": "yaiba_kusanagi_basic_player_01",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "yaiba.kusanagi",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 1
+    },
+    {
+     "record": "Vehicle.v_sportbike1_yaiba_kusanagi_player_02",
+     "appearance": "yaiba_kusanagi_basic_player_02",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "yaiba.kusanagi",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 1
+    },
+    {
+     "record": "Vehicle.v_sportbike1_yaiba_kusanagi_player_03",
+     "appearance": "yaiba_kusanagi_basic_player_03",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "yaiba.kusanagi",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 1
+    },
+    {
+     "record": "Vehicle.v_sportbike1_yaiba_muramasa_player",
+     "appearance": "",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "yaiba.kusanagi",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 1
+    },
+    {
+     "record": "Vehicle.v_sportbike1_yaiba_kusanagi_tyger_player",
+     "appearance": "yaiba_kusanagi_basic_tyger_01",
+     "hasVisualCustomization": false,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "yaiba.kusanagi",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 1
+    }
+   ]
+  },
+  {
+   "key": "maimai",
+   "primary": "Vehicle.v_standard2_makigai_maimai_player",
+   "vehicleType": "Car",
+   "entity": "base\\vehicles\\standard\\v_standard2_makigai_maimai_01_basic_01.ent",
+   "inLightRpCatalogue": true,
+   "records": [
+    {
+     "record": "Vehicle.v_standard2_makigai_maimai_player",
+     "appearance": "makigai_maimai__basic_player_01",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "makigai.maimai",
+     "customizableAppearance": "",
+     "uniqueTemplates": 10,
+     "profiles": 17
+    }
+   ]
+  },
+  {
+   "key": "merrimac",
+   "primary": "Vehicle.v_standard25_thorton_merrimac_player",
+   "vehicleType": "Car",
+   "entity": "ep1\\vehicles\\standard\\v_standard25_thorton_merrimac_01_player_01.ent",
+   "inLightRpCatalogue": true,
+   "records": [
+    {
+     "record": "Vehicle.v_standard25_thorton_merrimac_player",
+     "appearance": "thorton_merrimac_basic_player_01",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "thorton.merrimac",
+     "customizableAppearance": "",
+     "uniqueTemplates": 16,
+     "profiles": 33
+    }
+   ]
+  },
+  {
+   "key": "quartz",
+   "primary": "Vehicle.v_standard2_archer_quartz_player",
+   "vehicleType": "Car",
+   "entity": "base\\vehicles\\standard\\v_standard2_archer_quartz__basic_01.ent",
+   "inLightRpCatalogue": true,
+   "records": [
+    {
+     "record": "Vehicle.v_standard2_archer_quartz_player",
+     "appearance": "archer_quartz__basic_player_01",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "archer.quartz",
+     "customizableAppearance": "",
+     "uniqueTemplates": 18,
+     "profiles": 26
+    },
+    {
+     "record": "Vehicle.v_standard2_archer_quartz_base_player",
+     "appearance": "archer_quartz__basic_suburban_1_1",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "archer.quartz",
+     "customizableAppearance": "",
+     "uniqueTemplates": 18,
+     "profiles": 26
+    }
+   ]
+  },
+  {
+   "key": "semimaru",
+   "primary": "Vehicle.v_sport1_yaiba_semimaru_player",
+   "vehicleType": "Car",
+   "entity": "base\\vehicles\\sport\\v_sport1_yaiba_semimaru__basic_01.ent",
+   "inLightRpCatalogue": true,
+   "records": [
+    {
+     "record": "Vehicle.v_sport1_yaiba_semimaru_player",
+     "appearance": "yaiba_semimaru_basic_urban_01",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "yaiba.semimaru",
+     "customizableAppearance": "",
+     "uniqueTemplates": 4,
+     "profiles": 4
+    }
+   ]
+  },
+  {
+   "key": "shion",
+   "primary": "Vehicle.v_sport2_mizutani_shion_player",
+   "vehicleType": "Car",
+   "entity": "base\\vehicles\\sport\\v_sport2_mizutani_shion__basic_01.ent",
+   "inLightRpCatalogue": true,
+   "records": [
+    {
+     "record": "Vehicle.v_sport2_mizutani_shion_player",
+     "appearance": "mizutani_shion__basic_player_01",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "mizutani.shion",
+     "customizableAppearance": "",
+     "uniqueTemplates": 7,
+     "profiles": 18
+    },
+    {
+     "record": "Vehicle.v_sport2_mizutani_shion_base_player",
+     "appearance": "mizutani_shion__basic_suburban_07",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "mizutani.shion",
+     "customizableAppearance": "",
+     "uniqueTemplates": 7,
+     "profiles": 18
+    },
+    {
+     "record": "Vehicle.v_sport2_mizutani_shion_targa_player",
+     "appearance": "mizutani_shion__basic_targa_blue",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "mizutani.shion.targa",
+     "customizableAppearance": "",
+     "uniqueTemplates": 7,
+     "profiles": 18
+    }
+   ]
+  },
+  {
+   "key": "supron",
+   "primary": "Vehicle.v_standard25_mahir_supron_player",
+   "vehicleType": "Car",
+   "entity": "base\\vehicles\\standard\\v_standard25_mahir_supron_01__basic_01.ent",
+   "inLightRpCatalogue": true,
+   "records": [
+    {
+     "record": "Vehicle.v_standard25_mahir_supron_player",
+     "appearance": "mahir_supron__basic_player_01",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "mahir.supron",
+     "customizableAppearance": "",
+     "uniqueTemplates": 18,
+     "profiles": 24
+    },
+    {
+     "record": "Vehicle.v_standard25_mahir_supron_gt_player",
+     "appearance": "mahir_supron__basic_urban_02",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "mahir.supron",
+     "customizableAppearance": "",
+     "uniqueTemplates": 18,
+     "profiles": 24
+    }
+   ]
+  },
+  {
+   "key": "thrax",
+   "primary": "Vehicle.v_standard2_chevalier_thrax_player",
+   "vehicleType": "Car",
+   "entity": "base\\vehicles\\standard\\v_standard2_chevalier_thrax__basic_01.ent",
+   "inLightRpCatalogue": true,
+   "records": [
+    {
+     "record": "Vehicle.v_standard2_chevalier_thrax_player",
+     "appearance": "chevalier_thrax__basic_player_01",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "chevalier.thrax",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 12
+    }
+   ]
+  },
+  {
+   "key": "type66",
+   "primary": "Vehicle.v_sport2_quadra_type66_player",
+   "vehicleType": "Car",
+   "entity": "base\\vehicles\\sport\\v_sport2_quadra_type66__basic_01.ent",
+   "inLightRpCatalogue": true,
+   "records": [
+    {
+     "record": "Vehicle.v_sport2_quadra_type66_player",
+     "appearance": "quadra_type66__basic_jen_rowley",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "quadra.type66",
+     "customizableAppearance": "",
+     "uniqueTemplates": 11,
+     "profiles": 16
+    },
+    {
+     "record": "Vehicle.v_sport2_quadra_type66_gt_player",
+     "appearance": "quadra_type66__basic_player_urban_03",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "quadra.type66",
+     "customizableAppearance": "",
+     "uniqueTemplates": 11,
+     "profiles": 16
+    },
+    {
+     "record": "Vehicle.v_sport2_quadra_type66_02_player",
+     "appearance": "quadra_type66__basic_bulleat",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "quadra.type66",
+     "customizableAppearance": "",
+     "uniqueTemplates": 11,
+     "profiles": 16
+    },
+    {
+     "record": "Vehicle.v_sport2_quadra_type66_base_player",
+     "appearance": "quadra_type66__basic_suburban_06",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "quadra.type66",
+     "customizableAppearance": "",
+     "uniqueTemplates": 11,
+     "profiles": 16
+    },
+    {
+     "record": "Vehicle.v_sport2_quadra_type66_avenger_player",
+     "appearance": "quadra_type66_vtech_noralee",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "quadra.type66.avenger",
+     "customizableAppearance": "",
+     "uniqueTemplates": 11,
+     "profiles": 16
+    },
+    {
+     "record": "Vehicle.v_sport2_quadra_type66_nomad_ncu_player",
+     "appearance": "quadra_type66__basic_sampson",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "quadra.type66",
+     "customizableAppearance": "",
+     "uniqueTemplates": 11,
+     "profiles": 16
+    }
+   ]
+  },
+  {
+   "key": "911turbo",
+   "primary": "Vehicle.v_sport2_porsche_911turbo_player",
+   "vehicleType": "Car",
+   "entity": "base\\vehicles\\sport\\v_sport2_porsche_911turbo__basic_01.ent",
+   "inLightRpCatalogue": false,
+   "records": [
+    {
+     "record": "Vehicle.v_sport2_porsche_911turbo_player",
+     "appearance": "porsche_911turbo__basic_johnny",
+     "hasVisualCustomization": false,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 0
+    }
+   ]
+  },
+  {
+   "key": "911turbo_cabrio",
+   "primary": "Vehicle.v_sport2_porsche_911turbo_cabrio_player",
+   "vehicleType": "Car",
+   "entity": "base\\vehicles\\sport\\v_sport2_porsche_911turbo__cabrio_01.ent",
+   "inLightRpCatalogue": false,
+   "records": [
+    {
+     "record": "Vehicle.v_sport2_porsche_911turbo_cabrio_player",
+     "appearance": "porsche_911turbo__basic_cabrio_01",
+     "hasVisualCustomization": false,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 0
+    }
+   ]
+  },
+  {
+   "key": "aerondight",
+   "primary": "Vehicle.v_sport1_rayfield_aerondight_player",
+   "vehicleType": "Car",
+   "entity": "base\\vehicles\\sport\\v_sport1_rayfield_aerondight__basic_01.ent",
+   "inLightRpCatalogue": false,
+   "records": [
+    {
+     "record": "Vehicle.v_sport1_rayfield_aerondight_player",
+     "appearance": "rayfield_aerondight__basic_player_01",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "rayfield.aerondight",
+     "customizableAppearance": "rayfield_aerondight__basic_player_01_customizable_01",
+     "uniqueTemplates": 7,
+     "profiles": 7
+    }
+   ]
+  },
+  {
+   "key": "alvarado",
+   "primary": "Vehicle.v_sport2_villefort_alvarado_player",
+   "vehicleType": "Car",
+   "entity": "base\\vehicles\\sport\\v_sport2_villefort_alvarado__basic_01.ent",
+   "inLightRpCatalogue": false,
+   "records": [
+    {
+     "record": "Vehicle.v_sport2_villefort_alvarado_player",
+     "appearance": "villefort_alvarado__basic_player_01",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "villefort.alvarado.basic",
+     "customizableAppearance": "",
+     "uniqueTemplates": 11,
+     "profiles": 23
+    }
+   ]
+  },
+  {
+   "key": "alvarado_hearse",
+   "primary": "Vehicle.v_sport2_villefort_alvarado_hearse_player",
+   "vehicleType": "Car",
+   "entity": "ep1\\vehicles\\sport\\v_sport2_villefort_alvarado__hearse_01.ent",
+   "inLightRpCatalogue": false,
+   "records": [
+    {
+     "record": "Vehicle.v_sport2_villefort_alvarado_hearse_player",
+     "appearance": "villefort_alvarado_hearse_01_basic_web_01",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "villefort.alvarado.hearse",
+     "customizableAppearance": "",
+     "uniqueTemplates": 1,
+     "profiles": 26
+    }
+   ]
+  },
+  {
+   "key": "alvarado_valentinos",
+   "primary": "Vehicle.v_sport2_villefort_alvarado_valentinos_player",
+   "vehicleType": "Car",
+   "entity": "base\\vehicles\\sport\\v_sport2_villefort_alvarado__cabrio_01.ent",
+   "inLightRpCatalogue": false,
+   "records": [
+    {
+     "record": "Vehicle.v_sport2_villefort_alvarado_valentinos_player",
+     "appearance": "villefort_alvarado__basic_valentinos_02",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "villefort.alvarado.basic",
+     "customizableAppearance": "",
+     "uniqueTemplates": 11,
+     "profiles": 23
+    }
+   ]
+  },
+  {
+   "key": "colby_nomad",
+   "primary": "Vehicle.v_standard25_thorton_colby_nomad_player",
+   "vehicleType": "Car",
+   "entity": "base\\vehicles\\standard\\v_standard25_thorton_colby_pickup_nomad__basic_01.ent",
+   "inLightRpCatalogue": false,
+   "records": [
+    {
+     "record": "Vehicle.v_standard25_thorton_colby_nomad_player",
+     "appearance": "thorton_colby_pickup_nomad_player_01",
+     "hasVisualCustomization": false,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 0
+    },
+    {
+     "record": "Vehicle.v_standard25_thorton_colby_nomad_player_missiles",
+     "appearance": "thorton_colby_pickup_nomad_player_01_missiles",
+     "hasVisualCustomization": false,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 0
+    }
+   ]
+  },
+  {
+   "key": "colby_pickup",
+   "primary": "Vehicle.v_standard25_thorton_colby_pickup_player",
+   "vehicleType": "Car",
+   "entity": "base\\vehicles\\standard\\v_standard25_thorton_colby_pickup__basic_01.ent",
+   "inLightRpCatalogue": false,
+   "records": [
+    {
+     "record": "Vehicle.v_standard25_thorton_colby_pickup_player",
+     "appearance": "thorton_colby_pickup_player_01",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "thorton.colby.pickup",
+     "customizableAppearance": "",
+     "uniqueTemplates": 4,
+     "profiles": 9
+    },
+    {
+     "record": "Vehicle.v_standard25_thorton_colby_pickup_02_player",
+     "appearance": "thorton_colby_pickup_ma_bls_ina_se1_44",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "thorton.colby.pickup",
+     "customizableAppearance": "",
+     "uniqueTemplates": 4,
+     "profiles": 9
+    }
+   ]
+  },
+  {
+   "key": "colby_pickup_kurtz",
+   "primary": "Vehicle.v_standard25_thorton_colby_pickup_kurtz_player",
+   "vehicleType": "Car",
+   "entity": "ep1\\vehicles\\standard\\v_standard25_thorton_colby_pickup__kurtz_01.ent",
+   "inLightRpCatalogue": false,
+   "records": [
+    {
+     "record": "Vehicle.v_standard25_thorton_colby_pickup_kurtz_player",
+     "appearance": "thorton_colby_pickup_kurtz_player_01",
+     "hasVisualCustomization": false,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "thorton.colby.pickup",
+     "customizableAppearance": "",
+     "uniqueTemplates": 4,
+     "profiles": 9
+    }
+   ]
+  },
+  {
+   "key": "cortes_cab",
+   "primary": "Vehicle.v_standard2_villefort_cortes_delamain_player",
+   "vehicleType": "Car",
+   "entity": "base\\vehicles\\standard\\v_standard2_villefort_cortes_02__delamain_01.ent",
+   "inLightRpCatalogue": false,
+   "records": [
+    {
+     "record": "Vehicle.v_standard2_villefort_cortes_delamain_player",
+     "appearance": "villefort_cortes__basic_delamain",
+     "hasVisualCustomization": false,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "villefort.cortes",
+     "customizableAppearance": "",
+     "uniqueTemplates": 10,
+     "profiles": 20
+    }
+   ]
+  },
+  {
+   "key": "deleon",
+   "primary": "Vehicle.v_sport2_villefort_deleon_player",
+   "vehicleType": "Car",
+   "entity": "ep1\\vehicles\\sport\\v_sport2_villefort_deleon_01.ent",
+   "inLightRpCatalogue": false,
+   "records": [
+    {
+     "record": "Vehicle.v_sport2_villefort_deleon_player",
+     "appearance": "villefort_deleon_basic_player_01",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "villefort.deleon",
+     "customizableAppearance": "",
+     "uniqueTemplates": 1,
+     "profiles": 34
+    },
+    {
+     "record": "Vehicle.v_sport2_villefort_deleon_sport_player",
+     "appearance": "villefort_deleon_basic_urban_01",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "villefort.deleon",
+     "customizableAppearance": "",
+     "uniqueTemplates": 1,
+     "profiles": 34
+    }
+   ]
+  },
+  {
+   "key": "emperor",
+   "primary": "Vehicle.v_standard3_chevalier_emperor_player",
+   "vehicleType": "Car",
+   "entity": "base\\vehicles\\standard\\v_standard3_chevalier_emperor_01__basic_01.ent",
+   "inLightRpCatalogue": false,
+   "records": [
+    {
+     "record": "Vehicle.v_standard3_chevalier_emperor_player",
+     "appearance": "chevalier_emperor__basic_player_01",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "chevalier.emperor",
+     "customizableAppearance": "",
+     "uniqueTemplates": 10,
+     "profiles": 12
+    }
+   ]
+  },
+  {
+   "key": "galena_nomad",
+   "primary": "Vehicle.v_standard2_thorton_galena_nomad_player",
+   "vehicleType": "Car",
+   "entity": "base\\vehicles\\standard\\v_standard2_thorton_galena_nomad__01.ent",
+   "inLightRpCatalogue": false,
+   "records": [
+    {
+     "record": "Vehicle.v_standard2_thorton_galena_nomad_player",
+     "appearance": "thorton_galena_nomad_player_01",
+     "hasVisualCustomization": false,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 0
+    },
+    {
+     "record": "Vehicle.v_standard2_thorton_galena_nomad_player_missiles",
+     "appearance": "thorton_galena_nomad_player_01_missiles",
+     "hasVisualCustomization": false,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 0
+    }
+   ]
+  },
+  {
+   "key": "hellhound",
+   "primary": "Vehicle.v_standard3_militech_hellhound_player",
+   "vehicleType": "Car",
+   "entity": "ep1\\vehicles\\standard\\v_standard3_militech_hellhound__basic_01.ent",
+   "inLightRpCatalogue": false,
+   "records": [
+    {
+     "record": "Vehicle.v_standard3_militech_hellhound_player",
+     "appearance": "militech_hellhound__basic_player_01",
+     "hasVisualCustomization": false,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 0
+    }
+   ]
+  },
+  {
+   "key": "legatus",
+   "primary": "Vehicle.v_utility4_chevalier_legatus_player",
+   "vehicleType": "Car",
+   "entity": "base\\vehicles\\utility\\v_utility4_chevalier_legatus_basic_01.ent",
+   "inLightRpCatalogue": false,
+   "records": [
+    {
+     "record": "Vehicle.v_utility4_chevalier_legatus_player",
+     "appearance": "chevalier_legatus_basic_legatus_aquila_01",
+     "hasVisualCustomization": false,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "chevalier.centurion",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 26
+    }
+   ]
+  },
+  {
+   "key": "mackinaw",
+   "primary": "Vehicle.v_standard3_thorton_mackinaw_player",
+   "vehicleType": "Car",
+   "entity": "base\\vehicles\\standard\\v_standard3_thorton_mackinaw_01__basic_01.ent",
+   "inLightRpCatalogue": false,
+   "records": [
+    {
+     "record": "Vehicle.v_standard3_thorton_mackinaw_player",
+     "appearance": "thorton_mackinaw__basic_player_01",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "thorton.mackinaw.basic",
+     "customizableAppearance": "",
+     "uniqueTemplates": 24,
+     "profiles": 38
+    }
+   ]
+  },
+  {
+   "key": "mackinaw_bmf",
+   "primary": "Vehicle.v_utility4_thorton_mackinaw_bmf_player",
+   "vehicleType": "Car",
+   "entity": "base\\vehicles\\utility\\v_utility4_thorton_mackinaw_bmf_01.ent",
+   "inLightRpCatalogue": false,
+   "records": [
+    {
+     "record": "Vehicle.v_utility4_thorton_mackinaw_bmf_player",
+     "appearance": "thorton_mackinaw_bmf_bmf_01",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 0
+    }
+   ]
+  },
+  {
+   "key": "mackinaw_ncu",
+   "primary": "Vehicle.v_standard3_thorton_mackinaw_ncu_player",
+   "vehicleType": "Car",
+   "entity": "base\\vehicles\\standard\\v_standard3_thorton_mackinaw_nomad_01__basic_01.ent",
+   "inLightRpCatalogue": false,
+   "records": [
+    {
+     "record": "Vehicle.v_standard3_thorton_mackinaw_ncu_player",
+     "appearance": "",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "thorton.mackinaw.basic",
+     "customizableAppearance": "",
+     "uniqueTemplates": 24,
+     "profiles": 38
+    },
+    {
+     "record": "Vehicle.v_standard3_thorton_mackinaw_02_player",
+     "appearance": "thorton_mackinaw_nomad_saguaro_01",
+     "hasVisualCustomization": false,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "thorton.mackinaw.basic",
+     "customizableAppearance": "",
+     "uniqueTemplates": 24,
+     "profiles": 38
+    }
+   ]
+  },
+  {
+   "key": "nazare",
+   "primary": "Vehicle.v_sportbike2_arch_player",
+   "vehicleType": "Bike",
+   "entity": "base\\vehicles\\sportbike\\v_sportbike2_arch_nemesis_basic_01.ent",
+   "inLightRpCatalogue": false,
+   "records": [
+    {
+     "record": "Vehicle.v_sportbike2_arch_player",
+     "appearance": "arch_nemesis_basic_player_01",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "arch.nazare",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 1
+    },
+    {
+     "record": "Vehicle.v_sportbike2_arch_player_02",
+     "appearance": "arch_nemesis_basic_player_02",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "arch.nazare",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 1
+    },
+    {
+     "record": "Vehicle.v_sportbike2_arch_player_03",
+     "appearance": "arch_nemesis_basic_player_03",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "arch.nazare",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 1
+    },
+    {
+     "record": "Vehicle.v_sportbike2_arch_tyger_player",
+     "appearance": "arch_nemesis_basic_tygerclaws_boss_01",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "arch.nazare",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 1
+    },
+    {
+     "record": "Vehicle.v_sportbike2_arch_jackie_player",
+     "appearance": "arch_nemesis_basic_jackie",
+     "hasVisualCustomization": false,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "arch.nazare",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 1
+    },
+    {
+     "record": "Vehicle.v_sportbike2_arch_jackie_tuned_player",
+     "appearance": "arch_nemesis_basic_jackie_tuned_up",
+     "hasVisualCustomization": false,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "arch.nazare",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 1
+    }
+   ]
+  },
+  {
+   "key": "nazare_linas",
+   "primary": "Vehicle.v_sportbike2_arch_linas_player",
+   "vehicleType": "Bike",
+   "entity": "ep1\\vehicles\\sportbike\\v_sportbike2_arch_nemesis_lina_01.ent",
+   "inLightRpCatalogue": false,
+   "records": [
+    {
+     "record": "Vehicle.v_sportbike2_arch_linas_player",
+     "appearance": "arch_nemesis_lina_lina_malina_02",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "arch.nazare",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 1
+    }
+   ]
+  },
+  {
+   "key": "outlaw",
+   "primary": "Vehicle.v_sport1_herrera_outlaw_player",
+   "vehicleType": "Car",
+   "entity": "base\\vehicles\\sport\\v_sport1_herrera_outlaw_basic_01.ent",
+   "inLightRpCatalogue": false,
+   "records": [
+    {
+     "record": "Vehicle.v_sport1_herrera_outlaw_player",
+     "appearance": "herrera_outlaw__basic_player_01",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "herrera.outlaw",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 8
+    }
+   ]
+  },
+  {
+   "key": "outlaw_heist",
+   "primary": "Vehicle.v_sport1_herrera_outlaw_heist_player",
+   "vehicleType": "Car",
+   "entity": "ep1\\vehicles\\sport\\v_sport1_herrera_outlaw_heist_01.ent",
+   "inLightRpCatalogue": false,
+   "records": [
+    {
+     "record": "Vehicle.v_sport1_herrera_outlaw_heist_player",
+     "appearance": "herrera_outlaw__heist_player_01",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "herrera.outlaw",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 8
+    }
+   ]
+  },
+  {
+   "key": "quartz_nomad",
+   "primary": "Vehicle.v_standard2_archer_quartz_nomad_player",
+   "vehicleType": "Car",
+   "entity": "base\\vehicles\\standard\\v_standard2_archer_quartz_nomad__01.ent",
+   "inLightRpCatalogue": false,
+   "records": [
+    {
+     "record": "Vehicle.v_standard2_archer_quartz_nomad_player",
+     "appearance": "archer_quartz_nomad_player_01_missiles",
+     "hasVisualCustomization": false,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 0
+    },
+    {
+     "record": "Vehicle.v_standard2_archer_quartz_nomad_player_02",
+     "appearance": "archer_quartz_nomad_player_02",
+     "hasVisualCustomization": false,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 0
+    }
+   ]
+  },
+  {
+   "key": "riptide",
+   "primary": "Vehicle.v_sport1_herrera_riptide_player",
+   "vehicleType": "Car",
+   "entity": "ep1\\vehicles\\sport\\v_sport1_herrera_riptide_01.ent",
+   "inLightRpCatalogue": false,
+   "records": [
+    {
+     "record": "Vehicle.v_sport1_herrera_riptide_player",
+     "appearance": "herrera_riptide__basic_player_01",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "herrera.riptide",
+     "customizableAppearance": "",
+     "uniqueTemplates": 7,
+     "profiles": 20
+    }
+   ]
+  },
+  {
+   "key": "shion_nomad",
+   "primary": "Vehicle.v_sport2_mizutani_shion_nomad_player",
+   "vehicleType": "Car",
+   "entity": "base\\vehicles\\sport\\v_sport2_mizutani_shion_nomad__basic_01.ent",
+   "inLightRpCatalogue": false,
+   "records": [
+    {
+     "record": "Vehicle.v_sport2_mizutani_shion_nomad_player",
+     "appearance": "mizutani_shion_nomad_player_01",
+     "hasVisualCustomization": false,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 0
+    },
+    {
+     "record": "Vehicle.v_sport2_mizutani_shion_nomad_02_player",
+     "appearance": "mizutani_shion_nomad_player_02",
+     "hasVisualCustomization": false,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 0
+    },
+    {
+     "record": "Vehicle.v_sport2_mizutani_shion_nomad_player_missiles",
+     "appearance": "mizutani_shion_nomad_player_01_missiles",
+     "hasVisualCustomization": false,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 0
+    }
+   ]
+  },
+  {
+   "key": "sport_r7",
+   "primary": "Vehicle.v_sport1_quadra_sport_r7_player",
+   "vehicleType": "Car",
+   "entity": "ep1\\vehicles\\sport\\v_sport1_quadra_sport_r7_01.ent",
+   "inLightRpCatalogue": false,
+   "records": [
+    {
+     "record": "Vehicle.v_sport1_quadra_sport_r7_player",
+     "appearance": "quadra_sport_r7_basic_player_01",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "quadra.sport.r7",
+     "customizableAppearance": "",
+     "uniqueTemplates": 14,
+     "profiles": 26
+    },
+    {
+     "record": "Vehicle.v_sport1_quadra_sport_r7_player_02",
+     "appearance": "quadra_sport_r7_basic_player_02",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "quadra.sport.r7",
+     "customizableAppearance": "",
+     "uniqueTemplates": 14,
+     "profiles": 26
+    }
+   ]
+  },
+  {
+   "key": "supron_kurtz",
+   "primary": "Vehicle.v_standard3_mahir_supron_kurtz_player",
+   "vehicleType": "Car",
+   "entity": "ep1\\vehicles\\standard\\v_standard3_mahir_supron_kurtz_basic_01.ent",
+   "inLightRpCatalogue": false,
+   "records": [
+    {
+     "record": "Vehicle.v_standard3_mahir_supron_kurtz_player",
+     "appearance": "mahir_supron_kurtz_basic_player_01",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 0
+    }
+   ]
+  },
+  {
+   "key": "tanishi",
+   "primary": "Vehicle.v_standard3_makigai_tanishi_player",
+   "vehicleType": "Car",
+   "entity": "ep1\\vehicles\\standard\\v_standard3_makigai_tanishi_player_01.ent",
+   "inLightRpCatalogue": false,
+   "records": [
+    {
+     "record": "Vehicle.v_standard3_makigai_tanishi_player",
+     "appearance": "makigai_tanishi_basic_player_01",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "makigai.tanishi",
+     "customizableAppearance": "",
+     "uniqueTemplates": 14,
+     "profiles": 39
+    }
+   ]
+  },
+  {
+   "key": "tanishi_mr_hands",
+   "primary": "Vehicle.v_standard3_makigai_tanishi_player_mr_hands",
+   "vehicleType": "Car",
+   "entity": "ep1\\vehicles\\standard\\v_standard3_makigai_tanishi_basic_01.ent",
+   "inLightRpCatalogue": false,
+   "records": [
+    {
+     "record": "Vehicle.v_standard3_makigai_tanishi_player_mr_hands",
+     "appearance": "makigai_tanishi_basic_player_mr_hands",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "makigai.tanishi",
+     "customizableAppearance": "",
+     "uniqueTemplates": 14,
+     "profiles": 39
+    }
+   ]
+  },
+  {
+   "key": "turbo",
+   "primary": "Vehicle.v_sport1_quadra_turbo_player",
+   "vehicleType": "Car",
+   "entity": "base\\vehicles\\sport\\v_sport1_quadra_turbo__basic_01.ent",
+   "inLightRpCatalogue": false,
+   "records": [
+    {
+     "record": "Vehicle.v_sport1_quadra_turbo_player",
+     "appearance": "quadra_turbo_basic_player_02",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "quadra.turbo",
+     "customizableAppearance": "quadra_turbo_basic_player_02",
+     "uniqueTemplates": 10,
+     "profiles": 18
+    },
+    {
+     "record": "Vehicle.v_sport1_quadra_turbo_r_player",
+     "appearance": "quadra_turbo_basic_player",
+     "hasVisualCustomization": true,
+     "hasUniqueCustomization": true,
+     "twintoneModelName": "quadra.turbo",
+     "customizableAppearance": "quadra_turbo_basic_player",
+     "uniqueTemplates": 10,
+     "profiles": 18
+    }
+   ]
+  },
+  {
+   "key": "type66_nomad",
+   "primary": "Vehicle.v_sport2_quadra_type66_nomad_player",
+   "vehicleType": "Car",
+   "entity": "base\\vehicles\\sport\\v_sport2_quadra_type66_nomad__basic_01.ent",
+   "inLightRpCatalogue": false,
+   "records": [
+    {
+     "record": "Vehicle.v_sport2_quadra_type66_nomad_player",
+     "appearance": "quadra_type66_nomad_player_01",
+     "hasVisualCustomization": false,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 0
+    },
+    {
+     "record": "Vehicle.v_sport2_quadra_type66_nomad_player_03",
+     "appearance": "quadra_type66_nomad_player_03",
+     "hasVisualCustomization": false,
+     "hasUniqueCustomization": false,
+     "twintoneModelName": "",
+     "customizableAppearance": "",
+     "uniqueTemplates": 0,
+     "profiles": 0
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,111 @@
+{
+  "schema": "open77.vehicle-kit.archivexl/1",
+  "experiment": "E0.6",
+  "summary": "ArchiveXL adds appearances to the vanilla Archer Hella (player record). Each new definition is the factory player_01 definition, read from the local game at build time, plus components that reference vanilla meshes by depot path only.",
+  "resource": "open77_vehicle_appearance_test",
+  "archiveName": "open77_vehicle_appearance_test",
+  "record": "Vehicle.v_standard2_archer_hella_player",
+  "entity": "base\\vehicles\\standard\\v_standard2_archer_hella__basic_01.ent",
+  "appearanceResource": "base\\vehicles\\appearances\\standard\\archer_hella__basic.app",
+  "baseEntry": "archer_hella__basic_player_01",
+  "baseDefinition": "player_01",
+  "outputs": {
+    "app": "archer_hella_e06.app",
+    "entPatch": "archer_hella_e06.ent"
+  },
+  "entityVisualTags": [],
+  "dynamicAppearance": {
+    "status": "disabled",
+    "tagWanted": "DynamicAppearance",
+    "reason": "The vanilla Hella entity has visualTagsSchema = null. ArchiveXL 1.28.0+Open77 handles a .ent patch that adds visual tags to such an entity by assigning an empty handle and writing through it (ResourcePatch/Extension.cpp, visualTags branch): a null dereference on the first load of the entity. The generator refuses that combination. With the tag absent, open77_e06_dyn!a and !b exist only as .app definitions with no .ent entry: the server strings are negative controls.",
+    "enableWhen": "the ArchiveXL fork creates the schema (Red::MakeHandle<ent::VisualTagsSchema>()) before adding tags; then set entityVisualTags to [\"DynamicAppearance\"]"
+  },
+  "entityBindNames": [
+    "vehicle_slots"
+  ],
+  "components": {
+    "roof_solar": {
+      "type": "entMeshComponent",
+      "name": "open77_e06_roof_solar",
+      "mesh": "base\\vehicles\\standard\\v_standard2_archer_hella\\entities\\meshes\\v_standard2_archer_hella__ext01_junk_solar_01.mesh",
+      "meshAppearance": "default",
+      "bind": "vehicle_slots",
+      "slot": "Base"
+    },
+    "cab_body_01": {
+      "type": "entMeshComponent",
+      "name": "open77_e06_cab_body_01",
+      "mesh": "base\\vehicles\\standard\\v_standard2_archer_hella\\entities\\meshes\\v_standard2_archer_hella__ext01_body_stickers_combatcab_01.mesh",
+      "meshAppearance": "default",
+      "bind": "vehicle_slots",
+      "slot": "Base"
+    },
+    "cab_body_03": {
+      "type": "entMeshComponent",
+      "name": "open77_e06_cab_body_03",
+      "mesh": "base\\vehicles\\standard\\v_standard2_archer_hella\\entities\\meshes\\v_standard2_archer_hella__ext01_body_stickers_combatcab_03.mesh",
+      "meshAppearance": "default",
+      "bind": "vehicle_slots",
+      "slot": "Base"
+    },
+    "cab_hood": {
+      "type": "entMeshComponent",
+      "name": "open77_e06_cab_hood",
+      "mesh": "base\\vehicles\\standard\\v_standard2_archer_hella\\entities\\meshes\\v_standard2_archer_hella__ext01_hood_sticker_combatcab_01.mesh",
+      "meshAppearance": "default",
+      "bind": "hood_a"
+    }
+  },
+  "parts": {
+    "roof_part": {
+      "file": "archer_hella_e06_roof_part.ent",
+      "components": [
+        "roof_solar"
+      ]
+    }
+  },
+  "appearances": [
+    {
+      "entry": "open77_e06_a",
+      "definition": "open77_e06_a",
+      "add": [
+        "roof_solar"
+      ],
+      "expect": "the factory player look plus a junk solar panel on the roof"
+    },
+    {
+      "entry": "open77_e06_dyn",
+      "definition": "open77_e06_dyn",
+      "add": [],
+      "expect": "the factory player look (base of the dynamic set; an ordinary entry while the dynamic tag is disabled)"
+    },
+    {
+      "definition": "open77_e06_dyn!a",
+      "add": [
+        "roof_solar"
+      ],
+      "expect": "NEGATIVE CONTROL while the dynamic tag is disabled: no .ent entry, so no change is expected (enabled: solar panel through the dynamic selector)"
+    },
+    {
+      "definition": "open77_e06_dyn!b",
+      "add": [
+        "cab_body_01",
+        "cab_body_03",
+        "cab_hood"
+      ],
+      "expect": "NEGATIVE CONTROL while the dynamic tag is disabled (enabled: Combat Cab stickers on body and hood through the dynamic selector)"
+    },
+    {
+      "entry": "open77_e06_parts",
+      "definition": "open77_e06_parts",
+      "add": [],
+      "partsValues": [
+        "roof_part"
+      ],
+      "visualTags": [
+        "AppearanceParts"
+      ],
+      "expect": "solar panel on the roof, merged from a part .ent by ArchiveXL IncludeAppearanceParts"
+    }
+  ]
+}

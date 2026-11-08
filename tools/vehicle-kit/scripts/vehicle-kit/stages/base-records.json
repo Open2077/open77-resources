@@ -1,0 +1,608 @@
+{
+  "schema": "open77.vehicle-stage-bases/1",
+  "note": "Vanilla record names of each staged model's engine / drive model / wheel setup / wheel presets. Verified by id against tweakdb.bin on every run; regenerate with make_stages.py --names.",
+  "models": {
+    "Vehicle.v_standard2_makigai_maimai_player": {
+      "engine": "Vehicle.v_standard2_makigai_maimai_gt_inline6",
+      "drive": "Vehicle.v_standard2_makigai_maimai_gt_inline0",
+      "wheels": "Vehicle.v_standard2_makigai_maimai_gt_inline1",
+      "front": "Vehicle.v_standard2_makigai_maimai_gt_inline2",
+      "back": "Vehicle.v_standard2_makigai_maimai_gt_inline3"
+    },
+    "Vehicle.v_standard2_thorton_galena_player": {
+      "engine": "Vehicle.VehicleEngineData_4_Regular_Small",
+      "drive": "Vehicle.v_standard2_thorton_galena_player_inline3",
+      "wheels": "Vehicle.v_standard2_thorton_galena_player_inline4",
+      "front": "Vehicle.v_standard2_thorton_galena_player_inline5",
+      "back": "Vehicle.v_standard2_thorton_galena_player_inline6"
+    },
+    "Vehicle.v_standard2_archer_hella_player": {
+      "engine": "Vehicle.v_standard2_archer_hella_getto_inline5",
+      "drive": "Vehicle.VehicleDriveModelData_Archer_Players",
+      "wheels": "Vehicle.VehicleDriveModelData_Archer_Players_inline0",
+      "front": "Vehicle.VehicleWheelPreset_Archer_Players_Front",
+      "back": "Vehicle.VehicleWheelPreset_Archer_Players_Rear"
+    },
+    "Vehicle.v_standard2_thorton_colby_player": {
+      "engine": "Vehicle.v_standard2_thorton_colby_inline0",
+      "drive": "Vehicle.VehicleDriveModelData_Colby_Players",
+      "wheels": "Vehicle.VehicleDriveModelData_Colby_Players_inline0",
+      "front": "Vehicle.VehicleDriveModelData_Colby_Players_inline1",
+      "back": "Vehicle.VehicleDriveModelData_Colby_Players_inline2"
+    },
+    "Vehicle.v_standard25_mahir_supron_player": {
+      "engine": "Vehicle.v_standard25_mahir_supron_inline3",
+      "drive": "Vehicle.VehicleDriveModelData_Supron",
+      "wheels": "Vehicle.VehicleDriveModelData_Supron_inline0",
+      "front": "Vehicle.VehicleDriveModelData_Supron_inline1",
+      "back": "Vehicle.VehicleDriveModelData_Supron_inline2"
+    },
+    "Vehicle.v_standard2_archer_quartz_player": {
+      "engine": "Vehicle.v_standard2_archer_quartz_gt_inline12",
+      "drive": "Vehicle.v_standard2_archer_quartz_gt_inline1",
+      "wheels": "Vehicle.v_standard2_archer_quartz_gt_inline8",
+      "front": "Vehicle.v_standard2_archer_quartz_gt_inline9",
+      "back": "Vehicle.v_standard2_archer_quartz_gt_inline10"
+    },
+    "Vehicle.v_standard2_mizutani_hozuki_player": {
+      "engine": "Vehicle.v_standard2_mizutani_hozuki_sti_inline9",
+      "drive": "Vehicle.v_standard2_mizutani_hozuki_sti_inline4",
+      "wheels": "Vehicle.v_standard2_mizutani_hozuki_sti_inline5",
+      "front": "Vehicle.v_standard2_mizutani_hozuki_sti_inline6",
+      "back": "Vehicle.v_standard2_mizutani_hozuki_sti_inline7"
+    },
+    "Vehicle.v_standard25_villefort_columbus_player": {
+      "engine": "Vehicle.VehicleEngineData_4_Regular_Van",
+      "drive": "Vehicle.VehicleDriveModelData_Columbus",
+      "wheels": "Vehicle.VehicleDriveModelData_Columbus_inline0",
+      "front": "Vehicle.VehicleDriveModelData_Columbus_inline1",
+      "back": "Vehicle.VehicleDriveModelData_Columbus_inline2"
+    },
+    "Vehicle.v_standard2_villefort_cortes_player": {
+      "engine": "Vehicle.v_standard2_villefort_cortes_inline0",
+      "drive": "Vehicle.VehicleDriveModelData_Cortes",
+      "wheels": "Vehicle.VehicleDriveModelData_Cortes_inline0",
+      "front": "Vehicle.VehicleDriveModelData_Cortes_inline1",
+      "back": "Vehicle.VehicleDriveModelData_Cortes_inline2"
+    },
+    "Vehicle.v_standard25_thorton_merrimac_player": {
+      "engine": "Vehicle.v_standard25_thorton_merrimac_inline9",
+      "drive": "Vehicle.v_standard25_thorton_merrimac_inline4",
+      "wheels": "Vehicle.v_standard25_thorton_merrimac_inline5",
+      "front": "Vehicle.v_standard25_thorton_merrimac_inline6",
+      "back": "Vehicle.v_standard25_thorton_merrimac_inline7"
+    },
+    "Vehicle.v_standard2_archer_bandit_player": {
+      "engine": "Vehicle.v_standard2_archer_bandit_inline15",
+      "drive": "Vehicle.v_standard2_archer_bandit_inline4",
+      "wheels": "Vehicle.v_standard2_archer_bandit_inline5",
+      "front": "Vehicle.v_standard2_archer_bandit_inline6",
+      "back": "Vehicle.v_standard2_archer_bandit_inline7"
+    },
+    "Vehicle.v_standard2_chevalier_thrax_player": {
+      "engine": "Vehicle.v_standard2_chevalier_thrax_inline0",
+      "drive": "Vehicle.VehicleDriveModelData_Thrax",
+      "wheels": "Vehicle.VehicleDriveModelData_Thrax_inline0",
+      "front": "Vehicle.VehicleDriveModelData_Thrax_inline1",
+      "back": "Vehicle.VehicleDriveModelData_Thrax_inline2"
+    },
+    "Vehicle.v_sport1_yaiba_semimaru_player": {
+      "engine": "Vehicle.VehicleEngineData_4_SuperSport",
+      "drive": "Vehicle.v_sport1_yaiba_semimaru_inline0",
+      "wheels": "Vehicle.v_sport1_yaiba_semimaru_inline1",
+      "front": "Vehicle.v_sport1_yaiba_semimaru_inline2",
+      "back": "Vehicle.v_sport1_yaiba_semimaru_inline3"
+    },
+    "Vehicle.v_sportbike3_brennan_apollo_player": {
+      "engine": "Vehicle.VehicleEngineData_2_Default",
+      "drive": "Vehicle.VehicleDriveModelData_BrennanDirt",
+      "wheels": "Vehicle.VehicleDriveModelData_BrennanDirt_inline3",
+      "front": "Vehicle.VehicleDriveModelData_BrennanDirt_inline4",
+      "back": "Vehicle.VehicleDriveModelData_BrennanDirt_inline5"
+    },
+    "Vehicle.v_sportbike1_yaiba_kusanagi_player": {
+      "engine": "Vehicle.v_sportbike1_yaiba_kusanagi_inline5",
+      "drive": "Vehicle.VehicleDriveModelDataDefaultYaibaKusanagi",
+      "wheels": "Vehicle.VehicleDriveModelDataDefaultYaibaKusanagi_inline0",
+      "front": "Vehicle.VehicleDriveModelDataDefaultYaibaKusanagi_inline1",
+      "back": "Vehicle.VehicleDriveModelDataDefaultYaibaKusanagi_inline2"
+    },
+    "Vehicle.v_sport1_herrera_outlaw_heist_player": {
+      "engine": "Vehicle.v_sport1_herrera_outlaw_inline9",
+      "drive": "Vehicle.v_sport1_herrera_outlaw_inline5",
+      "wheels": "Vehicle.v_sport1_herrera_outlaw_inline6",
+      "front": "Vehicle.v_sport1_herrera_outlaw_inline7",
+      "back": "Vehicle.v_sport1_herrera_outlaw_inline8"
+    },
+    "Vehicle.v_sport1_herrera_outlaw_player": {
+      "engine": "Vehicle.v_sport1_herrera_outlaw_inline9",
+      "drive": "Vehicle.v_sport1_herrera_outlaw_inline5",
+      "wheels": "Vehicle.v_sport1_herrera_outlaw_inline6",
+      "front": "Vehicle.v_sport1_herrera_outlaw_inline7",
+      "back": "Vehicle.v_sport1_herrera_outlaw_inline8"
+    },
+    "Vehicle.v_sport1_herrera_riptide_player": {
+      "engine": "Vehicle.v_sport1_herrera_riptide_terrier_inline2",
+      "drive": "Vehicle.v_sport1_herrera_riptide_terrier_inline1",
+      "wheels": "Vehicle.VehicleDriveModelData_Riptide_inline0",
+      "front": "Vehicle.VehicleWheelDrivingPreset_Riptide_Front",
+      "back": "Vehicle.VehicleWheelDrivingPreset_Riptide_Rear"
+    },
+    "Vehicle.v_sport1_quadra_sport_r7_player": {
+      "engine": "Vehicle.v_sport1_quadra_sport_r7_rocket_inline3",
+      "drive": "Vehicle.VehicleDriveModelData_SportR7_Rocket",
+      "wheels": "Vehicle.VehicleDriveModelData_SportR7_Rocket_inline0",
+      "front": "Vehicle.VehicleDriveModelData_SportR7_Rocket_inline1",
+      "back": "Vehicle.VehicleDriveModelData_SportR7_Rocket_inline2"
+    },
+    "Vehicle.v_sport1_quadra_sport_r7_player_02": {
+      "engine": "Vehicle.v_sport1_quadra_sport_r7_rocket_inline3",
+      "drive": "Vehicle.VehicleDriveModelData_SportR7_Rocket",
+      "wheels": "Vehicle.VehicleDriveModelData_SportR7_Rocket_inline0",
+      "front": "Vehicle.VehicleDriveModelData_SportR7_Rocket_inline1",
+      "back": "Vehicle.VehicleDriveModelData_SportR7_Rocket_inline2"
+    },
+    "Vehicle.v_sport1_quadra_turbo_player": {
+      "engine": "Vehicle.v_sport1_quadra_turbo_inline0",
+      "drive": "Vehicle.VehicleDriveModelData_TurboR",
+      "wheels": "Vehicle.VehicleDriveModelData_TurboR_inline0",
+      "front": "Vehicle.VehicleWheelDrivingPreset_TurboR_Front",
+      "back": "Vehicle.VehicleWheelDrivingPreset_TurboR_Rear"
+    },
+    "Vehicle.v_sport1_quadra_turbo_r_player": {
+      "engine": "Vehicle.v_sport1_quadra_turbo_r_inline9",
+      "drive": "Vehicle.VehicleDriveModelData_TurboR_VTech",
+      "wheels": "Vehicle.VehicleDriveModelData_TurboR_VTech_inline0",
+      "front": "Vehicle.VehicleDriveModelData_TurboR_VTech_inline1",
+      "back": "Vehicle.VehicleDriveModelData_TurboR_VTech_inline2"
+    },
+    "Vehicle.v_sport1_rayfield_aerondight_player": {
+      "engine": "Vehicle.v_sport1_rayfield_aerondight_inline12",
+      "drive": "Vehicle.v_sport1_rayfield_aerondight_inline0",
+      "wheels": "Vehicle.v_sport1_rayfield_aerondight_inline8",
+      "front": "Vehicle.v_sport1_rayfield_aerondight_inline9",
+      "back": "Vehicle.v_sport1_rayfield_aerondight_inline10"
+    },
+    "Vehicle.v_sport1_rayfield_caliburn_02_player": {
+      "engine": "Vehicle.VehicleEngineData_4_SuperSport",
+      "drive": "Vehicle.v_sport1_rayfield_caliburn_inline0",
+      "wheels": "Vehicle.v_sport1_rayfield_caliburn_inline1",
+      "front": "Vehicle.v_sport1_rayfield_caliburn_inline2",
+      "back": "Vehicle.v_sport1_rayfield_caliburn_inline3"
+    },
+    "Vehicle.v_sport1_rayfield_caliburn_mordred_player": {
+      "engine": "Vehicle.VehicleEngineData_4_SuperSport",
+      "drive": "Vehicle.v_sport1_rayfield_caliburn_inline0",
+      "wheels": "Vehicle.v_sport1_rayfield_caliburn_inline1",
+      "front": "Vehicle.v_sport1_rayfield_caliburn_inline2",
+      "back": "Vehicle.v_sport1_rayfield_caliburn_inline3"
+    },
+    "Vehicle.v_sport1_rayfield_caliburn_player": {
+      "engine": "Vehicle.VehicleEngineData_4_SuperSport",
+      "drive": "Vehicle.v_sport1_rayfield_caliburn_inline0",
+      "wheels": "Vehicle.v_sport1_rayfield_caliburn_inline1",
+      "front": "Vehicle.v_sport1_rayfield_caliburn_inline2",
+      "back": "Vehicle.v_sport1_rayfield_caliburn_inline3"
+    },
+    "Vehicle.v_sport2_mizutani_shion_base_player": {
+      "engine": "Vehicle.v_sport2_mizutani_shion_inline0",
+      "drive": "Vehicle.VehicleDriveModelData_Shion",
+      "wheels": "Vehicle.VehicleDriveModelData_Shion_inline0",
+      "front": "Vehicle.VehicleDriveModelData_Shion_inline1",
+      "back": "Vehicle.VehicleDriveModelData_Shion_inline2"
+    },
+    "Vehicle.v_sport2_mizutani_shion_nomad_02_player": {
+      "engine": "Vehicle.Shion_MZ1_Nomad_Engine",
+      "drive": "Vehicle.VehicleDriveModelData_Shion_Nomad_Buggy",
+      "wheels": "Vehicle.VehicleDriveModelData_Shion_Nomad_Buggy_inline0",
+      "front": "Vehicle.VehicleDriveModelData_Shion_Nomad_Buggy_inline1",
+      "back": "Vehicle.VehicleDriveModelData_Shion_Nomad_Buggy_inline2"
+    },
+    "Vehicle.v_sport2_mizutani_shion_nomad_player": {
+      "engine": "Vehicle.Shion_MZ2_Nomad_Engine",
+      "drive": "Vehicle.v_sport2_mizutani_shion_nomad_inline0",
+      "wheels": "Vehicle.v_sport2_mizutani_shion_nomad_inline1",
+      "front": "Vehicle.v_sport2_mizutani_shion_nomad_inline2",
+      "back": "Vehicle.v_sport2_mizutani_shion_nomad_inline3"
+    },
+    "Vehicle.v_sport2_mizutani_shion_nomad_player_missiles": {
+      "engine": "Vehicle.Shion_MZ1_Nomad_Engine",
+      "drive": "Vehicle.VehicleDriveModelData_Shion_Nomad_Buggy",
+      "wheels": "Vehicle.VehicleDriveModelData_Shion_Nomad_Buggy_inline0",
+      "front": "Vehicle.VehicleDriveModelData_Shion_Nomad_Buggy_inline1",
+      "back": "Vehicle.VehicleDriveModelData_Shion_Nomad_Buggy_inline2"
+    },
+    "Vehicle.v_sport2_mizutani_shion_player": {
+      "engine": "Vehicle.v_sport2_mizutani_shion_sport_inline9",
+      "drive": "Vehicle.VehicleDriveModelData_Shion_Sport",
+      "wheels": "Vehicle.VehicleDriveModelData_Shion_Sport_inline0",
+      "front": "Vehicle.VehicleDriveModelData_Shion_Sport_inline1",
+      "back": "Vehicle.VehicleDriveModelData_Shion_Sport_inline2"
+    },
+    "Vehicle.v_sport2_mizutani_shion_targa_player": {
+      "engine": "Vehicle.v_sport2_mizutani_shion_targa_inline5",
+      "drive": "Vehicle.v_sport2_mizutani_shion_targa_inline0",
+      "wheels": "Vehicle.VehicleDriveModelData_Shion_Sport_inline0",
+      "front": "Vehicle.VehicleDriveModelData_Shion_Sport_inline1",
+      "back": "Vehicle.VehicleDriveModelData_Shion_Sport_inline2"
+    },
+    "Vehicle.v_sport2_porsche_911turbo_cabrio_player": {
+      "engine": "Vehicle.v_sport2_porsche_911turbo_inline0",
+      "drive": "Vehicle.v_sport2_porsche_911turbo_cabrio_inline1",
+      "wheels": "Vehicle.v_sport2_porsche_911turbo_cabrio_inline2",
+      "front": "Vehicle.v_sport2_porsche_911turbo_cabrio_inline3",
+      "back": "Vehicle.v_sport2_porsche_911turbo_cabrio_inline4"
+    },
+    "Vehicle.v_sport2_porsche_911turbo_player": {
+      "engine": "Vehicle.v_sport2_porsche_911turbo_inline0",
+      "drive": "Vehicle.VehicleDriveModelData_911Turbo",
+      "wheels": "Vehicle.VehicleDriveModelData_911Turbo_inline0",
+      "front": "Vehicle.VehicleDriveModelData_911Turbo_inline1",
+      "back": "Vehicle.VehicleDriveModelData_911Turbo_inline2"
+    },
+    "Vehicle.v_sport2_quadra_type66_02_player": {
+      "engine": "Vehicle.v_sport2_quadra_type66_inline5",
+      "drive": "Vehicle.v_sport2_quadra_type66_bulleat_inline4",
+      "wheels": "Vehicle.v_sport2_quadra_type66_bulleat_inline5",
+      "front": "Vehicle.v_sport2_quadra_type66_bulleat_inline6",
+      "back": "Vehicle.v_sport2_quadra_type66_bulleat_inline7"
+    },
+    "Vehicle.v_sport2_quadra_type66_avenger_player": {
+      "engine": "Vehicle.VehicleEngineData_4_Muscle",
+      "drive": "Vehicle.v_sport2_quadra_type66_avenger_inline5",
+      "wheels": "Vehicle.v_sport2_quadra_type66_avenger_inline6",
+      "front": "Vehicle.v_sport2_quadra_type66_avenger_inline7",
+      "back": "Vehicle.v_sport2_quadra_type66_avenger_inline8"
+    },
+    "Vehicle.v_sport2_quadra_type66_base_player": {
+      "engine": "Vehicle.v_sport2_quadra_type66_inline5",
+      "drive": "Vehicle.VehicleDriveModelData_Type66",
+      "wheels": "Vehicle.VehicleDriveModelData_Type66_inline0",
+      "front": "Vehicle.VehicleDriveModelData_Type66_inline1",
+      "back": "Vehicle.VehicleDriveModelData_Type66_inline2"
+    },
+    "Vehicle.v_sport2_quadra_type66_gt_player": {
+      "engine": "Vehicle.v_sport2_quadra_type66_sport_inline1",
+      "drive": "Vehicle.VehicleDriveModelData_Type66_GT",
+      "wheels": "Vehicle.VehicleDriveModelData_Type66_GT_inline0",
+      "front": "Vehicle.VehicleDriveModelData_Type66_GT_inline1",
+      "back": "Vehicle.VehicleDriveModelData_Type66_GT_inline2"
+    },
+    "Vehicle.v_sport2_quadra_type66_nomad_ncu_player": {
+      "engine": "Vehicle.VehicleEngineData_4_SportPlus",
+      "drive": "Vehicle.v_sport2_quadra_type66_sampson_inline46",
+      "wheels": "Vehicle.v_sport2_quadra_type66_sampson_inline47",
+      "front": "Vehicle.v_sport2_quadra_type66_sampson_inline48",
+      "back": "Vehicle.v_sport2_quadra_type66_sampson_inline49"
+    },
+    "Vehicle.v_sport2_quadra_type66_nomad_player": {
+      "engine": "Vehicle.v_sport2_quadra_type66_nomad_inline0",
+      "drive": "Vehicle.VehicleDriveModelData_Type66_Nomad",
+      "wheels": "Vehicle.VehicleDriveModelData_Type66_Nomad_inline0",
+      "front": "Vehicle.VehicleDriveModelData_Type66_Nomad_inline1",
+      "back": "Vehicle.VehicleDriveModelData_Type66_Nomad_inline2"
+    },
+    "Vehicle.v_sport2_quadra_type66_nomad_player_03": {
+      "engine": "Vehicle.v_sport2_quadra_type66_nomad_inline0",
+      "drive": "Vehicle.VehicleDriveModelData_Type66_Nomad",
+      "wheels": "Vehicle.VehicleDriveModelData_Type66_Nomad_inline0",
+      "front": "Vehicle.VehicleDriveModelData_Type66_Nomad_inline1",
+      "back": "Vehicle.VehicleDriveModelData_Type66_Nomad_inline2"
+    },
+    "Vehicle.v_sport2_quadra_type66_player": {
+      "engine": "Vehicle.v_sport2_quadra_type66_sport_inline1",
+      "drive": "Vehicle.v_sport2_quadra_type66_rowley_inline3",
+      "wheels": "Vehicle.v_sport2_quadra_type66_rowley_inline4",
+      "front": "Vehicle.v_sport2_quadra_type66_rowley_inline5",
+      "back": "Vehicle.v_sport2_quadra_type66_rowley_inline6"
+    },
+    "Vehicle.v_sport2_villefort_alvarado_hearse_player": {
+      "engine": "Vehicle.VehicleEngineData_4_Regular_Large",
+      "drive": "Vehicle.VehicleDriveModelData_Alvarado_Hearse",
+      "wheels": "Vehicle.VehicleDriveModelData_Alvarado_inline0",
+      "front": "Vehicle.VehicleDriveModelData_Alvarado_inline1",
+      "back": "Vehicle.VehicleDriveModelData_Alvarado_inline2"
+    },
+    "Vehicle.v_sport2_villefort_alvarado_player": {
+      "engine": "Vehicle.VehicleEngineData_4_Regular_Large",
+      "drive": "Vehicle.VehicleDriveModelData_Alvarado",
+      "wheels": "Vehicle.VehicleDriveModelData_Alvarado_inline0",
+      "front": "Vehicle.VehicleDriveModelData_Alvarado_inline1",
+      "back": "Vehicle.VehicleDriveModelData_Alvarado_inline2"
+    },
+    "Vehicle.v_sport2_villefort_alvarado_valentinos_player": {
+      "engine": "Vehicle.VehicleEngineData_4_Regular_Large",
+      "drive": "Vehicle.VehicleDriveModelData_Alvarado",
+      "wheels": "Vehicle.VehicleDriveModelData_Alvarado_inline0",
+      "front": "Vehicle.VehicleDriveModelData_Alvarado_inline1",
+      "back": "Vehicle.VehicleDriveModelData_Alvarado_inline2"
+    },
+    "Vehicle.v_sport2_villefort_deleon_player": {
+      "engine": "Vehicle.v_sport2_villefort_deleon_vindicator_inline10",
+      "drive": "Vehicle.v_sport2_villefort_deleon_vindicator_inline5",
+      "wheels": "Vehicle.v_sport2_villefort_deleon_vindicator_inline6",
+      "front": "Vehicle.v_sport2_villefort_deleon_vindicator_inline7",
+      "back": "Vehicle.v_sport2_villefort_deleon_vindicator_inline8"
+    },
+    "Vehicle.v_sport2_villefort_deleon_sport_player": {
+      "engine": "Vehicle.v_sport2_villefort_deleon_sport_inline8",
+      "drive": "Vehicle.v_sport2_villefort_deleon_sport_inline4",
+      "wheels": "Vehicle.v_sport2_villefort_deleon_sport_inline5",
+      "front": "Vehicle.v_sport2_villefort_deleon_sport_inline6",
+      "back": "Vehicle.v_sport2_villefort_deleon_sport_inline7"
+    },
+    "Vehicle.v_sportbike1_yaiba_kusanagi_player_02": {
+      "engine": "Vehicle.v_sportbike1_yaiba_kusanagi_inline5",
+      "drive": "Vehicle.v_sportbike1_yaiba_kusanagi_player_02_inline0",
+      "wheels": "Vehicle.v_sportbike1_yaiba_kusanagi_player_02_inline1",
+      "front": "Vehicle.v_sportbike1_yaiba_kusanagi_player_02_inline2",
+      "back": "Vehicle.v_sportbike1_yaiba_kusanagi_player_02_inline3"
+    },
+    "Vehicle.v_sportbike1_yaiba_kusanagi_player_03": {
+      "engine": "Vehicle.v_sportbike1_yaiba_kusanagi_inline5",
+      "drive": "Vehicle.v_sportbike1_yaiba_kusanagi_tyger_inline1",
+      "wheels": "Vehicle.VehicleDriveModelDataDefaultYaibaKusanagi_inline0",
+      "front": "Vehicle.VehicleDriveModelDataDefaultYaibaKusanagi_inline1",
+      "back": "Vehicle.VehicleDriveModelDataDefaultYaibaKusanagi_inline2"
+    },
+    "Vehicle.v_sportbike1_yaiba_kusanagi_tyger_player": {
+      "engine": "Vehicle.v_sportbike1_yaiba_kusanagi_inline5",
+      "drive": "Vehicle.v_sportbike1_yaiba_kusanagi_tyger_inline1",
+      "wheels": "Vehicle.VehicleDriveModelDataDefaultYaibaKusanagi_inline0",
+      "front": "Vehicle.VehicleDriveModelDataDefaultYaibaKusanagi_inline1",
+      "back": "Vehicle.VehicleDriveModelDataDefaultYaibaKusanagi_inline2"
+    },
+    "Vehicle.v_sportbike1_yaiba_muramasa_player": {
+      "engine": "Vehicle.v_sportbike1_yaiba_kusanagi_inline5",
+      "drive": "Vehicle.VehicleDriveModelDataDefaultYaibaKusanagi",
+      "wheels": "Vehicle.VehicleDriveModelDataDefaultYaibaKusanagi_inline0",
+      "front": "Vehicle.VehicleDriveModelDataDefaultYaibaKusanagi_inline1",
+      "back": "Vehicle.VehicleDriveModelDataDefaultYaibaKusanagi_inline2"
+    },
+    "Vehicle.v_sportbike2_arch_jackie_player": {
+      "engine": "Vehicle.VehicleEngineData_Arch",
+      "drive": "Vehicle.VehicleDriveModelData_Arch",
+      "wheels": "Vehicle.VehicleDriveModelData_Arch_inline0",
+      "front": "Vehicle.VehicleDriveModelData_Arch_inline1",
+      "back": "Vehicle.VehicleDriveModelData_Arch_inline2"
+    },
+    "Vehicle.v_sportbike2_arch_jackie_tuned_player": {
+      "engine": "Vehicle.v_sportbike2_arch_jackie_tuned_inline1",
+      "drive": "Vehicle.v_sportbike2_arch_jackie_tuned_inline2",
+      "wheels": "Vehicle.VehicleDriveModelData_Arch_inline0",
+      "front": "Vehicle.VehicleDriveModelData_Arch_inline1",
+      "back": "Vehicle.VehicleDriveModelData_Arch_inline2"
+    },
+    "Vehicle.v_sportbike2_arch_linas_player": {
+      "engine": "Vehicle.VehicleEngineData_Arch",
+      "drive": "Vehicle.VehicleDriveModelData_Arch",
+      "wheels": "Vehicle.VehicleDriveModelData_Arch_inline0",
+      "front": "Vehicle.VehicleDriveModelData_Arch_inline1",
+      "back": "Vehicle.VehicleDriveModelData_Arch_inline2"
+    },
+    "Vehicle.v_sportbike2_arch_player": {
+      "engine": "Vehicle.VehicleEngineData_Arch",
+      "drive": "Vehicle.VehicleDriveModelData_Arch",
+      "wheels": "Vehicle.VehicleDriveModelData_Arch_inline0",
+      "front": "Vehicle.VehicleDriveModelData_Arch_inline1",
+      "back": "Vehicle.VehicleDriveModelData_Arch_inline2"
+    },
+    "Vehicle.v_sportbike2_arch_player_02": {
+      "engine": "Vehicle.VehicleEngineData_Arch",
+      "drive": "Vehicle.v_sportbike2_arch_sport_inline1",
+      "wheels": "Vehicle.v_sportbike2_arch_sport_inline2",
+      "front": "Vehicle.v_sportbike2_arch_sport_inline3",
+      "back": "Vehicle.v_sportbike2_arch_sport_inline4"
+    },
+    "Vehicle.v_sportbike2_arch_player_03": {
+      "engine": "Vehicle.VehicleEngineData_Arch",
+      "drive": "Vehicle.VehicleDriveModelData_Arch",
+      "wheels": "Vehicle.VehicleDriveModelData_Arch_inline0",
+      "front": "Vehicle.VehicleDriveModelData_Arch_inline1",
+      "back": "Vehicle.VehicleDriveModelData_Arch_inline2"
+    },
+    "Vehicle.v_sportbike2_arch_tyger_player": {
+      "engine": "Vehicle.VehicleEngineData_Arch",
+      "drive": "Vehicle.VehicleDriveModelData_Arch",
+      "wheels": "Vehicle.VehicleDriveModelData_Arch_inline0",
+      "front": "Vehicle.VehicleDriveModelData_Arch_inline1",
+      "back": "Vehicle.VehicleDriveModelData_Arch_inline2"
+    },
+    "Vehicle.v_sportbike3_brennan_apollo_nomad_player": {
+      "engine": "Vehicle.VehicleEngineData_2_Default",
+      "drive": "Vehicle.VehicleDriveModelData_BrennanDirt",
+      "wheels": "Vehicle.VehicleDriveModelData_BrennanDirt_inline3",
+      "front": "Vehicle.VehicleDriveModelData_BrennanDirt_inline4",
+      "back": "Vehicle.VehicleDriveModelData_BrennanDirt_inline5"
+    },
+    "Vehicle.v_sportbike3_brennan_apollo_player_02": {
+      "engine": "Vehicle.v_sportbike3_brennan_apollo_sport_inline1",
+      "drive": "Vehicle.VehicleDriveModelDataDefault_2w",
+      "wheels": "Vehicle.VehicleWheelDrivingSetup_2_Default",
+      "front": "Vehicle.VehicleWheelDrivingPreset_2_Front",
+      "back": "Vehicle.VehicleWheelDrivingPreset_2_Rear"
+    },
+    "Vehicle.v_standard25_mahir_supron_gt_player": {
+      "engine": "Vehicle.v_standard25_mahir_supron_sport_inline9",
+      "drive": "Vehicle.v_standard25_mahir_supron_sport_inline3",
+      "wheels": "Vehicle.v_standard25_mahir_supron_sport_inline4",
+      "front": "Vehicle.v_standard25_mahir_supron_sport_inline5",
+      "back": "Vehicle.v_standard25_mahir_supron_sport_inline6"
+    },
+    "Vehicle.v_standard25_thorton_colby_nomad_player": {
+      "engine": "Vehicle.v_standard25_thorton_colby_nomad_inline5",
+      "drive": "Vehicle.v_standard25_thorton_colby_nomad_inline0",
+      "wheels": "Vehicle.v_standard25_thorton_colby_nomad_inline1",
+      "front": "Vehicle.v_standard25_thorton_colby_nomad_inline2",
+      "back": "Vehicle.v_standard25_thorton_colby_nomad_inline3"
+    },
+    "Vehicle.v_standard25_thorton_colby_nomad_player_missiles": {
+      "engine": "Vehicle.v_standard25_thorton_colby_nomad_inline5",
+      "drive": "Vehicle.v_standard25_thorton_colby_nomad_inline0",
+      "wheels": "Vehicle.v_standard25_thorton_colby_nomad_inline1",
+      "front": "Vehicle.v_standard25_thorton_colby_nomad_inline2",
+      "back": "Vehicle.v_standard25_thorton_colby_nomad_inline3"
+    },
+    "Vehicle.v_standard25_thorton_colby_pickup_02_player": {
+      "engine": "Vehicle.v_standard25_thorton_colby_pickup_inline8",
+      "drive": "Vehicle.v_standard25_thorton_colby_pickup_inline4",
+      "wheels": "Vehicle.v_standard25_thorton_colby_pickup_inline5",
+      "front": "Vehicle.v_standard25_thorton_colby_pickup_inline6",
+      "back": "Vehicle.v_standard25_thorton_colby_pickup_inline7"
+    },
+    "Vehicle.v_standard25_thorton_colby_pickup_kurtz_player": {
+      "engine": "Vehicle.v_standard25_thorton_colby_pickup_kurtz_inline14",
+      "drive": "Vehicle.v_standard25_thorton_colby_pickup_kurtz_inline0",
+      "wheels": "Vehicle.v_standard25_thorton_colby_pickup_kurtz_inline1",
+      "front": "Vehicle.v_standard25_thorton_colby_pickup_kurtz_inline2",
+      "back": "Vehicle.v_standard25_thorton_colby_pickup_kurtz_inline3"
+    },
+    "Vehicle.v_standard25_thorton_colby_pickup_player": {
+      "engine": "Vehicle.v_standard25_thorton_colby_pickup_inline8",
+      "drive": "Vehicle.v_standard25_thorton_colby_pickup_inline4",
+      "wheels": "Vehicle.v_standard25_thorton_colby_pickup_inline5",
+      "front": "Vehicle.v_standard25_thorton_colby_pickup_inline6",
+      "back": "Vehicle.v_standard25_thorton_colby_pickup_inline7"
+    },
+    "Vehicle.v_standard2_archer_quartz_base_player": {
+      "engine": "Vehicle.VehicleEngineData_4_Base_Transaxle",
+      "drive": "Vehicle.VehicleDriveModelData_Quartz",
+      "wheels": "Vehicle.VehicleDriveModelData_Quartz_inline0",
+      "front": "Vehicle.VehicleDriveModelData_Quartz_inline1",
+      "back": "Vehicle.VehicleDriveModelData_Quartz_inline2"
+    },
+    "Vehicle.v_standard2_archer_quartz_nomad_player": {
+      "engine": "Vehicle.v_standard2_archer_quartz_nomad_inline11",
+      "drive": "Vehicle.v_standard2_archer_quartz_nomad_inline6",
+      "wheels": "Vehicle.v_standard2_archer_quartz_nomad_inline7",
+      "front": "Vehicle.v_standard2_archer_quartz_nomad_inline8",
+      "back": "Vehicle.v_standard2_archer_quartz_nomad_inline9"
+    },
+    "Vehicle.v_standard2_archer_quartz_nomad_player_02": {
+      "engine": "Vehicle.v_standard2_archer_quartz_nomad_inline11",
+      "drive": "Vehicle.v_standard2_archer_quartz_nomad_inline6",
+      "wheels": "Vehicle.v_standard2_archer_quartz_nomad_inline7",
+      "front": "Vehicle.v_standard2_archer_quartz_nomad_inline8",
+      "back": "Vehicle.v_standard2_archer_quartz_nomad_inline9"
+    },
+    "Vehicle.v_standard2_mizutani_hozuki_gt_player": {
+      "engine": "Vehicle.v_standard2_mizutani_hozuki_sport_inline1",
+      "drive": "Vehicle.VehicleDriveModelData_HozukiSport",
+      "wheels": "Vehicle.VehicleDriveModelData_HozukiSport_inline0",
+      "front": "Vehicle.VehicleDriveModelData_HozukiSport_inline1",
+      "back": "Vehicle.VehicleDriveModelData_HozukiSport_inline2"
+    },
+    "Vehicle.v_standard2_thorton_colby_gt_player": {
+      "engine": "Vehicle.v_standard2_thorton_colby_gt_inline4",
+      "drive": "Vehicle.VehicleDriveModelData_Colby_GT",
+      "wheels": "Vehicle.VehicleDriveModelData_Colby_GT_inline0",
+      "front": "Vehicle.VehicleDriveModelData_Colby_GT_inline1",
+      "back": "Vehicle.VehicleDriveModelData_Colby_GT_inline2"
+    },
+    "Vehicle.v_standard2_thorton_galena_bobas_player": {
+      "engine": "Vehicle.VehicleEngineDataBobas",
+      "drive": "Vehicle.v_standard2_thorton_galena_bobas_inline5",
+      "wheels": "Vehicle.v_standard2_thorton_galena_bobas_inline6",
+      "front": "Vehicle.v_standard2_thorton_galena_bobas_inline7",
+      "back": "Vehicle.v_standard2_thorton_galena_bobas_inline8"
+    },
+    "Vehicle.v_standard2_thorton_galena_gt_player": {
+      "engine": "Vehicle.v_standard2_thorton_galena_gt_inline9",
+      "drive": "Vehicle.v_standard2_thorton_galena_gt_inline4",
+      "wheels": "Vehicle.v_standard2_thorton_galena_gt_inline5",
+      "front": "Vehicle.v_standard2_thorton_galena_gt_inline6",
+      "back": "Vehicle.v_standard2_thorton_galena_gt_inline7"
+    },
+    "Vehicle.v_standard2_thorton_galena_nomad_player": {
+      "engine": "Vehicle.v_standard2_thorton_galena_nomad_inline5",
+      "drive": "Vehicle.v_standard2_thorton_galena_nomad_inline0",
+      "wheels": "Vehicle.v_standard2_thorton_galena_nomad_inline1",
+      "front": "Vehicle.v_standard2_thorton_galena_nomad_inline2",
+      "back": "Vehicle.v_standard2_thorton_galena_nomad_inline3"
+    },
+    "Vehicle.v_standard2_thorton_galena_nomad_player_missiles": {
+      "engine": "Vehicle.v_standard2_thorton_galena_nomad_inline5",
+      "drive": "Vehicle.v_standard2_thorton_galena_nomad_inline0",
+      "wheels": "Vehicle.v_standard2_thorton_galena_nomad_inline1",
+      "front": "Vehicle.v_standard2_thorton_galena_nomad_inline2",
+      "back": "Vehicle.v_standard2_thorton_galena_nomad_inline3"
+    },
+    "Vehicle.v_standard2_villefort_cortes_delamain_player": {
+      "engine": "Vehicle.v_standard2_villefort_cortes_inline0",
+      "drive": "Vehicle.VehicleDriveModelData_Cortes",
+      "wheels": "Vehicle.VehicleDriveModelData_Cortes_inline0",
+      "front": "Vehicle.VehicleDriveModelData_Cortes_inline1",
+      "back": "Vehicle.VehicleDriveModelData_Cortes_inline2"
+    },
+    "Vehicle.v_standard3_chevalier_emperor_player": {
+      "engine": "Vehicle.VehicleEngineData_4_Truck",
+      "drive": "Vehicle.VehicleDriveModelData_Emperor",
+      "wheels": "Vehicle.VehicleDriveModelData_Emperor_inline0",
+      "front": "Vehicle.VehicleDriveModelData_Emperor_inline1",
+      "back": "Vehicle.VehicleDriveModelData_Emperor_inline2"
+    },
+    "Vehicle.v_standard3_mahir_supron_kurtz_player": {
+      "engine": "Vehicle.v_standard3_mahir_supron_kurtz_inline3",
+      "drive": "Vehicle.VehicleDriveModelData_SupronKurtz",
+      "wheels": "Vehicle.VehicleDriveModelData_SupronKurtz_inline0",
+      "front": "Vehicle.VehicleDriveModelData_SupronKurtz_inline1",
+      "back": "Vehicle.VehicleDriveModelData_SupronKurtz_inline2"
+    },
+    "Vehicle.v_standard3_makigai_tanishi_player": {
+      "engine": "Vehicle.v_standard3_makigai_tanishi_kuma_inline4",
+      "drive": "Vehicle.VehicleDriveModelData_Tanishi",
+      "wheels": "Vehicle.VehicleDriveModelData_Tanishi_inline0",
+      "front": "Vehicle.VehicleDriveModelData_Tanishi_inline1",
+      "back": "Vehicle.VehicleDriveModelData_Tanishi_inline2"
+    },
+    "Vehicle.v_standard3_makigai_tanishi_player_mr_hands": {
+      "engine": "Vehicle.v_standard3_makigai_tanishi_inline5",
+      "drive": "Vehicle.VehicleDriveModelData_Tanishi",
+      "wheels": "Vehicle.VehicleDriveModelData_Tanishi_inline0",
+      "front": "Vehicle.VehicleDriveModelData_Tanishi_inline1",
+      "back": "Vehicle.VehicleDriveModelData_Tanishi_inline2"
+    },
+    "Vehicle.v_standard3_militech_hellhound_player": {
+      "engine": "Vehicle.v_standard3_militech_hellhound_inline9",
+      "drive": "Vehicle.v_standard3_militech_hellhound_inline0",
+      "wheels": "Vehicle.v_standard3_militech_hellhound_inline1",
+      "front": "Vehicle.v_standard3_militech_hellhound_inline2",
+      "back": "Vehicle.v_standard3_militech_hellhound_inline3"
+    },
+    "Vehicle.v_standard3_thorton_mackinaw_02_player": {
+      "engine": "Vehicle.VehicleEngineData_4_Truck_Nomad",
+      "drive": "Vehicle.VehicleDriveModelData_Mackinaw_Nomad",
+      "wheels": "Vehicle.VehicleDriveModelData_Mackinaw_Nomad_inline0",
+      "front": "Vehicle.VehicleWheelPreset_Mackinaw_Nomad_Front",
+      "back": "Vehicle.VehicleWheelPreset_Mackinaw_Nomad_Rear"
+    },
+    "Vehicle.v_standard3_thorton_mackinaw_ncu_player": {
+      "engine": "Vehicle.VehicleEngineData_4_Truck_Nomad",
+      "drive": "Vehicle.VehicleDriveModelData_Mackinaw_Nomad",
+      "wheels": "Vehicle.VehicleDriveModelData_Mackinaw_Nomad_inline0",
+      "front": "Vehicle.VehicleWheelPreset_Mackinaw_Nomad_Front",
+      "back": "Vehicle.VehicleWheelPreset_Mackinaw_Nomad_Rear"
+    },
+    "Vehicle.v_standard3_thorton_mackinaw_player": {
+      "engine": "Vehicle.v_standard3_thorton_mackinaw_inline0",
+      "drive": "Vehicle.VehicleDriveModelData_Mackinaw",
+      "wheels": "Vehicle.VehicleDriveModelData_Mackinaw_inline0",
+      "front": "Vehicle.VehicleDriveModelData_Mackinaw_inline1",
+      "back": "Vehicle.VehicleDriveModelData_Mackinaw_inline2"
+    },
+    "Vehicle.v_utility4_chevalier_legatus_player": {
+      "engine": "Vehicle.v_utility4_chevalier_centurion_inline4",
+      "drive": "Vehicle.v_utility4_chevalier_centurion_inline0",
+      "wheels": "Vehicle.v_utility4_chevalier_centurion_inline1",
+      "front": "Vehicle.v_utility4_chevalier_centurion_inline2",
+      "back": "Vehicle.v_utility4_chevalier_centurion_inline3"
+    },
+    "Vehicle.v_utility4_thorton_mackinaw_bmf_player": {
+      "engine": "Vehicle.v_utility4_thorton_mackinaw_bmf_inline5",
+      "drive": "Vehicle.v_utility4_thorton_mackinaw_bmf_inline0",
+      "wheels": "Vehicle.v_utility4_thorton_mackinaw_bmf_inline1",
+      "front": "Vehicle.v_utility4_thorton_mackinaw_bmf_inline2",
+      "back": "Vehicle.v_utility4_thorton_mackinaw_bmf_inline3"
+    }
+  }
+}

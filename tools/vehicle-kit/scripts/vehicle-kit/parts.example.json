@@ -1,0 +1,49 @@
+{
+  "schema": "open77.vehicle-kit/1",
+  "resource": "open77_vehicle_kit_test",
+  "archiveName": "Open77VehicleKitTest",
+  "native": {
+    "autoHideDistance": 150
+  },
+  "palette": {
+    "chrome":       { "color": [0.66, 0.67, 0.69],   "metalness": 1.0,  "roughness": 0.1 },
+    "gunmetal":     { "color": [0.16, 0.17, 0.19],   "metalness": 0.9,  "roughness": 0.32 },
+    "gloss_black":  { "color": [0.015, 0.015, 0.017], "metalness": 0.0, "roughness": 0.22 },
+    "dark_metal":   { "color": [0.05, 0.05, 0.055],  "metalness": 0.6,  "roughness": 0.4 },
+    "satin_bronze": { "color": [0.42, 0.29, 0.13],   "metalness": 1.0,  "roughness": 0.35 },
+    "carbon":       { "color": [0.03, 0.03, 0.035],  "metalness": 0.0,  "roughness": 0.22 },
+    "white":        { "color": [0.8, 0.8, 0.8],      "metalness": 0.0,  "roughness": 0.4 }
+  },
+  "parts": [
+    {
+      "id": "rim_vk1",
+      "kind": "rim",
+      "label": "VK-1 split five",
+      "params": { "style": "split", "spokes": 5, "seed": 7, "radius": 0.2785, "width": 0.305, "face_x": -0.208, "dish": 0.045 },
+      "finishes": {
+        "chrome": { "rim_main": "chrome",       "rim_detail": "dark_metal" },
+        "black":  { "rim_main": "gloss_black",  "rim_detail": "chrome" },
+        "bronze": { "rim_main": "satin_bronze", "rim_detail": "gloss_black" }
+      }
+    },
+    {
+      "id": "rim_vk2",
+      "kind": "rim",
+      "label": "VK-2 turbine seven",
+      "params": { "style": "turbine", "spokes": 7, "seed": 2, "spoke_width": 0.042, "dish": 0.03 },
+      "finishes": {
+        "gunmetal": { "rim_main": "gunmetal", "rim_detail": "dark_metal" }
+      }
+    },
+    {
+      "id": "spoiler_vk1",
+      "kind": "spoiler",
+      "label": "VK-1 street wing",
+      "params": { "span": 1.3, "chord": 0.26, "height": 0.2, "aoa": 7, "seed": 3 },
+      "finishes": {
+        "carbon": { "wing_main": "carbon", "wing_detail": "gloss_black" },
+        "white":  { "wing_main": "white",  "wing_detail": "gloss_black" }
+      }
+    }
+  ]
+}

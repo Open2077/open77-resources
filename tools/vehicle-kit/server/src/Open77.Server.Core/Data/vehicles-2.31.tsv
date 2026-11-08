@@ -1,0 +1,1382 @@
+# GENERATED FILE -- do not edit by hand.
+# Produced by scripts/build-data-catalogue.py for Cyberpunk 2077 2.31.
+# Tab-separated, one row per record, first data line is the column header.
+# Read lazily by Open77.Server.Core.Data.RecordCatalogue; see that file and the
+# generator's docstring for why the client ships none of this.
+record	displayName	class	classLabel	manufacturer	seats	seatsSource	tweakDbId
+@dict	class	av	other	police	sport1	sport2	sportbike1	sportbike2	sportbike3	standard2	standard25	standard3	utility4
+@dict	classLabel	AV	Bike	Hypercar	Other	Pickup	Police	SUV	Saloon	Sports	Superbike	Truck
+@dict	seats	1	4
+@dict	seatsSource	class
+Vehicle.PlayerBike	Playerbike Playerbike	1	3	Playerbike	1	0	0x1274e17929
+Vehicle.PlayerCar	Playercar Playercar	1	3	Playercar	1	0	0x11f2b18b3f
+Vehicle.VehicleDroneCarrier	Vehicledronecarrier Vehicledronecarrier	1	3	Vehicledronecarrier	1	0	0x1bb0f54211
+Vehicle.aldecado_archer_quartz_heat_3	Aldecado Archer Quartz Heat 3	1	3	Aldecado	1	0	0x25fc2dbae3
+Vehicle.aldecado_thorton_colby_heat_3	Aldecado Thorton Colby Heat 3	1	3	Aldecado	1	0	0x2536b1901b
+Vehicle.aldecado_thorton_galena_heat_1	Aldecado Thorton Galena Heat 1	1	3	Aldecado	1	0	0x2624705f08
+Vehicle.aldecado_thorton_galena_heat_2	Aldecado Thorton Galena Heat 2	1	3	Aldecado	1	0	0x26bd790eb2
+Vehicle.arr_05_fox_car	Arr 05 Fox Car	1	3	Arr	1	0	0x16360f2840
+Vehicle.arr_05_objective_truck	Arr 05 Objective Truck	1	3	Arr	1	0	0x1e2e82ec2c
+Vehicle.av_camera_drone	AV Camera Drone	0	0	AV	1	0	0x17addbdddb
+Vehicle.av_garbage_drone	AV Garbage Drone	0	0	AV	1	0	0x187f74cfe4
+Vehicle.av_kurt_barghest	AV Kurt Barghest	0	0	AV	1	0	0x18c14172ff
+Vehicle.av_luxury	AV Luxury	0	0	AV	1	0	0x11544149b4
+Vehicle.av_militech	AV Militech	0	0	AV	1	0	0x13a21dccda
+Vehicle.av_militech_manticore	AV Militech Manticore	0	0	AV	1	0	0x1dae634d04
+Vehicle.av_militech_manticore_no_thruster	AV Militech Manticore No Thruster	0	0	AV	1	0	0x29d99bf87d
+Vehicle.av_militech_manticore_quest	AV Militech Manticore Quest	0	0	AV	1	0	0x2308a8e2e2
+Vehicle.av_public_train	AV Public Train	0	0	AV	1	0	0x17917971db
+Vehicle.av_public_train_b	AV Public Train B	0	0	AV	1	0	0x199a889f17
+Vehicle.av_rayfield_excalibur	AV Rayfield Excalibur	0	0	AV	1	0	0x1d78680ec9
+Vehicle.av_rayfield_excalibur_no_thruster	AV Rayfield Excalibur No Thruster	0	0	AV	1	0	0x29c7c79d29
+Vehicle.av_rayfield_excalibur_quest	AV Rayfield Excalibur Quest	0	0	AV	1	0	0x23e4880392
+Vehicle.av_scanning_drone	AV Scanning Drone	0	0	AV	1	0	0x19186b5d8d
+Vehicle.av_test	AV Test	0	0	AV	1	0	0xfd9e27d06
+Vehicle.av_trauma	AV Trauma	0	0	AV	1	0	0x11fac39b8f
+Vehicle.av_trauma_savable	AV Trauma Savable	0	0	AV	1	0	0x194feb9227
+Vehicle.av_zetatech_atlus	AV Zetatech Atlus	0	0	AV	1	0	0x1918418409
+Vehicle.av_zetatech_atlus_no_thruster	AV Zetatech Atlus No Thruster	0	0	AV	1	0	0x25ed06819c
+Vehicle.av_zetatech_octant	AV Zetatech Octant	0	0	AV	1	0	0x1a658a91aa
+Vehicle.av_zetatech_surveyor	AV Zetatech Surveyor	0	0	AV	1	0	0x1c3a0dd6f1
+Vehicle.av_zetatech_valgus	AV Zetatech Valgus	0	0	AV	1	0	0x1a9de1cc62
+Vehicle.av_zetatech_valgus_quest	AV Zetatech Valgus Quest	0	0	AV	1	0	0x203bfeb2fe
+Vehicle.batty_av	Batty Av	1	3	Batty	1	0	0x10df6e9d2d
+Vehicle.border_patrol_chevalier_emperor_militech_heat_3	Border Patrol Chevalier Emperor Militech Heat 3	1	3	Border	1	0	0x37cf985bdc
+Vehicle.border_patrol_villefort_cortes_heat_1	Border Patrol Villefort Cortes Heat 1	1	3	Border	1	0	0x2de880a647
+Vehicle.border_patrol_villefort_cortes_heat_2	Border Patrol Villefort Cortes Heat 2	1	3	Border	1	0	0x2d7189f7fd
+Vehicle.cs_savable_arch	Cs Savable Arch	1	3	Cs	1	0	0x17fc75f3dd
+Vehicle.cs_savable_arch_broken	Cs Savable Arch Broken	1	3	Cs	1	0	0x1ebf088465
+Vehicle.cs_savable_arch_disabled_interactions	Cs Savable Arch Disabled Interactions	1	3	Cs	1	0	0x2de015a413
+Vehicle.cs_savable_arch_traffic_test	Cs Savable Arch Traffic Test	1	3	Cs	1	0	0x242cb89ab1
+Vehicle.cs_savable_archer_hella	Cs Savable Archer Hella	1	3	Cs	1	0	0x1f722914ad
+Vehicle.cs_savable_archer_hella_broken	Cs Savable Archer Hella Broken	1	3	Cs	1	0	0x26a8449cb6
+Vehicle.cs_savable_archer_hella_destroyed	Cs Savable Archer Hella Destroyed	1	3	Cs	1	0	0x29a6445940
+Vehicle.cs_savable_archer_hella_disabled_interactions	Cs Savable Archer Hella Disabled Interactions	1	3	Cs	1	0	0x353b2ad49a
+Vehicle.cs_savable_archer_hella_kurtz	Cs Savable Archer Hella Kurtz	1	3	Cs	1	0	0x25e842fa65
+Vehicle.cs_savable_archer_hella_police_siren	Cs Savable Archer Hella Police Siren	1	3	Cs	1	0	0x2cce239b08
+Vehicle.cs_savable_archer_hella_police_siren_broken	Cs Savable Archer Hella Police Siren Broken	1	3	Cs	1	0	0x334f252ff1
+Vehicle.cs_savable_archer_hella_police_siren_disabled_interactions	Cs Savable Archer Hella Police Siren Disabled Interactions	1	3	Cs	1	0	0x42d17cc7cc
+Vehicle.cs_savable_archer_hella_sixth_street	Cs Savable Archer Hella Sixth Street	1	3	Cs	1	0	0x2cd2e66409
+Vehicle.cs_savable_archer_hella_sixth_street_broken	Cs Savable Archer Hella Sixth Street Broken	1	3	Cs	1	0	0x3336ac0005
+Vehicle.cs_savable_archer_hella_sixth_street_disabled_interactions	Cs Savable Archer Hella Sixth Street Disabled Interactions	1	3	Cs	1	0	0x421637d00c
+Vehicle.cs_savable_archer_quartz	Cs Savable Archer Quartz	1	3	Cs	1	0	0x205d99f58c
+Vehicle.cs_savable_archer_quartz_broken	Cs Savable Archer Quartz Broken	1	3	Cs	1	0	0x27f400d1c5
+Vehicle.cs_savable_archer_quartz_destroyed	Cs Savable Archer Quartz Destroyed	1	3	Cs	1	0	0x2ac4953bd4
+Vehicle.cs_savable_archer_quartz_mox	Cs Savable Archer Quartz Mox	1	3	Cs	1	0	0x24ef47b25f
+Vehicle.cs_savable_archer_quartz_mox_broken	Cs Savable Archer Quartz Mox Broken	1	3	Cs	1	0	0x2bfdc8b5e0
+Vehicle.cs_savable_archer_quartz_mox_disabled_interactions	Cs Savable Archer Quartz Mox Disabled Interactions	1	3	Cs	1	0	0x3a6a73d232
+Vehicle.cs_savable_archer_quartz_nomad_broken	Cs Savable Archer Quartz Nomad Broken	1	3	Cs	1	0	0x2d96db9e00
+Vehicle.cs_savable_archer_quartz_nomad_quest	Cs Savable Archer Quartz Nomad Quest	1	3	Cs	1	0	0x2c82f71694
+Vehicle.cs_savable_archer_quartz_tyger	Cs Savable Archer Quartz Tyger	1	3	Cs	1	0	0x26f0ecf88c
+Vehicle.cs_savable_archer_quartz_tyger_broken	Cs Savable Archer Quartz Tyger Broken	1	3	Cs	1	0	0x2dc6ad6c7c
+Vehicle.cs_savable_archer_quartz_tyger_disabled_interactions	Cs Savable Archer Quartz Tyger Disabled Interactions	1	3	Cs	1	0	0x3c592a345a
+Vehicle.cs_savable_brennan_apollo	Cs Savable Brennan Apollo	1	3	Cs	1	0	0x2142e42d41
+Vehicle.cs_savable_brennan_apollo_broken	Cs Savable Brennan Apollo Broken	1	3	Cs	1	0	0x28ae9fd27b
+Vehicle.cs_savable_brennan_apollo_disabled_interactions	Cs Savable Brennan Apollo Disabled Interactions	1	3	Cs	1	0	0x37686e8704
+Vehicle.cs_savable_brennan_apollo_traffic_test	Cs Savable Brennan Apollo Traffic Test	1	3	Cs	1	0	0x2e9f44d36b
+Vehicle.cs_savable_chevalier_emperor	Cs Savable Chevalier Emperor	1	3	Cs	1	0	0x243d393f2f
+Vehicle.cs_savable_chevalier_emperor_broken	Cs Savable Chevalier Emperor Broken	1	3	Cs	1	0	0x2b79314d71
+Vehicle.cs_savable_chevalier_emperor_disabled_interactions	Cs Savable Chevalier Emperor Disabled Interactions	1	3	Cs	1	0	0x3a7de2235b
+Vehicle.cs_savable_chevalier_emperor_police_siren	Cs Savable Chevalier Emperor Police Siren	1	3	Cs	1	0	0x31a6f1ec44
+Vehicle.cs_savable_chevalier_emperor_police_siren_broken	Cs Savable Chevalier Emperor Police Siren Broken	1	3	Cs	1	0	0x38d70efe50
+Vehicle.cs_savable_chevalier_emperor_police_siren_disabled_interactions	Cs Savable Chevalier Emperor Police Siren Disabled Interactions	1	3	Cs	1	0	0x47a9d617bc
+Vehicle.cs_savable_chevalier_thrax	Cs Savable Chevalier Thrax	1	3	Cs	1	0	0x222ce0db3f
+Vehicle.cs_savable_chevalier_thrax_broken	Cs Savable Chevalier Thrax Broken	1	3	Cs	1	0	0x29ff7aa5f9
+Vehicle.cs_savable_chevalier_thrax_disabled_interactions	Cs Savable Chevalier Thrax Disabled Interactions	1	3	Cs	1	0	0x3815a58592
+Vehicle.cs_savable_chevalier_thrax_maelstrom	Cs Savable Chevalier Thrax Maelstrom	1	3	Cs	1	0	0x2ce41bd4b9
+Vehicle.cs_savable_chevalier_thrax_maelstrom_broken	Cs Savable Chevalier Thrax Maelstrom Broken	1	3	Cs	1	0	0x3369f76f41
+Vehicle.cs_savable_chevalier_thrax_maelstrom_disabled_interactions	Cs Savable Chevalier Thrax Maelstrom Disabled Interactions	1	3	Cs	1	0	0x422c55b862
+Vehicle.cs_savable_chevalier_thrax_sixth_street	Cs Savable Chevalier Thrax Sixth Street	1	3	Cs	1	0	0x2ff9deb1e0
+Vehicle.cs_savable_chevalier_thrax_sixth_street_broken	Cs Savable Chevalier Thrax Sixth Street Broken	1	3	Cs	1	0	0x360405b525
+Vehicle.cs_savable_chevalier_thrax_sixth_street_disabled_interactions	Cs Savable Chevalier Thrax Sixth Street Disabled Interactions	1	3	Cs	1	0	0x455e67e738
+Vehicle.cs_savable_chevalier_thrax_valentino	Cs Savable Chevalier Thrax Valentino	1	3	Cs	1	0	0x2c070f53c1
+Vehicle.cs_savable_chevalier_thrax_valentino_broken	Cs Savable Chevalier Thrax Valentino Broken	1	3	Cs	1	0	0x33e46f0af9
+Vehicle.cs_savable_chevalier_thrax_valentino_disabled_interactions	Cs Savable Chevalier Thrax Valentino Disabled Interactions	1	3	Cs	1	0	0x42d984fa65
+Vehicle.cs_savable_herrera_outlaw	Cs Savable Herrera Outlaw	1	3	Cs	1	0	0x21e2764a4d
+Vehicle.cs_savable_herrera_outlaw_broken	Cs Savable Herrera Outlaw Broken	1	3	Cs	1	0	0x289a63ea98
+Vehicle.cs_savable_herrera_outlaw_disabled_interactions	Cs Savable Herrera Outlaw Disabled Interactions	1	3	Cs	1	0	0x377a2eefb4
+Vehicle.cs_savable_herrera_outlaw_sts_ep1_12_victim	Cs Savable Herrera Outlaw Sts Ep1 12 Victim	1	3	Cs	1	0	0x3358552f7d
+Vehicle.cs_savable_kaukaz_bratsk	Cs Savable Kaukaz Bratsk	1	3	Cs	1	0	0x2029233536
+Vehicle.cs_savable_kaukaz_bratsk_broken	Cs Savable Kaukaz Bratsk Broken	1	3	Cs	1	0	0x27dfc7f8e1
+Vehicle.cs_savable_kaukaz_bratsk_containers	Cs Savable Kaukaz Bratsk Containers	1	3	Cs	1	0	0x2be1a75b4b
+Vehicle.cs_savable_kaukaz_bratsk_containers_broken	Cs Savable Kaukaz Bratsk Containers Broken	1	3	Cs	1	0	0x329719f79b
+Vehicle.cs_savable_kaukaz_bratsk_containers_disabled_interactions	Cs Savable Kaukaz Bratsk Containers Disabled Interactions	1	3	Cs	1	0	0x41a41fd2b6
+Vehicle.cs_savable_kaukaz_bratsk_disabled_interactions	Cs Savable Kaukaz Bratsk Disabled Interactions	1	3	Cs	1	0	0x36f6b11e22
+Vehicle.cs_savable_kaukaz_bratsk_metalstud	Cs Savable Kaukaz Bratsk Metalstud	1	3	Cs	1	0	0x2a078d4600
+Vehicle.cs_savable_kaukaz_bratsk_metalstud_broken	Cs Savable Kaukaz Bratsk Metalstud Broken	1	3	Cs	1	0	0x311638ee1c
+Vehicle.cs_savable_kaukaz_bratsk_metalstud_disabled_interactions	Cs Savable Kaukaz Bratsk Metalstud Disabled Interactions	1	3	Cs	1	0	0x402cf75fc4
+Vehicle.cs_savable_kaukaz_zeya	Cs Savable Kaukaz Zeya	1	3	Cs	1	0	0x1ef572a535
+Vehicle.cs_savable_kaukaz_zeya_broken	Cs Savable Kaukaz Zeya Broken	1	3	Cs	1	0	0x259ab81465
+Vehicle.cs_savable_kaukaz_zeya_container	Cs Savable Kaukaz Zeya Container	1	3	Cs	1	0	0x2872e4404a
+Vehicle.cs_savable_kaukaz_zeya_container_broken	Cs Savable Kaukaz Zeya Container Broken	1	3	Cs	1	0	0x2fe8d962a4
+Vehicle.cs_savable_kaukaz_zeya_container_disabled_interactions	Cs Savable Kaukaz Zeya Container Disabled Interactions	1	3	Cs	1	0	0x3e166ba720
+Vehicle.cs_savable_kaukaz_zeya_disabled_interactions	Cs Savable Kaukaz Zeya Disabled Interactions	1	3	Cs	1	0	0x342255134d
+Vehicle.cs_savable_kaukaz_zeya_full	Cs Savable Kaukaz Zeya Full	1	3	Cs	1	0	0x239090d3bc
+Vehicle.cs_savable_kaukaz_zeya_full_broken	Cs Savable Kaukaz Zeya Full Broken	1	3	Cs	1	0	0x2a04a1c616
+Vehicle.cs_savable_kaukaz_zeya_full_disabled_interactions	Cs Savable Kaukaz Zeya Full Disabled Interactions	1	3	Cs	1	0	0x39c61ebe7a
+Vehicle.cs_savable_kaukaz_zeya_kurtz	Cs Savable Kaukaz Zeya Kurtz	1	3	Cs	1	0	0x24cca6ca49
+Vehicle.cs_savable_mahir_mt28_coach	Cs Savable Mahir Mt28 Coach	1	3	Cs	1	0	0x235b70fd92
+Vehicle.cs_savable_mahir_mt28_coach_broken	Cs Savable Mahir Mt28 Coach Broken	1	3	Cs	1	0	0x2a2f1d4e49
+Vehicle.cs_savable_mahir_mt28_coach_disabled_interactions	Cs Savable Mahir Mt28 Coach Disabled Interactions	1	3	Cs	1	0	0x39f82f6634
+Vehicle.cs_savable_mahir_supron	Cs Savable Mahir Supron	1	3	Cs	1	0	0x1f554b85c7
+Vehicle.cs_savable_mahir_supron_broken	Cs Savable Mahir Supron Broken	1	3	Cs	1	0	0x268faff951
+Vehicle.cs_savable_mahir_supron_disabled_interactions	Cs Savable Mahir Supron Disabled Interactions	1	3	Cs	1	0	0x358115fd01
+Vehicle.cs_savable_mahir_supron_kurtz	Cs Savable Mahir Supron Kurtz	1	3	Cs	1	0	0x250166b714
+Vehicle.cs_savable_mahir_supron_rave_ow	Cs Savable Mahir Supron Rave Ow	1	3	Cs	1	0	0x275fd4fab5
+Vehicle.cs_savable_mahir_voodoo_boys	Cs Savable Mahir Voodoo Boys	1	3	Cs	1	0	0x24e0af9c93
+Vehicle.cs_savable_mahir_voodoo_boys_broken	Cs Savable Mahir Voodoo Boys Broken	1	3	Cs	1	0	0x2b8b14b811
+Vehicle.cs_savable_mahir_voodoo_boys_disabled_interactions	Cs Savable Mahir Voodoo Boys Disabled Interactions	1	3	Cs	1	0	0x3ad484dc1f
+Vehicle.cs_savable_makigai_maimai	Cs Savable Makigai Maimai	1	3	Cs	1	0	0x2179412737
+Vehicle.cs_savable_makigai_maimai_broken	Cs Savable Makigai Maimai Broken	1	3	Cs	1	0	0x281f517b4a
+Vehicle.cs_savable_makigai_maimai_disabled_interactions	Cs Savable Makigai Maimai Disabled Interactions	1	3	Cs	1	0	0x37f53938c0
+Vehicle.cs_savable_militech_behemoth	Cs Savable Militech Behemoth	1	3	Cs	1	0	0x24a754b584
+Vehicle.cs_savable_militech_behemoth_broken	Cs Savable Militech Behemoth Broken	1	3	Cs	1	0	0x2b30e94f67
+Vehicle.cs_savable_militech_behemoth_disabled_interactions	Cs Savable Militech Behemoth Disabled Interactions	1	3	Cs	1	0	0x3aa43de021
+Vehicle.cs_savable_militech_behemoth_kurtz	Cs Savable Militech Behemoth Kurtz	1	3	Cs	1	0	0x2a97b19727
+Vehicle.cs_savable_mizutani_shion	Cs Savable Mizutani Shion	1	3	Cs	1	0	0x21f13cb58f
+Vehicle.cs_savable_mizutani_shion_broken	Cs Savable Mizutani Shion Broken	1	3	Cs	1	0	0x2875ca776f
+Vehicle.cs_savable_mizutani_shion_disabled_interactions	Cs Savable Mizutani Shion Disabled Interactions	1	3	Cs	1	0	0x37554f91ff
+Vehicle.cs_savable_mizutani_shion_tyger	Cs Savable Mizutani Shion Tyger	1	3	Cs	1	0	0x27845c9f58
+Vehicle.cs_savable_mizutani_shion_tyger_broken	Cs Savable Mizutani Shion Tyger Broken	1	3	Cs	1	0	0x2e784a4b17
+Vehicle.cs_savable_mizutani_shion_tyger_disabled_interactions	Cs Savable Mizutani Shion Tyger Disabled Interactions	1	3	Cs	1	0	0x3d237c76b4
+Vehicle.cs_savable_quadra_turbo	Cs Savable Quadra Turbo	1	3	Cs	1	0	0x1f0f09d275
+Vehicle.cs_savable_quadra_turbo_broken	Cs Savable Quadra Turbo Broken	1	3	Cs	1	0	0x26af4d7b78
+Vehicle.cs_savable_quadra_turbo_disabled_interactions	Cs Savable Quadra Turbo Disabled Interactions	1	3	Cs	1	0	0x35cb4b6e45
+Vehicle.cs_savable_quadra_turbo_tc	Cs Savable Quadra Turbo Tc	1	3	Cs	1	0	0x229fa18902
+Vehicle.cs_savable_quadra_turbo_tc_broken	Cs Savable Quadra Turbo Tc Broken	1	3	Cs	1	0	0x291ddc581a
+Vehicle.cs_savable_quadra_turbo_tc_disabled_interactions	Cs Savable Quadra Turbo Tc Disabled Interactions	1	3	Cs	1	0	0x38c1d85a07
+Vehicle.cs_savable_quadra_turbo_tyger_claw	Cs Savable Quadra Turbo Tyger Claw	1	3	Cs	1	0	0x2aa7a127b0
+Vehicle.cs_savable_quadra_turbo_tyger_claw_broken	Cs Savable Quadra Turbo Tyger Claw Broken	1	3	Cs	1	0	0x31bcbfa643
+Vehicle.cs_savable_quadra_turbo_tyger_claw_disabled_interactions	Cs Savable Quadra Turbo Tyger Claw Disabled Interactions	1	3	Cs	1	0	0x40cbdeee9a
+Vehicle.cs_savable_quadra_type66	Cs Savable Quadra Type66	1	3	Cs	1	0	0x203c172367
+Vehicle.cs_savable_quadra_type66_broken	Cs Savable Quadra Type66 Broken	1	3	Cs	1	0	0x27bc8c428f
+Vehicle.cs_savable_quadra_type66_disabled_interactions	Cs Savable Quadra Type66 Disabled Interactions	1	3	Cs	1	0	0x36a6e6a289
+Vehicle.cs_savable_quadra_type66_nomad	Cs Savable Quadra Type66 Nomad	1	3	Cs	1	0	0x260c448bc8
+Vehicle.cs_savable_quadra_type66_nomad_broken	Cs Savable Quadra Type66 Nomad Broken	1	3	Cs	1	0	0x2d77b83f31
+Vehicle.cs_savable_quadra_type66_nomad_disabled_interactions	Cs Savable Quadra Type66 Nomad Disabled Interactions	1	3	Cs	1	0	0x3c72d6d32f
+Vehicle.cs_savable_rayfield_caliburn	Cs Savable Rayfield Caliburn	1	3	Cs	1	0	0x24ce657864
+Vehicle.cs_savable_rayfield_caliburn_broken	Cs Savable Rayfield Caliburn Broken	1	3	Cs	1	0	0x2b4450cda5
+Vehicle.cs_savable_rayfield_caliburn_disabled_interactions	Cs Savable Rayfield Caliburn Disabled Interactions	1	3	Cs	1	0	0x3aed108962
+Vehicle.cs_savable_thorton_colby	Cs Savable Thorton Colby	1	3	Cs	1	0	0x20dbe9a150
+Vehicle.cs_savable_thorton_colby_broken	Cs Savable Thorton Colby Broken	1	3	Cs	1	0	0x273e9cfb3d
+Vehicle.cs_savable_thorton_colby_disabled_interactions	Cs Savable Thorton Colby Disabled Interactions	1	3	Cs	1	0	0x36324841c1
+Vehicle.cs_savable_thorton_colby_nomad	Cs Savable Thorton Colby Nomad	1	3	Cs	1	0	0x261409f89e
+Vehicle.cs_savable_thorton_colby_nomad_broken	Cs Savable Thorton Colby Nomad Broken	1	3	Cs	1	0	0x2d8fc57f5b
+Vehicle.cs_savable_thorton_colby_pickup_kurtz	Cs Savable Thorton Colby Pickup Kurtz	1	3	Cs	1	0	0x2d301e70fe
+Vehicle.cs_savable_thorton_colby_valentinos	Cs Savable Thorton Colby Valentinos	1	3	Cs	1	0	0x2b8c20eed9
+Vehicle.cs_savable_thorton_colby_valentinos_broken	Cs Savable Thorton Colby Valentinos Broken	1	3	Cs	1	0	0x326fc35114
+Vehicle.cs_savable_thorton_colby_valentinos_disabled_interactions	Cs Savable Thorton Colby Valentinos Disabled Interactions	1	3	Cs	1	0	0x41d9fbd1b6
+Vehicle.cs_savable_thorton_galena	Cs Savable Thorton Galena	1	3	Cs	1	0	0x21a76a6872
+Vehicle.cs_savable_thorton_galena_broken	Cs Savable Thorton Galena Broken	1	3	Cs	1	0	0x2887f64992
+Vehicle.cs_savable_thorton_galena_destroyed	Cs Savable Thorton Galena Destroyed	1	3	Cs	1	0	0x2b402054a9
+Vehicle.cs_savable_thorton_galena_gt	Cs Savable Thorton Galena Gt	1	3	Cs	1	0	0x24b2432daa
+Vehicle.cs_savable_thorton_galena_gt_broken	Cs Savable Thorton Galena Gt Broken	1	3	Cs	1	0	0x2beb5975b7
+Vehicle.cs_savable_thorton_galena_gt_disabled_interactions	Cs Savable Thorton Galena Gt Disabled Interactions	1	3	Cs	1	0	0x3a97ff335d
+Vehicle.cs_savable_thorton_galena_maelstrom	Cs Savable Thorton Galena Maelstrom	1	3	Cs	1	0	0x2bb65c83eb
+Vehicle.cs_savable_thorton_galena_maelstrom_broken	Cs Savable Thorton Galena Maelstrom Broken	1	3	Cs	1	0	0x3247e1ece0
+Vehicle.cs_savable_thorton_galena_maelstrom_disabled_interactions	Cs Savable Thorton Galena Maelstrom Disabled Interactions	1	3	Cs	1	0	0x41491c1677
+Vehicle.cs_savable_thorton_galena_nomad	Cs Savable Thorton Galena Nomad	1	3	Cs	1	0	0x27186f5ee8
+Vehicle.cs_savable_thorton_galena_nomad_broken	Cs Savable Thorton Galena Nomad Broken	1	3	Cs	1	0	0x2e939c55ec
+Vehicle.cs_savable_thorton_galena_nomad_disabled_interactions	Cs Savable Thorton Galena Nomad Disabled Interactions	1	3	Cs	1	0	0x3d2878f9ec
+Vehicle.cs_savable_thorton_galena_voodoo_boys	Cs Savable Thorton Galena Voodoo Boys	1	3	Cs	1	0	0x2d6b16bfd4
+Vehicle.cs_savable_thorton_galena_voodoo_boys_broken	Cs Savable Thorton Galena Voodoo Boys Broken	1	3	Cs	1	0	0x34ac0fdf21
+Vehicle.cs_savable_thorton_galena_voodoo_boys_disabled_interactions	Cs Savable Thorton Galena Voodoo Boys Disabled Interactions	1	3	Cs	1	0	0x43ce547329
+Vehicle.cs_savable_thorton_mackinaw	Cs Savable Thorton Mackinaw	1	3	Cs	1	0	0x23e413960a
+Vehicle.cs_savable_thorton_mackinaw_broken	Cs Savable Thorton Mackinaw Broken	1	3	Cs	1	0	0x2a0a8adada
+Vehicle.cs_savable_thorton_mackinaw_disabled_interactions	Cs Savable Thorton Mackinaw Disabled Interactions	1	3	Cs	1	0	0x39f6561651
+Vehicle.cs_savable_thorton_mackinaw_sixth_street	Cs Savable Thorton Mackinaw Sixth Street	1	3	Cs	1	0	0x30360d16fa
+Vehicle.cs_savable_thorton_mackinaw_sixth_street_broken	Cs Savable Thorton Mackinaw Sixth Street Broken	1	3	Cs	1	0	0x3723c9ac2a
+Vehicle.cs_savable_thorton_mackinaw_sixth_street_disabled_interactions	Cs Savable Thorton Mackinaw Sixth Street Disabled Interactions	1	3	Cs	1	0	0x4629ffd8b9
+Vehicle.cs_savable_thorton_mackinaw_valentinos	Cs Savable Thorton Mackinaw Valentinos	1	3	Cs	1	0	0x2ec32bfaed
+Vehicle.cs_savable_thorton_mackinaw_valentinos_broken	Cs Savable Thorton Mackinaw Valentinos Broken	1	3	Cs	1	0	0x351f0fe9a2
+Vehicle.cs_savable_thorton_mackinaw_valentinos_disabled_interactions	Cs Savable Thorton Mackinaw Valentinos Disabled Interactions	1	3	Cs	1	0	0x44c1ca6dfd
+Vehicle.cs_savable_utility4_kaukaz_zeya_freight	Cs Savable Utility4 Kaukaz Zeya Freight	1	3	Cs	1	0	0x2f351fb2aa
+Vehicle.cs_savable_utility4_kaukaz_zeya_freight_broken	Cs Savable Utility4 Kaukaz Zeya Freight Broken	1	3	Cs	1	0	0x368a047d69
+Vehicle.cs_savable_utility4_kaukaz_zeya_freight_disabled_interactions	Cs Savable Utility4 Kaukaz Zeya Freight Disabled Interactions	1	3	Cs	1	0	0x45749a56ff
+Vehicle.cs_savable_v_standard25_thorton_merrimac_police	Cs Savable V Standard25 Thorton Merrimac Police	1	3	Cs	1	0	0x37b02cf4c4
+Vehicle.cs_savable_v_standard25_thorton_merrimac_police_siren	Cs Savable V Standard25 Thorton Merrimac Police Siren	1	3	Cs	1	0	0x3d49c4123d
+Vehicle.cs_savable_v_standard3_militech_hellhound_police	Cs Savable V Standard3 Militech Hellhound Police	1	3	Cs	1	0	0x38792efc1e
+Vehicle.cs_savable_v_standard3_militech_hellhound_police_siren	Cs Savable V Standard3 Militech Hellhound Police Siren	1	3	Cs	1	0	0x3efe6603f1
+Vehicle.cs_savable_v_utility4_kaukaz_bratsk_container_dogtown_ow	Cs Savable V Utility4 Kaukaz Bratsk Container Dogtown Ow	1	3	Cs	1	0	0x4043228979
+Vehicle.cs_savable_villefort_alvarado	Cs Savable Villefort Alvarado	1	3	Cs	1	0	0x2546f5b885
+Vehicle.cs_savable_villefort_alvarado_broken	Cs Savable Villefort Alvarado Broken	1	3	Cs	1	0	0x2c0984c776
+Vehicle.cs_savable_villefort_alvarado_disabled_interactions	Cs Savable Villefort Alvarado Disabled Interactions	1	3	Cs	1	0	0x3b29d1e3e7
+Vehicle.cs_savable_villefort_alvarado_mox	Cs Savable Villefort Alvarado Mox	1	3	Cs	1	0	0x29a9200e01
+Vehicle.cs_savable_villefort_alvarado_mox_broken	Cs Savable Villefort Alvarado Mox Broken	1	3	Cs	1	0	0x30764758b8
+Vehicle.cs_savable_villefort_alvarado_mox_disabled_interactions	Cs Savable Villefort Alvarado Mox Disabled Interactions	1	3	Cs	1	0	0x3f0578d1db
+Vehicle.cs_savable_villefort_alvarado_valentinos	Cs Savable Villefort Alvarado Valentinos	1	3	Cs	1	0	0x30d7e21047
+Vehicle.cs_savable_villefort_alvarado_valentinos_broken	Cs Savable Villefort Alvarado Valentinos Broken	1	3	Cs	1	0	0x3770751704
+Vehicle.cs_savable_villefort_alvarado_valentinos_disabled_interactions	Cs Savable Villefort Alvarado Valentinos Disabled Interactions	1	3	Cs	1	0	0x465d9897d6
+Vehicle.cs_savable_villefort_columbus	Cs Savable Villefort Columbus	1	3	Cs	1	0	0x254ff13315
+Vehicle.cs_savable_villefort_columbus_arasaka	Cs Savable Villefort Columbus Arasaka	1	3	Cs	1	0	0x2d03c34306
+Vehicle.cs_savable_villefort_columbus_arasaka_broken	Cs Savable Villefort Columbus Arasaka Broken	1	3	Cs	1	0	0x344d843bea
+Vehicle.cs_savable_villefort_columbus_arasaka_disabled_interactions	Cs Savable Villefort Columbus Arasaka Disabled Interactions	1	3	Cs	1	0	0x43164d64f2
+Vehicle.cs_savable_villefort_columbus_broken	Cs Savable Villefort Columbus Broken	1	3	Cs	1	0	0x2c1ab3bc1b
+Vehicle.cs_savable_villefort_columbus_kangtao	Cs Savable Villefort Columbus Kangtao	1	3	Cs	1	0	0x2d78609f72
+Vehicle.cs_savable_villefort_columbus_kangtao_broken	Cs Savable Villefort Columbus Kangtao Broken	1	3	Cs	1	0	0x34bbe6d15d
+Vehicle.cs_savable_villefort_columbus_kangtao_disabled_interactions	Cs Savable Villefort Columbus Kangtao Disabled Interactions	1	3	Cs	1	0	0x4317eaa433
+Vehicle.cs_savable_villefort_columbus_sixth_street	Cs Savable Villefort Columbus Sixth Street	1	3	Cs	1	0	0x326bce4d5d
+Vehicle.cs_savable_villefort_columbus_sixth_street_broken	Cs Savable Villefort Columbus Sixth Street Broken	1	3	Cs	1	0	0x39505efc8a
+Vehicle.cs_savable_villefort_columbus_sixth_street_disabled_interactions	Cs Savable Villefort Columbus Sixth Street Disabled Interactions	1	3	Cs	1	0	0x48f27c0b90
+Vehicle.cs_savable_villefort_columbus_sts_ep1_12_wst_media	Cs Savable Villefort Columbus Sts Ep1 12 Wst Media	1	3	Cs	1	0	0x3a13279f5f
+Vehicle.cs_savable_villefort_columbus_tyger	Cs Savable Villefort Columbus Tyger	1	3	Cs	1	0	0x2b4de00a8e
+Vehicle.cs_savable_villefort_columbus_tyger_broken	Cs Savable Villefort Columbus Tyger Broken	1	3	Cs	1	0	0x322380be01
+Vehicle.cs_savable_villefort_columbus_tyger_disabled_interactions	Cs Savable Villefort Columbus Tyger Disabled Interactions	1	3	Cs	1	0	0x41c20a235b
+Vehicle.cs_savable_villefort_cortes	Cs Savable Villefort Cortes	1	3	Cs	1	0	0x2303c4d306
+Vehicle.cs_savable_villefort_cortes_broken	Cs Savable Villefort Cortes Broken	1	3	Cs	1	0	0x2ae2c2f1b9
+Vehicle.cs_savable_villefort_cortes_disabled_interactions	Cs Savable Villefort Cortes Disabled Interactions	1	3	Cs	1	0	0x398e5e4d2e
+Vehicle.cs_savable_villefort_cortes_kangtao	Cs Savable Villefort Cortes Kangtao	1	3	Cs	1	0	0x2b40402cfb
+Vehicle.cs_savable_villefort_cortes_kangtao_broken	Cs Savable Villefort Cortes Kangtao Broken	1	3	Cs	1	0	0x32ce68e0ed
+Vehicle.cs_savable_villefort_cortes_kangtao_disabled_interactions	Cs Savable Villefort Cortes Kangtao Disabled Interactions	1	3	Cs	1	0	0x4145768fd8
+Vehicle.cs_savable_villefort_cortes_police	Cs Savable Villefort Cortes Police	1	3	Cs	1	0	0x2ae4150494
+Vehicle.cs_savable_villefort_cortes_police_broken	Cs Savable Villefort Cortes Police Broken	1	3	Cs	1	0	0x316a939553
+Vehicle.cs_savable_villefort_cortes_police_disabled_interactions	Cs Savable Villefort Cortes Police Disabled Interactions	1	3	Cs	1	0	0x40c24e72b8
+Vehicle.cs_savable_villefort_cortes_police_siren	Cs Savable Villefort Cortes Police Siren	1	3	Cs	1	0	0x30ebe87bd0
+Vehicle.cs_savable_villefort_cortes_police_siren_broken	Cs Savable Villefort Cortes Police Siren Broken	1	3	Cs	1	0	0x37c864ff97
+Vehicle.cs_savable_villefort_cortes_police_siren_disabled_interactions	Cs Savable Villefort Cortes Police Siren Disabled Interactions	1	3	Cs	1	0	0x466184bce3
+Vehicle.cs_savable_yaiba_kusanagi	Cs Savable Yaiba Kusanagi	1	3	Cs	1	0	0x21f00b8283
+Vehicle.cs_savable_yaiba_kusanagi_broken	Cs Savable Yaiba Kusanagi Broken	1	3	Cs	1	0	0x2800a829fd
+Vehicle.cs_savable_yaiba_kusanagi_disabled_interactions	Cs Savable Yaiba Kusanagi Disabled Interactions	1	3	Cs	1	0	0x37c9fa4876
+Vehicle.cs_savable_yaiba_kusanagi_traffic_test	Cs Savable Yaiba Kusanagi Traffic Test	1	3	Cs	1	0	0x2ed653f590
+Vehicle.cs_v_sport1_rayfield_aerondight_disabled_interactions	Cs V Sport1 Rayfield Aerondight Disabled Interactions	1	3	Cs	1	0	0x3def3ec3f3
+Vehicle.cs_v_sport2_mizutani_shion_nomad	Cs V Sport2 Mizutani Shion Nomad	1	3	Cs	1	0	0x288d8b61b7
+Vehicle.cs_v_sport2_mizutani_shion_nomad_broken	Cs V Sport2 Mizutani Shion Nomad Broken	1	3	Cs	1	0	0x2fe4e70943
+Vehicle.cs_v_sport2_mizutani_shion_nomad_disabled_interactions	Cs V Sport2 Mizutani Shion Nomad Disabled Interactions	1	3	Cs	1	0	0x3ebaa305b8
+Vehicle.cs_v_sport2_mizutani_shion_nomad_wraith	Cs V Sport2 Mizutani Shion Nomad Wraith	1	3	Cs	1	0	0x2fee1dbf13
+Vehicle.cs_v_sport2_mizutani_shion_nomad_wraith_broken	Cs V Sport2 Mizutani Shion Nomad Wraith Broken	1	3	Cs	1	0	0x3608e2093c
+Vehicle.cs_v_sport2_mizutani_shion_nomad_wraith_disabled_interactions	Cs V Sport2 Mizutani Shion Nomad Wraith Disabled Interactions	1	3	Cs	1	0	0x45b8c7e1f3
+Vehicle.cs_v_standard2_thorton_galena_nomad	Cs V Standard2 Thorton Galena Nomad	1	3	Cs	1	0	0x2bfa8fa32e
+Vehicle.cs_v_standard2_thorton_galena_nomad_broken	Cs V Standard2 Thorton Galena Nomad Broken	1	3	Cs	1	0	0x32c1ffbbf6
+Vehicle.cs_v_standard2_thorton_galena_nomad_disabled_interactions	Cs V Standard2 Thorton Galena Nomad Disabled Interactions	1	3	Cs	1	0	0x41ac595cfd
+Vehicle.cvi_02_ps_objective_van	Cvi 02 Ps Objective Van	1	3	Cvi	1	0	0x1fdff806c8
+Vehicle.de_pac_wwd_04_galena	De Pac Wwd 04 Galena	1	3	De	1	0	0x1cb9586475
+Vehicle.destruction_galena_test	Destruction Galena Test	1	3	Destruction	1	0	0x1f2f0afcd1
+Vehicle.e319_galena_always_visible	E319 Galena Always Visible	1	3	E319	1	0	0x22fd6854c6
+Vehicle.e319_makigai_maimai	E319 Makigai Maimai	1	3	E319	1	0	0x1b697c18eb
+Vehicle.e319_mizutani_shion	E319 Mizutani Shion	1	3	E319	1	0	0x1be1018a53
+Vehicle.e319_thorton_colby	E319 Thorton Colby	1	3	E319	1	0	0x1a3cac27ca
+Vehicle.e319_thorton_galena	E319 Thorton Galena	1	3	E319	1	0	0x1bb75757ae
+Vehicle.e319_villefort_alvarado	E319 Villefort Alvarado	1	3	E319	1	0	0x1f721f44d3
+Vehicle.e319_yaiba_kusanagi	E319 Yaiba Kusanagi	1	3	E319	1	0	0x1be036bd5f
+Vehicle.ep1_cs_savable_herrera_riptide	Ep1 Cs Savable Herrera Riptide	1	3	Ep1	1	0	0x26e5a3bf71
+Vehicle.ep1_cs_savable_makigai_tanishi	Ep1 Cs Savable Makigai Tanishi	1	3	Ep1	1	0	0x26e82f7e64
+Vehicle.ep1_cs_savable_mizutani_hozuki	Ep1 Cs Savable Mizutani Hozuki	1	3	Ep1	1	0	0x2611fbe897
+Vehicle.ep1_cs_savable_quadra_sport_r7	Ep1 Cs Savable Quadra Sport R7	1	3	Ep1	1	0	0x26da8ab3b6
+Vehicle.ep1_cs_savable_thorton_merrimac	Ep1 Cs Savable Thorton Merrimac	1	3	Ep1	1	0	0x2785c77e16
+Vehicle.ep1_cs_savable_villefort_alvarado_hearse	Ep1 Cs Savable Villefort Alvarado Hearse	1	3	Ep1	1	0	0x303ccf6067
+Vehicle.ep1_cs_savable_villefort_deleon	Ep1 Cs Savable Villefort Deleon	1	3	Ep1	1	0	0x2748c71441
+Vehicle.ep1_hackable_archer_hella_kurtz	Ep1 Hackable Archer Hella Kurtz	1	3	Ep1	1	0	0x2712a7ee20
+Vehicle.ep1_hackable_herrera_riptide	Ep1 Hackable Herrera Riptide	1	3	Ep1	1	0	0x2442363f12
+Vehicle.ep1_hackable_kaukaz_zeya_kurtz	Ep1 Hackable Kaukaz Zeya Kurtz	1	3	Ep1	1	0	0x26268fec57
+Vehicle.ep1_hackable_mahir_supron_kurtz	Ep1 Hackable Mahir Supron Kurtz	1	3	Ep1	1	0	0x27fb83a351
+Vehicle.ep1_hackable_makigai_tanishi	Ep1 Hackable Makigai Tanishi	1	3	Ep1	1	0	0x244fbafe07
+Vehicle.ep1_hackable_militech_behemoth_kurtz	Ep1 Hackable Militech Behemoth Kurtz	1	3	Ep1	1	0	0x2c99a39baa
+Vehicle.ep1_hackable_mizutani_hozuki	Ep1 Hackable Mizutani Hozuki	1	3	Ep1	1	0	0x24b66e68f4
+Vehicle.ep1_hackable_quadra_sport_r7	Ep1 Hackable Quadra Sport R7	1	3	Ep1	1	0	0x247d1f33d5
+Vehicle.ep1_hackable_thorton_colby_pickup_kurtz	Ep1 Hackable Thorton Colby Pickup Kurtz	1	3	Ep1	1	0	0x2f86ffc667
+Vehicle.ep1_hackable_thorton_merrimac	Ep1 Hackable Thorton Merrimac	1	3	Ep1	1	0	0x2551dbdb74
+Vehicle.ep1_hackable_villefort_alvarado_hearse	Ep1 Hackable Villefort Alvarado Hearse	1	3	Ep1	1	0	0x2e8526882e
+Vehicle.ep1_hackable_villefort_deleon	Ep1 Hackable Villefort Deleon	1	3	Ep1	1	0	0x259cdbb123
+Vehicle.hackable_arch	Hackable Arch	1	3	Hackable	1	0	0x1511d7655c
+Vehicle.hackable_archer_hella	Hackable Archer Hella	1	3	Hackable	1	0	0x1de5306164
+Vehicle.hackable_archer_hella_police_siren	Hackable Archer Hella Police Siren	1	3	Hackable	1	0	0x2a1e74ba66
+Vehicle.hackable_archer_hella_sixth_street	Hackable Archer Hella Sixth Street	1	3	Hackable	1	0	0x2a02b14567
+Vehicle.hackable_archer_quartz	Hackable Archer Quartz	1	3	Hackable	1	0	0x1ebfb696ed
+Vehicle.hackable_archer_quartz_mox	Hackable Archer Quartz Mox	1	3	Hackable	1	0	0x227a54ec79
+Vehicle.hackable_archer_quartz_nomad_quest	Hackable Archer Quartz Nomad Quest	1	3	Hackable	1	0	0x2a52a037fa
+Vehicle.hackable_archer_quartz_tyger	Hackable Archer Quartz Tyger	1	3	Hackable	1	0	0x24bfe19248
+Vehicle.hackable_brennan_apollo	Hackable Brennan Apollo	1	3	Hackable	1	0	0x1f78b353ec
+Vehicle.hackable_chevalier_emperor	Hackable Chevalier Emperor	1	3	Hackable	1	0	0x22a82a6109
+Vehicle.hackable_chevalier_emperor_police_siren	Hackable Chevalier Emperor Police Siren	1	3	Hackable	1	0	0x2f70b61019
+Vehicle.hackable_chevalier_thrax	Hackable Chevalier Thrax	1	3	Hackable	1	0	0x2084bd5314
+Vehicle.hackable_chevalier_thrax_maelstrom	Hackable Chevalier Thrax Maelstrom	1	3	Hackable	1	0	0x2a344cf5d7
+Vehicle.hackable_chevalier_thrax_sixth_street	Hackable Chevalier Thrax Sixth Street	1	3	Hackable	1	0	0x2dc20786ae
+Vehicle.hackable_chevalier_thrax_valentino	Hackable Chevalier Thrax Valentino	1	3	Hackable	1	0	0x2ad75872af
+Vehicle.hackable_herrera_outlaw	Hackable Herrera Outlaw	1	3	Hackable	1	0	0x1fd82134e0
+Vehicle.hackable_kaukaz_bratsk	Hackable Kaukaz Bratsk	1	3	Hackable	1	0	0x1ecb0c5657
+Vehicle.hackable_kaukaz_bratsk_containers	Hackable Kaukaz Bratsk Containers	1	3	Hackable	1	0	0x29d690c2ae
+Vehicle.hackable_kaukaz_bratsk_metalstud	Hackable Kaukaz Bratsk Metalstud	1	3	Hackable	1	0	0x28e82f53eb
+Vehicle.hackable_kaukaz_zeya	Hackable Kaukaz Zeya	1	3	Hackable	1	0	0x1c3edee43e
+Vehicle.hackable_kaukaz_zeya_container	Hackable Kaukaz Zeya Container	1	3	Hackable	1	0	0x267015954b
+Vehicle.hackable_kaukaz_zeya_full	Hackable Kaukaz Zeya Full	1	3	Hackable	1	0	0x213c847774
+Vehicle.hackable_mahir_mt28_coach	Hackable Mahir Mt28 Coach	1	3	Hackable	1	0	0x21f764595a
+Vehicle.hackable_mahir_supron	Hackable Mahir Supron	1	3	Hackable	1	0	0x1dc252f00e
+Vehicle.hackable_mahir_voodoo_boys	Hackable Mahir Voodoo Boys	1	3	Hackable	1	0	0x2275bcc2b5
+Vehicle.hackable_makigai_maimai	Hackable Makigai Maimai	1	3	Hackable	1	0	0x1f4316599a
+Vehicle.hackable_militech_behemoth	Hackable Militech Behemoth	1	3	Hackable	1	0	0x223247eba2
+Vehicle.hackable_militech_hellhound_police_siren	Hackable Militech Hellhound Police Siren	1	3	Hackable	1	0	0x306cd79ac8
+Vehicle.hackable_mizutani_shion	Hackable Mizutani Shion	1	3	Hackable	1	0	0x1fcb6bcb22
+Vehicle.hackable_mizutani_shion_nomad	Hackable Mizutani Shion Nomad	1	3	Hackable	1	0	0x25da17e678
+Vehicle.hackable_mizutani_shion_nomad_wraith	Hackable Mizutani Shion Nomad Wraith	1	3	Hackable	1	0	0x2c95d1891b
+Vehicle.hackable_mizutani_shion_tyger	Hackable Mizutani Shion Tyger	1	3	Hackable	1	0	0x25181a949b
+Vehicle.hackable_quadra_turbo	Hackable Quadra Turbo	1	3	Hackable	1	0	0x1d9810a7bc
+Vehicle.hackable_quadra_turbo_tc	Hackable Quadra Turbo Tc	1	3	Hackable	1	0	0x2037fc0129
+Vehicle.hackable_quadra_turbo_tyger_claw	Hackable Quadra Turbo Tyger Claw	1	3	Hackable	1	0	0x284803325b
+Vehicle.hackable_quadra_type66_nomad	Hackable Quadra Type66 Nomad	1	3	Hackable	1	0	0x244349e10c
+Vehicle.hackable_rayfield_caliburn	Hackable Rayfield Caliburn	1	3	Hackable	1	0	0x225b762642
+Vehicle.hackable_thorton_colby	Hackable Thorton Colby	1	3	Hackable	1	0	0x1e39c6c231
+Vehicle.hackable_thorton_colby_nomad	Hackable Thorton Colby Nomad	1	3	Hackable	1	0	0x245b04925a
+Vehicle.hackable_thorton_colby_valentinos	Hackable Thorton Colby Valentinos	1	3	Hackable	1	0	0x29bb17773c
+Vehicle.hackable_thorton_galena	Hackable Thorton Galena	1	3	Hackable	1	0	0x1f9d3d16df
+Vehicle.hackable_thorton_galena_gt	Hackable Thorton Galena Gt	1	3	Hackable	1	0	0x222750738c
+Vehicle.hackable_thorton_galena_maelstrom	Hackable Thorton Galena Maelstrom	1	3	Hackable	1	0	0x29816b1a0e
+Vehicle.hackable_thorton_galena_nomad	Hackable Thorton Galena Nomad	1	3	Hackable	1	0	0x258429552b
+Vehicle.hackable_thorton_galena_voodoo_boys	Hackable Thorton Galena Voodoo Boys	1	3	Hackable	1	0	0x2bc1cca4aa
+Vehicle.hackable_thorton_mackinaw	Hackable Thorton Mackinaw	1	3	Hackable	1	0	0x21480732c2
+Vehicle.hackable_thorton_mackinaw_sixth_street	Hackable Thorton Mackinaw Sixth Street	1	3	Hackable	1	0	0x2ea752a35a
+Vehicle.hackable_thorton_mackinaw_valentinos	Hackable Thorton Mackinaw Valentinos	1	3	Hackable	1	0	0x2c743c7ccd
+Vehicle.hackable_thorton_merrimac_police_siren	Hackable Thorton Merrimac Police Siren	1	3	Hackable	1	0	0x2eb1ac4f20
+Vehicle.hackable_utility4_kaukaz_zeya_freight	Hackable Utility4 Kaukaz Zeya Freight	1	3	Hackable	1	0	0x2d0ec685e4
+Vehicle.hackable_villefort_alvarado	Hackable Villefort Alvarado	1	3	Hackable	1	0	0x23946d2e26
+Vehicle.hackable_villefort_alvarado_mox	Hackable Villefort Alvarado Mox	1	3	Hackable	1	0	0x27de25cf42
+Vehicle.hackable_villefort_alvarado_valentinos	Hackable Villefort Alvarado Valentinos	1	3	Hackable	1	0	0x2e46bda5e7
+Vehicle.hackable_villefort_columbus	Hackable Villefort Columbus	1	3	Hackable	1	0	0x239d69a5b6
+Vehicle.hackable_villefort_columbus_arasaka	Hackable Villefort Columbus Arasaka	1	3	Hackable	1	0	0x2ba9195878
+Vehicle.hackable_villefort_columbus_kangtao	Hackable Villefort Columbus Kangtao	1	3	Hackable	1	0	0x2bd2ba840c
+Vehicle.hackable_villefort_columbus_sixth_street	Hackable Villefort Columbus Sixth Street	1	3	Hackable	1	0	0x307ec227e8
+Vehicle.hackable_villefort_columbus_tyger	Hackable Villefort Columbus Tyger	1	3	Hackable	1	0	0x297ad7936b
+Vehicle.hackable_villefort_cortes	Hackable Villefort Cortes	1	3	Hackable	1	0	0x21afd077ce
+Vehicle.hackable_villefort_cortes_kangtao	Hackable Villefort Cortes Kangtao	1	3	Hackable	1	0	0x297777b51e
+Vehicle.hackable_villefort_cortes_police	Hackable Villefort Cortes Police	1	3	Hackable	1	0	0x280bb7117f
+Vehicle.hackable_villefort_cortes_police_siren	Hackable Villefort Cortes Police Siren	1	3	Hackable	1	0	0x2e7ab7ce70
+Vehicle.hackable_yaiba_kusanagi	Hackable Yaiba Kusanagi	1	3	Hackable	1	0	0x1fca5cfc2e
+Vehicle.hackablequadra_type66	Hackablequadra Type66	1	3	Hackablequadra	1	0	0x1d88167134
+Vehicle.hil_06_objective_car	Hil 06 Objective Car	1	3	Hil	1	0	0x1c061c8a58
+Vehicle.ina_04_antenna_car	Ina 04 Antenna Car	1	3	Ina	1	0	0x1adb5ec9c6
+Vehicle.jackie_bike	Jackie Bike	1	3	Jackie	1	0	0x13894af032
+Vehicle.johnny_car	Johnny Car	1	3	Johnny	1	0	0x124444487d
+Vehicle.jpn_01_gift_car	Jpn 01 Gift Car	1	3	Jpn	1	0	0x17fa0ef692
+Vehicle.judy_van	Judy Van	1	3	Judy	1	0	0x10c5f5edb4
+Vehicle.kab_02_backup_galena	Kab 02 Backup Galena	1	3	Kab	1	0	0x1c2e6fb53e
+Vehicle.kab_02_backup_thrax	Kab 02 Backup Thrax	1	3	Kab	1	0	0x1b089a93cd
+Vehicle.kerry_vehicle	Kerry Vehicle	1	3	Kerry	1	0	0x15e3de03cd
+Vehicle.kerry_vehicle_sq017	Kerry Vehicle Sq017	1	3	Kerry	1	0	0x1bfc99d6a3
+Vehicle.kurtz_brennan_apollo_bike	Kurtz Brennan Apollo Bike	1	3	Kurtz	1	0	0x21216b8319
+Vehicle.kurtz_mahir_supron_heat_3	Kurtz Mahir Supron Heat 3	1	3	Kurtz	1	0	0x2150bf6688
+Vehicle.kurtz_mahir_supron_heat_3_cd	Kurtz Mahir Supron Heat 3 Cd	1	3	Kurtz	1	0	0x241bf105ee
+Vehicle.kurtz_thorton_1	Kurtz Thorton 1	1	3	Kurtz	1	0	0x170f714da8
+Vehicle.kurtz_thorton_2	Kurtz Thorton 2	1	3	Kurtz	1	0	0x1796781c12
+Vehicle.kurtz_thorton_no_hull_1	Kurtz Thorton No Hull 1	1	3	Kurtz	1	0	0x1f83900264
+Vehicle.ma_bls_ina_se1_08_trapped_car	Ma Bls Ina Se1 08 Trapped Car	1	3	Ma	1	0	0x254a255164
+Vehicle.ma_bls_ina_se1_22_wraith_car	Ma Bls Ina Se1 22 Wraith Car	1	3	Ma	1	0	0x24b956acab
+Vehicle.ma_cct_dtn_03_scavenger_van	Ma Cct Dtn 03 Scavenger Van	1	3	Ma	1	0	0x2379938353
+Vehicle.ma_hey_spr_12_trauma_av	Ma Hey Spr 12 Trauma Av	1	3	Ma	1	0	0x1fe48ad39b
+Vehicle.ma_hey_spr_12_trauma_av_engine_on	Ma Hey Spr 12 Trauma Av Engine On	1	3	Ma	1	0	0x293d4a667b
+Vehicle.ma_pac_cvi_08_archer	Ma Pac Cvi 08 Archer	1	3	Ma	1	0	0x1c1d444957
+Vehicle.ma_pac_cvi_08_av_atlus	Ma Pac Cvi 08 Av Atlus	1	3	Ma	1	0	0x1e549daf1d
+Vehicle.ma_pac_cvi_08_av_valgus	Ma Pac Cvi 08 Av Valgus	1	3	Ma	1	0	0x1f8777c434
+Vehicle.ma_pac_cvi_08_bike_arch	Ma Pac Cvi 08 Bike Arch	1	3	Ma	1	0	0x1fa264e998
+Vehicle.ma_pac_cvi_08_bike_kusanagi	Ma Pac Cvi 08 Bike Kusanagi	1	3	Ma	1	0	0x231055d608
+Vehicle.ma_pac_cvi_08_crash_car	Ma Pac Cvi 08 Crash Car	1	3	Ma	1	0	0x1f3474d7d5
+Vehicle.ma_pac_cvi_08_quadra	Ma Pac Cvi 08 Quadra	1	3	Ma	1	0	0x1c8e9c637b
+Vehicle.ma_pac_cvi_08_shion	Ma Pac Cvi 08 Shion	1	3	Ma	1	0	0x1b0cb3fac4
+Vehicle.ma_pac_cvi_08_van	Ma Pac Cvi 08 Van	1	3	Ma	1	0	0x19cd2538c6
+Vehicle.ma_wat_lch_03_garbage_truck	Ma Wat Lch 03 Garbage Truck	1	3	Ma	1	0	0x2324b86ff7
+Vehicle.mahir_poor_open_trunk_open_right_door	Mahir Poor Open Trunk Open Right Door	1	3	Mahir	1	0	0x2df72116fa
+Vehicle.max_tac_av	Max Tac Av	1	3	Max	1	0	0x127ec97511
+Vehicle.max_tac_av1	Max Tac Av1	1	3	Max	1	0	0x13e9120630
+Vehicle.max_tac_av2	Max Tac Av2	1	3	Max	1	0	0x13701b578a
+Vehicle.max_tac_av3	Max Tac Av3	1	3	Max	1	0	0x13071c671c
+Vehicle.max_tac_av_2nd_wave1	Max Tac Av 2Nd Wave1	1	3	Max	1	0	0x1c96b4811f
+Vehicle.max_tac_av_2nd_wave2	Max Tac Av 2Nd Wave2	1	3	Max	1	0	0x1c0fbdd0a5
+Vehicle.max_tac_av_2nd_wave3	Max Tac Av 2Nd Wave3	1	3	Max	1	0	0x1c78bae033
+Vehicle.mitch_vehicle	Mitch Vehicle	1	3	Mitch	1	0	0x15dd53e736
+Vehicle.mq001_little_bombus	Mq001 Little Bombus	1	3	Mq001	1	0	0x1bdd344bb0
+Vehicle.mq001_scorpion_vehicle	Mq001 Scorpion Vehicle	1	3	Mq001	1	0	0x1ee78071e0
+Vehicle.mq005_police_car	Mq005 Police Car	1	3	Mq005	1	0	0x18ff10bfef
+Vehicle.mq006_rollercoaster_cart	Mq006 Rollercoaster Cart	1	3	Mq006	1	0	0x20a389c35e
+Vehicle.mq013_bike	Mq013 Bike	1	3	Mq013	1	0	0x1219bfb2a0
+Vehicle.mq017_delivery_truck	Mq017 Delivery Truck	1	3	Mq017	1	0	0x1c950bde3c
+Vehicle.mq026_maelstrom_car	Mq026 Maelstrom Car	1	3	Mq026	1	0	0x1be81b0d8c
+Vehicle.mq026_mib_van	Mq026 Mib Van	1	3	Mq026	1	0	0x15e8ea1006
+Vehicle.mq027_news_av	Mq027 News Av	1	3	Mq027	1	0	0x15dfaf33ee
+Vehicle.mq030_max_tac_av	Mq030 Max Tac Av	1	3	Mq030	1	0	0x18881bd155
+Vehicle.mq038_contact_car	Mq038 Contact Car	1	3	Mq038	1	0	0x19b613c51c
+Vehicle.mq056_discount_courier_car	Mq056 Discount Courier Car	1	3	Mq056	1	0	0x2203543ccb
+Vehicle.mq057_semimaru_car	Mq057 Semimaru Car	1	3	Mq057	1	0	0x1a11517975
+Vehicle.mq059_gang_car	Mq059 Gang Car	1	3	Mq059	1	0	0x164028b730
+Vehicle.mq060_yaiba_muramasa_aggresive	Mq060 Yaiba Muramasa Aggresive	1	3	Mq060	1	0	0x26ca6bdcee
+Vehicle.mq060_yaiba_muramasa_designerfavorite	Mq060 Yaiba Muramasa Designerfavorite	1	3	Mq060	1	0	0x2df9770969
+Vehicle.mq060_yaiba_muramasa_jackofalltrades	Mq060 Yaiba Muramasa Jackofalltrades	1	3	Mq060	1	0	0x2c38d812a8
+Vehicle.mq060_yaiba_muramasa_lowkeypredator	Mq060 Yaiba Muramasa Lowkeypredator	1	3	Mq060	1	0	0x2b9ea24591
+Vehicle.mq060_yaiba_muramasa_minimalist	Mq060 Yaiba Muramasa Minimalist	1	3	Mq060	1	0	0x27a035f12f
+Vehicle.mq060_yaiba_muramasa_showoff	Mq060 Yaiba Muramasa Showoff	1	3	Mq060	1	0	0x246cc4fd2f
+Vehicle.mq060_yaiba_muramasa_yaibabrandclassic	Mq060 Yaiba Muramasa Yaibabrandclassic	1	3	Mq060	1	0	0x2e904ac9a2
+Vehicle.mq301_kurt_delivery_car	Mq301 Kurt Delivery Car	1	3	Mq301	1	0	0x1f1513e58b
+Vehicle.mq301_kurt_protection_car	Mq301 Kurt Protection Car	1	3	Mq301	1	0	0x21c07d0145
+Vehicle.mq301_paco_transport_car	Mq301 Paco Transport Car	1	3	Mq301	1	0	0x20eac8fe40
+Vehicle.mq301_scav_delivery_bike_brennan_apollo	Mq301 Scav Delivery Bike Brennan Apollo	1	3	Mq301	1	0	0x2fb09f5868
+Vehicle.mq301_scav_delivery_car_colby	Mq301 Scav Delivery Car Colby	1	3	Mq301	1	0	0x2522e905c6
+Vehicle.mq301_scav_delivery_car_columbus	Mq301 Scav Delivery Car Columbus	1	3	Mq301	1	0	0x28136ea47a
+Vehicle.mq301_scav_delivery_car_cortes	Mq301 Scav Delivery Car Cortes	1	3	Mq301	1	0	0x262731e3b8
+Vehicle.mq301_scav_delivery_car_galena	Mq301 Scav Delivery Car Galena	1	3	Mq301	1	0	0x26beff5ea7
+Vehicle.mq303_lina_bike	Mq303 Lina Bike	1	3	Mq303	1	0	0x17a4c3d8ab
+Vehicle.mq304_core_transport	Mq304 Core Transport	1	3	Mq304	1	0	0x1c25ef787d
+Vehicle.mws_archer_hella_sixth_street_broken	Mws Archer Hella Sixth Street Broken	1	3	Mws	1	0	0x2c3126910f
+Vehicle.mws_arr_01_av	Mws Arr 01 Av	1	3	Mws	1	0	0x15e64befc5
+Vehicle.mws_arr_07_av	Mws Arr 07 Av	1	3	Mws	1	0	0x15c320b019
+Vehicle.mws_brennan_apollo	Mws Brennan Apollo	1	3	Mws	1	0	0x1a455d6719
+Vehicle.mws_cct_dtn_02_arasaka_car	Mws Cct Dtn 02 Arasaka Car	1	3	Mws	1	0	0x22a68d1c07
+Vehicle.mws_chevalier_thrax	Mws Chevalier Thrax	1	3	Mws	1	0	0x1b4957bbb3
+Vehicle.mws_kurtz_brennan_apollo	Mws Kurtz Brennan Apollo	1	3	Mws	1	0	0x2063d28db2
+Vehicle.mws_mahir_supron_kurtz	Mws Mahir Supron Kurtz	1	3	Mws	1	0	0x1ed9b1181d
+Vehicle.mws_mahir_voodoo_boys	Mws Mahir Voodoo Boys	1	3	Mws	1	0	0x1d3a2b4f3b
+Vehicle.mws_makigai_maimai	Mws Makigai Maimai	1	3	Mws	1	0	0x1a7ef86d6f
+Vehicle.mws_pac_06_trauma_av	Mws Pac 06 Trauma Av	1	3	Mws	1	0	0x1ca3d13506
+Vehicle.mws_se5_02_car	Mws Se5 02 Car	1	3	Mws	1	0	0x160ee41dfc
+Vehicle.mws_se5_06_netwatch_car	Mws Se5 06 Netwatch Car	1	3	Mws	1	0	0x1f2ac0f59c
+Vehicle.mws_se5_06_netwatch_truck	Mws Se5 06 Netwatch Truck	1	3	Mws	1	0	0x215069de68
+Vehicle.mws_se5_06_netwatch_van	Mws Se5 06 Netwatch Van	1	3	Mws	1	0	0x1f242cc848
+Vehicle.mws_se5_08_netwatch_car	Mws Se5 08 Netwatch Car	1	3	Mws	1	0	0x1fe15ba01c
+Vehicle.mws_standard25_thorton_kurtz	Mws Standard25 Thorton Kurtz	1	3	Mws	1	0	0x244e9496d0
+Vehicle.mws_thenerves_quadra_1_sm	Mws Thenerves Quadra 1 Sm	1	3	Mws	1	0	0x21bb6db8dc
+Vehicle.mws_thenerves_quadra_2_sm	Mws Thenerves Quadra 2 Sm	1	3	Mws	1	0	0x21a9d81732
+Vehicle.mws_thorton_mackinaw_country_poor	Mws Thorton Mackinaw Country Poor	1	3	Mws	1	0	0x29bed61d33
+Vehicle.mws_voodoo_galena	Mws Voodoo Galena	1	3	Mws	1	0	0x1921c6aaee
+Vehicle.mws_wbr_06_tyger_car_1	Mws Wbr 06 Tyger Car 1	1	3	Mws	1	0	0x1eec49a932
+Vehicle.mws_wbr_06_tyger_car_2	Mws Wbr 06 Tyger Car 2	1	3	Mws	1	0	0x1e7540f888
+Vehicle.ncpd_archer_hella_heat_2	Archer Hella Heat 2	2	5	Archer	1	0	0x20adeb2604
+Vehicle.ncpd_archer_hella_heat_3	Archer Hella Heat 3	2	5	Archer	1	0	0x20daec1692
+Vehicle.ncpd_brennan_apollo_bike	Brennan Apollo Bike	2	5	Brennan	1	0	0x208cd396e4
+Vehicle.ncpd_hellhound_heat_5	Hellhound Heat 5	2	5	Hellhound	1	0	0x1d562e8e4a
+Vehicle.ncpd_suv_chevalier_emperor_heat_4	Suv Chevalier Emperor Heat 4	2	5	Suv	1	0	0x2945075d4e
+Vehicle.ncpd_suv_thorton_merrimac_maxtac	Suv Thorton Merrimac Maxtac	2	5	Suv	1	0	0x285dfd77ab
+Vehicle.ncpd_thorton_merrimac_police_heat_4	Thorton Merrimac Police Heat 4	2	5	Thorton	1	0	0x2b36e4c80d
+Vehicle.ncpd_villefort_cortes_heat_1	Villefort Cortes Heat 1	2	5	Villefort	1	0	0x249d9b7634
+Vehicle.ncpd_villefort_cortes_heat_2	Villefort Cortes Heat 2	2	5	Villefort	1	0	0x240492278e
+Vehicle.nid_02_objective_van	Nid 02 Objective Van	1	3	Nid	1	0	0x1c11fee136
+Vehicle.ow_fixer_car_dino	Ow Fixer Car Dino	1	3	Ow	1	0	0x19f97caac1
+Vehicle.ow_fixer_car_muamar	Ow Fixer Car Muamar	1	3	Ow	1	0	0x1bbe2ee2ff
+Vehicle.ow_fixer_car_regina	Ow Fixer Car Regina	1	3	Ow	1	0	0x1b0d0a6f22
+Vehicle.ow_fixer_car_rouge	Ow Fixer Car Rouge	1	3	Ow	1	0	0x1a11210fb1
+Vehicle.ow_fixer_car_wakako	Ow Fixer Car Wakako	1	3	Ow	1	0	0x1b764d6f13
+Vehicle.panam_army_truck	Panam Army Truck	1	3	Panam	1	0	0x185ae5c85b
+Vehicle.panam_panzer	Panam Panzer	1	3	Panam	1	0	0x149b982875
+Vehicle.panam_panzer_q202	Panam Panzer Q202	1	3	Panam	1	0	0x19aa9d6c84
+Vehicle.panam_vehicle	Panam Vehicle	1	3	Panam	1	0	0x152a4f5e51
+Vehicle.ps_interceptor	Ps Interceptor	1	3	Ps	1	0	0x162fc4951a
+Vehicle.q000_arasaka_av	Q000 Arasaka Av	1	3	Q000	1	0	0x174191dcbb
+Vehicle.q000_arasaka_chase_car	Q000 Arasaka Chase Car	1	3	Q000	1	0	0x1eb85cc26f
+Vehicle.q000_arasaka_lux_av	Q000 Arasaka Lux Av	1	3	Q000	1	0	0x1bf1f01691
+Vehicle.q000_car_custom_scenes	Q000 Car Custom Scenes	1	3	Q000	1	0	0x1e88be6258
+Vehicle.q000_hym_player_car	Q000 Hym Player Car	1	3	Q000	1	0	0x1bb3554fe8
+Vehicle.q000_kid_6thstreet_car	Q000 Kid 6Thstreet Car	1	3	Q000	1	0	0x1e9f59b8e8
+Vehicle.q000_kid_av_garbage	Q000 Kid Av Garbage	1	3	Q000	1	0	0x1bff63e6d8
+Vehicle.q000_kid_corporate_car	Q000 Kid Corporate Car	1	3	Q000	1	0	0x1e1ec8c587
+Vehicle.q000_kid_padre_car	Q000 Kid Padre Car	1	3	Q000	1	0	0x1a9c9b8be5
+Vehicle.q000_kid_police_car	Q000 Kid Police Car	1	3	Q000	1	0	0x1b2755eb2d
+Vehicle.q000_kid_police_car_lights	Q000 Kid Police Car Lights	1	3	Q000	1	0	0x22de70314a
+Vehicle.q000_kid_police_car_lights_02	Q000 Kid Police Car Lights 02	1	3	Q000	1	0	0x256465a9aa
+Vehicle.q000_lizzies_wealthy_client_car_01	Q000 Lizzies Wealthy Client Car 01	1	3	Q000	1	0	0x2ae232122f
+Vehicle.q000_lizzies_wealthy_client_car_02	Q000 Lizzies Wealthy Client Car 02	1	3	Q000	1	0	0x2a7b3b4395
+Vehicle.q000_lizzies_wealthy_client_car_03	Q000 Lizzies Wealthy Client Car 03	1	3	Q000	1	0	0x2a0c3c7303
+Vehicle.q000_lizzies_wealthy_client_car_04	Q000 Lizzies Wealthy Client Car 04	1	3	Q000	1	0	0x2a9258e6a0
+Vehicle.q000_nomad_border_patrol_heli	Q000 Nomad Border Patrol Heli	1	3	Q000	1	0	0x25bb8f7f44
+Vehicle.q000_nomad_chase_cargo_av	Q000 Nomad Chase Cargo Av	1	3	Q000	1	0	0x217277f795
+Vehicle.q000_nomad_drone	Q000 Nomad Drone	1	3	Q000	1	0	0x18f5c49d82
+Vehicle.q000_nomad_v_sport1_herrera_outlaw_quest	Q000 Nomad V Sport1 Herrera Outlaw Quest	1	3	Q000	1	0	0x303c8fc402
+Vehicle.q000_nomad_v_sport1_quadra_turbo_quest	Q000 Nomad V Sport1 Quadra Turbo Quest	1	3	Q000	1	0	0x2e2a76620c
+Vehicle.q000_nomad_v_sport1_rayfield_aerondight_quest	Q000 Nomad V Sport1 Rayfield Aerondight Quest	1	3	Q000	1	0	0x35664ac9f6
+Vehicle.q000_nomad_v_sport1_rayfield_caliburn_quest	Q000 Nomad V Sport1 Rayfield Caliburn Quest	1	3	Q000	1	0	0x33fe9f6d52
+Vehicle.q000_nomad_v_sport2_mizutani_shion_nomad_quest	Q000 Nomad V Sport2 Mizutani Shion Nomad Quest	1	3	Q000	1	0	0x36578c5371
+Vehicle.q000_nomad_v_sport2_mizutani_shion_quest	Q000 Nomad V Sport2 Mizutani Shion Quest	1	3	Q000	1	0	0x30797ab401
+Vehicle.q000_nomad_v_sport2_porsche_911turbo_quest	Q000 Nomad V Sport2 Porsche 911Turbo Quest	1	3	Q000	1	0	0x3245f9f444
+Vehicle.q000_nomad_v_sport2_quadra_type66_nomad_quest	Q000 Nomad V Sport2 Quadra Type66 Nomad Quest	1	3	Q000	1	0	0x35a0436a3c
+Vehicle.q000_nomad_v_sport2_quadra_type66_quest	Q000 Nomad V Sport2 Quadra Type66 Quest	1	3	Q000	1	0	0x2f06f4f0f6
+Vehicle.q000_nomad_v_sport2_villefort_alvarado_quest	Q000 Nomad V Sport2 Villefort Alvarado Quest	1	3	Q000	1	0	0x3430ed7471
+Vehicle.q000_nomad_v_standard25_mahir_supron_quest	Q000 Nomad V Standard25 Mahir Supron Quest	1	3	Q000	1	0	0x327b3194fb
+Vehicle.q000_nomad_v_standard25_thorton_colby_nomad_quest	Q000 Nomad V Standard25 Thorton Colby Nomad Quest	1	3	Q000	1	0	0x3958f72eb0
+Vehicle.q000_nomad_v_standard25_thorton_colby_pickup_quest	Q000 Nomad V Standard25 Thorton Colby Pickup Quest	1	3	Q000	1	0	0x3a8e19f45a
+Vehicle.q000_nomad_v_standard25_villefort_columbus_quest	Q000 Nomad V Standard25 Villefort Columbus Quest	1	3	Q000	1	0	0x3889641967
+Vehicle.q000_nomad_v_standard2_archer_hella_quest	Q000 Nomad V Standard2 Archer Hella Quest	1	3	Q000	1	0	0x31f6ee36ef
+Vehicle.q000_nomad_v_standard2_archer_quartz_nomad_quest	Q000 Nomad V Standard2 Archer Quartz Nomad Quest	1	3	Q000	1	0	0x389f1ccf2b
+Vehicle.q000_nomad_v_standard2_archer_quartz_quest	Q000 Nomad V Standard2 Archer Quartz Quest	1	3	Q000	1	0	0x327d99bfea
+Vehicle.q000_nomad_v_standard2_chevalier_thrax_quest	Q000 Nomad V Standard2 Chevalier Thrax Quest	1	3	Q000	1	0	0x34d0d44c2d
+Vehicle.q000_nomad_v_standard2_makigai_maimai_quest	Q000 Nomad V Standard2 Makigai Maimai Quest	1	3	Q000	1	0	0x330ea0c15a
+Vehicle.q000_nomad_v_standard2_thorton_colby_quest	Q000 Nomad V Standard2 Thorton Colby Quest	1	3	Q000	1	0	0x325b71cd1b
+Vehicle.q000_nomad_v_standard2_thorton_galena_nomad_quest	Q000 Nomad V Standard2 Thorton Galena Nomad Quest	1	3	Q000	1	0	0x399ea8ac97
+Vehicle.q000_nomad_v_standard2_thorton_galena_quest	Q000 Nomad V Standard2 Thorton Galena Quest	1	3	Q000	1	0	0x337bb2a518
+Vehicle.q000_nomad_v_standard2_villefort_cortes_police	Q000 Nomad V Standard2 Villefort Cortes Police	1	3	Q000	1	0	0x369ea4102f
+Vehicle.q000_nomad_v_standard2_villefort_cortes_quest	Q000 Nomad V Standard2 Villefort Cortes Quest	1	3	Q000	1	0	0x35f104269c
+Vehicle.q000_nomad_v_standard3_chevalier_emperor_quest	Q000 Nomad V Standard3 Chevalier Emperor Quest	1	3	Q000	1	0	0x36620ec962
+Vehicle.q000_nomad_v_standard3_thorton_mackinaw_nomad_quest	Q000 Nomad V Standard3 Thorton Mackinaw Nomad Quest	1	3	Q000	1	0	0x3b449bdc3d
+Vehicle.q000_nomad_v_standard3_thorton_mackinaw_quest	Q000 Nomad V Standard3 Thorton Mackinaw Quest	1	3	Q000	1	0	0x3580de13fc
+Vehicle.q000_nomad_v_utility4_kaukaz_bratsk_quest	Q000 Nomad V Utility4 Kaukaz Bratsk Quest	1	3	Q000	1	0	0x31d4eb9b99
+Vehicle.q000_nomad_v_utility4_kaukaz_zeya_quest	Q000 Nomad V Utility4 Kaukaz Zeya Quest	1	3	Q000	1	0	0x2f1ffdb7d3
+Vehicle.q000_nomad_v_utility4_militech_behemoth_quest	Q000 Nomad V Utility4 Militech Behemoth Quest	1	3	Q000	1	0	0x35fc0fc513
+Vehicle.q000_nomad_v_vista_car	Q000 Nomad V Vista Car	1	3	Q000	1	0	0x1eec6eaf47
+Vehicle.q000_sheriffs_car	Q000 Sheriffs Car	1	3	Q000	1	0	0x191895cdc0
+Vehicle.q000_v_nomad_car	Q000 V Nomad Car	1	3	Q000	1	0	0x1851e42042
+Vehicle.q000_v_nomad_car_chase	Q000 V Nomad Car Chase	1	3	Q000	1	0	0x1eabf7c18e
+Vehicle.q001_archer_hella	Q001 Archer Hella	1	3	Q001	1	0	0x1948b1463d
+Vehicle.q001_barricade_police_cars	Q001 Barricade Police Cars	1	3	Q001	1	0	0x22e9cb84a2
+Vehicle.q001_dex_limo	Q001 Dex Limo	1	3	Q001	1	0	0x1522431899
+Vehicle.q001_lux_av	Q001 Lux Av	1	3	Q001	1	0	0x13dbacbdfe
+Vehicle.q001_luxury_av	Q001 Luxury Av	1	3	Q001	1	0	0x16b5648413
+Vehicle.q001_max_tac_av	Q001 Max Tac Av	1	3	Q001	1	0	0x178d0e3404
+Vehicle.q001_maxtac_av	Q001 Maxtac Av	1	3	Q001	1	0	0x168956268d
+Vehicle.q001_police_av	Q001 Police Av	1	3	Q001	1	0	0x16b22134bd
+Vehicle.q001_quadra_turbo	Q001 Quadra Turbo	1	3	Q001	1	0	0x19359180e5
+Vehicle.q001_scavengers_chase_van	Q001 Scavengers Chase Van	1	3	Q001	1	0	0x2189f0297b
+Vehicle.q001_trauma_av	Q001 Trauma Av	1	3	Q001	1	0	0x162de2cb5d
+Vehicle.q001_victim_cortes	Q001 Victim Cortes	1	3	Q001	1	0	0x1a6f0595db
+Vehicle.q003_bossfight_car	Q003 Bossfight Car	1	3	Q003	1	0	0x1af5f8d99e
+Vehicle.q003_manticore	Q003 Manticore	1	3	Q003	1	0	0x16247e98a5
+Vehicle.q003_suv	Q003 Suv	1	3	Q003	1	0	0x104c421df6
+Vehicle.q005_arasaka_heavy_combat_drone	Q005 Arasaka Heavy Combat Drone	1	3	Q005	1	0	0x27ff269292
+Vehicle.q005_arasaka_light_combat_drone	Q005 Arasaka Light Combat Drone	1	3	Q005	1	0	0x272cecb340
+Vehicle.q005_delamain_cab_combat	Q005 Delamain Cab Combat	1	3	Q005	1	0	0x203622707b
+Vehicle.q005_invisible_av_drone_carrier	Q005 Invisible Av Drone Carrier	1	3	Q005	1	0	0x276f1671c4
+Vehicle.q005_saburo_av	Q005 Saburo Av	1	3	Q005	1	0	0x1638e98e23
+Vehicle.q101_corpo_av	Q101 Corpo Av	1	3	Q101	1	0	0x150fd44812
+Vehicle.q101_delamain_cab	Q101 Delamain Cab	1	3	Q101	1	0	0x19c4c260db
+Vehicle.q101_river_pickup	Q101 River Pickup	1	3	Q101	1	0	0x19e25a385a
+Vehicle.q101_stretchers	Q101 Stretchers	1	3	Q101	1	0	0x17c75a84f9
+Vehicle.q101_stretchers_vehicle	Q101 Stretchers Vehicle	1	3	Q101	1	0	0x1f0595db21
+Vehicle.q101_troy_bike	Q101 Troy Bike	1	3	Q101	1	0	0x16406add80
+Vehicle.q101_wheelchair	Q101 Wheelchair	1	3	Q101	1	0	0x17c4867ef2
+Vehicle.q103_6th_vehicle	Q103 6Th Vehicle	1	3	Q103	1	0	0x181a72678f
+Vehicle.q103_panam_stolen_car	Q103 Panam Stolen Car	1	3	Q103	1	0	0x1de45b34b9
+Vehicle.q103_raffen_vehicle	Q103 Raffen Vehicle	1	3	Q103	1	0	0x1b4de88f74
+Vehicle.q104_airstrip_destroyed_nomad	Q104 Airstrip Destroyed Nomad	1	3	Q104	1	0	0x25b6f6aa12
+Vehicle.q104_av_kang_tao_civilian	Q104 Av Kang Tao Civilian	1	3	Q104	1	0	0x2175a12f50
+Vehicle.q104_av_zetatech	Q104 Av Zetatech	1	3	Q104	1	0	0x1805cc1efa
+Vehicle.q104_crash_site_bike	Q104 Crash Site Bike	1	3	Q104	1	0	0x1c68b62dac
+Vehicle.q104_crash_site_destroyed_nomad	Q104 Crash Site Destroyed Nomad	1	3	Q104	1	0	0x27907cb606
+Vehicle.q104_crash_site_destroyed_nomad_2	Q104 Crash Site Destroyed Nomad 2	1	3	Q104	1	0	0x29c07523a7
+Vehicle.q104_crash_site_destroyed_nomad_3	Q104 Crash Site Destroyed Nomad 3	1	3	Q104	1	0	0x29b7721331
+Vehicle.q104_military_drone	Q104 Military Drone	1	3	Q104	1	0	0x1bfc30908a
+Vehicle.q104_panam_drone	Q104 Panam Drone	1	3	Q104	1	0	0x18c2da8a94
+Vehicle.q104_scorpion_bike	Q104 Scorpion Bike	1	3	Q104	1	0	0x1a347d5258
+Vehicle.q104_tracking_vehicle_01	Q104 Tracking Vehicle 01	1	3	Q104	1	0	0x20478a6ecd
+Vehicle.q104_tracking_vehicle_02	Q104 Tracking Vehicle 02	1	3	Q104	1	0	0x20de833f77
+Vehicle.q108_arasaka_car	Q108 Arasaka Car	1	3	Q108	1	0	0x18d5045c38
+Vehicle.q108_arasaka_helicopter	Q108 Arasaka Helicopter	1	3	Q108	1	0	0x1f40f1e1f2
+Vehicle.q108_delamain_cab	Q108 Delamain Cab	1	3	Q108	1	0	0x196a949f9b
+Vehicle.q108_thugs_van	Q108 Thugs Van	1	3	Q108	1	0	0x16501959bb
+Vehicle.q110_animals_bike	Q110 Animals Bike	1	3	Q110	1	0	0x1938808e86
+Vehicle.q110_animals_delivery_truck	Q110 Animals Delivery Truck	1	3	Q110	1	0	0x23fe5ba113
+Vehicle.q110_den_taptap	Q110 Den Taptap	1	3	Q110	1	0	0x17d2c8f6b7
+Vehicle.q110_huge_cargo_av	Q110 Huge Cargo Av	1	3	Q110	1	0	0x1a0a1c7ff0
+Vehicle.q110_invisible_vehicle	Q110 Invisible Vehicle	1	3	Q110	1	0	0x1e3c1d8487
+Vehicle.q110_max_tac_heli	Q110 Max Tac Heli	1	3	Q110	1	0	0x1910d3aabb
+Vehicle.q110_news_station_av	Q110 News Station Av	1	3	Q110	1	0	0x1c3e491dab
+Vehicle.q110_v_standard2_thorton_colby_quest	Q110 V Standard2 Thorton Colby Quest	1	3	Q110	1	0	0x2c5bad2222
+Vehicle.q110_voodoo_boy_lookout_car	Q110 Voodoo Boy Lookout Car	1	3	Q110	1	0	0x23dd5fefe0
+Vehicle.q111_sobchak_car	Q111 Sobchak Car	1	3	Q111	1	0	0x18d0d1b30e
+Vehicle.q112_arasaka_av	Q112 Arasaka Av	1	3	Q112	1	0	0x17ed337ad7
+Vehicle.q112_arasaka_av_static	Q112 Arasaka Av Static	1	3	Q112	1	0	0x1e7fba8779
+Vehicle.q112_arasaka_suv	Q112 Arasaka Suv	1	3	Q112	1	0	0x1847b16b54
+Vehicle.q112_cargo_ship	Q112 Cargo Ship	1	3	Q112	1	0	0x17890b6641
+Vehicle.q112_carp_barge_01	Q112 Carp Barge 01	1	3	Q112	1	0	0x1abc64ddb8
+Vehicle.q112_carp_barge_02	Q112 Carp Barge 02	1	3	Q112	1	0	0x1a256d8c02
+Vehicle.q112_flying_dragon_barge	Q112 Flying Dragon Barge	1	3	Q112	1	0	0x2025153f42
+Vehicle.q112_fox_barge	Q112 Fox Barge	1	3	Q112	1	0	0x16a3eb2dcc
+Vehicle.q112_hanakos_barge	Q112 Hanakos Barge	1	3	Q112	1	0	0x1a7a6d522b
+Vehicle.q112_large_arasaka_drone	Q112 Large Arasaka Drone	1	3	Q112	1	0	0x207be52eae
+Vehicle.q112_large_barge_01	Q112 Large Barge 01	1	3	Q112	1	0	0x1b0348047f
+Vehicle.q112_news54_Av	Q112 News54 Av	1	3	Q112	1	0	0x160ec0ddba
+Vehicle.q112_phoenix	Q112 Phoenix	1	3	Q112	1	0	0x1455a51015
+Vehicle.q112_samurai_barge	Q112 Samurai Barge	1	3	Q112	1	0	0x1a48432959
+Vehicle.q112_truck	Q112 Truck	1	3	Q112	1	0	0x12a49eb172
+Vehicle.q113_av	Q113 Av	1	3	Q113	1	0	0xf33a6030d
+Vehicle.q114_archer_quartz_nomad	Q114 Archer Quartz Nomad	1	3	Q114	1	0	0x20e3f7288a
+Vehicle.q114_brennan_apollo_nomad	Q114 Brennan Apollo Nomad	1	3	Q114	1	0	0x21788c2fc4
+Vehicle.q114_fake_4wheel_truck	Q114 Fake 4Wheel Truck	1	3	Q114	1	0	0x1e7a1f2c12
+Vehicle.q114_militech_av	Q114 Militech Av	1	3	Q114	1	0	0x18291dbf55
+Vehicle.q114_militech_gun_wagon	Q114 Militech Gun Wagon	1	3	Q114	1	0	0x1f540cb291
+Vehicle.q114_militech_gun_wagon_test	Q114 Militech Gun Wagon Test	1	3	Q114	1	0	0x24098ae792
+Vehicle.q114_militech_gun_wagon_turrets	Q114 Militech Gun Wagon Turrets	1	3	Q114	1	0	0x27ca1a5bd8
+Vehicle.q114_militech_gun_wagon_turrets_noturrets_test	Q114 Militech Gun Wagon Turrets Noturrets Test	1	3	Q114	1	0	0x36fa5a0f37
+Vehicle.q114_militech_mechdrop_av	Q114 Militech Mechdrop Av	1	3	Q114	1	0	0x21bcfdb071
+Vehicle.q114_militech_missile_av	Q114 Militech Missile Av	1	3	Q114	1	0	0x2096fb54d4
+Vehicle.q114_militech_missile_truck_final	Q114 Militech Missile Truck Final	1	3	Q114	1	0	0x29bf4c820d
+Vehicle.q114_militech_panzer	Q114 Militech Panzer	1	3	Q114	1	0	0x1c901f1539
+Vehicle.q114_militech_response_bike	Q114 Militech Response Bike	1	3	Q114	1	0	0x23515e9032
+Vehicle.q114_militech_response_car	Q114 Militech Response Car	1	3	Q114	1	0	0x22228a308d
+Vehicle.q114_mizutani_shion_nomad	Q114 Mizutani Shion Nomad	1	3	Q114	1	0	0x2196e0edee
+Vehicle.q114_mood_scene_car_001	Q114 Mood Scene Car 001	1	3	Q114	1	0	0x1f92123978
+Vehicle.q114_mood_scene_car_002	Q114 Mood Scene Car 002	1	3	Q114	1	0	0x1f0b1b68c2
+Vehicle.q114_mood_scene_car_racer	Q114 Mood Scene Car Racer	1	3	Q114	1	0	0x216101edd9
+Vehicle.q114_nomad_bike_001	Q114 Nomad Bike 001	1	3	Q114	1	0	0x1b8341acfa
+Vehicle.q114_nomad_car_cassidy	Q114 Nomad Car Cassidy	1	3	Q114	1	0	0x1e6b5db810
+Vehicle.q114_nomad_car_regular_001	Q114 Nomad Car Regular 001	1	3	Q114	1	0	0x22720d5ec1
+Vehicle.q114_nomad_car_teddy	Q114 Nomad Car Teddy	1	3	Q114	1	0	0x1cd3b24063
+Vehicle.q114_nomad_car_van_001	Q114 Nomad Car Van 001	1	3	Q114	1	0	0x1ee9920c01
+Vehicle.q114_nomad_drone	Q114 Nomad Drone	1	3	Q114	1	0	0x181189cd8a
+Vehicle.q114_nomad_drone_bombus_veh	Q114 Nomad Drone Bombus Veh	1	3	Q114	1	0	0x239e4afec8
+Vehicle.q114_nomad_panzer	Q114 Nomad Panzer	1	3	Q114	1	0	0x197de1dd78
+Vehicle.q114_quadra_type66_nomad	Q114 Quadra Type66 Nomad	1	3	Q114	1	0	0x20dd52292d
+Vehicle.q114_thorton_colby_nomad	Q114 Thorton Colby Nomad	1	3	Q114	1	0	0x20c51f5a7b
+Vehicle.q114_thorton_galena_nomad	Q114 Thorton Galena Nomad	1	3	Q114	1	0	0x21c8de5ebd
+Vehicle.q114_transmission_van	Q114 Transmission Van	1	3	Q114	1	0	0x1d35c4c351
+Vehicle.q114_tunnel_driller	Q114 Tunnel Driller	1	3	Q114	1	0	0x1b94939b70
+Vehicle.q114_villefort_columbus_nomad	Q114 Villefort Columbus Nomad	1	3	Q114	1	0	0x250833cad0
+Vehicle.q115_av_smasher	Q115 Av Smasher	1	3	Q115	1	0	0x17d14736dd
+Vehicle.q115_halo_jump_av	Q115 Halo Jump Av	1	3	Q115	1	0	0x1920251e92
+Vehicle.q115_halo_jump_av_crashed	Q115 Halo Jump Av Crashed	1	3	Q115	1	0	0x21103dda9b
+Vehicle.q115_satellite	Q115 Satellite	1	3	Q115	1	0	0x16278a0843
+Vehicle.q116_delamain_av	Q116 Delamain Av	1	3	Q116	1	0	0x18fdd913d6
+Vehicle.q201_limo_av	Q201 Limo Av	1	3	Q201	1	0	0x146e9f9f5c
+Vehicle.q202_bob_vehicle	Q202 Bob Vehicle	1	3	Q202	1	0	0x18549e8a54
+Vehicle.q202_teddy_vehicle	Q202 Teddy Vehicle	1	3	Q202	1	0	0x1a2f943d84
+Vehicle.q203_delamain_av	Q203 Delamain Av	1	3	Q203	1	0	0x186c842bca
+Vehicle.q204_bus	Q204 Bus	1	3	Q204	1	0	0x100473ed07
+Vehicle.q204_steve_dad_car	Q204 Steve Dad Car	1	3	Q204	1	0	0x1a029c0fca
+Vehicle.q301_bike	Q301 Bike	1	3	Q301	1	0	0x117afacf74
+Vehicle.q301_border_car_inspection	Q301 Border Car Inspection	1	3	Q301	1	0	0x228ccf1e0d
+Vehicle.q301_border_ncpd_car	Q301 Border Ncpd Car	1	3	Q301	1	0	0x1cbf1c53b8
+Vehicle.q301_border_truck_gate_01	Q301 Border Truck Gate 01	1	3	Q301	1	0	0x216ddda62a
+Vehicle.q301_border_truck_gate_02	Q301 Border Truck Gate 02	1	3	Q301	1	0	0x21f4d4f790
+Vehicle.q301_border_truck_inspection	Q301 Border Truck Inspection	1	3	Q301	1	0	0x244d06181a
+Vehicle.q301_crashing_av	Q301 Crashing Av	1	3	Q301	1	0	0x18e7f8252a
+Vehicle.q301_distract_car	Q301 Distract Car	1	3	Q301	1	0	0x194a6d9582
+Vehicle.q301_ejecting_pod	Q301 Ejecting Pod	1	3	Q301	1	0	0x19b0525d61
+Vehicle.q301_rocket	Q301 Rocket	1	3	Q301	1	0	0x130d0fd3cf
+Vehicle.q301_sf1	Q301 Sf1	1	3	Q301	1	0	0x108e3dc1aa
+Vehicle.q301_skybridge_drone_carrier	Q301 Skybridge Drone Carrier	1	3	Q301	1	0	0x24099c90e8
+Vehicle.q301_skybridge_guard_car	Q301 Skybridge Guard Car	1	3	Q301	1	0	0x206985c7a3
+Vehicle.q301_wtc_kurt_pickup	Q301 Wtc Kurt Pickup	1	3	Q301	1	0	0x1c202b4b8f
+Vehicle.q301_wtc_kurt_supron	Q301 Wtc Kurt Supron	1	3	Q301	1	0	0x1c18d6e494
+Vehicle.q302_kurtz_av_manticore	Q302 Kurtz Av Manticore	1	3	Q302	1	0	0x1f669fe7a0
+Vehicle.q302_militia_car	Q302 Militia Car	1	3	Q302	1	0	0x18f693bb81
+Vehicle.q302_militia_car_reed_ambush	Q302 Militia Car Reed Ambush	1	3	Q302	1	0	0x245daebe3d
+Vehicle.q302_protest_6th_columbus	Q302 Protest 6Th Columbus	1	3	Q302	1	0	0x211af3d57e
+Vehicle.q302_protest_6th_hella	Q302 Protest 6Th Hella	1	3	Q302	1	0	0x1e11de3bf2
+Vehicle.q302_protest_kurtz_supron	Q302 Protest Kurtz Supron	1	3	Q302	1	0	0x211de8d92f
+Vehicle.q303_escape_bike	Q303 Escape Bike	1	3	Q303	1	0	0x1846606c6c
+Vehicle.q303_limo	Q303 Limo	1	3	Q303	1	0	0x11616257d4
+Vehicle.q304_ambush_truck	Q304 Ambush Truck	1	3	Q304	1	0	0x190f87e110
+Vehicle.q304_car_retrieval_truck	Q304 Car Retrieval Truck	1	3	Q304	1	0	0x2032da6ba4
+Vehicle.q304_car_retrieval_truck_replacement	Q304 Car Retrieval Truck Replacement	1	3	Q304	1	0	0x2c4a992f7b
+Vehicle.q304_crash_cortes	Q304 Crash Cortes	1	3	Q304	1	0	0x192af60f08
+Vehicle.q304_get_away_car	Q304 Get Away Car	1	3	Q304	1	0	0x1912504659
+Vehicle.q304_get_away_car_stadium	Q304 Get Away Car Stadium	1	3	Q304	1	0	0x21e9508189
+Vehicle.q304_kurtz_army_colby_pickup_no_interactions	Q304 Kurtz Army Colby Pickup No Interactions	1	3	Q304	1	0	0x34090e142c
+Vehicle.q304_kurtz_army_colby_pickup_no_interactions_scanning	Q304 Kurtz Army Colby Pickup No Interactions Scanning	1	3	Q304	1	0	0x3d699ae96f
+Vehicle.q304_max_tac_av	Q304 Max Tac Av	1	3	Q304	1	0	0x1769cc66cf
+Vehicle.q304_max_tac_av_detailed	Q304 Max Tac Av Detailed	1	3	Q304	1	0	0x20f2263886
+Vehicle.q304_songbird_escape_002	Q304 Songbird Escape 002	1	3	Q304	1	0	0x20b0488477
+Vehicle.q304_songbird_escape_player	Q304 Songbird Escape	1	3	Q304	1	0	0x235fb5675d
+Vehicle.q304_songbird_escape_trap_bike	Q304 Songbird Escape Trap Bike	1	3	Q304	1	0	0x265e1fddbc
+Vehicle.q304_songbird_escape_trap_car_01	Q304 Songbird Escape Trap Car 01	1	3	Q304	1	0	0x288092d5c3
+Vehicle.q304_songbird_escape_trap_car_02	Q304 Songbird Escape Trap Car 02	1	3	Q304	1	0	0x28199b8479
+Vehicle.q304_songbird_escape_trap_car_03	Q304 Songbird Escape Trap Car 03	1	3	Q304	1	0	0x286e9cb4ef
+Vehicle.q304_v_sport2_villefort_alvarado_scanning	Q304 V Sport2 Villefort Alvarado Scanning	1	3	Q304	1	0	0x311c2520b8
+Vehicle.q304_v_sportbike3_brennan_apollo_quest_scanning	Q304 V Sportbike3 Brennan Apollo Quest Scanning	1	3	Q304	1	0	0x37dd435265
+Vehicle.q304_v_standard25_thorton_colby_pickup_scanning	Q304 V Standard25 Thorton Colby Pickup Scanning	1	3	Q304	1	0	0x370c49db03
+Vehicle.q304_v_standard25_villefort_columbus_scanning	Q304 V Standard25 Villefort Columbus Scanning	1	3	Q304	1	0	0x3538f1f57c
+Vehicle.q304_v_standard2_archer_hella_scanning	Q304 V Standard2 Archer Hella Scanning	1	3	Q304	1	0	0x2e7fdb879e
+Vehicle.q304_v_standard2_makigai_maimai_scanning	Q304 V Standard2 Makigai Maimai Scanning	1	3	Q304	1	0	0x30f3446b1d
+Vehicle.q304_v_standard2_thorton_galena_scanning	Q304 V Standard2 Thorton Galena Scanning	1	3	Q304	1	0	0x307272ed2d
+Vehicle.q304_v_standard2_villefort_cortes_scanning	Q304 V Standard2 Villefort Cortes Scanning	1	3	Q304	1	0	0x327a07088b
+Vehicle.q304_v_standard3_thorton_mackinaw_scanning	Q304 V Standard3 Thorton Mackinaw Scanning	1	3	Q304	1	0	0x32f6e73aa6
+Vehicle.q304_v_utility4_kaukaz_bratsk_concrete_scanning	Q304 V Utility4 Kaukaz Bratsk Concrete Scanning	1	3	Q304	1	0	0x37012d25c3
+Vehicle.q304_v_utility4_militech_behemoth_quest_scanning	Q304 V Utility4 Militech Behemoth Quest Scanning	1	3	Q304	1	0	0x38871d0169
+Vehicle.q305_6th_boom_van	Q305 6Th Boom Van	1	3	Q305	1	0	0x190153738d
+Vehicle.q305_6th_thorton	Q305 6Th Thorton	1	3	Q305	1	0	0x18a9be3804
+Vehicle.q305_apc	Q305 Apc	1	3	Q305	1	0	0x10fde2957b
+Vehicle.q305_av_camera_drone	Q305 Av Camera Drone	1	3	Q305	1	0	0x1c5d5c69ac
+Vehicle.q305_av_camera_drone_veh	Q305 Av Camera Drone Veh	1	3	Q305	1	0	0x20fadacb81
+Vehicle.q305_av_militech_manticore	Q305 Av Militech Manticore	1	3	Q305	1	0	0x22984923fb
+Vehicle.q305_broken_truck	Q305 Broken Truck	1	3	Q305	1	0	0x1990e0fd5e
+Vehicle.q305_exploded_columbus	Q305 Exploded Columbus	1	3	Q305	1	0	0x1e4a0dcbbb
+Vehicle.q305_holo_apc	Q305 Holo Apc	1	3	Q305	1	0	0x158cd8fed9
+Vehicle.q305_holo_chevalier	Q305 Holo Chevalier	1	3	Q305	1	0	0x1b731ec10f
+Vehicle.q305_holo_hellhound	Q305 Holo Hellhound	1	3	Q305	1	0	0x1b4022d53c
+Vehicle.q305_kaukaz_containter	Q305 Kaukaz Containter	1	3	Q305	1	0	0x1eaf510b14
+Vehicle.q305_maxtac_hellhound	Q305 Maxtac Hellhound	1	3	Q305	1	0	0x1d62701058
+Vehicle.q305_medical_helicopter	Q305 Medical Helicopter	1	3	Q305	1	0	0x1fef602ec9
+Vehicle.q305_myers_av	Q305 Myers Av	1	3	Q305	1	0	0x15855c4455
+Vehicle.q305_scanning_drone	Q305 Scanning Drone	1	3	Q305	1	0	0x1be0cf01f1
+Vehicle.q306_av_atlus_stealth_nusa	Q306 Av Atlus Stealth Nusa	1	3	Q306	1	0	0x2260a44660
+Vehicle.q306_chopper_drone_av	Q306 Chopper Drone Av	1	3	Q306	1	0	0x1d4ee2b0b9
+Vehicle.q306_combat_chopper	Q306 Combat Chopper	1	3	Q306	1	0	0x1b98481047
+Vehicle.q306_corpbud_truck_01	Q306 Corpbud Truck 01	1	3	Q306	1	0	0x1ded6faee1
+Vehicle.q306_corpbud_truck_02	Q306 Corpbud Truck 02	1	3	Q306	1	0	0x1d7466ff5b
+Vehicle.q306_corpbud_truck_03	Q306 Corpbud Truck 03	1	3	Q306	1	0	0x1d0361cfcd
+Vehicle.q306_maglev_train_scene	Q306 Maglev Train Scene	1	3	Q306	1	0	0x1fd7d2e94e
+Vehicle.q306_monorail_train_new	Q306 Monorail Train New	1	3	Q306	1	0	0x1f18019009
+Vehicle.q306_oa_rayfield	Q306 Oa Rayfield	1	3	Q306	1	0	0x185f5b8479
+Vehicle.q306_orbital_capsule	Q306 Orbital Capsule	1	3	Q306	1	0	0x1cfc82ec5a
+Vehicle.q306_restricted_area_train	Q306 Restricted Area Train	1	3	Q306	1	0	0x2215153ccb
+Vehicle.q306_rocket_maglev_ride	Q306 Rocket Maglev Ride	1	3	Q306	1	0	0x1f7e5b4b20
+Vehicle.q306_songbird_spy_van	Q306 Songbird Spy Van	1	3	Q306	1	0	0x1dc4143ddd
+Vehicle.q306_songbird_stolen_car	Q306 Songbird Stolen Car	1	3	Q306	1	0	0x20b36872b6
+Vehicle.q306_spaceport_ow_combat_taxi_trunk_door_open	Q306 Spaceport Ow Combat Taxi Trunk Door Open	1	3	Q306	1	0	0x35d9faa60d
+Vehicle.q306_spaceport_ow_vehicle_alvrado_open	Q306 Spaceport Ow Vehicle Alvrado Open	1	3	Q306	1	0	0x2e30a5b8a6
+Vehicle.q306_spaceport_ow_vehicle_civilian_cortez	Q306 Spaceport Ow Vehicle Civilian Cortez	1	3	Q306	1	0	0x31c088b142
+Vehicle.q306_spaceport_tram_new	Q306 Spaceport Tram New	1	3	Q306	1	0	0x1fc0a38a00
+Vehicle.q307_av	Q307 Av	1	3	Q307	1	0	0xfcc6c1ce1
+Vehicle.q307_delamain_cab	Q307 Delamain Cab	1	3	Q307	1	0	0x19bba00e0e
+Vehicle.q307_militech_manticore	Q307 Militech Manticore	1	3	Q307	1	0	0x1f59eff0bb
+Vehicle.rcr_03_escape_car	Rcr 03 Escape Car	1	3	Rcr	1	0	0x1973284844
+Vehicle.reed_car	Reed Car	1	3	Reed	1	0	0x1050b5e6a6
+Vehicle.reed_car_border_crossing	Reed Car Border Crossing	1	3	Reed	1	0	0x20f22a342e
+Vehicle.reginald_vehicle	Reginald Vehicle	1	3	Reginald	1	0	0x184a08e2e2
+Vehicle.rogue_bike	Rogue Bike	1	3	Rogue	1	0	0x129e68b179
+Vehicle.rogue_car	Rogue Car	1	3	Rogue	1	0	0x11ae3ee2bb
+Vehicle.sa_ep1_airdrop_av	Sa Ep1 Airdrop Av	1	3	Sa	1	0	0x1928abd345
+Vehicle.sa_ep1_airdrop_crate	Sa Ep1 Airdrop Crate	1	3	Sa	1	0	0x1ca83d36a8
+Vehicle.sa_ep1_courier_outro_behemoth	Sa Ep1 Courier Outro Behemoth	1	3	Sa	1	0	0x25faea2850
+Vehicle.santiago_bike	Santiago Bike	1	3	Santiago	1	0	0x157d4d2cea
+Vehicle.santiago_truck	Santiago Truck	1	3	Santiago	1	0	0x16609a8a57
+Vehicle.saul_bike	Saul Bike	1	3	Saul	1	0	0x11e52c52be
+Vehicle.sobchak_ncpd_vehicle	Sobchak Ncpd Vehicle	1	3	Sobchak	1	0	0x1c97a6d4ff
+Vehicle.sobchak_vehicle	Sobchak Vehicle	1	3	Sobchak	1	0	0x177c12ef94
+Vehicle.spr_03_nomad_truck	Spr 03 Nomad Truck	1	3	Spr	1	0	0x1a247a2971
+Vehicle.sq003_car	Sq003 Car	1	3	Sq003	1	0	0x11dec0a36c
+Vehicle.sq004_deco_nomad_car	Sq004 Deco Nomad Car	1	3	Sq004	1	0	0x1c5f76ad21
+Vehicle.sq004_nomad_bike	Sq004 Nomad Bike	1	3	Sq004	1	0	0x18e44c9c6f
+Vehicle.sq004_nomad_drone	Sq004 Nomad Drone	1	3	Sq004	1	0	0x19de961e26
+Vehicle.sq004_raffen_shiv_car	Sq004 Raffen Shiv Car	1	3	Sq004	1	0	0x1d6f09ed84
+Vehicle.sq004_raffen_shiv_car_archer	Sq004 Raffen Shiv Car Archer	1	3	Sq004	1	0	0x24794b276e
+Vehicle.sq004_raffen_shiv_car_hackable_001	Sq004 Raffen Shiv Car Hackable 001	1	3	Sq004	1	0	0x2a80357d65
+Vehicle.sq004_raffen_shiv_car_hackable_002	Sq004 Raffen Shiv Car Hackable 002	1	3	Sq004	1	0	0x2a193c2cdf
+Vehicle.sq004_raffen_shiv_car_hackable_003	Sq004 Raffen Shiv Car Hackable 003	1	3	Sq004	1	0	0x2a6e3b1c49
+Vehicle.sq004_raffen_shiv_car_tall	Sq004 Raffen Shiv Car Tall	1	3	Sq004	1	0	0x22d1a2f353
+Vehicle.sq004_saul_truck_scanning	Sq004 Saul Truck Scanning	1	3	Sq004	1	0	0x213b4a9a83
+Vehicle.sq004_transmission_van	Sq004 Transmission Van	1	3	Sq004	1	0	0x1eefea887d
+Vehicle.sq006_av	Sq006 Av	1	3	Sq006	1	0	0x10f26ccece
+Vehicle.sq006_mobile_lab	Sq006 Mobile Lab	1	3	Sq006	1	0	0x186e4c58cc
+Vehicle.sq011_denny_vehicle	Sq011 Denny Vehicle	1	3	Sq011	1	0	0x1b3191dd7a
+Vehicle.sq011_nancy_vehicle	Sq011 Nancy Vehicle	1	3	Sq011	1	0	0x1bfd360b93
+Vehicle.sq012_peralez_car	Sq012 Peralez Car	1	3	Sq012	1	0	0x196d7086e9
+Vehicle.sq012_yu_car	Sq012 Yu Car	1	3	Sq012	1	0	0x14961a8a1c
+Vehicle.sq017_us_cracks_truck	Sq017 Us Cracks Truck	1	3	Sq017	1	0	0x1d175ae9f7
+Vehicle.sq018_maxtac_av	Sq018 Maxtac Av	1	3	Sq018	1	0	0x17630d9caa
+Vehicle.sq021_av_trauma	Sq021 Av Trauma	1	3	Sq021	1	0	0x17627b90cf
+Vehicle.sq021_corpo_av	Sq021 Corpo Av	1	3	Sq021	1	0	0x167f7b5732
+Vehicle.sq021_farm_police_1	Sq021 Farm Police 1	1	3	Sq021	1	0	0x1bfe114c0e
+Vehicle.sq021_farm_police_2	Sq021 Farm Police 2	1	3	Sq021	1	0	0x1b67181db4
+Vehicle.sq022_drone	Sq022 Drone	1	3	Sq022	1	0	0x1301c8d1b3
+Vehicle.sq023_bills_truck	Sq023 Bills Truck	1	3	Sq023	1	0	0x1948cf7fef
+Vehicle.sq023_cargo_truck	Sq023 Cargo Truck	1	3	Sq023	1	0	0x19038093d4
+Vehicle.sq023_companys_car	Sq023 Companys Car	1	3	Sq023	1	0	0x1a0ec69672
+Vehicle.sq024_claire_truck	Sq024 Claire Truck	1	3	Sq024	1	0	0x1a67fe747d
+Vehicle.sq024_dominic_truck	Sq024 Dominic Truck	1	3	Sq024	1	0	0x1bfb50e4ed
+Vehicle.sq024_gps_system	Sq024 Gps System	1	3	Sq024	1	0	0x18a6403fba
+Vehicle.sq024_police_vehicle_1	Sq024 Police Vehicle 1	1	3	Sq024	1	0	0x1ed0aeeb08
+Vehicle.sq024_police_vehicle_2	Sq024 Police Vehicle 2	1	3	Sq024	1	0	0x1e49a7bab2
+Vehicle.sq024_trauma_team_av	Sq024 Trauma Team Av	1	3	Sq024	1	0	0x1c639591cd
+Vehicle.sq025_archer_crash	Sq025 Archer Crash	1	3	Sq025	1	0	0x1a37e7b980
+Vehicle.sq025_delamain_av	Sq025 Delamain Av	1	3	Sq025	1	0	0x196e626819
+Vehicle.sq025_delamain_cab	Sq025 Delamain Cab	1	3	Sq025	1	0	0x1a13bc75a9
+Vehicle.sq025_delamain_cab_angry	Sq025 Delamain Cab Angry	1	3	Sq025	1	0	0x200c1c0997
+Vehicle.sq025_delamain_cab_deep	Sq025 Delamain Cab Deep	1	3	Sq025	1	0	0x1f42cbc3e9
+Vehicle.sq025_delamain_cab_destro	Sq025 Delamain Cab Destro	1	3	Sq025	1	0	0x217e774cb9
+Vehicle.sq025_delamain_cab_manic	Sq025 Delamain Cab Manic	1	3	Sq025	1	0	0x20ca0afdaf
+Vehicle.sq025_delamain_cab_mean	Sq025 Delamain Cab Mean	1	3	Sq025	1	0	0x1fa1a07404
+Vehicle.sq025_delamain_cab_sad	Sq025 Delamain Cab Sad	1	3	Sq025	1	0	0x1e7c33b518
+Vehicle.sq025_delamain_cab_scared	Sq025 Delamain Cab Scared	1	3	Sq025	1	0	0x2183283582
+Vehicle.sq025_delamain_cab_suicidal	Sq025 Delamain Cab Suicidal	1	3	Sq025	1	0	0x23d936f2bb
+Vehicle.sq025_quadra	Sq025 Quadra	1	3	Sq025	1	0	0x14b9eba4f6
+Vehicle.sq025_sportscar_crash	Sq025 Sportscar Crash	1	3	Sq025	1	0	0x1d01c296f8
+Vehicle.sq026_av_ncpd	Sq026 Av Ncpd	1	3	Sq026	1	0	0x152bec2830
+Vehicle.sq027_car_cassidy	Sq027 Car Cassidy	1	3	Sq027	1	0	0x19cf99bbcd
+Vehicle.sq027_car_teddy	Sq027 Car Teddy	1	3	Sq027	1	0	0x17ce2f6f3e
+Vehicle.sq027_fake_flatbed_truck_a	Sq027 Fake Flatbed Truck A	1	3	Sq027	1	0	0x22ae206a01
+Vehicle.sq027_fake_flatbed_truck_b	Sq027 Fake Flatbed Truck B	1	3	Sq027	1	0	0x2237293bbb
+Vehicle.sq027_fake_train	Sq027 Fake Train	1	3	Sq027	1	0	0x1839f91970
+Vehicle.sq027_fake_train_car_A	Sq027 Fake Train Car A	1	3	Sq027	1	0	0x1ecc9975d9
+Vehicle.sq027_fake_train_car_B	Sq027 Fake Train Car B	1	3	Sq027	1	0	0x1e55902463
+Vehicle.sq027_militech_suv	Sq027 Militech Suv	1	3	Sq027	1	0	0x1a4f8bc3c7
+Vehicle.sq027_nomad_jammer	Sq027 Nomad Jammer	1	3	Sq027	1	0	0x1adf3882c4
+Vehicle.sq027_nomad_truck	Sq027 Nomad Truck	1	3	Sq027	1	0	0x19a175542b
+Vehicle.sq027_savable_raffen_shiv_car	Sq027 Savable Raffen Shiv Car	1	3	Sq027	1	0	0x25965ae093
+Vehicle.sq027_v_nomad_car	Sq027 V Nomad Car	1	3	Sq027	1	0	0x1926120b85
+Vehicle.sq028_yacht	Sq028 Yacht	1	3	Sq028	1	0	0x134a945baf
+Vehicle.sq028_yacht_no_enviro	Sq028 Yacht No Enviro	1	3	Sq028	1	0	0x1db7eae590
+Vehicle.sq030_lake_crane	Sq030 Lake Crane	1	3	Sq030	1	0	0x188d86bd6e
+Vehicle.sq031_ruby_vehicle	Sq031 Ruby Vehicle	1	3	Sq031	1	0	0x1a9470f25f
+Vehicle.stadium_ow_av_garbage	Stadium Ow Av Garbage	1	3	Stadium	1	0	0x1d0995602b
+Vehicle.sts_bls_ina_07_ghost_car	Sts Bls Ina 07 Ghost Car	1	3	Sts	1	0	0x20d067dac7
+Vehicle.sts_bls_ina_08_pickup_car	Sts Bls Ina 08 Pickup Car	1	3	Sts	1	0	0x219a81a084
+Vehicle.sts_bls_ina_08_trevor_car	Sts Bls Ina 08 Trevor Car	1	3	Sts	1	0	0x21a5145a46
+Vehicle.sts_cct_dtn_04_av	Sts Cct Dtn 04 Av	1	3	Sts	1	0	0x198c59bd01
+Vehicle.sts_cct_dtn_04_av_alt	Sts Cct Dtn 04 Av Alt	1	3	Sts	1	0	0x1d9f52d341
+Vehicle.sts_ep1_03_broken_car_clue	Sts Ep1 03 Broken Car Clue	1	3	Sts	1	0	0x224a7e086c
+Vehicle.sts_ep1_06_broken_motorcycle	Sts Ep1 06 Broken Motorcycle	1	3	Sts	1	0	0x24f0d60acf
+Vehicle.sts_ep1_06_broken_motorcycle_02	Sts Ep1 06 Broken Motorcycle 02	1	3	Sts	1	0	0x27809c990a
+Vehicle.sts_ep1_06_broken_motorcycle_03	Sts Ep1 06 Broken Motorcycle 03	1	3	Sts	1	0	0x27f79ba99c
+Vehicle.sts_ep1_07_nele_vehicle	Sts Ep1 07 Nele Vehicle	1	3	Sts	1	0	0x1fd18a60f4
+Vehicle.sts_hey_gle_06_estevez_car	Sts Hey Gle 06 Estevez Car	1	3	Sts	1	0	0x229eec812d
+Vehicle.sts_std_arr_06_kangtao_car	Sts Std Arr 06 Kangtao Car	1	3	Sts	1	0	0x22d8b699df
+Vehicle.sts_std_arr_06_karl_car	Sts Std Arr 06 Karl Car	1	3	Sts	1	0	0x1fd4f37a30
+Vehicle.sts_std_arr_12_autonomous_truck	Sts Std Arr 12 Autonomous Truck	1	3	Sts	1	0	0x27e948c70a
+Vehicle.sts_std_arr_12_av_zetatech_atlus	Sts Std Arr 12 Av Zetatech Atlus	1	3	Sts	1	0	0x28b9f8e16e
+Vehicle.sts_std_arr_12_zetatech_car	Sts Std Arr 12 Zetatech Car	1	3	Sts	1	0	0x23f6023a13
+Vehicle.sts_std_rcr_01_car	Sts Std Rcr 01 Car	1	3	Sts	1	0	0x1abfbec25f
+Vehicle.sts_wat_kab_04_car	Sts Wat Kab 04 Car	1	3	Sts	1	0	0x1a4234898e
+Vehicle.sts_wat_kab_102_objective_car	Sts Wat Kab 102 Objective Car	1	3	Sts	1	0	0x2597cb4121
+Vehicle.takemura_van	Takemura Van	1	3	Takemura	1	0	0x1434beb170
+Vehicle.takemura_vehicle	Takemura Vehicle	1	3	Takemura	1	0	0x1839eb571e
+Vehicle.thorton_poor_open_trunk	Thorton Poor Open Trunk	1	3	Thorton	1	0	0x1fb61a0d4e
+Vehicle.trauma_team_av_model_toy	Trauma Team Av Model Toy	1	3	Trauma	1	0	0x202d42cc63
+Vehicle.ue_metro_train	Ue Metro Train	1	3	Ue	1	0	0x165b4ce404
+Vehicle.v_001_limousine	Limousine Limousine	1	3	Limousine	1	0	0x17c84d91ba
+Vehicle.v_003_smalltruck	Smalltruck Smalltruck	1	3	Smalltruck	1	0	0x1875e3eeb0
+Vehicle.v_004_bubble_one	Bubble One	1	3	Bubble	1	0	0x184cc0cd03
+Vehicle.v_005_lego	Lego Lego	1	3	Lego	1	0	0x1259495162
+Vehicle.v_006_golf	Golf Golf	1	3	Golf	1	0	0x129f634074
+Vehicle.v_007_aerondight_demo_trigger	Aerondight Demo Trigger	1	3	Aerondight	1	0	0x25694bac0f
+Vehicle.v_007_interceptor	Interceptor Interceptor	1	3	Interceptor	1	0	0x1988fbe0d1
+Vehicle.v_007_interceptor_demo_trigger	Interceptor Demo Trigger	1	3	Interceptor	1	0	0x26e44858e1
+Vehicle.v_007_interceptor_police	Interceptor Police	1	3	Interceptor	1	0	0x2011b65231
+Vehicle.v_009_box_car	Box Car	1	3	Box	1	0	0x1595c53f76
+Vehicle.v_010_v_tek	V Tek	1	3	V	1	0	0x13645c5304
+Vehicle.v_011_scavenger_van	Scavenger Van	1	3	Scavenger	1	0	0x1bcf03513d
+Vehicle.v_012_corpo_suv	Corpo Suv	1	3	Corpo	1	0	0x174c4712ac
+Vehicle.v_013_rayfield_aerodnight	Rayfield Aerodnight	1	3	Rayfield	1	0	0x216d87c873
+Vehicle.v_archer_hella_dodger_car	Hella Dodger Car	1	3	Hella	1	0	0x219cd5ddc0
+Vehicle.v_brennan_apollo_bike_intro_chase	Apollo Bike Intro Chase	1	3	Apollo	1	0	0x29e1e8b322
+Vehicle.v_bubble_demo_trigger	Demo Trigger	1	3	Demo	1	0	0x1d4a463934
+Vehicle.v_delamain_taxi	Taxi Taxi	1	3	Taxi	1	0	0x1796a09cf1
+Vehicle.v_golf_demo_trigger	Demo Trigger	1	3	Demo	1	0	0x1bd30b9b3a
+Vehicle.v_kaukaz_z71_aras	Z71 Aras	1	3	Z71	1	0	0x19209d5c16
+Vehicle.v_lego_demo_trigger	Demo Trigger	1	3	Demo	1	0	0x1be2906cb2
+Vehicle.v_mahir_mt28_coach	Mt28 Coach	1	3	Mt28	1	0	0x1ae09aaeb8
+Vehicle.v_militech_basilisk	Basilisk Basilisk	1	3	Basilisk	1	0	0x1b4e8371e1
+Vehicle.v_militech_basilisk_militech	Basilisk Militech	1	3	Basilisk	1	0	0x2493d58c93
+Vehicle.v_militech_basilisk_transport	Basilisk Transport	1	3	Basilisk	1	0	0x25dd4fbdf7
+Vehicle.v_mizutani_shion_muamar_courier_car	Shion Muamar Courier Car	1	3	Shion	1	0	0x2b1c71b7d1
+Vehicle.v_sport1_herrera_outlaw	Herrera Outlaw	3	2	Herrera	1	0	0x1f105d1dcd
+Vehicle.v_sport1_herrera_outlaw_courier	Herrera Outlaw Courier	3	2	Herrera	1	0	0x278c018e42
+Vehicle.v_sport1_herrera_outlaw_heist	Herrera Outlaw Heist	3	2	Herrera	1	0	0x25ed9b65d5
+Vehicle.v_sport1_herrera_outlaw_heist_player	Herrera Outlaw Heist	3	2	Herrera	1	0	0x2c422ba009
+Vehicle.v_sport1_herrera_outlaw_player	Herrera Outlaw	3	2	Herrera	1	0	0x26e3322e0d
+Vehicle.v_sport1_herrera_outlaw_quest	Herrera Outlaw Quest	3	2	Herrera	1	0	0x25d9683edd
+Vehicle.v_sport1_herrera_riptide	Herrera Riptide	3	2	Herrera	1	0	0x2077d36f3e
+Vehicle.v_sport1_herrera_riptide_courier	Herrera Riptide Courier	3	2	Herrera	1	0	0x2889ba821c
+Vehicle.v_sport1_herrera_riptide_player	Herrera Riptide	3	2	Herrera	1	0	0x27586963ca
+Vehicle.v_sport1_herrera_riptide_premium	Herrera Riptide Premium	3	2	Herrera	1	0	0x28cf94dae5
+Vehicle.v_sport1_herrera_riptide_terrier	Herrera Riptide Terrier	3	2	Herrera	1	0	0x283878df2a
+Vehicle.v_sport1_herrera_riptide_web	Herrera Riptide Web	3	2	Herrera	1	0	0x246fa95067
+Vehicle.v_sport1_quadra_sport_r7	Quadra Sport R7	3	2	Quadra	1	0	0x2048fa63f9
+Vehicle.v_sport1_quadra_sport_r7_courier	Quadra Sport R7 Courier	3	2	Quadra	1	0	0x283dabddef
+Vehicle.v_sport1_quadra_sport_r7_gt	Quadra Sport R7 Gt	3	2	Quadra	1	0	0x234cd893ab
+Vehicle.v_sport1_quadra_sport_r7_mrhands	Quadra Sport R7 Mrhands	3	2	Quadra	1	0	0x2863530be7
+Vehicle.v_sport1_quadra_sport_r7_netrunner	Quadra Sport R7 Netrunner	3	2	Quadra	1	0	0x2a6709b651
+Vehicle.v_sport1_quadra_sport_r7_netrunner_01	Quadra Sport R7 Netrunner 01	3	2	Quadra	1	0	0x2db004732c
+Vehicle.v_sport1_quadra_sport_r7_netrunner_02	Quadra Sport R7 Netrunner 02	3	2	Quadra	1	0	0x2d290d2296
+Vehicle.v_sport1_quadra_sport_r7_player	Quadra Sport R7	3	2	Quadra	1	0	0x274288a736
+Vehicle.v_sport1_quadra_sport_r7_player_02	Quadra Sport R7 Player 02	3	2	Quadra	1	0	0x2aadf36fb0
+Vehicle.v_sport1_quadra_sport_r7_poor	Quadra Sport R7 Poor	3	2	Quadra	1	0	0x25e4ffbd34
+Vehicle.v_sport1_quadra_sport_r7_premium	Quadra Sport R7 Premium	3	2	Quadra	1	0	0x287b858516
+Vehicle.v_sport1_quadra_sport_r7_rocket	Quadra Sport R7 Rocket	3	2	Quadra	1	0	0x271428664d
+Vehicle.v_sport1_quadra_sport_r7_web	Quadra Sport R7 Web	3	2	Quadra	1	0	0x247f09cd6a
+Vehicle.v_sport1_quadra_turbo	Quadra Turbo-R	3	2	Quadra	1	0	0x1d3180cc93
+Vehicle.v_sport1_quadra_turbo_courier	Quadra Turbo Courier	3	2	Quadra	1	0	0x2593186e02
+Vehicle.v_sport1_quadra_turbo_courier_expanded	Quadra Turbo Courier Expanded	3	2	Quadra	1	0	0x2e41380c82
+Vehicle.v_sport1_quadra_turbo_player	Quadra Turbo-R	3	2	Quadra	1	0	0x24205100de
+Vehicle.v_sport1_quadra_turbo_poor	Quadra Turbo Poor	3	2	Quadra	1	0	0x2285eef4b2
+Vehicle.v_sport1_quadra_turbo_quest	Quadra Turbo Quest	3	2	Quadra	1	0	0x23b6c84c20
+Vehicle.v_sport1_quadra_turbo_r	Quadra Turbo R	3	2	Quadra	1	0	0x1f0a4f25b6
+Vehicle.v_sport1_quadra_turbo_r_player	Quadra Turbo R	3	2	Quadra	1	0	0x26c0f05c05
+Vehicle.v_sport1_quadra_turbo_tyger_claw	Quadra Turbo Tyger Claw	3	2	Quadra	1	0	0x280bf70854
+Vehicle.v_sport1_quadra_turbo_tyger_claw_courier	Quadra Turbo Tyger Claw Courier	3	2	Quadra	1	0	0x30269f06ea
+Vehicle.v_sport1_rayfield_aerondight	Rayfield Aerondight	3	2	Rayfield	1	0	0x24e0077040
+Vehicle.v_sport1_rayfield_aerondight_courier	Rayfield Aerondight Courier	3	2	Rayfield	1	0	0x2c4b7f48a0
+Vehicle.v_sport1_rayfield_aerondight_kerry	Rayfield Aerondight Kerry	3	2	Rayfield	1	0	0x2a0f1a3684
+Vehicle.v_sport1_rayfield_aerondight_player	Rayfield Aerondight	3	2	Rayfield	1	0	0x2b4a5c7876
+Vehicle.v_sport1_rayfield_aerondight_quest	Rayfield Aerondight Quest	3	2	Rayfield	1	0	0x2a0b901631
+Vehicle.v_sport1_rayfield_caliburn	Rayfield Caliburn	3	2	Rayfield	1	0	0x22761651c5
+Vehicle.v_sport1_rayfield_caliburn_02_player	Rayfield Caliburn	3	2	Rayfield	1	0	0x2c70d92e94
+Vehicle.v_sport1_rayfield_caliburn_courier	Rayfield Caliburn Courier	3	2	Rayfield	1	0	0x2aafa2f2b8
+Vehicle.v_sport1_rayfield_caliburn_mordred	Caliburn “Mordred”	3	2	Rayfield	1	0	0x2adc68a476
+Vehicle.v_sport1_rayfield_caliburn_mordred_player	Caliburn “Mordred”	3	2	Rayfield	1	0	0x31a9df11a2
+Vehicle.v_sport1_rayfield_caliburn_murdered	Rayfield Caliburn Murdered	3	2	Rayfield	1	0	0x2b2f75de73
+Vehicle.v_sport1_rayfield_caliburn_player	Rayfield Caliburn	3	2	Rayfield	1	0	0x2999296bfa
+Vehicle.v_sport1_rayfield_caliburn_quest	Rayfield Caliburn Quest	3	2	Rayfield	1	0	0x28a8776156
+Vehicle.v_sport1_yaiba_semimaru	Yaiba Semimaru	3	2	Yaiba	1	0	0x1ff20d5ecc
+Vehicle.v_sport1_yaiba_semimaru_player	Yaiba Semimaru	3	2	Yaiba	1	0	0x2688ec1b03
+Vehicle.v_sport2_mizutani_shion	Mizutani Shion	4	8	Mizutani	1	0	0x1f2adf56fd
+Vehicle.v_sport2_mizutani_shion_base_player	Mizutani Shion Base	4	8	Mizutani	1	0	0x2b5d287496
+Vehicle.v_sport2_mizutani_shion_courier_expanded	Mizutani Shion Courier Expanded	4	8	Mizutani	1	0	0x30ce0bea72
+Vehicle.v_sport2_mizutani_shion_nomad	Mizutani Shion Nomad	4	8	Mizutani	1	0	0x252ad9c879
+Vehicle.v_sport2_mizutani_shion_nomad_02_player	Mizutani Shion Nomad 02	4	8	Mizutani	1	0	0x2fc5d6671e
+Vehicle.v_sport2_mizutani_shion_nomad_buggy	Mizutani Shion Nomad Buggy	4	8	Mizutani	1	0	0x2b263a4c69
+Vehicle.v_sport2_mizutani_shion_nomad_buggy_quest	Mizutani Shion Nomad Buggy Quest	4	8	Mizutani	1	0	0x31d881ddc6
+Vehicle.v_sport2_mizutani_shion_nomad_courier	Mizutani Shion Nomad Courier	4	8	Mizutani	1	0	0x2d49f68c14
+Vehicle.v_sport2_mizutani_shion_nomad_ncu	Mizutani Shion Nomad Ncu	4	8	Mizutani	1	0	0x299c16047b
+Vehicle.v_sport2_mizutani_shion_nomad_player	Mizutani Shion Nomad	4	8	Mizutani	1	0	0x2cae0bc6b5
+Vehicle.v_sport2_mizutani_shion_nomad_player_missiles	Mizutani Shion Nomad Player Missiles	4	8	Mizutani	1	0	0x3564a8198a
+Vehicle.v_sport2_mizutani_shion_nomad_quest	Mizutani Shion Nomad Quest	4	8	Mizutani	1	0	0x2b52e1debd
+Vehicle.v_sport2_mizutani_shion_nomad_samum	Mizutani Shion Nomad Samum	4	8	Mizutani	1	0	0x2bcb7813eb
+Vehicle.v_sport2_mizutani_shion_nomad_technical	Mizutani Shion Nomad Technical	4	8	Mizutani	1	0	0x2fa9ab2554
+Vehicle.v_sport2_mizutani_shion_nomad_wraith	Mizutani Shion Nomad Wraith	4	8	Mizutani	1	0	0x2cde43a6f4
+Vehicle.v_sport2_mizutani_shion_player	Mizutani Shion	4	8	Mizutani	1	0	0x267a7e8ac7
+Vehicle.v_sport2_mizutani_shion_poor	Mizutani Shion Poor	4	8	Mizutani	1	0	0x24bfc79e49
+Vehicle.v_sport2_mizutani_shion_quest	Mizutani Shion Quest	4	8	Mizutani	1	0	0x259c9d4ede
+Vehicle.v_sport2_mizutani_shion_sport	Mizutani Shion Sport	4	8	Mizutani	1	0	0x25c50f591b
+Vehicle.v_sport2_mizutani_shion_targa	Mizutani Shion Targa	4	8	Mizutani	1	0	0x25d11c872d
+Vehicle.v_sport2_mizutani_shion_targa_player	Mizutani Shion Targa	4	8	Mizutani	1	0	0x2cf70d45a5
+Vehicle.v_sport2_mizutani_shion_tdr	Mizutani Shion Tdr	4	8	Mizutani	1	0	0x239f6e32a9
+Vehicle.v_sport2_mizutani_shion_tyger	Mizutani Shion Tyger	4	8	Mizutani	1	0	0x25e8d4ba9a
+Vehicle.v_sport2_mizutani_shion_tyger_courier	Mizutani Shion Tyger Courier	4	8	Mizutani	1	0	0x2d1015c7f1
+Vehicle.v_sport2_porsche_911turbo	Porsche 911 Turbo	4	8	Porsche	1	0	0x214c511df5
+Vehicle.v_sport2_porsche_911turbo_cabrio	Porsche 911Turbo Cabrio	4	8	Porsche	1	0	0x2890144f7d
+Vehicle.v_sport2_porsche_911turbo_cabrio_player	Porsche 911Turbo Cabrio	4	8	Porsche	1	0	0x2f3abb4452
+Vehicle.v_sport2_porsche_911turbo_player	Porsche 911 Turbo	4	8	Porsche	1	0	0x283c959823
+Vehicle.v_sport2_porsche_911turbo_quest	Porsche 911Turbo Quest	4	8	Porsche	1	0	0x271e31d371
+Vehicle.v_sport2_quadra_type66	Quadra Type-66	4	8	Quadra	1	0	0x1e643d874d
+Vehicle.v_sport2_quadra_type66_02_player	Quadra Type-66	4	8	Quadra	1	0	0x28b64bac35
+Vehicle.v_sport2_quadra_type66_avenger	Quadra Type66 Avenger	4	8	Quadra	1	0	0x2653d37b6a
+Vehicle.v_sport2_quadra_type66_avenger_player	Quadra Type66 Avenger	4	8	Quadra	1	0	0x2d38e4d68a
+Vehicle.v_sport2_quadra_type66_base_player	Quadra Type66 Base	4	8	Quadra	1	0	0x2ac2501fd0
+Vehicle.v_sport2_quadra_type66_bulleat	Quadra Type66 Bulleat	4	8	Quadra	1	0	0x26cd3d0dfc
+Vehicle.v_sport2_quadra_type66_corier_client_car	Quadra Type66 Corier Client Car	4	8	Quadra	1	0	0x307e1fd7a7
+Vehicle.v_sport2_quadra_type66_courier_expanded	Quadra Type66 Courier Expanded	4	8	Quadra	1	0	0x2f59a498a4
+Vehicle.v_sport2_quadra_type66_gt_player	Quadra Type66 Gt	4	8	Quadra	1	0	0x284f8a4be0
+Vehicle.v_sport2_quadra_type66_nomad	Quadra Type66 Nomad	4	8	Quadra	1	0	0x2482f4a49c
+Vehicle.v_sport2_quadra_type66_nomad_courier	Quadra Type66 Nomad Courier	4	8	Quadra	1	0	0x2c35b5433f
+Vehicle.v_sport2_quadra_type66_nomad_kb	Quadra Type66 Nomad Kb	4	8	Quadra	1	0	0x2739a60c79
+Vehicle.v_sport2_quadra_type66_nomad_ncu_player	Quadra Type66 Nomad Ncu	4	8	Quadra	1	0	0x2f9b4d15c9
+Vehicle.v_sport2_quadra_type66_nomad_player	Quadra Type66 Nomad	4	8	Quadra	1	0	0x2b312b5a7b
+Vehicle.v_sport2_quadra_type66_nomad_player_03	Quadra Type66 Nomad Player 03	4	8	Quadra	1	0	0x2e4c7b2c64
+Vehicle.v_sport2_quadra_type66_nomad_quest	Quadra Type66 Nomad Quest	4	8	Quadra	1	0	0x2acd99b5fb
+Vehicle.v_sport2_quadra_type66_nomad_tribute	Quadra Type66 Nomad Tribute	4	8	Quadra	1	0	0x2c18bb21e5
+Vehicle.v_sport2_quadra_type66_nomad_wraith	Quadra Type66 Nomad Wraith	4	8	Quadra	1	0	0x2b41633a3a
+Vehicle.v_sport2_quadra_type66_player	Quadra Type-66	4	8	Quadra	1	0	0x25aab6b15c
+Vehicle.v_sport2_quadra_type66_poor	Quadra Type66 Poor	4	8	Quadra	1	0	0x23f5742ee4
+Vehicle.v_sport2_quadra_type66_quest	Quadra Type66 Quest	4	8	Quadra	1	0	0x2434b0223b
+Vehicle.v_sport2_quadra_type66_rogue	Quadra Type66 Rogue	4	8	Quadra	1	0	0x2473dabc0a
+Vehicle.v_sport2_quadra_type66_rowley	Quadra Type66 Rowley	4	8	Quadra	1	0	0x255893dad7
+Vehicle.v_sport2_quadra_type66_sampson	Quadra Type66 Sampson	4	8	Quadra	1	0	0x26c83610aa
+Vehicle.v_sport2_quadra_type66_sport	Quadra Type66 Sport	4	8	Quadra	1	0	0x246d2235fe
+Vehicle.v_sport2_villefort_alvarado	Villefort Alvarado	4	8	Villefort	1	0	0x2348351518
+Vehicle.v_sport2_villefort_alvarado_cabrio	Villefort Alvarado Cabrio	4	8	Villefort	1	0	0x2afde04c1d
+Vehicle.v_sport2_villefort_alvarado_courier	Villefort Alvarado Courier	4	8	Villefort	1	0	0x2b1dd7b160
+Vehicle.v_sport2_villefort_alvarado_hearse	Villefort Alvarado Hearse	4	8	Villefort	1	0	0x2a20eaa635
+Vehicle.v_sport2_villefort_alvarado_hearse_player	Villefort Alvarado Hearse	4	8	Villefort	1	0	0x31966295a0
+Vehicle.v_sport2_villefort_alvarado_hearse_poor	Villefort Alvarado Hearse Poor	4	8	Villefort	1	0	0x2f388be405
+Vehicle.v_sport2_villefort_alvarado_hearse_premium	Villefort Alvarado Hearse Premium	4	8	Villefort	1	0	0x32623d5955
+Vehicle.v_sport2_villefort_alvarado_hearse_web	Villefort Alvarado Hearse Web	4	8	Villefort	1	0	0x2edd5d3344
+Vehicle.v_sport2_villefort_alvarado_mox	Villefort Alvarado Mox	4	8	Villefort	1	0	0x271be80302
+Vehicle.v_sport2_villefort_alvarado_player	Villefort Alvarado	4	8	Villefort	1	0	0x2a51619b43
+Vehicle.v_sport2_villefort_alvarado_poor	Villefort Alvarado Poor	4	8	Villefort	1	0	0x2825ec7d66
+Vehicle.v_sport2_villefort_alvarado_premium	Villefort Alvarado Premium	4	8	Villefort	1	0	0x2b5bf9e999
+Vehicle.v_sport2_villefort_alvarado_quest	Villefort Alvarado Quest	4	8	Villefort	1	0	0x2937d65864
+Vehicle.v_sport2_villefort_alvarado_valentinos	Villefort Alvarado Valentinos	4	8	Villefort	1	0	0x2e348a3c0f
+Vehicle.v_sport2_villefort_alvarado_valentinos_cabrio	Villefort Alvarado Valentinos Cabrio	4	8	Villefort	1	0	0x35cc443a42
+Vehicle.v_sport2_villefort_alvarado_valentinos_courier	Villefort Alvarado Valentinos Courier	4	8	Villefort	1	0	0x36e6325973
+Vehicle.v_sport2_villefort_alvarado_valentinos_player	Villefort Alvarado Valentinos	4	8	Villefort	1	0	0x3560c5ed1c
+Vehicle.v_sport2_villefort_deleon	Villefort Deleon	4	8	Villefort	1	0	0x2144b0e5f2
+Vehicle.v_sport2_villefort_deleon_courier	Villefort Deleon Courier	4	8	Villefort	1	0	0x29e034da7a
+Vehicle.v_sport2_villefort_deleon_player	Villefort Deleon	4	8	Villefort	1	0	0x28d0f3fb59
+Vehicle.v_sport2_villefort_deleon_poor	Villefort Deleon Poor	4	8	Villefort	1	0	0x268aa522d8
+Vehicle.v_sport2_villefort_deleon_sport	Villefort Deleon Sport	4	8	Villefort	1	0	0x2742329875
+Vehicle.v_sport2_villefort_deleon_sport_player	Villefort Deleon Sport	4	8	Villefort	1	0	0x2ec4b38d14
+Vehicle.v_sport2_villefort_deleon_vindicator	Villefort Deleon Vindicator	4	8	Villefort	1	0	0x2ca97cf0de
+Vehicle.v_sport2_villefort_deleon_web	Villefort Deleon Web	4	8	Villefort	1	0	0x254e90c6fd
+Vehicle.v_sportbike1_yaiba_kusanagi	Yaiba Kusanagi	5	9	Yaiba	0	0	0x233b7a2838
+Vehicle.v_sportbike1_yaiba_kusanagi_animal	Yaiba Kusanagi Animal	5	9	Yaiba	0	0	0x2a77a32f3c
+Vehicle.v_sportbike1_yaiba_kusanagi_courier	Yaiba Kusanagi Courier	5	9	Yaiba	0	0	0x2b6d693502
+Vehicle.v_sportbike1_yaiba_kusanagi_courier_expanded	Yaiba Kusanagi Courier Expanded	5	9	Yaiba	0	0	0x342cf340e4
+Vehicle.v_sportbike1_yaiba_kusanagi_mox	Yaiba Kusanagi Mox	5	9	Yaiba	0	0	0x272984a9b3
+Vehicle.v_sportbike1_yaiba_kusanagi_player	Yaiba Kusanagi	5	9	Yaiba	0	0	0x2a85117646
+Vehicle.v_sportbike1_yaiba_kusanagi_player_02	Yaiba Kusanagi Player 02	5	9	Yaiba	0	0	0x2de8f2d899
+Vehicle.v_sportbike1_yaiba_kusanagi_player_03	Yaiba Kusanagi Player 03	5	9	Yaiba	0	0	0x2d9ff5e80f
+Vehicle.v_sportbike1_yaiba_kusanagi_quest	Yaiba Kusanagi Quest	5	9	Yaiba	0	0	0x29fc0bbf07
+Vehicle.v_sportbike1_yaiba_kusanagi_test5	Yaiba Kusanagi Test5	5	9	Yaiba	0	0	0x2932c35feb
+Vehicle.v_sportbike1_yaiba_kusanagi_tyger	Yaiba Kusanagi Tyger	5	9	Yaiba	0	0	0x2988424b43
+Vehicle.v_sportbike1_yaiba_kusanagi_tyger_courier	Yaiba Kusanagi Tyger Courier	5	9	Yaiba	0	0	0x31994319b8
+Vehicle.v_sportbike1_yaiba_kusanagi_tyger_player	Yaiba Kusanagi Tyger	5	9	Yaiba	0	0	0x307b889d50
+Vehicle.v_sportbike1_yaiba_muramasa_naked	Yaiba Muramasa Naked	5	9	Yaiba	0	0	0x29893f3a49
+Vehicle.v_sportbike1_yaiba_muramasa_naked_as	Yaiba Muramasa Naked As	5	9	Yaiba	0	0	0x2cc1cf8f7d
+Vehicle.v_sportbike1_yaiba_muramasa_naked_as_nr	Yaiba Muramasa Naked As Nr	5	9	Yaiba	0	0	0x2f363d46c1
+Vehicle.v_sportbike1_yaiba_muramasa_naked_as_ns	Yaiba Muramasa Naked As Ns	5	9	Yaiba	0	0	0x2f413a7657
+Vehicle.v_sportbike1_yaiba_muramasa_naked_as_ns_nr	Yaiba Muramasa Naked As Ns Nr	5	9	Yaiba	0	0	0x320b4ed910
+Vehicle.v_sportbike1_yaiba_muramasa_naked_nr	Yaiba Muramasa Naked Nr	5	9	Yaiba	0	0	0x2c3150a324
+Vehicle.v_sportbike1_yaiba_muramasa_naked_ns	Yaiba Muramasa Naked Ns	5	9	Yaiba	0	0	0x2c465793b2
+Vehicle.v_sportbike1_yaiba_muramasa_naked_ns_nr	Yaiba Muramasa Naked Ns Nr	5	9	Yaiba	0	0	0x2fb46dd110
+Vehicle.v_sportbike1_yaiba_muramasa_player	Yaiba Muramasa	5	9	Yaiba	0	0	0x2ac15615f8
+Vehicle.v_sportbike1_yaiba_muramasa_regular	Yaiba Muramasa Regular	5	9	Yaiba	0	0	0x2bc496a342
+Vehicle.v_sportbike1_yaiba_muramasa_regular_as	Yaiba Muramasa Regular As	5	9	Yaiba	0	0	0x2ec2134ace
+Vehicle.v_sportbike1_yaiba_muramasa_regular_as_nr	Yaiba Muramasa Regular As Nr	5	9	Yaiba	0	0	0x31c8cdbb7f
+Vehicle.v_sportbike1_yaiba_muramasa_regular_as_ns	Yaiba Muramasa Regular As Ns	5	9	Yaiba	0	0	0x31bfca8be9
+Vehicle.v_sportbike1_yaiba_muramasa_regular_as_ns_nr	Yaiba Muramasa Regular As Ns Nr	5	9	Yaiba	0	0	0x34d8216718
+Vehicle.v_sportbike1_yaiba_muramasa_regular_nr	Yaiba Muramasa Regular Nr	5	9	Yaiba	0	0	0x2e328c6697
+Vehicle.v_sportbike1_yaiba_muramasa_regular_ns	Yaiba Muramasa Regular Ns	5	9	Yaiba	0	0	0x2e458b5601
+Vehicle.v_sportbike1_yaiba_muramasa_regular_ns_nr	Yaiba Muramasa Regular Ns Nr	5	9	Yaiba	0	0	0x314a9d2cae
+Vehicle.v_sportbike2_arch	Arch Nazaré	6	1	Arch	0	0	0x19c34dc573
+Vehicle.v_sportbike2_arch_courier	Arch Courier	6	1	Arch	0	0	0x211ad200e7
+Vehicle.v_sportbike2_arch_jackie	Arch Jackie	6	1	Arch	0	0	0x20f9049555
+Vehicle.v_sportbike2_arch_jackie_player	Arch Jackie	6	1	Arch	0	0	0x27538223eb
+Vehicle.v_sportbike2_arch_jackie_tuned	Arch Jackie Tuned	6	1	Arch	0	0	0x267c673f85
+Vehicle.v_sportbike2_arch_jackie_tuned_player	Arch Jackie Tuned	6	1	Arch	0	0	0x2d44d359b2
+Vehicle.v_sportbike2_arch_linas_player	Arch Linas	6	1	Arch	0	0	0x263c8d063d
+Vehicle.v_sportbike2_arch_player	Arch Nazaré	6	1	Arch	0	0	0x2039140547
+Vehicle.v_sportbike2_arch_player_02	Arch Player 02	6	1	Arch	0	0	0x239d486ca8
+Vehicle.v_sportbike2_arch_player_03	Arch Player 03	6	1	Arch	0	0	0x23ea4f5c3e
+Vehicle.v_sportbike2_arch_quest	Arch Quest	6	1	Arch	0	0	0x1f9ffba4b6
+Vehicle.v_sportbike2_arch_sport	Arch Sport	6	1	Arch	0	0	0x1fc669b373
+Vehicle.v_sportbike2_arch_tyger	Arch Tyger	6	1	Arch	0	0	0x1febb250f2
+Vehicle.v_sportbike2_arch_tyger_courier	Arch Tyger Courier	6	1	Arch	0	0	0x272dc61331
+Vehicle.v_sportbike2_arch_tyger_player	Arch Tyger	6	1	Arch	0	0	0x26f53c23ac
+Vehicle.v_sportbike3_brennan_apollo	Brennan Apollo	7	1	Brennan	0	0	0x230e35a299
+Vehicle.v_sportbike3_brennan_apollo_basic_01_prevention	Brennan Apollo Basic 01 Prevention	7	1	Brennan	0	0	0x37e49fa798
+Vehicle.v_sportbike3_brennan_apollo_courier	Brennan Apollo Courier	7	1	Brennan	0	0	0x2bb027e8e3
+Vehicle.v_sportbike3_brennan_apollo_courier_expanded	Brennan Apollo Courier Expanded	7	1	Brennan	0	0	0x342632b754
+Vehicle.v_sportbike3_brennan_apollo_kurtz	Brennan Apollo Kurtz	7	1	Brennan	0	0	0x29af0a3b79
+Vehicle.v_sportbike3_brennan_apollo_nomad	Brennan Apollo Nomad	7	1	Brennan	0	0	0x29828e3cc8
+Vehicle.v_sportbike3_brennan_apollo_nomad_player	Brennan Apollo Nomad	7	1	Brennan	0	0	0x30a4e6fb9f
+Vehicle.v_sportbike3_brennan_apollo_player	Brennan Apollo	7	1	Brennan	0	0	0x2ac6b05e29
+Vehicle.v_sportbike3_brennan_apollo_player_02	Brennan Apollo Player 02	7	1	Brennan	0	0	0x2d57f56913
+Vehicle.v_sportbike3_brennan_apollo_police	Brennan Apollo Police	7	1	Brennan	0	0	0x2abad57d15
+Vehicle.v_sportbike3_brennan_apollo_quest	Brennan Apollo Quest	7	1	Brennan	0	0	0x2934caba6f
+Vehicle.v_sportbike3_brennan_apollo_scorpion	Brennan Apollo Scorpion	7	1	Brennan	0	0	0x2c838ac037
+Vehicle.v_sportbike3_brennan_apollo_sport	Brennan Apollo Sport	7	1	Brennan	0	0	0x296d58adaa
+Vehicle.v_sportbike3_brennan_apollo_tyger	Brennan Apollo Tyger	7	1	Brennan	0	0	0x2940834e2b
+Vehicle.v_sportbike3_brennan_apollo_tyger_courier_expanded	Brennan Apollo Tyger Courier Expanded	7	1	Brennan	0	0	0x3a9916d3ae
+Vehicle.v_standard25_mahir_mox	Mahir Mox	9	4	Mahir	1	0	0x1e7ab11ff1
+Vehicle.v_standard25_mahir_supron	Mahir Supron	9	4	Mahir	1	0	0x21f3590e25
+Vehicle.v_standard25_mahir_supron_courier	Mahir Supron Courier	9	4	Mahir	1	0	0x297ee7c9dc
+Vehicle.v_standard25_mahir_supron_courier_expanded	Mahir Supron Courier Expanded	9	4	Mahir	1	0	0x3205993ad0
+Vehicle.v_standard25_mahir_supron_gt_player	Mahir Supron Gt	9	4	Mahir	1	0	0x2b39825f83
+Vehicle.v_standard25_mahir_supron_player	Mahir Supron	9	4	Mahir	1	0	0x286775fe5e
+Vehicle.v_standard25_mahir_supron_poor	Mahir Supron Poor	9	4	Mahir	1	0	0x26bdb994f8
+Vehicle.v_standard25_mahir_supron_poor_dogtown	Mahir Supron Poor Dogtown	9	4	Mahir	1	0	0x2ecb548b57
+Vehicle.v_standard25_mahir_supron_quest	Mahir Supron Quest	9	4	Mahir	1	0	0x2720f9b3ce
+Vehicle.v_standard25_mahir_supron_sport	Mahir Supron Sport	9	4	Mahir	1	0	0x27796ba40b
+Vehicle.v_standard25_mahir_voodoo_boys	Mahir Voodoo Boys	9	4	Mahir	1	0	0x266f1c5567
+Vehicle.v_standard25_mahir_voodoo_boys_courier_expanded	Mahir Voodoo Boys Courier Expanded	9	4	Mahir	1	0	0x372829ab6f
+Vehicle.v_standard25_thorton_colby_nomad	Thorton Colby Nomad	9	4	Thorton	1	0	0x2886612980
+Vehicle.v_standard25_thorton_colby_nomad_courier	Thorton Colby Nomad Courier	9	4	Thorton	1	0	0x304f4bcd59
+Vehicle.v_standard25_thorton_colby_nomad_courier_expanded	Thorton Colby Nomad Courier Expanded	9	4	Thorton	1	0	0x39e23c1c38
+Vehicle.v_standard25_thorton_colby_nomad_disabled_interactions	Thorton Colby Nomad Disabled Interactions	9	4	Thorton	1	0	0x3e96162cde
+Vehicle.v_standard25_thorton_colby_nomad_mule	Thorton Colby Nomad Mule	9	4	Thorton	1	0	0x2d5b9755e2
+Vehicle.v_standard25_thorton_colby_nomad_ncu	Thorton Colby Nomad Ncu	9	4	Thorton	1	0	0x2c3c242cb2
+Vehicle.v_standard25_thorton_colby_nomad_player	Thorton Colby Nomad	9	4	Thorton	1	0	0x2fa5ff94f0
+Vehicle.v_standard25_thorton_colby_nomad_player_missiles	Thorton Colby Nomad Player Missiles	9	4	Thorton	1	0	0x381d584570
+Vehicle.v_standard25_thorton_colby_nomad_prevention	Thorton Colby Nomad Prevention	9	4	Thorton	1	0	0x33308412a2
+Vehicle.v_standard25_thorton_colby_nomad_quest	Thorton Colby Nomad Quest	9	4	Thorton	1	0	0x2e7d6cba72
+Vehicle.v_standard25_thorton_colby_nomad_vulture	Thorton Colby Nomad Vulture	9	4	Thorton	1	0	0x300317aea7
+Vehicle.v_standard25_thorton_colby_nomad_wraith	Thorton Colby Nomad Wraith	9	4	Thorton	1	0	0x2fd5b7f4b1
+Vehicle.v_standard25_thorton_colby_pickup	Thorton Colby Pickup	9	4	Thorton	1	0	0x2967343b06
+Vehicle.v_standard25_thorton_colby_pickup_02_player	Thorton Colby Pickup 02	9	4	Thorton	1	0	0x3350e6625d
+Vehicle.v_standard25_thorton_colby_pickup_kurtz	Thorton Colby Pickup Kurtz	9	4	Thorton	1	0	0x2f60964d44
+Vehicle.v_standard25_thorton_colby_pickup_kurtz_cd	Thorton Colby Pickup Kurtz Cd	9	4	Thorton	1	0	0x32b7860fff
+Vehicle.v_standard25_thorton_colby_pickup_kurtz_cd_no_hull	Thorton Colby Pickup Kurtz Cd No Hull	9	4	Thorton	1	0	0x3aeaa5c56f
+Vehicle.v_standard25_thorton_colby_pickup_kurtz_courier	Thorton Colby Pickup Kurtz Courier	9	4	Thorton	1	0	0x37615df7bc
+Vehicle.v_standard25_thorton_colby_pickup_kurtz_no_hull	Thorton Colby Pickup Kurtz No Hull	9	4	Thorton	1	0	0x378aaeca1c
+Vehicle.v_standard25_thorton_colby_pickup_kurtz_player	Thorton Colby Pickup Kurtz	9	4	Thorton	1	0	0x3607c8f08d
+Vehicle.v_standard25_thorton_colby_pickup_nomad__basic_01_mq304	Thorton Colby Pickup Nomad Basic 01 Mq304	9	4	Thorton	1	0	0x3f140d6721
+Vehicle.v_standard25_thorton_colby_pickup_player	Thorton Colby Pickup	9	4	Thorton	1	0	0x309e178e4e
+Vehicle.v_standard25_thorton_colby_pickup_poor	Thorton Colby Pickup Poor	9	4	Thorton	1	0	0x2ea90fded2
+Vehicle.v_standard25_thorton_colby_pickup_quest	Thorton Colby Pickup Quest	9	4	Thorton	1	0	0x2ffb56cc52
+Vehicle.v_standard25_thorton_kurtz_no_hull_01_prevention	Thorton Kurtz No Hull 01 Prevention	9	4	Thorton	1	0	0x38d9c9c0e1
+Vehicle.v_standard25_thorton_kurtz_no_hull_02_prevention	Thorton Kurtz No Hull 02 Prevention	9	4	Thorton	1	0	0x38ae571211
+Vehicle.v_standard25_thorton_merrimac	Thorton Merrimac	9	4	Thorton	1	0	0x257bedf72c
+Vehicle.v_standard25_thorton_merrimac_courier	Thorton Merrimac Courier	9	4	Thorton	1	0	0x2d908307cd
+Vehicle.v_standard25_thorton_merrimac_maxtac	Thorton Merrimac Maxtac	9	4	Thorton	1	0	0x2c61177818
+Vehicle.v_standard25_thorton_merrimac_maxtac_prevention	Thorton Merrimac Maxtac Prevention	9	4	Thorton	1	0	0x370f2a79e2
+Vehicle.v_standard25_thorton_merrimac_pickup	Thorton Merrimac Pickup	9	4	Thorton	1	0	0x2cd45d80c4
+Vehicle.v_standard25_thorton_merrimac_player	Thorton Merrimac	9	4	Thorton	1	0	0x2c0ddac35c
+Vehicle.v_standard25_thorton_merrimac_police	Thorton Merrimac Police	9	4	Thorton	1	0	0x2c71bfe060
+Vehicle.v_standard25_thorton_merrimac_poor	Thorton Merrimac Poor	9	4	Thorton	1	0	0x2a7acaeb2b
+Vehicle.v_standard25_thorton_merrimac_premium	Thorton Merrimac Premium	9	4	Thorton	1	0	0x2dd6ad5f34
+Vehicle.v_standard25_thorton_merrimac_reed	Thorton Merrimac Reed	9	4	Thorton	1	0	0x2ad36ffbad
+Vehicle.v_standard25_thorton_merrimac_web	Thorton Merrimac Web	9	4	Thorton	1	0	0x292eca716d
+Vehicle.v_standard25_villefort_columbus	Villefort Columbus	9	4	Villefort	1	0	0x27f5aeb6d9
+Vehicle.v_standard25_villefort_columbus_arasaka	Villefort Columbus Arasaka	9	4	Villefort	1	0	0x2f534b7ebc
+Vehicle.v_standard25_villefort_columbus_corpo	Villefort Columbus Corpo	9	4	Villefort	1	0	0x2de0872716
+Vehicle.v_standard25_villefort_columbus_courier	Villefort Columbus Courier	9	4	Villefort	1	0	0x2f426e151f
+Vehicle.v_standard25_villefort_columbus_disabled_interactions	Villefort Columbus Disabled Interactions	9	4	Villefort	1	0	0x3d9788b07d
+Vehicle.v_standard25_villefort_columbus_growl_fm	Villefort Columbus Growl Fm	9	4	Villefort	1	0	0x30b4298bd0
+Vehicle.v_standard25_villefort_columbus_judy_van	Villefort Columbus Judy Van	9	4	Villefort	1	0	0x303c360370
+Vehicle.v_standard25_villefort_columbus_kangtao	Villefort Columbus Kangtao	9	4	Villefort	1	0	0x2f28e8a2c8
+Vehicle.v_standard25_villefort_columbus_kangtao_courier	Villefort Columbus Kangtao Courier	9	4	Villefort	1	0	0x37c98aceee
+Vehicle.v_standard25_villefort_columbus_locked_doors	Villefort Columbus Locked Doors	9	4	Villefort	1	0	0x344987889e
+Vehicle.v_standard25_villefort_columbus_player	Villefort Columbus	9	4	Villefort	1	0	0x2eed4dec7a
+Vehicle.v_standard25_villefort_columbus_poor	Villefort Columbus Poor	9	4	Villefort	1	0	0x2c0e6a8d02
+Vehicle.v_standard25_villefort_columbus_quest	Villefort Columbus Quest	9	4	Villefort	1	0	0x2d7d227bd5
+Vehicle.v_standard25_villefort_columbus_scavengers	Villefort Columbus Scavengers	9	4	Villefort	1	0	0x32456c9a96
+Vehicle.v_standard25_villefort_columbus_scavengers_courier	Villefort Columbus Scavengers Courier	9	4	Villefort	1	0	0x3af629211d
+Vehicle.v_standard25_villefort_columbus_sixth_street	Villefort Columbus Sixth Street	9	4	Villefort	1	0	0x3466656af8
+Vehicle.v_standard25_villefort_columbus_sixth_street_courier	Villefort Columbus Sixth Street Courier	9	4	Villefort	1	0	0x3cf658ad51
+Vehicle.v_standard25_villefort_columbus_songbird	Villefort Columbus Songbird	9	4	Villefort	1	0	0x3076268cc8
+Vehicle.v_standard25_villefort_columbus_tyger	Villefort Columbus Tyger	9	4	Villefort	1	0	0x2d096b8f91
+Vehicle.v_standard2_archer_bandit	Archer Bandit	8	7	Archer	1	0	0x21ce47c3be
+Vehicle.v_standard2_archer_bandit_player	Archer Bandit	8	7	Archer	1	0	0x28fa5dd86d
+Vehicle.v_standard2_archer_bandit_quest	Archer Bandit Quest	8	7	Archer	1	0	0x27daa82f4b
+Vehicle.v_standard2_archer_hella	Archer Hella	8	7	Archer	1	0	0x2029190887
+Vehicle.v_standard2_archer_hella_combat_cab	Archer Hella Combat Cab	8	7	Archer	1	0	0x2b0c04c6fe
+Vehicle.v_standard2_archer_hella_courier_expanded	Archer Hella Courier Expanded	8	7	Archer	1	0	0x31aaafbf78
+Vehicle.v_standard2_archer_hella_getto	Archer Hella Getto	8	7	Archer	1	0	0x26871ebd81
+Vehicle.v_standard2_archer_hella_kurtz	Archer Hella Kurtz	8	7	Archer	1	0	0x267ba79f46
+Vehicle.v_standard2_archer_hella_ncu	Archer Hella Ncu	8	7	Archer	1	0	0x2439f3755b
+Vehicle.v_standard2_archer_hella_player	Archer Hella	8	7	Archer	1	0	0x277002deb0
+Vehicle.v_standard2_archer_hella_police	Archer Hella Police	8	7	Archer	1	0	0x270c67fd8c
+Vehicle.v_standard2_archer_hella_police_mws	Archer Hella Police Mws	8	7	Archer	1	0	0x2b62ce0f67
+Vehicle.v_standard2_archer_hella_police_prevention	Archer Hella Police Prevention	8	7	Archer	1	0	0x32dd854fce
+Vehicle.v_standard2_archer_hella_police_prevention_2	Archer Hella Police Prevention 2	8	7	Archer	1	0	0x34073779a0
+Vehicle.v_standard2_archer_hella_police_siren	Archer Hella Police Siren	8	7	Archer	1	0	0x2d278e2005
+Vehicle.v_standard2_archer_hella_police_sts_ep1_10	Archer Hella Police Sts Ep1 10	8	7	Archer	1	0	0x325e4edd43
+Vehicle.v_standard2_archer_hella_poor	Archer Hella Poor	8	7	Archer	1	0	0x259978a787
+Vehicle.v_standard2_archer_hella_poor_dogtown	Archer Hella Poor Dogtown	8	7	Archer	1	0	0x2dc95af371
+Vehicle.v_standard2_archer_hella_quest	Archer Hella Quest	8	7	Archer	1	0	0x26e0671e50
+Vehicle.v_standard2_archer_hella_scavenger_courier_expanded	Archer Hella Scavenger Courier Expanded	8	7	Archer	1	0	0x3b392e0d87
+Vehicle.v_standard2_archer_hella_scavengers	Archer Hella Scavengers	8	7	Archer	1	0	0x2b822c1939
+Vehicle.v_standard2_archer_hella_scavengers_courier	Archer Hella Scavengers Courier	8	7	Archer	1	0	0x3368d71af5
+Vehicle.v_standard2_archer_hella_sixth_street	Archer Hella Sixth Street	8	7	Archer	1	0	0x2d3b4bdf04
+Vehicle.v_standard2_archer_hella_sixth_street_courier	Archer Hella Sixth Street Courier	8	7	Archer	1	0	0x35d1f4a36f
+Vehicle.v_standard2_archer_hella_sixth_street_courier_expanded	Archer Hella Sixth Street Courier Expanded	8	7	Archer	1	0	0x3e8b275f93
+Vehicle.v_standard2_archer_hella_sixth_street_mws	Archer Hella Sixth Street Mws	8	7	Archer	1	0	0x31f066cd9c
+Vehicle.v_standard2_archer_quartz	Archer Quartz	8	7	Archer	1	0	0x2186790c46
+Vehicle.v_standard2_archer_quartz_base_player	Archer Quartz Base	8	7	Archer	1	0	0x2d649307b2
+Vehicle.v_standard2_archer_quartz_courier	Archer Quartz Courier	8	7	Archer	1	0	0x2981821524
+Vehicle.v_standard2_archer_quartz_disabled_interactions	Archer Quartz Disabled Interactions	8	7	Archer	1	0	0x3706b2cb3c
+Vehicle.v_standard2_archer_quartz_gt	Archer Quartz Gt	8	7	Archer	1	0	0x24140e8fba
+Vehicle.v_standard2_archer_quartz_locked_doors	Archer Quartz Locked Doors	8	7	Archer	1	0	0x2edf59ac40
+Vehicle.v_standard2_archer_quartz_mox	Archer Quartz Mox	8	7	Archer	1	0	0x2503dd0cd2
+Vehicle.v_standard2_archer_quartz_nomad	Archer Quartz Nomad	8	7	Archer	1	0	0x2790151e78
+Vehicle.v_standard2_archer_quartz_nomad_courier	Archer Quartz Nomad Courier	8	7	Archer	1	0	0x2f7112748f
+Vehicle.v_standard2_archer_quartz_nomad_disabled_interactions	Archer Quartz Nomad Disabled Interactions	8	7	Archer	1	0	0x3d31e48140
+Vehicle.v_standard2_archer_quartz_nomad_player	Archer Quartz Nomad	8	7	Archer	1	0	0x2e92319917
+Vehicle.v_standard2_archer_quartz_nomad_player_02	Archer Quartz Nomad Player 02	8	7	Archer	1	0	0x31670453e2
+Vehicle.v_standard2_archer_quartz_nomad_prevention	Archer Quartz Nomad Prevention	8	7	Archer	1	0	0x329e30a7bf
+Vehicle.v_standard2_archer_quartz_nomad_quest	Archer Quartz Nomad Quest	8	7	Archer	1	0	0x2d6b5aad99
+Vehicle.v_standard2_archer_quartz_nomad_wraith	Archer Quartz Nomad Wraith	8	7	Archer	1	0	0x2ee279f956
+Vehicle.v_standard2_archer_quartz_player	Archer Quartz	8	7	Archer	1	0	0x280dc37687
+Vehicle.v_standard2_archer_quartz_poor	Archer Quartz Poor	8	7	Archer	1	0	0x26a3279abd
+Vehicle.v_standard2_archer_quartz_quest	Archer Quartz Quest	8	7	Archer	1	0	0x27265198df
+Vehicle.v_standard2_archer_quartz_tyger	Archer Quartz Tyger	8	7	Archer	1	0	0x2752186c9b
+Vehicle.v_standard2_archer_quartz_tyger_courier	Archer Quartz Tyger Courier	8	7	Archer	1	0	0x2f28f13f6a
+Vehicle.v_standard2_archer_quartz_tyger_courier_expanded	Archer Quartz Tyger Courier Expanded	8	7	Archer	1	0	0x38d93adc14
+Vehicle.v_standard2_chevalier_thrax	Chevalier Thrax	8	7	Chevalier	1	0	0x23d99475a3
+Vehicle.v_standard2_chevalier_thrax_combat_cab	Chevalier Thrax Combat Cab	8	7	Chevalier	1	0	0x2e5187c7d1
+Vehicle.v_standard2_chevalier_thrax_courier_expanded	Chevalier Thrax Courier Expanded	8	7	Chevalier	1	0	0x34fabd851d
+Vehicle.v_standard2_chevalier_thrax_dex	Chevalier Thrax Dex	8	7	Chevalier	1	0	0x275c66fcc6
+Vehicle.v_standard2_chevalier_thrax_maelstrom	Chevalier Thrax Maelstrom	8	7	Chevalier	1	0	0x2d0db66fb4
+Vehicle.v_standard2_chevalier_thrax_maelstrom_courier	Chevalier Thrax Maelstrom Courier	8	7	Chevalier	1	0	0x35a01a7d89
+Vehicle.v_standard2_chevalier_thrax_maelstrom_courier_expanded	Chevalier Thrax Maelstrom Courier Expanded	8	7	Chevalier	1	0	0x3e427dc0f2
+Vehicle.v_standard2_chevalier_thrax_maelstrom_mws	Chevalier Thrax Maelstrom Mws	8	7	Chevalier	1	0	0x3146e2777f
+Vehicle.v_standard2_chevalier_thrax_mafia_courier	Chevalier Thrax Mafia Courier	8	7	Chevalier	1	0	0x31d4981a8e
+Vehicle.v_standard2_chevalier_thrax_mq304	Chevalier Thrax Mq304	8	7	Chevalier	1	0	0x29382482b8
+Vehicle.v_standard2_chevalier_thrax_ncu	Chevalier Thrax Ncu	8	7	Chevalier	1	0	0x27791aa22b
+Vehicle.v_standard2_chevalier_thrax_player	Chevalier Thrax	8	7	Chevalier	1	0	0x2a335cbfa4
+Vehicle.v_standard2_chevalier_thrax_poor	Chevalier Thrax Poor	8	7	Chevalier	1	0	0x28c93d3f6c
+Vehicle.v_standard2_chevalier_thrax_premium	Chevalier Thrax Premium	8	7	Chevalier	1	0	0x2b65f5a366
+Vehicle.v_standard2_chevalier_thrax_premium_quest	Chevalier Thrax Premium Quest	8	7	Chevalier	1	0	0x31dfa1f2d4
+Vehicle.v_standard2_chevalier_thrax_quest	Chevalier Thrax Quest	8	7	Chevalier	1	0	0x29d7ef6038
+Vehicle.v_standard2_chevalier_thrax_scavengers	Chevalier Thrax Scavengers	8	7	Chevalier	1	0	0x2edfaf1816
+Vehicle.v_standard2_chevalier_thrax_scavengers_quest	Chevalier Thrax Scavengers Quest	8	7	Chevalier	1	0	0x34dfed5210
+Vehicle.v_standard2_chevalier_thrax_sixth_street	Chevalier Thrax Sixth Street	8	7	Chevalier	1	0	0x305e508a7c
+Vehicle.v_standard2_chevalier_thrax_sixth_street_courier	Chevalier Thrax Sixth Street Courier	8	7	Chevalier	1	0	0x38e76fe53f
+Vehicle.v_standard2_chevalier_thrax_valentino	Chevalier Thrax Valentino	8	7	Chevalier	1	0	0x2deea2e8cc
+Vehicle.v_standard2_chevalier_thrax_valentino_courier	Chevalier Thrax Valentino Courier	8	7	Chevalier	1	0	0x35652dde52
+Vehicle.v_standard2_makigai_maimai	Makigai MaiMai	8	7	Makigai	1	0	0x22022bec60
+Vehicle.v_standard2_makigai_maimai_courier	Makigai Maimai Courier	8	7	Makigai	1	0	0x2ab81b674c
+Vehicle.v_standard2_makigai_maimai_courier_expanded	Makigai Maimai Courier Expanded	8	7	Makigai	1	0	0x3314a42054
+Vehicle.v_standard2_makigai_maimai_gt	Makigai Maimai Gt	8	7	Makigai	1	0	0x25f3d57658
+Vehicle.v_standard2_makigai_maimai_player	Makigai MaiMai	8	7	Makigai	1	0	0x299702dc64
+Vehicle.v_standard2_makigai_maimai_poor	Makigai Maimai Poor	8	7	Makigai	1	0	0x270b0ea6b0
+Vehicle.v_standard2_makigai_maimai_poor_dogtown	Makigai Maimai Poor Dogtown	8	7	Makigai	1	0	0x2f9698380d
+Vehicle.v_standard2_makigai_maimai_premium	Makigai Maimai Premium	8	7	Makigai	1	0	0x2afe353fb5
+Vehicle.v_standard2_makigai_maimai_quest	Makigai Maimai Quest	8	7	Makigai	1	0	0x285848cd5e
+Vehicle.v_standard2_mizutani_hozuki	Mizutani Hozuki	8	7	Mizutani	1	0	0x239bb53e33
+Vehicle.v_standard2_mizutani_hozuki_courier	Mizutani Hozuki Courier	8	7	Mizutani	1	0	0x2ba494b357
+Vehicle.v_standard2_mizutani_hozuki_gt_player	Mizutani Hozuki Gt	8	7	Mizutani	1	0	0x2d51255c52
+Vehicle.v_standard2_mizutani_hozuki_player	Mizutani Hozuki	8	7	Mizutani	1	0	0x2a74b7a535
+Vehicle.v_standard2_mizutani_hozuki_poor	Mizutani Hozuki Poor	8	7	Mizutani	1	0	0x28afeec610
+Vehicle.v_standard2_mizutani_hozuki_poor_dogtown	Mizutani Hozuki Poor Dogtown	8	7	Mizutani	1	0	0x302480b1b0
+Vehicle.v_standard2_mizutani_hozuki_premium	Mizutani Hozuki Premium	8	7	Mizutani	1	0	0x2be2baebae
+Vehicle.v_standard2_mizutani_hozuki_sport	Mizutani Hozuki Sport	8	7	Mizutani	1	0	0x29d7a89913
+Vehicle.v_standard2_mizutani_hozuki_sti	Mizutani Hozuki Sti	8	7	Mizutani	1	0	0x27a9a4fc0b
+Vehicle.v_standard2_mizutani_hozuki_web	Mizutani Hozuki Web	8	7	Mizutani	1	0	0x276aa6ae4f
+Vehicle.v_standard2_thorton_colby	Thorton Colby	8	7	Thorton	1	0	0x210009589a
+Vehicle.v_standard2_thorton_colby_courier_expanded	Thorton Colby Courier Expanded	8	7	Thorton	1	0	0x32404955a4
+Vehicle.v_standard2_thorton_colby_family	Thorton Colby Family	8	7	Thorton	1	0	0x28faa00741
+Vehicle.v_standard2_thorton_colby_gt	Thorton Colby Gt	8	7	Thorton	1	0	0x241e4faa04
+Vehicle.v_standard2_thorton_colby_gt_player	Thorton Colby Gt	8	7	Thorton	1	0	0x2b47876449
+Vehicle.v_standard2_thorton_colby_player	Thorton Colby	8	7	Thorton	1	0	0x28c75f5c7f
+Vehicle.v_standard2_thorton_colby_poor	Thorton Colby Poor	8	7	Thorton	1	0	0x269265c78d
+Vehicle.v_standard2_thorton_colby_quest	Thorton Colby Quest	8	7	Thorton	1	0	0x2700b9ea2e
+Vehicle.v_standard2_thorton_colby_scavengers	Thorton Colby Scavengers	8	7	Thorton	1	0	0x2c14a32db1
+Vehicle.v_standard2_thorton_colby_scavengers_courier_expanded	Thorton Colby Scavengers Courier Expanded	8	7	Thorton	1	0	0x3da00c1d0f
+Vehicle.v_standard2_thorton_colby_scavengers_quest	Thorton Colby Scavengers Quest	8	7	Thorton	1	0	0x32651982a9
+Vehicle.v_standard2_thorton_colby_valentinos	Thorton Colby Valentinos	8	7	Thorton	1	0	0x2c423ed6df
+Vehicle.v_standard2_thorton_colby_valentinos_courier	Thorton Colby Valentinos Courier	8	7	Thorton	1	0	0x34b036923a
+Vehicle.v_standard2_thorton_colby_valentinos_mws	Thorton Colby Valentinos Mws	8	7	Thorton	1	0	0x3075738ca0
+Vehicle.v_standard2_thorton_galena	Thorton Galena	8	7	Thorton	1	0	0x22dc00a325
+Vehicle.v_standard2_thorton_galena_bobas	Thorton Galena Bobas	8	7	Thorton	1	0	0x28d6610040
+Vehicle.v_standard2_thorton_galena_bobas_player	Thorton Galena Bobas	8	7	Thorton	1	0	0x2f824c5027
+Vehicle.v_standard2_thorton_galena_courier	Thorton Galena Courier	8	7	Thorton	1	0	0x2a308b9a98
+Vehicle.v_standard2_thorton_galena_courier_expanded	Thorton Galena Courier Expanded	8	7	Thorton	1	0	0x33240ad173
+Vehicle.v_standard2_thorton_galena_disabled_interactions	Thorton Galena Disabled Interactions	8	7	Thorton	1	0	0x3880549ab7
+Vehicle.v_standard2_thorton_galena_gt	Thorton Galena Gt	8	7	Thorton	1	0	0x255ed99327
+Vehicle.v_standard2_thorton_galena_gt_player	Thorton Galena Gt	8	7	Thorton	1	0	0x2c5ff59ba0
+Vehicle.v_standard2_thorton_galena_locked_doors	Thorton Galena Locked Doors	8	7	Thorton	1	0	0x2f4d5b4b4e
+Vehicle.v_standard2_thorton_galena_maelstrom	Thorton Galena Maelstrom	8	7	Thorton	1	0	0x2c7842bbed
+Vehicle.v_standard2_thorton_galena_maelstrom_courier	Thorton Galena Maelstrom Courier	8	7	Thorton	1	0	0x340ace8682
+Vehicle.v_standard2_thorton_galena_maelstrom_courier_expanded	Thorton Galena Maelstrom Courier Expanded	8	7	Thorton	1	0	0x3d852243ed
+Vehicle.v_standard2_thorton_galena_ncu	Thorton Galena Ncu	8	7	Thorton	1	0	0x265d6bb9df
+Vehicle.v_standard2_thorton_galena_nomad	Thorton Galena Nomad	8	7	Thorton	1	0	0x289b1e2fbb
+Vehicle.v_standard2_thorton_galena_nomad_courier	Thorton Galena Nomad Courier	8	7	Thorton	1	0	0x3096385b6f
+Vehicle.v_standard2_thorton_galena_nomad_courier_expanded	Thorton Galena Nomad Courier Expanded	8	7	Thorton	1	0	0x39be499f47
+Vehicle.v_standard2_thorton_galena_nomad_locust	Thorton Galena Nomad Locust	8	7	Thorton	1	0	0x2f656fe724
+Vehicle.v_standard2_thorton_galena_nomad_player	Thorton Galena Nomad	8	7	Thorton	1	0	0x2f00337e19
+Vehicle.v_standard2_thorton_galena_nomad_player_missiles	Thorton Galena Nomad Player Missiles	8	7	Thorton	1	0	0x38dbb13ecb
+Vehicle.v_standard2_thorton_galena_nomad_prevention	Thorton Galena Nomad Prevention	8	7	Thorton	1	0	0x33fe758643
+Vehicle.v_standard2_thorton_galena_nomad_prevention_2	Thorton Galena Nomad Prevention 2	8	7	Thorton	1	0	0x356ba2c642
+Vehicle.v_standard2_thorton_galena_nomad_quest	Thorton Galena Nomad Quest	8	7	Thorton	1	0	0x2ebb333855
+Vehicle.v_standard2_thorton_galena_nomad_red_green	Thorton Galena Nomad Red Green	8	7	Thorton	1	0	0x32d6f207b4
+Vehicle.v_standard2_thorton_galena_nomad_scorpion	Thorton Galena Nomad Scorpion	8	7	Thorton	1	0	0x3167a2108f
+Vehicle.v_standard2_thorton_galena_nomad_wraith	Thorton Galena Nomad Wraith	8	7	Thorton	1	0	0x2f707b1e58
+Vehicle.v_standard2_thorton_galena_player	Thorton Galena	8	7	Thorton	1	0	0x290fa5eebc
+Vehicle.v_standard2_thorton_galena_poor	Thorton Galena Poor	8	7	Thorton	1	0	0x2773c97872
+Vehicle.v_standard2_thorton_galena_poor_dogtown	Thorton Galena Poor Dogtown	8	7	Thorton	1	0	0x2f90a8855d
+Vehicle.v_standard2_thorton_galena_quest	Thorton Galena Quest	8	7	Thorton	1	0	0x282d5aa91c
+Vehicle.v_standard2_thorton_galena_voodoo_boys	Thorton Galena Voodoo Boys	8	7	Thorton	1	0	0x2e154e6ed2
+Vehicle.v_standard2_villefort_cortes	Villefort Cortes	8	7	Villefort	1	0	0x24fa8878c7
+Vehicle.v_standard2_villefort_cortes_arasaka	Villefort Cortes Arasaka	8	7	Villefort	1	0	0x2cf5fdc889
+Vehicle.v_standard2_villefort_cortes_courier	Villefort Cortes Courier	8	7	Villefort	1	0	0x2ce4d8a32a
+Vehicle.v_standard2_villefort_cortes_courier_expanded	Villefort Cortes Courier Expanded	8	7	Villefort	1	0	0x354388dc2d
+Vehicle.v_standard2_villefort_cortes_delamain	Villefort Cortes Delamain	8	7	Villefort	1	0	0x2d2f26aee0
+Vehicle.v_standard2_villefort_cortes_delamain_player	Villefort Cortes Delamain	8	7	Villefort	1	0	0x34f74c2ea3
+Vehicle.v_standard2_villefort_cortes_delamain_taxi	Villefort Cortes Delamain Taxi	8	7	Villefort	1	0	0x32a91db80f
+Vehicle.v_standard2_villefort_cortes_kangtao	Villefort Cortes Kangtao	8	7	Villefort	1	0	0x2c8e5e14fd
+Vehicle.v_standard2_villefort_cortes_kangtao_courier	Villefort Cortes Kangtao Courier	8	7	Villefort	1	0	0x3474f67333
+Vehicle.v_standard2_villefort_cortes_mafia_courier	Villefort Cortes Mafia Courier	8	7	Villefort	1	0	0x3210a93369
+Vehicle.v_standard2_villefort_cortes_player	Villefort Cortes	8	7	Villefort	1	0	0x2be7acbedf
+Vehicle.v_standard2_villefort_cortes_police	Villefort Cortes Police	8	7	Villefort	1	0	0x2b9bc99de3
+Vehicle.v_standard2_villefort_cortes_police_border_patrol	Villefort Cortes Police Border Patrol	8	7	Villefort	1	0	0x396a9fae40
+Vehicle.v_standard2_villefort_cortes_police_border_patrol_prevention	Villefort Cortes Police Border Patrol Prevention	8	7	Villefort	1	0	0x441fbf048c
+Vehicle.v_standard2_villefort_cortes_police_border_patrol_prevention_2	Villefort Cortes Police Border Patrol Prevention 2	8	7	Villefort	1	0	0x4624760e05
+Vehicle.v_standard2_villefort_cortes_police_mws	Villefort Cortes Police Mws	8	7	Villefort	1	0	0x2f17b3b492
+Vehicle.v_standard2_villefort_cortes_police_prevention	Villefort Cortes Police Prevention	8	7	Villefort	1	0	0x36c66dcdd6
+Vehicle.v_standard2_villefort_cortes_police_prevention_2	Villefort Cortes Police Prevention 2	8	7	Villefort	1	0	0x38869a181d
+Vehicle.v_standard2_villefort_cortes_police_sheriff	Villefort Cortes Police Sheriff	8	7	Villefort	1	0	0x3383e67d48
+Vehicle.v_standard2_villefort_cortes_police_siren	Villefort Cortes Police Siren	8	7	Villefort	1	0	0x3112f62a84
+Vehicle.v_standard2_villefort_cortes_poor	Villefort Cortes Poor	8	7	Villefort	1	0	0x29fc701b49
+Vehicle.v_standard2_villefort_cortes_premium	Villefort Cortes Premium	8	7	Villefort	1	0	0x2ca2f6fbd3
+Vehicle.v_standard2_villefort_cortes_quest	Villefort Cortes Quest	8	7	Villefort	1	0	0x2a9cdef95b
+Vehicle.v_standard3_chevalier_emperor	Chevalier Emperor	10	6	Chevalier	1	0	0x25064101fa
+Vehicle.v_standard3_chevalier_emperor_arasaka_courier	Chevalier Emperor Arasaka Courier	10	6	Chevalier	1	0	0x3545c1fab4
+Vehicle.v_standard3_chevalier_emperor_courier	Chevalier Emperor Courier	10	6	Chevalier	1	0	0x2d38c3825e
+Vehicle.v_standard3_chevalier_emperor_courier_expanded	Chevalier Emperor Courier Expanded	10	6	Chevalier	1	0	0x36db3e385c
+Vehicle.v_standard3_chevalier_emperor_militech	Chevalier Emperor Militech	10	6	Chevalier	1	0	0x2ea999c70c
+Vehicle.v_standard3_chevalier_emperor_militech_border_prevention	Chevalier Emperor Militech Border Prevention	10	6	Chevalier	1	0	0x40b8e87fd2
+Vehicle.v_standard3_chevalier_emperor_militech_courier	Chevalier Emperor Militech Courier	10	6	Chevalier	1	0	0x36a210a327
+Vehicle.v_standard3_chevalier_emperor_militech_wasteland_heavy_prevention	Chevalier Emperor Militech Wasteland Heavy Prevention	10	6	Chevalier	1	0	0x49a94432fc
+Vehicle.v_standard3_chevalier_emperor_militech_wasteland_prevention	Chevalier Emperor Militech Wasteland Prevention	10	6	Chevalier	1	0	0x430b70d57f
+Vehicle.v_standard3_chevalier_emperor_militech_wasteland_prevention_2	Chevalier Emperor Militech Wasteland Prevention 2	10	6	Chevalier	1	0	0x45ea334af6
+Vehicle.v_standard3_chevalier_emperor_ncu	Chevalier Emperor Ncu	10	6	Chevalier	1	0	0x2976c4dc90
+Vehicle.v_standard3_chevalier_emperor_player	Chevalier Emperor	10	6	Chevalier	1	0	0x2c2a8005f1
+Vehicle.v_standard3_chevalier_emperor_police	Chevalier Emperor Police	10	6	Chevalier	1	0	0x2c56e526cd
+Vehicle.v_standard3_chevalier_emperor_police_mws	Chevalier Emperor Police Mws	10	6	Chevalier	1	0	0x3042b1a8cd
+Vehicle.v_standard3_chevalier_emperor_police_prevention	Chevalier Emperor Police Prevention	10	6	Chevalier	1	0	0x37e1f73a98
+Vehicle.v_standard3_chevalier_emperor_police_siren	Chevalier Emperor Police Siren	10	6	Chevalier	1	0	0x323bd46252
+Vehicle.v_standard3_chevalier_emperor_quest	Chevalier Emperor Quest	10	6	Chevalier	1	0	0x2b676344ae
+Vehicle.v_standard3_chevalier_emperor_sport	Chevalier Emperor Sport	10	6	Chevalier	1	0	0x2b3ef1536b
+Vehicle.v_standard3_mahir_supron_kurtz	Mahir Supron Kurtz	10	6	Mahir	1	0	0x26f7e4e971
+Vehicle.v_standard3_mahir_supron_kurtz_basic_mq304	Mahir Supron Kurtz Basic Mq304	10	6	Mahir	1	0	0x32075c5514
+Vehicle.v_standard3_mahir_supron_kurtz_overlander	Mahir Supron Kurtz Overlander	10	6	Mahir	1	0	0x314f8589af
+Vehicle.v_standard3_mahir_supron_kurtz_player	Mahir Supron Kurtz	10	6	Mahir	1	0	0x2ddc9b4332
+Vehicle.v_standard3_mahir_supron_kurtz_prevention	Mahir Supron Kurtz Prevention	10	6	Mahir	1	0	0x314c4e70a1
+Vehicle.v_standard3_makigai_tanishi	Makigai Tanishi	10	6	Makigai	1	0	0x23e5c76383
+Vehicle.v_standard3_makigai_tanishi_cargo_courier	Makigai Tanishi Cargo Courier	10	6	Makigai	1	0	0x3156491aae
+Vehicle.v_standard3_makigai_tanishi_courier	Makigai Tanishi Courier	10	6	Makigai	1	0	0x2b30681fe3
+Vehicle.v_standard3_makigai_tanishi_hfs	Makigai Tanishi Hfs	10	6	Makigai	1	0	0x27efe38d05
+Vehicle.v_standard3_makigai_tanishi_kuma	Makigai Tanishi Kuma	10	6	Makigai	1	0	0x2840a62459
+Vehicle.v_standard3_makigai_tanishi_player	Makigai Tanishi	10	6	Makigai	1	0	0x2aec2095bc
+Vehicle.v_standard3_makigai_tanishi_player_mr_hands	Makigai Tanishi Player Mr Hands	10	6	Makigai	1	0	0x334124fbdf
+Vehicle.v_standard3_makigai_tanishi_poor	Makigai Tanishi Poor	10	6	Makigai	1	0	0x286087f13d
+Vehicle.v_standard3_makigai_tanishi_poor_dogtown	Makigai Tanishi Poor Dogtown	10	6	Makigai	1	0	0x306f897c73
+Vehicle.v_standard3_makigai_tanishi_premium	Makigai Tanishi Premium	10	6	Makigai	1	0	0x2b7646471a
+Vehicle.v_standard3_militech_hellhound	Militech Hellhound	10	6	Militech	1	0	0x265d3bbaa1
+Vehicle.v_standard3_militech_hellhound_courier	Militech Hellhound Courier	10	6	Militech	1	0	0x2ef787a6e9
+Vehicle.v_standard3_militech_hellhound_player	Militech Hellhound	10	6	Militech	1	0	0x2dd4312bc7
+Vehicle.v_standard3_militech_hellhound_police	Militech Hellhound Police	10	6	Militech	1	0	0x2da85408fb
+Vehicle.v_standard3_thorton_mackinaw	Thorton Mackinaw	10	6	Thorton	1	0	0x24f20d8b2a
+Vehicle.v_standard3_thorton_mackinaw_02_player	Thorton Mackinaw 02	10	6	Thorton	1	0	0x2e6a915053
+Vehicle.v_standard3_thorton_mackinaw_cargo_courier	Thorton Mackinaw Cargo Courier	10	6	Thorton	1	0	0x327fccbfc9
+Vehicle.v_standard3_thorton_mackinaw_country	Thorton Mackinaw Country	10	6	Thorton	1	0	0x2c4bf6f86e
+Vehicle.v_standard3_thorton_mackinaw_country_poor	Thorton Mackinaw Country Poor	10	6	Thorton	1	0	0x31cfaf8a36
+Vehicle.v_standard3_thorton_mackinaw_country_premium	Thorton Mackinaw Country Premium	10	6	Thorton	1	0	0x34836da093
+Vehicle.v_standard3_thorton_mackinaw_courier	Thorton Mackinaw Courier	10	6	Thorton	1	0	0x2cd7967d74
+Vehicle.v_standard3_thorton_mackinaw_ncu_player	Thorton Mackinaw Ncu	10	6	Thorton	1	0	0x2f04201d05
+Vehicle.v_standard3_thorton_mackinaw_nomad	Thorton Mackinaw Nomad	10	6	Thorton	1	0	0x2a5b404a9c
+Vehicle.v_standard3_thorton_mackinaw_nomad_ncu	Thorton Mackinaw Nomad Ncu	10	6	Thorton	1	0	0x2e18870a66
+Vehicle.v_standard3_thorton_mackinaw_nomad_panam	Thorton Mackinaw Nomad Panam	10	6	Thorton	1	0	0x30b8e4c5bd
+Vehicle.v_standard3_thorton_mackinaw_nomad_quest	Thorton Mackinaw Nomad Quest	10	6	Thorton	1	0	0x304a351b37
+Vehicle.v_standard3_thorton_mackinaw_player	Thorton Mackinaw	10	6	Thorton	1	0	0x2baa6f05b2
+Vehicle.v_standard3_thorton_mackinaw_poor	Thorton Mackinaw Poor	10	6	Thorton	1	0	0x2997c0f20d
+Vehicle.v_standard3_thorton_mackinaw_premium	Thorton Mackinaw Premium	10	6	Thorton	1	0	0x2c91b8258d
+Vehicle.v_standard3_thorton_mackinaw_quest	Thorton Mackinaw Quest	10	6	Thorton	1	0	0x2aed04cc3b
+Vehicle.v_standard3_thorton_mackinaw_quest_bfr	Thorton Mackinaw Quest Bfr	10	6	Thorton	1	0	0x2e719d48d2
+Vehicle.v_standard3_thorton_mackinaw_sixth_street	Thorton Mackinaw Sixth Street	10	6	Thorton	1	0	0x31c1f4af7f
+Vehicle.v_standard3_thorton_mackinaw_valentinos	Thorton Mackinaw Valentinos	10	6	Thorton	1	0	0x2f4931de2d
+Vehicle.v_sts_ep1_01_archer_hella_scavengers	Ep1 01 Archer Hella Scavengers	1	3	Ep1	1	0	0x2c7ba30612
+Vehicle.v_sts_ep1_01_villefort_columbus_scavengers	Ep1 01 Villefort Columbus Scavengers	1	3	Ep1	1	0	0x327dc4e86c
+Vehicle.v_trailer_supron	Supron Supron	1	3	Supron	1	0	0x185a03fa7f
+Vehicle.v_utility4_chevalier_centurion	Chevalier Centurion	11	10	Chevalier	1	0	0x26c7cc43a4
+Vehicle.v_utility4_chevalier_centurion_cargo	Chevalier Centurion Cargo	11	10	Chevalier	1	0	0x2c84731bf7
+Vehicle.v_utility4_chevalier_centurion_cargo_courier	Chevalier Centurion Cargo Courier	11	10	Chevalier	1	0	0x34e2fc115b
+Vehicle.v_utility4_chevalier_centurion_cargo_dogtown	Chevalier Centurion Cargo Dogtown	11	10	Chevalier	1	0	0x347068e4c5
+Vehicle.v_utility4_chevalier_centurion_flatbed	Chevalier Centurion Flatbed	11	10	Chevalier	1	0	0x2e4186a8b0
+Vehicle.v_utility4_chevalier_centurion_flatbed_poor	Chevalier Centurion Flatbed Poor	11	10	Chevalier	1	0	0x339c79c476
+Vehicle.v_utility4_chevalier_centurion_flatbed_poor_dogtown	Chevalier Centurion Flatbed Poor Dogtown	11	10	Chevalier	1	0	0x3b4379ed08
+Vehicle.v_utility4_chevalier_centurion_poor	Chevalier Centurion Poor	11	10	Chevalier	1	0	0x2b18b304d6
+Vehicle.v_utility4_chevalier_centurion_poor_dogtown	Chevalier Centurion Poor Dogtown	11	10	Chevalier	1	0	0x33d13cbe8f
+Vehicle.v_utility4_chevalier_legatus_aquila_basic	Chevalier Legatus Aquila Basic	11	10	Chevalier	1	0	0x313c565331
+Vehicle.v_utility4_chevalier_legatus_basic	Chevalier Legatus Basic	11	10	Chevalier	1	0	0x2ac4579e8f
+Vehicle.v_utility4_chevalier_legatus_player	Chevalier Legatus	11	10	Chevalier	1	0	0x2b1728ca71
+Vehicle.v_utility4_kaukaz_bratsk	Kaukaz Bratsk	11	10	Kaukaz	1	0	0x2035a40ea2
+Vehicle.v_utility4_kaukaz_bratsk_concrete	Kaukaz Bratsk Concrete	11	10	Kaukaz	1	0	0x29453ef328
+Vehicle.v_utility4_kaukaz_bratsk_concrete_locked_doors	Kaukaz Bratsk Concrete Locked Doors	11	10	Kaukaz	1	0	0x3671aeb205
+Vehicle.v_utility4_kaukaz_bratsk_concrete_non_interation	Kaukaz Bratsk Concrete Non Interation	11	10	Kaukaz	1	0	0x380f074aa4
+Vehicle.v_utility4_kaukaz_bratsk_container	Kaukaz Bratsk Container	11	10	Kaukaz	1	0	0x2a3b0d2ffb
+Vehicle.v_utility4_kaukaz_bratsk_container_dogtown	Kaukaz Bratsk Container Dogtown	11	10	Kaukaz	1	0	0x32d85483bf
+Vehicle.v_utility4_kaukaz_bratsk_container_dogtown_ow	Kaukaz Bratsk Container Dogtown Ow	11	10	Kaukaz	1	0	0x35060fc4f8
+Vehicle.v_utility4_kaukaz_bratsk_container_locked_doors	Kaukaz Bratsk Container Locked Doors	11	10	Kaukaz	1	0	0x37653a2cf6
+Vehicle.v_utility4_kaukaz_bratsk_corp_bud_01	Kaukaz Bratsk Corp Bud 01	11	10	Kaukaz	1	0	0x2c50e49f02
+Vehicle.v_utility4_kaukaz_bratsk_corp_bud_02	Kaukaz Bratsk Corp Bud 02	11	10	Kaukaz	1	0	0x2cc9edceb8
+Vehicle.v_utility4_kaukaz_bratsk_corp_bud_03	Kaukaz Bratsk Corp Bud 03	11	10	Kaukaz	1	0	0x2cbeeafe2e
+Vehicle.v_utility4_kaukaz_bratsk_dogtown	Kaukaz Bratsk Dogtown	11	10	Kaukaz	1	0	0x287ad4a73d
+Vehicle.v_utility4_kaukaz_bratsk_dumpster	Kaukaz Bratsk Dumpster	11	10	Kaukaz	1	0	0x2958d3aeb8
+Vehicle.v_utility4_kaukaz_bratsk_dumpster_locked_doors	Kaukaz Bratsk Dumpster Locked Doors	11	10	Kaukaz	1	0	0x36f9e68ed2
+Vehicle.v_utility4_kaukaz_bratsk_extended	Kaukaz Bratsk Extended	11	10	Kaukaz	1	0	0x2933f61d24
+Vehicle.v_utility4_kaukaz_bratsk_extended_locked_doors	Kaukaz Bratsk Extended Locked Doors	11	10	Kaukaz	1	0	0x36aa8de3e2
+Vehicle.v_utility4_kaukaz_bratsk_machine	Kaukaz Bratsk Machine	11	10	Kaukaz	1	0	0x283256c15b
+Vehicle.v_utility4_kaukaz_bratsk_machine_dogtown	Kaukaz Bratsk Machine Dogtown	11	10	Kaukaz	1	0	0x304adf233c
+Vehicle.v_utility4_kaukaz_bratsk_machine_locked_doors	Kaukaz Bratsk Machine Locked Doors	11	10	Kaukaz	1	0	0x357000e348
+Vehicle.v_utility4_kaukaz_bratsk_metalstud	Kaukaz Bratsk Metalstud	11	10	Kaukaz	1	0	0x2a9a294ae5
+Vehicle.v_utility4_kaukaz_bratsk_metalstud_dogtown	Kaukaz Bratsk Metalstud Dogtown	11	10	Kaukaz	1	0	0x32b99132e2
+Vehicle.v_utility4_kaukaz_bratsk_metalstud_locked_doors	Kaukaz Bratsk Metalstud Locked Doors	11	10	Kaukaz	1	0	0x37ebf5003e
+Vehicle.v_utility4_kaukaz_bratsk_misile	Kaukaz Bratsk Misile	11	10	Kaukaz	1	0	0x270ac993cb
+Vehicle.v_utility4_kaukaz_bratsk_quest	Kaukaz Bratsk Quest	11	10	Kaukaz	1	0	0x26c262b326
+Vehicle.v_utility4_kaukaz_zeya	Kaukaz Zeya	11	10	Kaukaz	1	0	0x1ea1b2cbf0
+Vehicle.v_utility4_kaukaz_zeya_barrels	Kaukaz Zeya Barrels	11	10	Kaukaz	1	0	0x2611edb20d
+Vehicle.v_utility4_kaukaz_zeya_barrels_dogtown	Kaukaz Zeya Barrels Dogtown	11	10	Kaukaz	1	0	0x2ef27aa5a9
+Vehicle.v_utility4_kaukaz_zeya_barrels_locked_doors	Kaukaz Zeya Barrels Locked Doors	11	10	Kaukaz	1	0	0x33527b19f4
+Vehicle.v_utility4_kaukaz_zeya_container	Kaukaz Zeya Container	11	10	Kaukaz	1	0	0x28d5ef550a
+Vehicle.v_utility4_kaukaz_zeya_container_dogtown	Kaukaz Zeya Container Dogtown	11	10	Kaukaz	1	0	0x306fe5db39
+Vehicle.v_utility4_kaukaz_zeya_container_locked_doors	Kaukaz Zeya Container Locked Doors	11	10	Kaukaz	1	0	0x353a3de2d1
+Vehicle.v_utility4_kaukaz_zeya_freight	Kaukaz Zeya Freight	11	10	Kaukaz	1	0	0x26ccb4f9ee
+Vehicle.v_utility4_kaukaz_zeya_freight_locked_doors	Kaukaz Zeya Freight Locked Doors	11	10	Kaukaz	1	0	0x33a9c57ed5
+Vehicle.v_utility4_kaukaz_zeya_full	Kaukaz Zeya Full	11	10	Kaukaz	1	0	0x2325e43a37
+Vehicle.v_utility4_kaukaz_zeya_full_courier	Kaukaz Zeya Full Courier	11	10	Kaukaz	1	0	0x2bbcb4f499
+Vehicle.v_utility4_kaukaz_zeya_full_courier_expanded	Kaukaz Zeya Full Courier Expanded	11	10	Kaukaz	1	0	0x34c14976a1
+Vehicle.v_utility4_kaukaz_zeya_full_dogtown	Kaukaz Zeya Full Dogtown	11	10	Kaukaz	1	0	0x2b2e200107
+Vehicle.v_utility4_kaukaz_zeya_full_locked_doors	Kaukaz Zeya Full Locked Doors	11	10	Kaukaz	1	0	0x3013c39724
+Vehicle.v_utility4_kaukaz_zeya_kurtz	Kaukaz Zeya Kurtz	11	10	Kaukaz	1	0	0x24b679e408
+Vehicle.v_utility4_kaukaz_zeya_quest	Kaukaz Zeya Quest	11	10	Kaukaz	1	0	0x242db9651e
+Vehicle.v_utility4_militech_behemoth	Militech Behemoth	11	10	Militech	1	0	0x24dd8b9bc5
+Vehicle.v_utility4_militech_behemoth_border_patrol	Militech Behemoth Border Patrol	11	10	Militech	1	0	0x321d79b830
+Vehicle.v_utility4_militech_behemoth_kangtao	Militech Behemoth Kangtao	11	10	Militech	1	0	0x2c0b462eb0
+Vehicle.v_utility4_militech_behemoth_kurtz	Militech Behemoth Kurtz	11	10	Militech	1	0	0x2a0a159bc2
+Vehicle.v_utility4_militech_behemoth_maxtac	Militech Behemoth Maxtac	11	10	Militech	1	0	0x2bf66b90c9
+Vehicle.v_utility4_militech_behemoth_netwatch	Militech Behemoth Netwatch	11	10	Militech	1	0	0x2df59ce677
+Vehicle.v_utility4_militech_behemoth_police	Militech Behemoth Police	11	10	Militech	1	0	0x2be6c308b1
+Vehicle.v_utility4_militech_behemoth_quest	Militech Behemoth Quest	11	10	Militech	1	0	0x2a91d51ad4
+Vehicle.v_utility4_thorton_mackinaw_bmf	Thorton Mackinaw Bmf	11	10	Thorton	1	0	0x27b1636c10
+Vehicle.v_utility4_thorton_mackinaw_bmf_player	Thorton Mackinaw Bmf	11	10	Thorton	1	0	0x2e029eea6b
+Vehicle.v_villefort_columbus_courier_intro_chase	Columbus Courier Intro Chase	1	3	Columbus	1	0	0x30ebd9d579
+Vehicle.vehicle_template	Vehicle Template	1	3	Vehicle	1	0	0x18354f39c7
+Vehicle.vm_001_motorcycle	Vm 001 Motorcycle	1	3	Vm	1	0	0x196cd59dcf
+Vehicle.wasteland_chevalier_emperor_militech_heat_1	Wasteland Chevalier Emperor Militech Heat 1	1	3	Wasteland	1	0	0x338e39e572
+Vehicle.wasteland_chevalier_emperor_militech_heat_2	Wasteland Chevalier Emperor Militech Heat 2	1	3	Wasteland	1	0	0x331730b4c8
+Vehicle.wasteland_chevalier_emperor_militech_heat_3	Wasteland Chevalier Emperor Militech Heat 3	1	3	Wasteland	1	0	0x336037845e
+Vehicle.wst_ep1_10_scavenger_vehicle	Wst Ep1 10 Scavenger Vehicle	1	3	Wst	1	0	0x24539ee606

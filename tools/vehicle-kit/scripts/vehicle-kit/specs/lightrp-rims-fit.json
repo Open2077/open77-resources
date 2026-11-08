@@ -1,0 +1,4273 @@
+{
+  "schema": "open77.vehicle-kit.rim-fit/1",
+  "resource": "lightrp_vk_rims",
+  "generatedBy": "scripts/vehicle-kit/measure-wheels.ps1 (measure-wheels.cjs fit)",
+  "gameVersion": "2.50",
+  "conventions": {
+    "frame": "wheel slot frame: metres, spin axis X, -X outboard on all four car wheels (E0.5); offset and scale are the prop localTransform position and visualScale [x, y, z]",
+    "rimBase": {
+      "radius": 0.28,
+      "face_x": -0.208,
+      "width": 0.3
+    },
+    "scale": "lip radius = min(stock rim outer radius, tyre bead radius + 0.0015) / rimBase.radius on Y and Z; X is the same on cars (uniform), the stock rim width / rimBase.width on motorcycles",
+    "offset": "x = stock rim face x (after its visualScale) - scale.x * rimBase.face_x, so the new lip face is flush with the stock one; y = z = 0",
+    "hide": "stock rim components of the player appearance on the four contract slots (never the tyre), plus rim centres on brake slots that reach into the new rim",
+    "slots": "per-slot offset/scale where a wheel differs from the front-left (car) or front (bike) one; a client that ignores it puts the record-level fit on every wheel",
+    "extraSlots": "wheels beyond the contract slots (Merrimac middle axle): slot -> offset, scale, hide; not covered by setWheels as specified",
+    "slotNames": "motorcycles: contract slot -> the stock slot the stock rim binds to (the offset is measured in that frame)",
+    "rightSide": "no extra turn: right slot frames are the left ones turned 180 deg about Z (so -X stays outboard), and the stock right rims use the left mesh unrotated or with a spin phase about X only (mountTable[].rightSide per model)"
+  },
+  "parts": {
+    "rim_classic": {
+      "kind": "rim",
+      "label": "Classic 10",
+      "variants": {
+        "chrome": "asset:lightrp_vk_rims/rim_classic_chrome",
+        "black": "asset:lightrp_vk_rims/rim_classic_black",
+        "white": "asset:lightrp_vk_rims/rim_classic_white",
+        "alu": "asset:lightrp_vk_rims/rim_classic_alu",
+        "gold": "asset:lightrp_vk_rims/rim_classic_gold",
+        "black_chrome": "asset:lightrp_vk_rims/rim_classic_black_chrome"
+      }
+    },
+    "rim_lattice": {
+      "kind": "rim",
+      "label": "Lattice",
+      "variants": {
+        "chrome": "asset:lightrp_vk_rims/rim_lattice_chrome",
+        "black": "asset:lightrp_vk_rims/rim_lattice_black",
+        "bronze": "asset:lightrp_vk_rims/rim_lattice_bronze",
+        "gold": "asset:lightrp_vk_rims/rim_lattice_gold",
+        "alu": "asset:lightrp_vk_rims/rim_lattice_alu",
+        "matte": "asset:lightrp_vk_rims/rim_lattice_matte"
+      }
+    },
+    "rim_dish": {
+      "kind": "rim",
+      "label": "Deep Dish 8",
+      "variants": {
+        "chrome": "asset:lightrp_vk_rims/rim_dish_chrome",
+        "black": "asset:lightrp_vk_rims/rim_dish_black",
+        "gunmetal": "asset:lightrp_vk_rims/rim_dish_gunmetal",
+        "black_chrome": "asset:lightrp_vk_rims/rim_dish_black_chrome",
+        "gold": "asset:lightrp_vk_rims/rim_dish_gold",
+        "white": "asset:lightrp_vk_rims/rim_dish_white"
+      }
+    },
+    "rim_fork": {
+      "kind": "rim",
+      "label": "Fork 5",
+      "variants": {
+        "chrome": "asset:lightrp_vk_rims/rim_fork_chrome",
+        "black": "asset:lightrp_vk_rims/rim_fork_black",
+        "bronze": "asset:lightrp_vk_rims/rim_fork_bronze",
+        "alu": "asset:lightrp_vk_rims/rim_fork_alu",
+        "matte": "asset:lightrp_vk_rims/rim_fork_matte",
+        "gunmetal": "asset:lightrp_vk_rims/rim_fork_gunmetal"
+      }
+    },
+    "rim_blade": {
+      "kind": "rim",
+      "label": "Blade 12",
+      "variants": {
+        "chrome": "asset:lightrp_vk_rims/rim_blade_chrome",
+        "black": "asset:lightrp_vk_rims/rim_blade_black",
+        "white": "asset:lightrp_vk_rims/rim_blade_white",
+        "gunmetal": "asset:lightrp_vk_rims/rim_blade_gunmetal",
+        "matte": "asset:lightrp_vk_rims/rim_blade_matte",
+        "gold": "asset:lightrp_vk_rims/rim_blade_gold"
+      }
+    },
+    "rim_beadlock": {
+      "kind": "rim",
+      "label": "Beadlock 6",
+      "variants": {
+        "chrome": "asset:lightrp_vk_rims/rim_beadlock_chrome",
+        "black": "asset:lightrp_vk_rims/rim_beadlock_black",
+        "gunmetal": "asset:lightrp_vk_rims/rim_beadlock_gunmetal",
+        "matte": "asset:lightrp_vk_rims/rim_beadlock_matte",
+        "bronze": "asset:lightrp_vk_rims/rim_beadlock_bronze",
+        "white": "asset:lightrp_vk_rims/rim_beadlock_white"
+      }
+    },
+    "rim_aero": {
+      "kind": "rim",
+      "label": "Aero Disc",
+      "variants": {
+        "chrome": "asset:lightrp_vk_rims/rim_aero_chrome",
+        "black": "asset:lightrp_vk_rims/rim_aero_black",
+        "white": "asset:lightrp_vk_rims/rim_aero_white",
+        "alu": "asset:lightrp_vk_rims/rim_aero_alu",
+        "gold": "asset:lightrp_vk_rims/rim_aero_gold",
+        "black_chrome": "asset:lightrp_vk_rims/rim_aero_black_chrome"
+      }
+    },
+    "rim_tech": {
+      "kind": "rim",
+      "label": "Tri-Blade",
+      "variants": {
+        "chrome": "asset:lightrp_vk_rims/rim_tech_chrome",
+        "black": "asset:lightrp_vk_rims/rim_tech_black",
+        "gunmetal": "asset:lightrp_vk_rims/rim_tech_gunmetal",
+        "matte": "asset:lightrp_vk_rims/rim_tech_matte",
+        "white": "asset:lightrp_vk_rims/rim_tech_white",
+        "gold": "asset:lightrp_vk_rims/rim_tech_gold"
+      }
+    },
+    "rim_star": {
+      "kind": "rim",
+      "label": "Star 5",
+      "variants": {
+        "chrome": "asset:lightrp_vk_rims/rim_star_chrome",
+        "black": "asset:lightrp_vk_rims/rim_star_black",
+        "alu": "asset:lightrp_vk_rims/rim_star_alu",
+        "gunmetal": "asset:lightrp_vk_rims/rim_star_gunmetal",
+        "bronze": "asset:lightrp_vk_rims/rim_star_bronze",
+        "black_chrome": "asset:lightrp_vk_rims/rim_star_black_chrome"
+      }
+    },
+    "rim_twin": {
+      "kind": "rim",
+      "label": "Twin 6",
+      "variants": {
+        "chrome": "asset:lightrp_vk_rims/rim_twin_chrome",
+        "black": "asset:lightrp_vk_rims/rim_twin_black",
+        "alu": "asset:lightrp_vk_rims/rim_twin_alu",
+        "gunmetal": "asset:lightrp_vk_rims/rim_twin_gunmetal",
+        "white": "asset:lightrp_vk_rims/rim_twin_white",
+        "gold": "asset:lightrp_vk_rims/rim_twin_gold"
+      }
+    },
+    "rim_yspoke": {
+      "kind": "rim",
+      "label": "Y-Spoke 6",
+      "variants": {
+        "chrome": "asset:lightrp_vk_rims/rim_yspoke_chrome",
+        "black": "asset:lightrp_vk_rims/rim_yspoke_black",
+        "alu": "asset:lightrp_vk_rims/rim_yspoke_alu",
+        "matte": "asset:lightrp_vk_rims/rim_yspoke_matte",
+        "bronze": "asset:lightrp_vk_rims/rim_yspoke_bronze",
+        "black_chrome": "asset:lightrp_vk_rims/rim_yspoke_black_chrome"
+      }
+    },
+    "rim_vortex": {
+      "kind": "rim",
+      "label": "Vortex 7",
+      "variants": {
+        "chrome": "asset:lightrp_vk_rims/rim_vortex_chrome",
+        "black": "asset:lightrp_vk_rims/rim_vortex_black",
+        "gunmetal": "asset:lightrp_vk_rims/rim_vortex_gunmetal",
+        "matte": "asset:lightrp_vk_rims/rim_vortex_matte",
+        "red": "asset:lightrp_vk_rims/rim_vortex_red",
+        "gold": "asset:lightrp_vk_rims/rim_vortex_gold"
+      }
+    },
+    "rim_threepiece": {
+      "kind": "rim",
+      "label": "Three-Piece 10",
+      "variants": {
+        "chrome": "asset:lightrp_vk_rims/rim_threepiece_chrome",
+        "black_chrome": "asset:lightrp_vk_rims/rim_threepiece_black_chrome",
+        "gold": "asset:lightrp_vk_rims/rim_threepiece_gold",
+        "bronze": "asset:lightrp_vk_rims/rim_threepiece_bronze",
+        "white": "asset:lightrp_vk_rims/rim_threepiece_white",
+        "red": "asset:lightrp_vk_rims/rim_threepiece_red"
+      }
+    },
+    "rim_wire": {
+      "kind": "rim",
+      "label": "Wire 64",
+      "variants": {
+        "chrome": "asset:lightrp_vk_rims/rim_wire_chrome",
+        "gold": "asset:lightrp_vk_rims/rim_wire_gold",
+        "black": "asset:lightrp_vk_rims/rim_wire_black",
+        "red": "asset:lightrp_vk_rims/rim_wire_red",
+        "white": "asset:lightrp_vk_rims/rim_wire_white",
+        "gunmetal": "asset:lightrp_vk_rims/rim_wire_gunmetal"
+      }
+    },
+    "rim_turbofan": {
+      "kind": "rim",
+      "label": "Turbofan",
+      "variants": {
+        "chrome": "asset:lightrp_vk_rims/rim_turbofan_chrome",
+        "black": "asset:lightrp_vk_rims/rim_turbofan_black",
+        "white": "asset:lightrp_vk_rims/rim_turbofan_white",
+        "alu": "asset:lightrp_vk_rims/rim_turbofan_alu",
+        "gunmetal": "asset:lightrp_vk_rims/rim_turbofan_gunmetal",
+        "red": "asset:lightrp_vk_rims/rim_turbofan_red"
+      }
+    },
+    "rim_steelie": {
+      "kind": "rim",
+      "label": "Steelie",
+      "variants": {
+        "black": "asset:lightrp_vk_rims/rim_steelie_black",
+        "white": "asset:lightrp_vk_rims/rim_steelie_white",
+        "red": "asset:lightrp_vk_rims/rim_steelie_red",
+        "chrome": "asset:lightrp_vk_rims/rim_steelie_chrome",
+        "matte": "asset:lightrp_vk_rims/rim_steelie_matte",
+        "alu": "asset:lightrp_vk_rims/rim_steelie_alu"
+      }
+    },
+    "rim_offroad": {
+      "kind": "rim",
+      "label": "Off-Road 8",
+      "variants": {
+        "black": "asset:lightrp_vk_rims/rim_offroad_black",
+        "matte": "asset:lightrp_vk_rims/rim_offroad_matte",
+        "gunmetal": "asset:lightrp_vk_rims/rim_offroad_gunmetal",
+        "alu": "asset:lightrp_vk_rims/rim_offroad_alu",
+        "chrome": "asset:lightrp_vk_rims/rim_offroad_chrome",
+        "bronze": "asset:lightrp_vk_rims/rim_offroad_bronze"
+      }
+    },
+    "rim_hex": {
+      "kind": "rim",
+      "label": "Hex Mesh",
+      "variants": {
+        "chrome": "asset:lightrp_vk_rims/rim_hex_chrome",
+        "black": "asset:lightrp_vk_rims/rim_hex_black",
+        "gunmetal": "asset:lightrp_vk_rims/rim_hex_gunmetal",
+        "matte": "asset:lightrp_vk_rims/rim_hex_matte",
+        "white": "asset:lightrp_vk_rims/rim_hex_white",
+        "red": "asset:lightrp_vk_rims/rim_hex_red"
+      }
+    }
+  },
+  "fit": {
+    "Vehicle.v_standard2_makigai_maimai_player": {
+      "offset": [
+        0.0156,
+        0,
+        0
+      ],
+      "scale": [
+        0.6479,
+        0.6479,
+        0.6479
+      ],
+      "hide": [
+        "wheel_bl_02",
+        "wheel_br_02",
+        "wheel_fl_02",
+        "wheel_fr_02"
+      ]
+    },
+    "Vehicle.v_standard2_thorton_galena_player": {
+      "offset": [
+        -0.0623,
+        0,
+        0
+      ],
+      "scale": [
+        0.8564,
+        0.8564,
+        0.8564
+      ],
+      "hide": [
+        "wheel_01_fl_a",
+        "wheel_01_fr_a",
+        "wheel_02_bl_a",
+        "wheel_02_br"
+      ],
+      "slots": {
+        "wheel_back_left": {
+          "offset": [
+            -0.1332,
+            0,
+            0
+          ],
+          "scale": [
+            0.8179,
+            0.8179,
+            0.8179
+          ]
+        },
+        "wheel_back_right": {
+          "offset": [
+            -0.1332,
+            0,
+            0
+          ],
+          "scale": [
+            0.8179,
+            0.8179,
+            0.8179
+          ]
+        }
+      }
+    },
+    "Vehicle.v_sportbike3_brennan_apollo_player": {
+      "offset": [
+        0.0281,
+        0,
+        0
+      ],
+      "scale": [
+        0.4847,
+        0.7943,
+        0.7943
+      ],
+      "hide": [
+        "v_sportbike3_brennan_apollo__ext01_wheel_f_01",
+        "wheel_b_01"
+      ],
+      "slots": {
+        "wheel_back": {
+          "offset": [
+            0.0429,
+            0,
+            0
+          ],
+          "scale": [
+            0.6753,
+            0.7543,
+            0.7543
+          ]
+        }
+      },
+      "slotNames": {
+        "wheel_front": "wheel_front_rot_set",
+        "wheel_back": "axle_back_wheel"
+      }
+    },
+    "Vehicle.v_standard2_archer_hella_player": {
+      "offset": [
+        -0.1001,
+        0,
+        0
+      ],
+      "scale": [
+        0.9611,
+        0.9611,
+        0.9611
+      ],
+      "hide": [
+        "wheel_01_bl_a",
+        "wheel_01_br_a",
+        "wheel_01_fl_a",
+        "wheel_01_fr_a"
+      ],
+      "slots": {
+        "wheel_back_left": {
+          "offset": [
+            -0.143,
+            0,
+            0
+          ],
+          "scale": [
+            0.9611,
+            0.9611,
+            0.9611
+          ]
+        },
+        "wheel_back_right": {
+          "offset": [
+            -0.143,
+            0,
+            0
+          ],
+          "scale": [
+            0.9611,
+            0.9611,
+            0.9611
+          ]
+        }
+      }
+    },
+    "Vehicle.v_standard2_thorton_colby_player": {
+      "offset": [
+        0.0392,
+        0,
+        0
+      ],
+      "scale": [
+        0.9011,
+        0.9011,
+        0.9011
+      ],
+      "hide": [
+        "wheel_bl_03",
+        "wheel_br_03",
+        "wheel_fl_03",
+        "wheel_fr_03"
+      ]
+    },
+    "Vehicle.v_standard2_archer_quartz_player": {
+      "offset": [
+        -0.103,
+        0,
+        0
+      ],
+      "scale": [
+        0.8907,
+        0.8907,
+        0.8907
+      ],
+      "hide": [
+        "wheel_01_bl_a",
+        "wheel_01_br_a",
+        "wheel_01_fl_a",
+        "wheel_01_fr_a"
+      ],
+      "slots": {
+        "wheel_back_left": {
+          "offset": [
+            -0.148,
+            0,
+            0
+          ],
+          "scale": [
+            0.8907,
+            0.8907,
+            0.8907
+          ]
+        },
+        "wheel_back_right": {
+          "offset": [
+            -0.148,
+            0,
+            0
+          ],
+          "scale": [
+            0.8907,
+            0.8907,
+            0.8907
+          ]
+        }
+      }
+    },
+    "Vehicle.v_standard2_mizutani_hozuki_player": {
+      "offset": [
+        0.0865,
+        0,
+        0
+      ],
+      "scale": [
+        1.0007,
+        1.0007,
+        1.0007
+      ],
+      "hide": [
+        "wheel_01_bl_a",
+        "wheel_01_br_a",
+        "wheel_01_fl_a",
+        "wheel_01_fr_a"
+      ]
+    },
+    "Vehicle.v_standard25_mahir_supron_player": {
+      "offset": [
+        -0.0245,
+        0,
+        0
+      ],
+      "scale": [
+        0.8814,
+        0.8814,
+        0.8814
+      ],
+      "hide": [
+        "wheel_01_bl_a",
+        "wheel_01_br_a",
+        "wheel_01_fl_a",
+        "wheel_01_fr_a"
+      ]
+    },
+    "Vehicle.v_standard25_villefort_columbus_player": {
+      "offset": [
+        0.0369,
+        0,
+        0
+      ],
+      "scale": [
+        0.9661,
+        0.9661,
+        0.9661
+      ],
+      "hide": [
+        "v_standard25_villefort_columbus__ext01_wheel_quadra66_b2_fl_01",
+        "wheel_quadra66_br",
+        "wheel_quadra66_fl",
+        "wheel_quadra66_fr"
+      ]
+    },
+    "Vehicle.v_standard2_villefort_cortes_player": {
+      "offset": [
+        -0.0146,
+        0,
+        0
+      ],
+      "scale": [
+        1.0929,
+        1.0929,
+        1.0929
+      ],
+      "hide": [
+        "wheel_01_bl_a",
+        "wheel_01_bl_center",
+        "wheel_01_br_a",
+        "wheel_01_br_center",
+        "wheel_01_fl_a",
+        "wheel_01_fl_center",
+        "wheel_01_fr_a",
+        "wheel_01_fr_center"
+      ]
+    },
+    "Vehicle.v_standard2_chevalier_thrax_player": {
+      "offset": [
+        -0.0067,
+        0,
+        0
+      ],
+      "scale": [
+        1.0464,
+        1.0464,
+        1.0464
+      ],
+      "hide": [
+        "wheel_01_bl_a",
+        "wheel_01_br_a",
+        "wheel_01_fl_a",
+        "wheel_01_fr_a"
+      ],
+      "slots": {
+        "wheel_back_left": {
+          "offset": [
+            0.0469,
+            0,
+            0
+          ],
+          "scale": [
+            1.0464,
+            1.0464,
+            1.0464
+          ]
+        },
+        "wheel_back_right": {
+          "offset": [
+            0.0469,
+            0,
+            0
+          ],
+          "scale": [
+            1.0464,
+            1.0464,
+            1.0464
+          ]
+        }
+      }
+    },
+    "Vehicle.v_standard2_archer_bandit_player": {
+      "offset": [
+        -0.0944,
+        0,
+        0
+      ],
+      "scale": [
+        1.0007,
+        1.0007,
+        1.0007
+      ],
+      "hide": [
+        "wheel_bl_05",
+        "wheel_br_05",
+        "wheel_fl_05",
+        "wheel_fr_05"
+      ],
+      "slots": {
+        "wheel_back_left": {
+          "offset": [
+            -0.2457,
+            0,
+            0
+          ],
+          "scale": [
+            1.0007,
+            1.0007,
+            1.0007
+          ]
+        },
+        "wheel_back_right": {
+          "offset": [
+            -0.2457,
+            0,
+            0
+          ],
+          "scale": [
+            1.0007,
+            1.0007,
+            1.0007
+          ]
+        }
+      }
+    },
+    "Vehicle.v_standard25_thorton_merrimac_player": {
+      "offset": [
+        -0.1916,
+        0,
+        0
+      ],
+      "scale": [
+        0.9596,
+        0.9596,
+        0.9596
+      ],
+      "hide": [
+        "wheel_01_bl_a",
+        "wheel_01_br_a",
+        "wheel_01_fl_a",
+        "wheel_01_fr_a"
+      ],
+      "extraSlots": {
+        "wheel_back_left_b": {
+          "offset": [
+            -0.1916,
+            0,
+            0
+          ],
+          "scale": [
+            0.9596,
+            0.9596,
+            0.9596
+          ],
+          "hide": [
+            "wheel_02_bl_b"
+          ]
+        },
+        "wheel_back_right_b": {
+          "offset": [
+            -0.1916,
+            0,
+            0
+          ],
+          "scale": [
+            0.9596,
+            0.9596,
+            0.9596
+          ],
+          "hide": [
+            "wheel_02_br_b"
+          ]
+        }
+      }
+    },
+    "Vehicle.v_sport1_yaiba_semimaru_player": {
+      "offset": [
+        -0.0545,
+        0,
+        0
+      ],
+      "scale": [
+        0.9939,
+        0.9939,
+        0.9939
+      ],
+      "hide": [
+        "wheel_01_bl_a",
+        "wheel_01_br_a",
+        "wheel_01_fl_a",
+        "wheel_01_fr_a",
+        "wheel_center_fl",
+        "wheel_center_fr"
+      ],
+      "slots": {
+        "wheel_back_left": {
+          "offset": [
+            -0.1697,
+            0,
+            0
+          ],
+          "scale": [
+            1.0496,
+            1.0496,
+            1.0496
+          ]
+        },
+        "wheel_back_right": {
+          "offset": [
+            -0.1697,
+            0,
+            0
+          ],
+          "scale": [
+            1.0496,
+            1.0496,
+            1.0496
+          ]
+        }
+      }
+    },
+    "Vehicle.v_sport1_rayfield_caliburn_player": {
+      "offset": [
+        -0.0517,
+        0,
+        0
+      ],
+      "scale": [
+        1.1682,
+        1.1682,
+        1.1682
+      ],
+      "hide": [
+        "wheel_01_bl_a",
+        "wheel_01_br_a",
+        "wheel_01_fl_a",
+        "wheel_01_fr_a"
+      ],
+      "slots": {
+        "wheel_back_left": {
+          "offset": [
+            -0.1339,
+            0,
+            0
+          ],
+          "scale": [
+            1.17,
+            1.17,
+            1.17
+          ]
+        },
+        "wheel_back_right": {
+          "offset": [
+            -0.1339,
+            0,
+            0
+          ],
+          "scale": [
+            1.17,
+            1.17,
+            1.17
+          ]
+        }
+      }
+    }
+  },
+  "excluded": {
+    "Vehicle.v_sportbike1_yaiba_kusanagi_player": "Front rim is a hubless ring (stock rim radius 0.182-0.231 m) around a hub-centre steering assembly that fills the wheel centre; a spoked rim would run through it. The back rim alone could take one, but a mismatched front/back set is not offered."
+  },
+  "mountTable": [
+    {
+      "key": "maimai",
+      "label": "Makigai MaiMai",
+      "record": "Vehicle.v_standard2_makigai_maimai_player",
+      "vehicleType": "Car",
+      "appearance": "makigai_maimai__basic_player_01",
+      "wheels": {
+        "wheel_front_left": {
+          "stock": {
+            "faceX": -0.1192,
+            "innerX": 0.117,
+            "width": 0.2362,
+            "lipRadius": 0.1837,
+            "outerRadius": 0.1993,
+            "hubX": [
+              -0.0765,
+              0.0026
+            ],
+            "visualScale": [
+              0.75,
+              0.66,
+              0.66
+            ],
+            "tyre": {
+              "beadRadius": 0.1799,
+              "outerRadius": 0.2356,
+              "faceX": -0.1065,
+              "innerX": 0.1046
+            }
+          },
+          "targetLipRadius": 0.1814,
+          "scale": [
+            0.6479,
+            0.6479,
+            0.6479
+          ],
+          "offsetX": 0.0156,
+          "ours": {
+            "faceX": -0.1192,
+            "inboardX": 0.0752,
+            "width": 0.1944,
+            "lipRadius": 0.1814,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.022,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.079
+            }
+          },
+          "hide": [
+            "wheel_fl_02"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_front_right": {
+          "stock": {
+            "faceX": -0.1192,
+            "innerX": 0.117,
+            "width": 0.2362,
+            "lipRadius": 0.1837,
+            "outerRadius": 0.1993,
+            "hubX": [
+              -0.0765,
+              0.0026
+            ],
+            "visualScale": [
+              0.75,
+              0.66,
+              0.66
+            ],
+            "tyre": {
+              "beadRadius": 0.1799,
+              "outerRadius": 0.2356,
+              "faceX": -0.1065,
+              "innerX": 0.1046
+            }
+          },
+          "targetLipRadius": 0.1814,
+          "scale": [
+            0.6479,
+            0.6479,
+            0.6479
+          ],
+          "offsetX": 0.0156,
+          "ours": {
+            "faceX": -0.1192,
+            "inboardX": 0.0752,
+            "width": 0.1944,
+            "lipRadius": 0.1814,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.022,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.079
+            }
+          },
+          "hide": [
+            "wheel_fr_02"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_back_left": {
+          "stock": {
+            "faceX": -0.1192,
+            "innerX": 0.117,
+            "width": 0.2362,
+            "lipRadius": 0.1837,
+            "outerRadius": 0.1993,
+            "hubX": [
+              -0.0765,
+              0.0026
+            ],
+            "visualScale": [
+              0.75,
+              0.66,
+              0.66
+            ],
+            "tyre": {
+              "beadRadius": 0.1799,
+              "outerRadius": 0.2356,
+              "faceX": -0.1065,
+              "innerX": 0.1046
+            }
+          },
+          "targetLipRadius": 0.1814,
+          "scale": [
+            0.6479,
+            0.6479,
+            0.6479
+          ],
+          "offsetX": 0.0156,
+          "ours": {
+            "faceX": -0.1192,
+            "inboardX": 0.0752,
+            "width": 0.1944,
+            "lipRadius": 0.1814,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.022,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.079
+            }
+          },
+          "hide": [
+            "wheel_bl_02"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_back_right": {
+          "stock": {
+            "faceX": -0.1192,
+            "innerX": 0.117,
+            "width": 0.2362,
+            "lipRadius": 0.1837,
+            "outerRadius": 0.1993,
+            "hubX": [
+              -0.0765,
+              0.0026
+            ],
+            "visualScale": [
+              0.75,
+              0.66,
+              0.66
+            ],
+            "tyre": {
+              "beadRadius": 0.1799,
+              "outerRadius": 0.2356,
+              "faceX": -0.1065,
+              "innerX": 0.1046
+            }
+          },
+          "targetLipRadius": 0.1814,
+          "scale": [
+            0.6479,
+            0.6479,
+            0.6479
+          ],
+          "offsetX": 0.0156,
+          "ours": {
+            "faceX": -0.1192,
+            "inboardX": 0.0752,
+            "width": 0.1944,
+            "lipRadius": 0.1814,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.022,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.079
+            }
+          },
+          "hide": [
+            "wheel_br_02"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        }
+      },
+      "rightSide": {
+        "slotFrameVsLeft": {
+          "front": "turned180aboutZ",
+          "back": "turned180aboutZ"
+        },
+        "stockRightRimRotation": "none",
+        "stockRightRimsShareLeftMesh": true,
+        "extraTurn": "none"
+      },
+      "stockOnly": []
+    },
+    {
+      "key": "galena",
+      "label": "Thorton Galena",
+      "record": "Vehicle.v_standard2_thorton_galena_player",
+      "vehicleType": "Car",
+      "appearance": "thorton_galena__basic_player_01",
+      "wheels": {
+        "wheel_front_left": {
+          "stock": {
+            "faceX": -0.2404,
+            "innerX": 0.022,
+            "width": 0.2624,
+            "lipRadius": 0.2425,
+            "outerRadius": 0.2467,
+            "hubX": [
+              -0.2113,
+              -0.0999
+            ],
+            "visualScale": [
+              0.7,
+              0.93,
+              0.93
+            ],
+            "tyre": {
+              "beadRadius": 0.2383,
+              "outerRadius": 0.3236,
+              "faceX": -0.2184,
+              "innerX": 0.0183
+            }
+          },
+          "targetLipRadius": 0.2398,
+          "scale": [
+            0.8564,
+            0.8564,
+            0.8564
+          ],
+          "offsetX": -0.0623,
+          "ours": {
+            "faceX": -0.2404,
+            "inboardX": 0.0165,
+            "width": 0.2569,
+            "lipRadius": 0.2398,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.1119,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.1873
+            }
+          },
+          "hide": [
+            "wheel_01_fl_a"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_front_right": {
+          "stock": {
+            "faceX": -0.2404,
+            "innerX": 0.022,
+            "width": 0.2624,
+            "lipRadius": 0.2425,
+            "outerRadius": 0.2467,
+            "hubX": [
+              -0.2113,
+              -0.0999
+            ],
+            "visualScale": [
+              0.7,
+              0.93,
+              0.93
+            ],
+            "tyre": {
+              "beadRadius": 0.2383,
+              "outerRadius": 0.3236,
+              "faceX": -0.2184,
+              "innerX": 0.0183
+            }
+          },
+          "targetLipRadius": 0.2398,
+          "scale": [
+            0.8564,
+            0.8564,
+            0.8564
+          ],
+          "offsetX": -0.0623,
+          "ours": {
+            "faceX": -0.2404,
+            "inboardX": 0.0165,
+            "width": 0.2569,
+            "lipRadius": 0.2398,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.1119,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.1873
+            }
+          },
+          "hide": [
+            "wheel_01_fr_a"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_back_left": {
+          "stock": {
+            "faceX": -0.3033,
+            "innerX": 0.1633,
+            "width": 0.4666,
+            "lipRadius": 0.236,
+            "outerRadius": 0.2403,
+            "hubX": [
+              -0.1885,
+              -0.0739
+            ],
+            "visualScale": [
+              1.1,
+              0.85,
+              0.85
+            ],
+            "tyre": {
+              "beadRadius": 0.2275,
+              "outerRadius": 0.3257,
+              "faceX": -0.3019,
+              "innerX": 0.1612
+            }
+          },
+          "targetLipRadius": 0.229,
+          "scale": [
+            0.8179,
+            0.8179,
+            0.8179
+          ],
+          "offsetX": -0.1332,
+          "ours": {
+            "faceX": -0.3033,
+            "inboardX": -0.0579,
+            "width": 0.2454,
+            "lipRadius": 0.229,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.1806,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.2526
+            }
+          },
+          "hide": [
+            "wheel_02_bl_a"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_back_right": {
+          "stock": {
+            "faceX": -0.3033,
+            "innerX": 0.1633,
+            "width": 0.4666,
+            "lipRadius": 0.236,
+            "outerRadius": 0.2403,
+            "hubX": [
+              -0.1885,
+              -0.0739
+            ],
+            "visualScale": [
+              1.1,
+              0.85,
+              0.85
+            ],
+            "tyre": {
+              "beadRadius": 0.2275,
+              "outerRadius": 0.3257,
+              "faceX": -0.3019,
+              "innerX": 0.1612
+            }
+          },
+          "targetLipRadius": 0.229,
+          "scale": [
+            0.8179,
+            0.8179,
+            0.8179
+          ],
+          "offsetX": -0.1332,
+          "ours": {
+            "faceX": -0.3033,
+            "inboardX": -0.0579,
+            "width": 0.2454,
+            "lipRadius": 0.229,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.1806,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.2526
+            }
+          },
+          "hide": [
+            "wheel_02_br"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        }
+      },
+      "rightSide": {
+        "slotFrameVsLeft": {
+          "front": "turned180aboutZ",
+          "back": "turned180aboutZ"
+        },
+        "stockRightRimRotation": "none",
+        "stockRightRimsShareLeftMesh": true,
+        "extraTurn": "none"
+      },
+      "stockOnly": []
+    },
+    {
+      "key": "apollo",
+      "label": "Brennan Apollo",
+      "record": "Vehicle.v_sportbike3_brennan_apollo_player",
+      "vehicleType": "Bike",
+      "appearance": "brennan_apollo_basic_player_01",
+      "wheels": {
+        "wheel_front": {
+          "stock": {
+            "faceX": -0.0727,
+            "innerX": 0.0727,
+            "width": 0.1454,
+            "lipRadius": 0.2274,
+            "outerRadius": 0.2274,
+            "hubX": null,
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.2209,
+              "outerRadius": 0.317,
+              "faceX": -0.077,
+              "innerX": 0.077
+            }
+          },
+          "targetLipRadius": 0.2224,
+          "scale": [
+            0.4847,
+            0.7943,
+            0.7943
+          ],
+          "offsetX": 0.0281,
+          "ours": {
+            "faceX": -0.0727,
+            "inboardX": 0.0727,
+            "width": 0.1454,
+            "lipRadius": 0.2224
+          },
+          "hide": [
+            "v_sportbike3_brennan_apollo__ext01_wheel_f_01"
+          ],
+          "centres": [],
+          "flags": [
+            "stock v_sportbike3_brennan_apollo__ext01_break_01 (wheel_front_rot_turn_set) shares the rim volume: x -0.1144..0.1144, r 0.0412..0.2045"
+          ],
+          "hiddenCentres": [],
+          "others": [
+            {
+              "name": "v_sportbike3_brennan_apollo__ext01_break_01",
+              "slot": "wheel_front_rot_turn_set",
+              "x": [
+                -0.1144,
+                0.1144
+              ],
+              "radius": [
+                0.0412,
+                0.2045
+              ]
+            }
+          ]
+        },
+        "wheel_back": {
+          "stock": {
+            "faceX": -0.0976,
+            "innerX": 0.105,
+            "width": 0.2026,
+            "lipRadius": 0.2148,
+            "outerRadius": 0.2148,
+            "hubX": [
+              -0.0904,
+              0.0459
+            ],
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.2097,
+              "outerRadius": 0.3201,
+              "faceX": -0.1023,
+              "innerX": 0.1023
+            }
+          },
+          "targetLipRadius": 0.2112,
+          "scale": [
+            0.6753,
+            0.7543,
+            0.7543
+          ],
+          "offsetX": 0.0429,
+          "ours": {
+            "faceX": -0.0976,
+            "inboardX": 0.105,
+            "width": 0.2026,
+            "lipRadius": 0.2112,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": 0.0037,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.0557
+            }
+          },
+          "hide": [
+            "wheel_b_01"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        }
+      },
+      "slotRelation": {
+        "wheel_front": {
+          "stockSlot": "wheel_front_rot_set",
+          "relation": {
+            "distance": 0,
+            "spinAxisDot": 1
+          }
+        },
+        "wheel_back": {
+          "stockSlot": "axle_back_wheel",
+          "relation": {
+            "distance": 0,
+            "spinAxisDot": 1
+          }
+        }
+      },
+      "stockOnly": []
+    },
+    {
+      "key": "hella",
+      "label": "Archer Hella",
+      "record": "Vehicle.v_standard2_archer_hella_player",
+      "vehicleType": "Car",
+      "appearance": "archer_hella__basic_player_01",
+      "wheels": {
+        "wheel_front_left": {
+          "stock": {
+            "faceX": -0.3,
+            "innerX": 0.1505,
+            "width": 0.4505,
+            "lipRadius": 0.2776,
+            "outerRadius": 0.2828,
+            "hubX": [
+              -0.1627,
+              -0.0785
+            ],
+            "visualScale": [
+              0.7,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.2676,
+              "outerRadius": 0.3832,
+              "faceX": -0.3016,
+              "innerX": 0.1455
+            }
+          },
+          "targetLipRadius": 0.2691,
+          "scale": [
+            0.9611,
+            0.9611,
+            0.9611
+          ],
+          "offsetX": -0.1001,
+          "ours": {
+            "faceX": -0.3,
+            "inboardX": -0.0117,
+            "width": 0.2883,
+            "lipRadius": 0.2691,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.1558,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.2404
+            }
+          },
+          "hide": [
+            "wheel_01_fl_a"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_front_right": {
+          "stock": {
+            "faceX": -0.3,
+            "innerX": 0.1505,
+            "width": 0.4505,
+            "lipRadius": 0.2776,
+            "outerRadius": 0.2828,
+            "hubX": [
+              -0.1627,
+              -0.0785
+            ],
+            "visualScale": [
+              0.7,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.2676,
+              "outerRadius": 0.3832,
+              "faceX": -0.3016,
+              "innerX": 0.1455
+            }
+          },
+          "targetLipRadius": 0.2691,
+          "scale": [
+            0.9611,
+            0.9611,
+            0.9611
+          ],
+          "offsetX": -0.1001,
+          "ours": {
+            "faceX": -0.3,
+            "inboardX": -0.0117,
+            "width": 0.2883,
+            "lipRadius": 0.2691,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.1558,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.2404
+            }
+          },
+          "hide": [
+            "wheel_01_fr_a"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_back_left": {
+          "stock": {
+            "faceX": -0.3429,
+            "innerX": 0.172,
+            "width": 0.5149,
+            "lipRadius": 0.2776,
+            "outerRadius": 0.2828,
+            "hubX": [
+              -0.1859,
+              -0.0897
+            ],
+            "visualScale": [
+              0.8,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.2676,
+              "outerRadius": 0.3832,
+              "faceX": -0.3447,
+              "innerX": 0.1663
+            }
+          },
+          "targetLipRadius": 0.2691,
+          "scale": [
+            0.9611,
+            0.9611,
+            0.9611
+          ],
+          "offsetX": -0.143,
+          "ours": {
+            "faceX": -0.3429,
+            "inboardX": -0.0546,
+            "width": 0.2883,
+            "lipRadius": 0.2691,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.1987,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.2833
+            }
+          },
+          "hide": [
+            "wheel_01_bl_a"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_back_right": {
+          "stock": {
+            "faceX": -0.3429,
+            "innerX": 0.172,
+            "width": 0.5149,
+            "lipRadius": 0.2776,
+            "outerRadius": 0.2828,
+            "hubX": [
+              -0.1859,
+              -0.0897
+            ],
+            "visualScale": [
+              0.8,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.2676,
+              "outerRadius": 0.3832,
+              "faceX": -0.3447,
+              "innerX": 0.1663
+            }
+          },
+          "targetLipRadius": 0.2691,
+          "scale": [
+            0.9611,
+            0.9611,
+            0.9611
+          ],
+          "offsetX": -0.143,
+          "ours": {
+            "faceX": -0.3429,
+            "inboardX": -0.0546,
+            "width": 0.2883,
+            "lipRadius": 0.2691,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.1987,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.2833
+            }
+          },
+          "hide": [
+            "wheel_01_br_a"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        }
+      },
+      "rightSide": {
+        "slotFrameVsLeft": {
+          "front": "turned180aboutZ",
+          "back": "turned180aboutZ"
+        },
+        "stockRightRimRotation": "none",
+        "stockRightRimsShareLeftMesh": true,
+        "extraTurn": "none"
+      },
+      "stockOnly": []
+    },
+    {
+      "key": "colby",
+      "label": "Thorton Colby",
+      "record": "Vehicle.v_standard2_thorton_colby_player",
+      "vehicleType": "Car",
+      "appearance": "thorton_colby__basic_player_01",
+      "wheels": {
+        "wheel_front_left": {
+          "stock": {
+            "faceX": -0.1482,
+            "innerX": 0.1678,
+            "width": 0.316,
+            "lipRadius": 0.2563,
+            "outerRadius": 0.2647,
+            "hubX": [
+              -0.1354,
+              -0.0563
+            ],
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.2508,
+              "outerRadius": 0.357,
+              "faceX": -0.1412,
+              "innerX": 0.1653
+            }
+          },
+          "targetLipRadius": 0.2523,
+          "scale": [
+            0.9011,
+            0.9011,
+            0.9011
+          ],
+          "offsetX": 0.0392,
+          "ours": {
+            "faceX": -0.1482,
+            "inboardX": 0.1221,
+            "width": 0.2703,
+            "lipRadius": 0.2523,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.013,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.0923
+            }
+          },
+          "hide": [
+            "wheel_fl_03"
+          ],
+          "centres": [],
+          "flags": [
+            "centre deeper than stock (rim_dish +0.043, rim_wire +0.02, rim_threepiece +0.019, rim_beadlock +0.011, rim_offroad +0.011 m)"
+          ],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_front_right": {
+          "stock": {
+            "faceX": -0.1482,
+            "innerX": 0.1678,
+            "width": 0.316,
+            "lipRadius": 0.2563,
+            "outerRadius": 0.2647,
+            "hubX": [
+              -0.1354,
+              -0.0563
+            ],
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.2508,
+              "outerRadius": 0.357,
+              "faceX": -0.1412,
+              "innerX": 0.1653
+            }
+          },
+          "targetLipRadius": 0.2523,
+          "scale": [
+            0.9011,
+            0.9011,
+            0.9011
+          ],
+          "offsetX": 0.0392,
+          "ours": {
+            "faceX": -0.1482,
+            "inboardX": 0.1221,
+            "width": 0.2703,
+            "lipRadius": 0.2523,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.013,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.0923
+            }
+          },
+          "hide": [
+            "wheel_fr_03"
+          ],
+          "centres": [],
+          "flags": [
+            "centre deeper than stock (rim_dish +0.043, rim_wire +0.02, rim_threepiece +0.019, rim_beadlock +0.011, rim_offroad +0.011 m)"
+          ],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_back_left": {
+          "stock": {
+            "faceX": -0.1482,
+            "innerX": 0.1678,
+            "width": 0.316,
+            "lipRadius": 0.2563,
+            "outerRadius": 0.2647,
+            "hubX": [
+              -0.1354,
+              -0.0563
+            ],
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.2508,
+              "outerRadius": 0.357,
+              "faceX": -0.1412,
+              "innerX": 0.1653
+            }
+          },
+          "targetLipRadius": 0.2523,
+          "scale": [
+            0.9011,
+            0.9011,
+            0.9011
+          ],
+          "offsetX": 0.0392,
+          "ours": {
+            "faceX": -0.1482,
+            "inboardX": 0.1221,
+            "width": 0.2703,
+            "lipRadius": 0.2523,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.013,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.0923
+            }
+          },
+          "hide": [
+            "wheel_bl_03"
+          ],
+          "centres": [],
+          "flags": [
+            "centre deeper than stock (rim_dish +0.043, rim_wire +0.02, rim_threepiece +0.019, rim_beadlock +0.011, rim_offroad +0.011 m)"
+          ],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_back_right": {
+          "stock": {
+            "faceX": -0.1482,
+            "innerX": 0.1678,
+            "width": 0.316,
+            "lipRadius": 0.2563,
+            "outerRadius": 0.2647,
+            "hubX": [
+              -0.1354,
+              -0.0563
+            ],
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.2508,
+              "outerRadius": 0.357,
+              "faceX": -0.1412,
+              "innerX": 0.1653
+            }
+          },
+          "targetLipRadius": 0.2523,
+          "scale": [
+            0.9011,
+            0.9011,
+            0.9011
+          ],
+          "offsetX": 0.0392,
+          "ours": {
+            "faceX": -0.1482,
+            "inboardX": 0.1221,
+            "width": 0.2703,
+            "lipRadius": 0.2523,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.013,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.0923
+            }
+          },
+          "hide": [
+            "wheel_br_03"
+          ],
+          "centres": [],
+          "flags": [
+            "centre deeper than stock (rim_dish +0.043, rim_wire +0.02, rim_threepiece +0.019, rim_beadlock +0.011, rim_offroad +0.011 m)"
+          ],
+          "hiddenCentres": [],
+          "others": []
+        }
+      },
+      "rightSide": {
+        "slotFrameVsLeft": {
+          "front": "turned180aboutZ",
+          "back": "turned180aboutZ"
+        },
+        "stockRightRimRotation": "spin phase about X only",
+        "stockRightRimsShareLeftMesh": true,
+        "extraTurn": "none"
+      },
+      "stockOnly": []
+    },
+    {
+      "key": "quartz",
+      "label": "Archer Quartz",
+      "record": "Vehicle.v_standard2_archer_quartz_player",
+      "vehicleType": "Car",
+      "appearance": "archer_quartz__basic_player_01",
+      "wheels": {
+        "wheel_front_left": {
+          "stock": {
+            "faceX": -0.2883,
+            "innerX": 0.0596,
+            "width": 0.3479,
+            "lipRadius": 0.2499,
+            "outerRadius": 0.2546,
+            "hubX": [
+              -0.1598,
+              -0.0727
+            ],
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.2479,
+              "outerRadius": 0.3549,
+              "faceX": -0.2832,
+              "innerX": 0.0586
+            }
+          },
+          "targetLipRadius": 0.2494,
+          "scale": [
+            0.8907,
+            0.8907,
+            0.8907
+          ],
+          "offsetX": -0.103,
+          "ours": {
+            "faceX": -0.2883,
+            "inboardX": -0.0211,
+            "width": 0.2672,
+            "lipRadius": 0.2494,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.1547,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.2331
+            }
+          },
+          "hide": [
+            "wheel_01_fl_a"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_front_right": {
+          "stock": {
+            "faceX": -0.2883,
+            "innerX": 0.0596,
+            "width": 0.3479,
+            "lipRadius": 0.2499,
+            "outerRadius": 0.2546,
+            "hubX": [
+              -0.1598,
+              -0.0727
+            ],
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.2479,
+              "outerRadius": 0.3549,
+              "faceX": -0.2832,
+              "innerX": 0.0586
+            }
+          },
+          "targetLipRadius": 0.2494,
+          "scale": [
+            0.8907,
+            0.8907,
+            0.8907
+          ],
+          "offsetX": -0.103,
+          "ours": {
+            "faceX": -0.2883,
+            "inboardX": -0.0211,
+            "width": 0.2672,
+            "lipRadius": 0.2494,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.1547,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.2331
+            }
+          },
+          "hide": [
+            "wheel_01_fr_a"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_back_left": {
+          "stock": {
+            "faceX": -0.3333,
+            "innerX": 0.1299,
+            "width": 0.4632,
+            "lipRadius": 0.2552,
+            "outerRadius": 0.26,
+            "hubX": [
+              -0.2043,
+              -0.0918
+            ],
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.2479,
+              "outerRadius": 0.3549,
+              "faceX": -0.3299,
+              "innerX": 0.1247
+            }
+          },
+          "targetLipRadius": 0.2494,
+          "scale": [
+            0.8907,
+            0.8907,
+            0.8907
+          ],
+          "offsetX": -0.148,
+          "ours": {
+            "faceX": -0.3333,
+            "inboardX": -0.0661,
+            "width": 0.2672,
+            "lipRadius": 0.2494,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.1997,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.2781
+            }
+          },
+          "hide": [
+            "wheel_01_bl_a"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_back_right": {
+          "stock": {
+            "faceX": -0.3333,
+            "innerX": 0.1299,
+            "width": 0.4632,
+            "lipRadius": 0.2552,
+            "outerRadius": 0.26,
+            "hubX": [
+              -0.2043,
+              -0.0918
+            ],
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.2479,
+              "outerRadius": 0.3549,
+              "faceX": -0.3299,
+              "innerX": 0.1247
+            }
+          },
+          "targetLipRadius": 0.2494,
+          "scale": [
+            0.8907,
+            0.8907,
+            0.8907
+          ],
+          "offsetX": -0.148,
+          "ours": {
+            "faceX": -0.3333,
+            "inboardX": -0.0661,
+            "width": 0.2672,
+            "lipRadius": 0.2494,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.1997,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.2781
+            }
+          },
+          "hide": [
+            "wheel_01_br_a"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        }
+      },
+      "rightSide": {
+        "slotFrameVsLeft": {
+          "front": "turned180aboutZ",
+          "back": "turned180aboutZ"
+        },
+        "stockRightRimRotation": "none",
+        "stockRightRimsShareLeftMesh": true,
+        "extraTurn": "none"
+      },
+      "stockOnly": []
+    },
+    {
+      "key": "hozuki",
+      "label": "Mizutani Hozuki",
+      "record": "Vehicle.v_standard2_mizutani_hozuki_player",
+      "vehicleType": "Car",
+      "appearance": "mizutani_hozuki__basic_player_01",
+      "wheels": {
+        "wheel_front_left": {
+          "stock": {
+            "faceX": -0.1216,
+            "innerX": 0.1415,
+            "width": 0.2631,
+            "lipRadius": 0.2885,
+            "outerRadius": 0.2939,
+            "hubX": [
+              -0.0898,
+              0.0589
+            ],
+            "visualScale": [
+              0.67,
+              0.9,
+              0.9
+            ],
+            "tyre": {
+              "beadRadius": 0.2787,
+              "outerRadius": 0.3589,
+              "faceX": -0.1111,
+              "innerX": 0.1436
+            }
+          },
+          "targetLipRadius": 0.2802,
+          "scale": [
+            1.0007,
+            1.0007,
+            1.0007
+          ],
+          "offsetX": 0.0865,
+          "ours": {
+            "faceX": -0.1216,
+            "inboardX": 0.1786,
+            "width": 0.3002,
+            "lipRadius": 0.2802,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": 0.0285,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.0596
+            }
+          },
+          "hide": [
+            "wheel_01_fl_a"
+          ],
+          "centres": [],
+          "flags": [
+            "barrel ends 0.035 m inboard of the tyre"
+          ],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_front_right": {
+          "stock": {
+            "faceX": -0.1216,
+            "innerX": 0.1415,
+            "width": 0.2631,
+            "lipRadius": 0.2885,
+            "outerRadius": 0.2939,
+            "hubX": [
+              -0.0898,
+              0.0589
+            ],
+            "visualScale": [
+              0.67,
+              0.9,
+              0.9
+            ],
+            "tyre": {
+              "beadRadius": 0.2787,
+              "outerRadius": 0.3589,
+              "faceX": -0.1111,
+              "innerX": 0.1436
+            }
+          },
+          "targetLipRadius": 0.2802,
+          "scale": [
+            1.0007,
+            1.0007,
+            1.0007
+          ],
+          "offsetX": 0.0865,
+          "ours": {
+            "faceX": -0.1216,
+            "inboardX": 0.1786,
+            "width": 0.3002,
+            "lipRadius": 0.2802,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": 0.0285,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.0596
+            }
+          },
+          "hide": [
+            "wheel_01_fr_a"
+          ],
+          "centres": [],
+          "flags": [
+            "barrel ends 0.035 m inboard of the tyre"
+          ],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_back_left": {
+          "stock": {
+            "faceX": -0.1229,
+            "innerX": 0.1913,
+            "width": 0.3142,
+            "lipRadius": 0.2885,
+            "outerRadius": 0.2939,
+            "hubX": [
+              -0.0849,
+              0.0927
+            ],
+            "visualScale": [
+              0.8,
+              0.9,
+              0.9
+            ],
+            "tyre": {
+              "beadRadius": 0.2787,
+              "outerRadius": 0.3589,
+              "faceX": -0.1052,
+              "innerX": 0.1877
+            }
+          },
+          "targetLipRadius": 0.2802,
+          "scale": [
+            1.0007,
+            1.0007,
+            1.0007
+          ],
+          "offsetX": 0.0852,
+          "ours": {
+            "faceX": -0.1229,
+            "inboardX": 0.1773,
+            "width": 0.3002,
+            "lipRadius": 0.2802,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": 0.0272,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.0609
+            }
+          },
+          "hide": [
+            "wheel_01_bl_a"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_back_right": {
+          "stock": {
+            "faceX": -0.1229,
+            "innerX": 0.1913,
+            "width": 0.3142,
+            "lipRadius": 0.2885,
+            "outerRadius": 0.2939,
+            "hubX": [
+              -0.0849,
+              0.0927
+            ],
+            "visualScale": [
+              0.8,
+              0.9,
+              0.9
+            ],
+            "tyre": {
+              "beadRadius": 0.2787,
+              "outerRadius": 0.3589,
+              "faceX": -0.1052,
+              "innerX": 0.1877
+            }
+          },
+          "targetLipRadius": 0.2802,
+          "scale": [
+            1.0007,
+            1.0007,
+            1.0007
+          ],
+          "offsetX": 0.0852,
+          "ours": {
+            "faceX": -0.1229,
+            "inboardX": 0.1773,
+            "width": 0.3002,
+            "lipRadius": 0.2802,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": 0.0272,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.0609
+            }
+          },
+          "hide": [
+            "wheel_01_br_a"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        }
+      },
+      "rightSide": {
+        "slotFrameVsLeft": {
+          "front": "turned180aboutZ",
+          "back": "turned180aboutZ"
+        },
+        "stockRightRimRotation": "none",
+        "stockRightRimsShareLeftMesh": true,
+        "extraTurn": "none"
+      },
+      "stockOnly": []
+    },
+    {
+      "key": "supron",
+      "label": "Mahir Supron",
+      "record": "Vehicle.v_standard25_mahir_supron_player",
+      "vehicleType": "Car",
+      "appearance": "mahir_supron__basic_player_01",
+      "wheels": {
+        "wheel_front_left": {
+          "stock": {
+            "faceX": -0.2078,
+            "innerX": 0.0646,
+            "width": 0.2724,
+            "lipRadius": 0.2507,
+            "outerRadius": 0.2507,
+            "hubX": [
+              -0.1803,
+              -0.0393
+            ],
+            "visualScale": [
+              0.9,
+              0.9,
+              0.9
+            ],
+            "tyre": {
+              "beadRadius": 0.2453,
+              "outerRadius": 0.3213,
+              "faceX": -0.1957,
+              "innerX": 0.0576
+            }
+          },
+          "targetLipRadius": 0.2468,
+          "scale": [
+            0.8814,
+            0.8814,
+            0.8814
+          ],
+          "offsetX": -0.0245,
+          "ours": {
+            "faceX": -0.2078,
+            "inboardX": 0.0566,
+            "width": 0.2644,
+            "lipRadius": 0.2468,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.0756,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.1532
+            }
+          },
+          "hide": [
+            "wheel_01_fl_a"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_front_right": {
+          "stock": {
+            "faceX": -0.2078,
+            "innerX": 0.0646,
+            "width": 0.2724,
+            "lipRadius": 0.2507,
+            "outerRadius": 0.2507,
+            "hubX": [
+              -0.1803,
+              -0.0393
+            ],
+            "visualScale": [
+              0.9,
+              0.9,
+              0.9
+            ],
+            "tyre": {
+              "beadRadius": 0.2453,
+              "outerRadius": 0.3213,
+              "faceX": -0.1957,
+              "innerX": 0.0576
+            }
+          },
+          "targetLipRadius": 0.2468,
+          "scale": [
+            0.8814,
+            0.8814,
+            0.8814
+          ],
+          "offsetX": -0.0245,
+          "ours": {
+            "faceX": -0.2078,
+            "inboardX": 0.0566,
+            "width": 0.2644,
+            "lipRadius": 0.2468,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.0756,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.1532
+            }
+          },
+          "hide": [
+            "wheel_01_fr_a"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_back_left": {
+          "stock": {
+            "faceX": -0.2078,
+            "innerX": 0.0646,
+            "width": 0.2724,
+            "lipRadius": 0.2507,
+            "outerRadius": 0.2507,
+            "hubX": [
+              -0.1803,
+              -0.0393
+            ],
+            "visualScale": [
+              0.9,
+              0.9,
+              0.9
+            ],
+            "tyre": {
+              "beadRadius": 0.2453,
+              "outerRadius": 0.3213,
+              "faceX": -0.1957,
+              "innerX": 0.0576
+            }
+          },
+          "targetLipRadius": 0.2468,
+          "scale": [
+            0.8814,
+            0.8814,
+            0.8814
+          ],
+          "offsetX": -0.0245,
+          "ours": {
+            "faceX": -0.2078,
+            "inboardX": 0.0566,
+            "width": 0.2644,
+            "lipRadius": 0.2468,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.0756,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.1532
+            }
+          },
+          "hide": [
+            "wheel_01_bl_a"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_back_right": {
+          "stock": {
+            "faceX": -0.2078,
+            "innerX": 0.0646,
+            "width": 0.2724,
+            "lipRadius": 0.2507,
+            "outerRadius": 0.2507,
+            "hubX": [
+              -0.1803,
+              -0.0393
+            ],
+            "visualScale": [
+              0.9,
+              0.9,
+              0.9
+            ],
+            "tyre": {
+              "beadRadius": 0.2453,
+              "outerRadius": 0.3213,
+              "faceX": -0.1957,
+              "innerX": 0.0576
+            }
+          },
+          "targetLipRadius": 0.2468,
+          "scale": [
+            0.8814,
+            0.8814,
+            0.8814
+          ],
+          "offsetX": -0.0245,
+          "ours": {
+            "faceX": -0.2078,
+            "inboardX": 0.0566,
+            "width": 0.2644,
+            "lipRadius": 0.2468,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.0756,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.1532
+            }
+          },
+          "hide": [
+            "wheel_01_br_a"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        }
+      },
+      "rightSide": {
+        "slotFrameVsLeft": {
+          "front": "turned180aboutZ",
+          "back": "turned180aboutZ"
+        },
+        "stockRightRimRotation": "none",
+        "stockRightRimsShareLeftMesh": true,
+        "extraTurn": "none"
+      },
+      "stockOnly": []
+    },
+    {
+      "key": "columbus",
+      "label": "Villefort Columbus",
+      "record": "Vehicle.v_standard25_villefort_columbus_player",
+      "vehicleType": "Car",
+      "appearance": "villefort_columbus__basic_player_01",
+      "wheels": {
+        "wheel_front_left": {
+          "stock": {
+            "faceX": -0.164,
+            "innerX": 0.1736,
+            "width": 0.3376,
+            "lipRadius": 0.2981,
+            "outerRadius": 0.3037,
+            "hubX": [
+              -0.0534,
+              0.0475
+            ],
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.269,
+              "outerRadius": 0.3909,
+              "faceX": -0.1555,
+              "innerX": 0.1491
+            }
+          },
+          "targetLipRadius": 0.2705,
+          "scale": [
+            0.9661,
+            0.9661,
+            0.9661
+          ],
+          "offsetX": 0.0369,
+          "ours": {
+            "faceX": -0.164,
+            "inboardX": 0.1258,
+            "width": 0.2898,
+            "lipRadius": 0.2705,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.0191,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.1041
+            }
+          },
+          "hide": [
+            "wheel_quadra66_fl"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_front_right": {
+          "stock": {
+            "faceX": -0.164,
+            "innerX": 0.1736,
+            "width": 0.3376,
+            "lipRadius": 0.2981,
+            "outerRadius": 0.3037,
+            "hubX": [
+              -0.0534,
+              0.0475
+            ],
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.269,
+              "outerRadius": 0.3909,
+              "faceX": -0.1555,
+              "innerX": 0.1491
+            }
+          },
+          "targetLipRadius": 0.2705,
+          "scale": [
+            0.9661,
+            0.9661,
+            0.9661
+          ],
+          "offsetX": 0.0369,
+          "ours": {
+            "faceX": -0.164,
+            "inboardX": 0.1258,
+            "width": 0.2898,
+            "lipRadius": 0.2705,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.0191,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.1041
+            }
+          },
+          "hide": [
+            "wheel_quadra66_fr"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_back_left": {
+          "stock": {
+            "faceX": -0.164,
+            "innerX": 0.1736,
+            "width": 0.3376,
+            "lipRadius": 0.2981,
+            "outerRadius": 0.3037,
+            "hubX": [
+              -0.0534,
+              0.0475
+            ],
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.269,
+              "outerRadius": 0.3909,
+              "faceX": -0.1555,
+              "innerX": 0.1491
+            }
+          },
+          "targetLipRadius": 0.2705,
+          "scale": [
+            0.9661,
+            0.9661,
+            0.9661
+          ],
+          "offsetX": 0.0369,
+          "ours": {
+            "faceX": -0.164,
+            "inboardX": 0.1258,
+            "width": 0.2898,
+            "lipRadius": 0.2705,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.0191,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.1041
+            }
+          },
+          "hide": [
+            "v_standard25_villefort_columbus__ext01_wheel_quadra66_b2_fl_01"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_back_right": {
+          "stock": {
+            "faceX": -0.164,
+            "innerX": 0.1736,
+            "width": 0.3376,
+            "lipRadius": 0.2981,
+            "outerRadius": 0.3037,
+            "hubX": [
+              -0.0534,
+              0.0475
+            ],
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.269,
+              "outerRadius": 0.3909,
+              "faceX": -0.1555,
+              "innerX": 0.1491
+            }
+          },
+          "targetLipRadius": 0.2705,
+          "scale": [
+            0.9661,
+            0.9661,
+            0.9661
+          ],
+          "offsetX": 0.0369,
+          "ours": {
+            "faceX": -0.164,
+            "inboardX": 0.1258,
+            "width": 0.2898,
+            "lipRadius": 0.2705,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.0191,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.1041
+            }
+          },
+          "hide": [
+            "wheel_quadra66_br"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        }
+      },
+      "rightSide": {
+        "slotFrameVsLeft": {
+          "front": "turned180aboutZ",
+          "back": "turned180aboutZ"
+        },
+        "stockRightRimRotation": "none",
+        "stockRightRimsShareLeftMesh": true,
+        "extraTurn": "none"
+      },
+      "stockOnly": []
+    },
+    {
+      "key": "cortes",
+      "label": "Villefort Cortes",
+      "record": "Vehicle.v_standard2_villefort_cortes_player",
+      "vehicleType": "Car",
+      "appearance": "villefort_cortes__basic_player_01",
+      "wheels": {
+        "wheel_front_left": {
+          "stock": {
+            "faceX": -0.2419,
+            "innerX": 0.1309,
+            "width": 0.3728,
+            "lipRadius": 0.3167,
+            "outerRadius": 0.3167,
+            "hubX": [
+              -0.1586,
+              -0.1137
+            ],
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.3045,
+              "outerRadius": 0.3927,
+              "faceX": -0.2433,
+              "innerX": 0.1497
+            }
+          },
+          "targetLipRadius": 0.306,
+          "scale": [
+            1.0929,
+            1.0929,
+            1.0929
+          ],
+          "offsetX": -0.0146,
+          "ours": {
+            "faceX": -0.2419,
+            "inboardX": 0.086,
+            "width": 0.3279,
+            "lipRadius": 0.306,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.078,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.1741
+            }
+          },
+          "hide": [
+            "wheel_01_fl_a"
+          ],
+          "centres": [
+            {
+              "name": "wheel_01_fl_center",
+              "slot": "brake_front_left",
+              "faceX": -0.1957,
+              "innerX": -0.0759,
+              "outerRadius": 0.2404,
+              "angularCoverage": 0.306
+            }
+          ],
+          "flags": [
+            "centre deeper than stock (rim_dish +0.036 m)"
+          ],
+          "hiddenCentres": [
+            "wheel_01_fl_center"
+          ],
+          "others": []
+        },
+        "wheel_front_right": {
+          "stock": {
+            "faceX": -0.2419,
+            "innerX": 0.1309,
+            "width": 0.3728,
+            "lipRadius": 0.3167,
+            "outerRadius": 0.3167,
+            "hubX": [
+              -0.1586,
+              -0.1137
+            ],
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.3045,
+              "outerRadius": 0.3927,
+              "faceX": -0.2433,
+              "innerX": 0.1497
+            }
+          },
+          "targetLipRadius": 0.306,
+          "scale": [
+            1.0929,
+            1.0929,
+            1.0929
+          ],
+          "offsetX": -0.0146,
+          "ours": {
+            "faceX": -0.2419,
+            "inboardX": 0.086,
+            "width": 0.3279,
+            "lipRadius": 0.306,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.078,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.1741
+            }
+          },
+          "hide": [
+            "wheel_01_fr_a"
+          ],
+          "centres": [
+            {
+              "name": "wheel_01_fr_center",
+              "slot": "brake_front_right",
+              "faceX": -0.1957,
+              "innerX": -0.0759,
+              "outerRadius": 0.2404,
+              "angularCoverage": 0.306
+            }
+          ],
+          "flags": [
+            "centre deeper than stock (rim_dish +0.036 m)"
+          ],
+          "hiddenCentres": [
+            "wheel_01_fr_center"
+          ],
+          "others": []
+        },
+        "wheel_back_left": {
+          "stock": {
+            "faceX": -0.2419,
+            "innerX": 0.1309,
+            "width": 0.3728,
+            "lipRadius": 0.3167,
+            "outerRadius": 0.3167,
+            "hubX": [
+              -0.1586,
+              -0.1137
+            ],
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.3045,
+              "outerRadius": 0.3927,
+              "faceX": -0.2433,
+              "innerX": 0.1497
+            }
+          },
+          "targetLipRadius": 0.306,
+          "scale": [
+            1.0929,
+            1.0929,
+            1.0929
+          ],
+          "offsetX": -0.0146,
+          "ours": {
+            "faceX": -0.2419,
+            "inboardX": 0.086,
+            "width": 0.3279,
+            "lipRadius": 0.306,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.078,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.1741
+            }
+          },
+          "hide": [
+            "wheel_01_bl_a"
+          ],
+          "centres": [
+            {
+              "name": "wheel_01_bl_center",
+              "slot": "brake_back_left",
+              "faceX": -0.1947,
+              "innerX": -0.0749,
+              "outerRadius": 0.2402,
+              "angularCoverage": 0.306
+            }
+          ],
+          "flags": [
+            "centre deeper than stock (rim_dish +0.036 m)"
+          ],
+          "hiddenCentres": [
+            "wheel_01_bl_center"
+          ],
+          "others": []
+        },
+        "wheel_back_right": {
+          "stock": {
+            "faceX": -0.2419,
+            "innerX": 0.1309,
+            "width": 0.3728,
+            "lipRadius": 0.3167,
+            "outerRadius": 0.3167,
+            "hubX": [
+              -0.1586,
+              -0.1137
+            ],
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.3045,
+              "outerRadius": 0.3927,
+              "faceX": -0.2433,
+              "innerX": 0.1497
+            }
+          },
+          "targetLipRadius": 0.306,
+          "scale": [
+            1.0929,
+            1.0929,
+            1.0929
+          ],
+          "offsetX": -0.0146,
+          "ours": {
+            "faceX": -0.2419,
+            "inboardX": 0.086,
+            "width": 0.3279,
+            "lipRadius": 0.306,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.078,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.1741
+            }
+          },
+          "hide": [
+            "wheel_01_br_a"
+          ],
+          "centres": [
+            {
+              "name": "wheel_01_br_center",
+              "slot": "brake_back_right",
+              "faceX": -0.1947,
+              "innerX": -0.0749,
+              "outerRadius": 0.2402,
+              "angularCoverage": 0.306
+            }
+          ],
+          "flags": [
+            "centre deeper than stock (rim_dish +0.036 m)"
+          ],
+          "hiddenCentres": [
+            "wheel_01_br_center"
+          ],
+          "others": []
+        }
+      },
+      "rightSide": {
+        "slotFrameVsLeft": {
+          "front": "turned180aboutZ",
+          "back": "turned180aboutZ"
+        },
+        "stockRightRimRotation": "none",
+        "stockRightRimsShareLeftMesh": true,
+        "extraTurn": "none"
+      },
+      "stockOnly": []
+    },
+    {
+      "key": "thrax",
+      "label": "Chevalier Thrax",
+      "record": "Vehicle.v_standard2_chevalier_thrax_player",
+      "vehicleType": "Car",
+      "appearance": "chevalier_thrax__basic_player_01",
+      "wheels": {
+        "wheel_front_left": {
+          "stock": {
+            "faceX": -0.2244,
+            "innerX": 0.1293,
+            "width": 0.3537,
+            "lipRadius": 0.3021,
+            "outerRadius": 0.3277,
+            "hubX": [
+              -0.1663,
+              -0.0584
+            ],
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.2915,
+              "outerRadius": 0.4238,
+              "faceX": -0.2119,
+              "innerX": 0.1162
+            }
+          },
+          "targetLipRadius": 0.293,
+          "scale": [
+            1.0464,
+            1.0464,
+            1.0464
+          ],
+          "offsetX": -0.0067,
+          "ours": {
+            "faceX": -0.2244,
+            "inboardX": 0.0895,
+            "width": 0.3139,
+            "lipRadius": 0.293,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.0674,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.1595
+            }
+          },
+          "hide": [
+            "wheel_01_fl_a"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_front_right": {
+          "stock": {
+            "faceX": -0.2244,
+            "innerX": 0.1293,
+            "width": 0.3537,
+            "lipRadius": 0.3021,
+            "outerRadius": 0.3277,
+            "hubX": [
+              -0.1663,
+              -0.0584
+            ],
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.2915,
+              "outerRadius": 0.4238,
+              "faceX": -0.2119,
+              "innerX": 0.1162
+            }
+          },
+          "targetLipRadius": 0.293,
+          "scale": [
+            1.0464,
+            1.0464,
+            1.0464
+          ],
+          "offsetX": -0.0067,
+          "ours": {
+            "faceX": -0.2244,
+            "inboardX": 0.0895,
+            "width": 0.3139,
+            "lipRadius": 0.293,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.0674,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.1595
+            }
+          },
+          "hide": [
+            "wheel_01_fr_a"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_back_left": {
+          "stock": {
+            "faceX": -0.1708,
+            "innerX": 0.2614,
+            "width": 0.4322,
+            "lipRadius": 0.3053,
+            "outerRadius": 0.3294,
+            "hubX": [
+              -0.112,
+              -0.0028
+            ],
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.2915,
+              "outerRadius": 0.4238,
+              "faceX": -0.1585,
+              "innerX": 0.2564
+            }
+          },
+          "targetLipRadius": 0.293,
+          "scale": [
+            1.0464,
+            1.0464,
+            1.0464
+          ],
+          "offsetX": 0.0469,
+          "ours": {
+            "faceX": -0.1708,
+            "inboardX": 0.1431,
+            "width": 0.3139,
+            "lipRadius": 0.293,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.0138,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.1059
+            }
+          },
+          "hide": [
+            "wheel_01_bl_a"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_back_right": {
+          "stock": {
+            "faceX": -0.1708,
+            "innerX": 0.2614,
+            "width": 0.4322,
+            "lipRadius": 0.3053,
+            "outerRadius": 0.3294,
+            "hubX": [
+              -0.112,
+              -0.0028
+            ],
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.2915,
+              "outerRadius": 0.4238,
+              "faceX": -0.1585,
+              "innerX": 0.2564
+            }
+          },
+          "targetLipRadius": 0.293,
+          "scale": [
+            1.0464,
+            1.0464,
+            1.0464
+          ],
+          "offsetX": 0.0469,
+          "ours": {
+            "faceX": -0.1708,
+            "inboardX": 0.1431,
+            "width": 0.3139,
+            "lipRadius": 0.293,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.0138,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.1059
+            }
+          },
+          "hide": [
+            "wheel_01_br_a"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        }
+      },
+      "rightSide": {
+        "slotFrameVsLeft": {
+          "front": "turned180aboutZ",
+          "back": "turned180aboutZ"
+        },
+        "stockRightRimRotation": "none",
+        "stockRightRimsShareLeftMesh": true,
+        "extraTurn": "none"
+      },
+      "stockOnly": []
+    },
+    {
+      "key": "bandit",
+      "label": "Archer Bandit",
+      "record": "Vehicle.v_standard2_archer_bandit_player",
+      "vehicleType": "Car",
+      "appearance": "archer_bandit_bandit_01",
+      "wheels": {
+        "wheel_front_left": {
+          "stock": {
+            "faceX": -0.3025,
+            "innerX": 0.0142,
+            "width": 0.3167,
+            "lipRadius": 0.2896,
+            "outerRadius": 0.2898,
+            "hubX": [
+              -0.2631,
+              -0.1335
+            ],
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.2787,
+              "outerRadius": 0.3589,
+              "faceX": -0.3008,
+              "innerX": 0.0175
+            }
+          },
+          "targetLipRadius": 0.2802,
+          "scale": [
+            1.0007,
+            1.0007,
+            1.0007
+          ],
+          "offsetX": -0.0944,
+          "ours": {
+            "faceX": -0.3025,
+            "inboardX": -0.0023,
+            "width": 0.3002,
+            "lipRadius": 0.2802,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.1524,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.2405
+            }
+          },
+          "hide": [
+            "wheel_fl_05"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_front_right": {
+          "stock": {
+            "faceX": -0.3025,
+            "innerX": 0.0142,
+            "width": 0.3167,
+            "lipRadius": 0.2896,
+            "outerRadius": 0.2898,
+            "hubX": [
+              -0.2631,
+              -0.1335
+            ],
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.2787,
+              "outerRadius": 0.3589,
+              "faceX": -0.3008,
+              "innerX": 0.0175
+            }
+          },
+          "targetLipRadius": 0.2802,
+          "scale": [
+            1.0007,
+            1.0007,
+            1.0007
+          ],
+          "offsetX": -0.0944,
+          "ours": {
+            "faceX": -0.3025,
+            "inboardX": -0.0023,
+            "width": 0.3002,
+            "lipRadius": 0.2802,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.1524,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.2405
+            }
+          },
+          "hide": [
+            "wheel_fr_05"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_back_left": {
+          "stock": {
+            "faceX": -0.4538,
+            "innerX": 0.0213,
+            "width": 0.4751,
+            "lipRadius": 0.2896,
+            "outerRadius": 0.2898,
+            "hubX": [
+              -0.3947,
+              -0.2002
+            ],
+            "visualScale": [
+              1.5,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.2787,
+              "outerRadius": 0.3589,
+              "faceX": -0.4513,
+              "innerX": 0.0262
+            }
+          },
+          "targetLipRadius": 0.2802,
+          "scale": [
+            1.0007,
+            1.0007,
+            1.0007
+          ],
+          "offsetX": -0.2457,
+          "ours": {
+            "faceX": -0.4538,
+            "inboardX": -0.1536,
+            "width": 0.3002,
+            "lipRadius": 0.2802,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.3037,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.3918
+            }
+          },
+          "hide": [
+            "wheel_bl_05"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_back_right": {
+          "stock": {
+            "faceX": -0.4538,
+            "innerX": 0.0213,
+            "width": 0.4751,
+            "lipRadius": 0.2896,
+            "outerRadius": 0.2898,
+            "hubX": [
+              -0.3947,
+              -0.2002
+            ],
+            "visualScale": [
+              1.5,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.2787,
+              "outerRadius": 0.3589,
+              "faceX": -0.4513,
+              "innerX": 0.0262
+            }
+          },
+          "targetLipRadius": 0.2802,
+          "scale": [
+            1.0007,
+            1.0007,
+            1.0007
+          ],
+          "offsetX": -0.2457,
+          "ours": {
+            "faceX": -0.4538,
+            "inboardX": -0.1536,
+            "width": 0.3002,
+            "lipRadius": 0.2802,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.3037,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.3918
+            }
+          },
+          "hide": [
+            "wheel_br_05"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        }
+      },
+      "rightSide": {
+        "slotFrameVsLeft": {
+          "front": "turned180aboutZ",
+          "back": "turned180aboutZ"
+        },
+        "stockRightRimRotation": "none",
+        "stockRightRimsShareLeftMesh": true,
+        "extraTurn": "none"
+      },
+      "stockOnly": []
+    },
+    {
+      "key": "merrimac",
+      "label": "Thorton Merrimac",
+      "record": "Vehicle.v_standard25_thorton_merrimac_player",
+      "vehicleType": "Car",
+      "appearance": "thorton_merrimac_basic_player_01",
+      "wheels": {
+        "wheel_front_left": {
+          "stock": {
+            "faceX": -0.3912,
+            "innerX": -0.0125,
+            "width": 0.3787,
+            "lipRadius": 0.2694,
+            "outerRadius": 0.2714,
+            "hubX": [
+              -0.3375,
+              -0.2451
+            ],
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.2672,
+              "outerRadius": 0.4205,
+              "faceX": -0.4031,
+              "innerX": -0.0075
+            }
+          },
+          "targetLipRadius": 0.2687,
+          "scale": [
+            0.9596,
+            0.9596,
+            0.9596
+          ],
+          "offsetX": -0.1916,
+          "ours": {
+            "faceX": -0.3912,
+            "inboardX": -0.1033,
+            "width": 0.2879,
+            "lipRadius": 0.2687,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.2473,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.3317
+            }
+          },
+          "hide": [
+            "wheel_01_fl_a"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_front_right": {
+          "stock": {
+            "faceX": -0.3912,
+            "innerX": -0.0125,
+            "width": 0.3787,
+            "lipRadius": 0.2694,
+            "outerRadius": 0.2714,
+            "hubX": [
+              -0.3375,
+              -0.2451
+            ],
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.2672,
+              "outerRadius": 0.4205,
+              "faceX": -0.4031,
+              "innerX": -0.0075
+            }
+          },
+          "targetLipRadius": 0.2687,
+          "scale": [
+            0.9596,
+            0.9596,
+            0.9596
+          ],
+          "offsetX": -0.1916,
+          "ours": {
+            "faceX": -0.3912,
+            "inboardX": -0.1033,
+            "width": 0.2879,
+            "lipRadius": 0.2687,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.2473,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.3317
+            }
+          },
+          "hide": [
+            "wheel_01_fr_a"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_back_left": {
+          "stock": {
+            "faceX": -0.3912,
+            "innerX": -0.0125,
+            "width": 0.3787,
+            "lipRadius": 0.2694,
+            "outerRadius": 0.2714,
+            "hubX": [
+              -0.3375,
+              -0.2451
+            ],
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.2672,
+              "outerRadius": 0.4205,
+              "faceX": -0.4031,
+              "innerX": -0.0075
+            }
+          },
+          "targetLipRadius": 0.2687,
+          "scale": [
+            0.9596,
+            0.9596,
+            0.9596
+          ],
+          "offsetX": -0.1916,
+          "ours": {
+            "faceX": -0.3912,
+            "inboardX": -0.1033,
+            "width": 0.2879,
+            "lipRadius": 0.2687,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.2473,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.3317
+            }
+          },
+          "hide": [
+            "wheel_01_bl_a"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_back_right": {
+          "stock": {
+            "faceX": -0.3912,
+            "innerX": -0.0125,
+            "width": 0.3787,
+            "lipRadius": 0.2694,
+            "outerRadius": 0.2714,
+            "hubX": [
+              -0.3375,
+              -0.2451
+            ],
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.2672,
+              "outerRadius": 0.4205,
+              "faceX": -0.4031,
+              "innerX": -0.0075
+            }
+          },
+          "targetLipRadius": 0.2687,
+          "scale": [
+            0.9596,
+            0.9596,
+            0.9596
+          ],
+          "offsetX": -0.1916,
+          "ours": {
+            "faceX": -0.3912,
+            "inboardX": -0.1033,
+            "width": 0.2879,
+            "lipRadius": 0.2687,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.2473,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.3317
+            }
+          },
+          "hide": [
+            "wheel_01_br_a"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_back_left_b": {
+          "stock": {
+            "faceX": -0.3912,
+            "innerX": -0.0125,
+            "width": 0.3787,
+            "lipRadius": 0.2694,
+            "outerRadius": 0.2714,
+            "hubX": [
+              -0.3375,
+              -0.2451
+            ],
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.2672,
+              "outerRadius": 0.4205,
+              "faceX": -0.4031,
+              "innerX": -0.0075
+            }
+          },
+          "targetLipRadius": 0.2687,
+          "scale": [
+            0.9596,
+            0.9596,
+            0.9596
+          ],
+          "offsetX": -0.1916,
+          "ours": {
+            "faceX": -0.3912,
+            "inboardX": -0.1033,
+            "width": 0.2879,
+            "lipRadius": 0.2687,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.2473,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.3317
+            }
+          },
+          "hide": [
+            "wheel_02_bl_b"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_back_right_b": {
+          "stock": {
+            "faceX": -0.3912,
+            "innerX": -0.0125,
+            "width": 0.3787,
+            "lipRadius": 0.2694,
+            "outerRadius": 0.2714,
+            "hubX": [
+              -0.3375,
+              -0.2451
+            ],
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.2672,
+              "outerRadius": 0.4205,
+              "faceX": -0.4031,
+              "innerX": -0.0075
+            }
+          },
+          "targetLipRadius": 0.2687,
+          "scale": [
+            0.9596,
+            0.9596,
+            0.9596
+          ],
+          "offsetX": -0.1916,
+          "ours": {
+            "faceX": -0.3912,
+            "inboardX": -0.1033,
+            "width": 0.2879,
+            "lipRadius": 0.2687,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.2473,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.3317
+            }
+          },
+          "hide": [
+            "wheel_02_br_b"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        }
+      },
+      "rightSide": {
+        "slotFrameVsLeft": {
+          "front": "turned180aboutZ",
+          "back": "turned180aboutZ"
+        },
+        "stockRightRimRotation": "spin phase about X only",
+        "stockRightRimsShareLeftMesh": true,
+        "extraTurn": "none"
+      },
+      "stockOnly": [
+        {
+          "name": "wheel_02_trunk",
+          "slot": "Base",
+          "note": "not on a wheel slot (spare wheel or prop): left stock"
+        }
+      ]
+    },
+    {
+      "key": "semimaru",
+      "label": "Yaiba Semimaru",
+      "record": "Vehicle.v_sport1_yaiba_semimaru_player",
+      "vehicleType": "Car",
+      "appearance": "yaiba_semimaru_basic_urban_01",
+      "wheels": {
+        "wheel_front_left": {
+          "stock": {
+            "faceX": -0.2612,
+            "innerX": 0.0548,
+            "width": 0.316,
+            "lipRadius": 0.2795,
+            "outerRadius": 0.3019,
+            "hubX": [
+              -0.2484,
+              -0.185
+            ],
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.2768,
+              "outerRadius": 0.379,
+              "faceX": -0.2623,
+              "innerX": 0.0556
+            }
+          },
+          "targetLipRadius": 0.2783,
+          "scale": [
+            0.9939,
+            0.9939,
+            0.9939
+          ],
+          "offsetX": -0.0545,
+          "ours": {
+            "faceX": -0.2612,
+            "inboardX": 0.037,
+            "width": 0.2982,
+            "lipRadius": 0.2783,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.1121,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.1996
+            }
+          },
+          "hide": [
+            "wheel_01_fl_a"
+          ],
+          "centres": [
+            {
+              "name": "wheel_center_fl",
+              "slot": "brake_front_left",
+              "faceX": -0.2847,
+              "innerX": -0.2389,
+              "outerRadius": 0.2784,
+              "angularCoverage": 1
+            }
+          ],
+          "flags": [
+            "centre deeper than stock (rim_dish +0.073, rim_wire +0.047, rim_threepiece +0.046, rim_beadlock +0.037, rim_offroad +0.037, rim_tech +0.025, rim_fork +0.018, rim_star +0.016, rim_yspoke +0.016, rim_classic +0.013, rim_twin +0.012, rim_vortex +0.012 m)"
+          ],
+          "hiddenCentres": [
+            "wheel_center_fl"
+          ],
+          "others": []
+        },
+        "wheel_front_right": {
+          "stock": {
+            "faceX": -0.2612,
+            "innerX": 0.0548,
+            "width": 0.316,
+            "lipRadius": 0.2795,
+            "outerRadius": 0.3019,
+            "hubX": [
+              -0.2484,
+              -0.185
+            ],
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.2768,
+              "outerRadius": 0.379,
+              "faceX": -0.2623,
+              "innerX": 0.0556
+            }
+          },
+          "targetLipRadius": 0.2783,
+          "scale": [
+            0.9939,
+            0.9939,
+            0.9939
+          ],
+          "offsetX": -0.0545,
+          "ours": {
+            "faceX": -0.2612,
+            "inboardX": 0.037,
+            "width": 0.2982,
+            "lipRadius": 0.2783,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.1121,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.1996
+            }
+          },
+          "hide": [
+            "wheel_01_fr_a"
+          ],
+          "centres": [
+            {
+              "name": "wheel_center_fr",
+              "slot": "brake_front_right",
+              "faceX": -0.2847,
+              "innerX": -0.2389,
+              "outerRadius": 0.2784,
+              "angularCoverage": 1
+            }
+          ],
+          "flags": [
+            "centre deeper than stock (rim_dish +0.073, rim_wire +0.047, rim_threepiece +0.046, rim_beadlock +0.037, rim_offroad +0.037, rim_tech +0.025, rim_fork +0.018, rim_star +0.016, rim_yspoke +0.016, rim_classic +0.013, rim_twin +0.012, rim_vortex +0.012 m)"
+          ],
+          "hiddenCentres": [
+            "wheel_center_fr"
+          ],
+          "others": []
+        },
+        "wheel_back_left": {
+          "stock": {
+            "faceX": -0.388,
+            "innerX": 0.0751,
+            "width": 0.4631,
+            "lipRadius": 0.2959,
+            "outerRadius": 0.2959,
+            "hubX": [
+              -0.2677,
+              -0.2027
+            ],
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.2924,
+              "outerRadius": 0.4102,
+              "faceX": -0.3813,
+              "innerX": 0.069
+            }
+          },
+          "targetLipRadius": 0.2939,
+          "scale": [
+            1.0496,
+            1.0496,
+            1.0496
+          ],
+          "offsetX": -0.1697,
+          "ours": {
+            "faceX": -0.388,
+            "inboardX": -0.0731,
+            "width": 0.3149,
+            "lipRadius": 0.2939,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.2306,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.3229
+            }
+          },
+          "hide": [
+            "wheel_01_bl_a"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_back_right": {
+          "stock": {
+            "faceX": -0.388,
+            "innerX": 0.0751,
+            "width": 0.4631,
+            "lipRadius": 0.2959,
+            "outerRadius": 0.2959,
+            "hubX": [
+              -0.2677,
+              -0.2027
+            ],
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.2924,
+              "outerRadius": 0.4102,
+              "faceX": -0.3813,
+              "innerX": 0.069
+            }
+          },
+          "targetLipRadius": 0.2939,
+          "scale": [
+            1.0496,
+            1.0496,
+            1.0496
+          ],
+          "offsetX": -0.1697,
+          "ours": {
+            "faceX": -0.388,
+            "inboardX": -0.0731,
+            "width": 0.3149,
+            "lipRadius": 0.2939,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.2306,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.3229
+            }
+          },
+          "hide": [
+            "wheel_01_br_a"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        }
+      },
+      "rightSide": {
+        "slotFrameVsLeft": {
+          "front": "turned180aboutZ",
+          "back": "turned180aboutZ"
+        },
+        "stockRightRimRotation": "none",
+        "stockRightRimsShareLeftMesh": true,
+        "extraTurn": "none"
+      },
+      "stockOnly": []
+    },
+    {
+      "key": "kusanagi",
+      "label": "Yaiba Kusanagi",
+      "record": "Vehicle.v_sportbike1_yaiba_kusanagi_player",
+      "vehicleType": "Bike",
+      "appearance": "yaiba_kusanagi_basic_player_01",
+      "wheels": {
+        "wheel_front": {
+          "stock": {
+            "faceX": -0.0802,
+            "innerX": 0.0802,
+            "width": 0.1604,
+            "lipRadius": 0.2313,
+            "outerRadius": 0.2313,
+            "hubX": null,
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.2294,
+              "outerRadius": 0.3098,
+              "faceX": -0.0808,
+              "innerX": 0.0808
+            }
+          },
+          "targetLipRadius": 0.2309,
+          "scale": [
+            0.5347,
+            0.8246,
+            0.8246
+          ],
+          "offsetX": 0.031,
+          "ours": {
+            "faceX": -0.0802,
+            "inboardX": 0.0802,
+            "width": 0.1604,
+            "lipRadius": 0.2309
+          },
+          "hide": [
+            "v_sportbike1_yaiba_kusanagi__ext01_wheel_f_010871"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_back": {
+          "stock": {
+            "faceX": -0.1272,
+            "innerX": 0.1272,
+            "width": 0.2544,
+            "lipRadius": 0.2626,
+            "outerRadius": 0.2626,
+            "hubX": [
+              -0.045,
+              0.0487
+            ],
+            "visualScale": [
+              1,
+              1,
+              1
+            ],
+            "tyre": {
+              "beadRadius": 0.2566,
+              "outerRadius": 0.3465,
+              "faceX": -0.1334,
+              "innerX": 0.1334
+            }
+          },
+          "targetLipRadius": 0.2581,
+          "scale": [
+            0.848,
+            0.9218,
+            0.9218
+          ],
+          "offsetX": 0.0492,
+          "ours": {
+            "faceX": -0.1272,
+            "inboardX": 0.1272,
+            "width": 0.2544,
+            "lipRadius": 0.2581,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": 0,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.0746
+            }
+          },
+          "hide": [
+            "v_sportbike1_yaiba_kusanagi__ext01_wheel_r_010655"
+          ],
+          "centres": [],
+          "flags": [
+            "stock v_sportbike1_yaiba_kusanagi__ext01_axle_b_017048 (axle_back) shares the rim volume: x -0.1289..0.2205, r 0.011..0.9925"
+          ],
+          "hiddenCentres": [],
+          "others": [
+            {
+              "name": "v_sportbike1_yaiba_kusanagi__ext01_axle_b_017048",
+              "slot": "axle_back",
+              "x": [
+                -0.1289,
+                0.2205
+              ],
+              "radius": [
+                0.011,
+                0.9925
+              ]
+            }
+          ]
+        }
+      },
+      "slotRelation": {
+        "wheel_front": {
+          "stockSlot": "wheel_front",
+          "relation": "same slot"
+        },
+        "wheel_back": {
+          "stockSlot": "wheel_back",
+          "relation": "same slot"
+        }
+      },
+      "stockOnly": [],
+      "excluded": "Front rim is a hubless ring (stock rim radius 0.182-0.231 m) around a hub-centre steering assembly that fills the wheel centre; a spoked rim would run through it. The back rim alone could take one, but a mismatched front/back set is not offered."
+    },
+    {
+      "key": "caliburn",
+      "label": "Rayfield Caliburn",
+      "record": "Vehicle.v_sport1_rayfield_caliburn_player",
+      "vehicleType": "Car",
+      "appearance": "rayfield_caliburn__basic_player_01",
+      "wheels": {
+        "wheel_front_left": {
+          "stock": {
+            "faceX": -0.2947,
+            "innerX": 0.0627,
+            "width": 0.3574,
+            "lipRadius": 0.3366,
+            "outerRadius": 0.3429,
+            "hubX": [
+              -0.2515,
+              -0.0495
+            ],
+            "visualScale": [
+              0.91,
+              1.05,
+              1.05
+            ],
+            "tyre": {
+              "beadRadius": 0.3256,
+              "outerRadius": 0.3796,
+              "faceX": -0.2829,
+              "innerX": 0.0644
+            }
+          },
+          "targetLipRadius": 0.3271,
+          "scale": [
+            1.1682,
+            1.1682,
+            1.1682
+          ],
+          "offsetX": -0.0517,
+          "ours": {
+            "faceX": -0.2947,
+            "inboardX": 0.0558,
+            "width": 0.3505,
+            "lipRadius": 0.3271,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.1195,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.2223
+            }
+          },
+          "hide": [
+            "wheel_01_fl_a"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_front_right": {
+          "stock": {
+            "faceX": -0.2947,
+            "innerX": 0.0627,
+            "width": 0.3574,
+            "lipRadius": 0.3366,
+            "outerRadius": 0.3429,
+            "hubX": [
+              -0.2515,
+              -0.0495
+            ],
+            "visualScale": [
+              0.91,
+              1.05,
+              1.05
+            ],
+            "tyre": {
+              "beadRadius": 0.3256,
+              "outerRadius": 0.3796,
+              "faceX": -0.2829,
+              "innerX": 0.0644
+            }
+          },
+          "targetLipRadius": 0.3271,
+          "scale": [
+            1.1682,
+            1.1682,
+            1.1682
+          ],
+          "offsetX": -0.0517,
+          "ours": {
+            "faceX": -0.2947,
+            "inboardX": 0.0558,
+            "width": 0.3505,
+            "lipRadius": 0.3271,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.1195,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.2223
+            }
+          },
+          "hide": [
+            "wheel_01_fr_a"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_back_left": {
+          "stock": {
+            "faceX": -0.3773,
+            "innerX": 0.1175,
+            "width": 0.4948,
+            "lipRadius": 0.3366,
+            "outerRadius": 0.3429,
+            "hubX": [
+              -0.3175,
+              -0.0378
+            ],
+            "visualScale": [
+              1.26,
+              1.05,
+              1.05
+            ],
+            "tyre": {
+              "beadRadius": 0.3261,
+              "outerRadius": 0.3993,
+              "faceX": -0.354,
+              "innerX": 0.1125
+            }
+          },
+          "targetLipRadius": 0.3276,
+          "scale": [
+            1.17,
+            1.17,
+            1.17
+          ],
+          "offsetX": -0.1339,
+          "ours": {
+            "faceX": -0.3773,
+            "inboardX": -0.0263,
+            "width": 0.351,
+            "lipRadius": 0.3276,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.2018,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.3048
+            }
+          },
+          "hide": [
+            "wheel_01_bl_a"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        },
+        "wheel_back_right": {
+          "stock": {
+            "faceX": -0.3773,
+            "innerX": 0.1175,
+            "width": 0.4948,
+            "lipRadius": 0.3366,
+            "outerRadius": 0.3429,
+            "hubX": [
+              -0.3175,
+              -0.0378
+            ],
+            "visualScale": [
+              1.26,
+              1.05,
+              1.05
+            ],
+            "tyre": {
+              "beadRadius": 0.3261,
+              "outerRadius": 0.3993,
+              "faceX": -0.354,
+              "innerX": 0.1125
+            }
+          },
+          "targetLipRadius": 0.3276,
+          "scale": [
+            1.17,
+            1.17,
+            1.17
+          ],
+          "offsetX": -0.1339,
+          "ours": {
+            "faceX": -0.3773,
+            "inboardX": -0.0263,
+            "width": 0.351,
+            "lipRadius": 0.3276,
+            "centreBackX": {
+              "deepest": "rim_dish",
+              "x": -0.2018,
+              "shallowest": "rim_turbofan",
+              "xMin": -0.3048
+            }
+          },
+          "hide": [
+            "wheel_01_br_a"
+          ],
+          "centres": [],
+          "flags": [],
+          "hiddenCentres": [],
+          "others": []
+        }
+      },
+      "rightSide": {
+        "slotFrameVsLeft": {
+          "front": "turned180aboutZ",
+          "back": "turned180aboutZ"
+        },
+        "stockRightRimRotation": "none",
+        "stockRightRimsShareLeftMesh": true,
+        "extraTurn": "none"
+      },
+      "stockOnly": []
+    }
+  ]
+}

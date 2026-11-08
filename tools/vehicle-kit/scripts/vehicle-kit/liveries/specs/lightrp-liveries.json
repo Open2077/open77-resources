@@ -1,0 +1,114 @@
+{
+  "schema": "open77.vehicle-liveries/1",
+  "resource": "lightrp_vk_liveries",
+  "archiveName": "LightRPVehicleLiveries",
+  "recordPrefix": "Vehicle.o77_livery_",
+  "notes": [
+    "Every design is drawn by lv_art.py from these parameters: no image, font or logo comes from the game or a third party (text uses Aileron, the CC0 face bundled with Pillow).",
+    "One record per design and model: Vehicle.o77_livery_<design>_<model>. The base colour is a VehicleCustomMultilayer (our .mlsetup over the model's own vanilla mask, referenced by path); all artwork is VehicleDecalAttachment entities of this pack.",
+    "A template carries at most 12 decals (13 crash the game at spawn, docs/research/vehicles-api.md): lv_plan.py folds a model's decals into their parent panel above that cap, never a part one of the kitFits can hide.",
+    "models covers the dealer stock and every other vanilla player body (docs/generated/vehicle-player-scope-2.50.json) with a CrystalCoat unique template to paint over; unsupported says why each other body takes none. A model's trims (records of the same body) take its liveries when they share its AppearancesToColorTemplate and carry every decal panel (lv_plan.py records / trimsRefused).",
+    "Company and job names are the Light RP ones (light-rp shared/jobs.lua and the ncmotors dealer); no real-world or Night City brand mark is drawn."
+  ],
+  "kitFits": ["../../specs/lightrp-bodykit-fit.json"],
+  "models": ["hella", "galena", "colby", "quartz", "hozuki", "supron", "columbus", "cortes", "merrimac", "semimaru", "maimai",
+             "shion", "type66", "alvarado_hearse", "alvarado_valentinos", "colby_pickup", "mackinaw", "sport_r7", "tanishi",
+             "tanishi_mr_hands", "turbo"],
+  "unsupported": {
+    "thrax": "hasUniqueCustomization = false: the customization component never applies a unique (pattern) template on it.",
+    "bandit": "no vanilla unique template and a single colour template: no reference mask to paint over (to measure in game before adding).",
+    "apollo": "bike, hasUniqueCustomization = false.",
+    "kusanagi": "bike, hasUniqueCustomization = false.",
+    "911turbo": "no AppearancesToColorTemplate (not CrystalCoat paintable): nothing to append a livery to; needs P3.7 paintable work.",
+    "911turbo_cabrio": "no AppearancesToColorTemplate (not CrystalCoat paintable): nothing to append a livery to; needs P3.7 paintable work.",
+    "aerondight": "CrystalCoat-paintable, but 16 decal panels after folding, over the 12 per template (multi-part doors, hood or trunk on their own slots): needs a fold rule for those parts measured on the rig first, not P3.7.",
+    "alvarado": "CrystalCoat-paintable, but 13 decal panels after folding, over the 12 per template (multi-part doors, hood or trunk on their own slots): needs a fold rule for those parts measured on the rig first, not P3.7.",
+    "caliburn": "no vanilla full-body unique template painted over the model's own masks (its pattern templates use the shared unique masks): no reference to paint over; needs P3.7 paintable work.",
+    "colby_nomad": "no AppearancesToColorTemplate (not CrystalCoat paintable): nothing to append a livery to; needs P3.7 paintable work.",
+    "colby_pickup_kurtz": "hasUniqueCustomization = false; needs P3.7 paintable work.",
+    "cortes_cab": "hasUniqueCustomization = false (the Delamain cab livery is baked in); needs P3.7 paintable work.",
+    "deleon": "no vanilla full-body unique template painted over the model's own masks: no reference to paint over; needs P3.7 paintable work.",
+    "emperor": "CrystalCoat-paintable, but 14 decal panels after folding, over the 12 per template (multi-part doors, hood or trunk on their own slots): needs a fold rule for those parts measured on the rig first, not P3.7.",
+    "galena_nomad": "no AppearancesToColorTemplate (not CrystalCoat paintable): nothing to append a livery to; needs P3.7 paintable work.",
+    "hellhound": "no AppearancesToColorTemplate (not CrystalCoat paintable): nothing to append a livery to; needs P3.7 paintable work.",
+    "legatus": "hasUniqueCustomization = false; needs P3.7 paintable work.",
+    "mackinaw_bmf": "no AppearancesToColorTemplate (not CrystalCoat paintable): nothing to append a livery to; needs P3.7 paintable work.",
+    "mackinaw_ncu": "hasUniqueCustomization = false; needs P3.7 paintable work.",
+    "nazare": "bike, hasUniqueCustomization = false; needs P3.7 paintable work.",
+    "nazare_linas": "bike, hasUniqueCustomization = false; needs P3.7 paintable work.",
+    "outlaw": "no vanilla unique (pattern) template, colour templates only: no reference to paint over; needs P3.7 paintable work.",
+    "outlaw_heist": "no vanilla unique (pattern) template, colour templates only: no reference to paint over; needs P3.7 paintable work.",
+    "quartz_nomad": "no AppearancesToColorTemplate (not CrystalCoat paintable): nothing to append a livery to; needs P3.7 paintable work.",
+    "riptide": "CrystalCoat-paintable, but 19 decal panels after folding, over the 12 per template (multi-part doors, hood or trunk on their own slots): needs a fold rule for those parts measured on the rig first, not P3.7.",
+    "shion_nomad": "no AppearancesToColorTemplate (not CrystalCoat paintable): nothing to append a livery to; needs P3.7 paintable work.",
+    "supron_kurtz": "no AppearancesToColorTemplate (not CrystalCoat paintable): nothing to append a livery to; needs P3.7 paintable work.",
+    "type66_nomad": "no AppearancesToColorTemplate (not CrystalCoat paintable): nothing to append a livery to; needs P3.7 paintable work."
+  },
+  "finishes": {
+    "gloss": "base\\surfaces\\materials\\paint\\paint_fine\\paint_fine_clean_01_300.mltemplate",
+    "matte": "base\\surfaces\\materials\\paint\\paint_fine\\paint_fine_clean_matte_01_300.mltemplate",
+    "metallic": "base\\surfaces\\materials\\paint\\car_paint\\car_paint_metallic_01.mltemplate"
+  },
+  "designs": [
+    {
+      "id": "taxi", "label": "City Taxi", "group": "job", "job": "taxi", "company": "Delamain Partner (Light RP job 'taxi')",
+      "finish": "gloss", "primary": "#f2c21b", "secondary": "#141414",
+      "art": { "kind": "taxi", "band": "#141414", "check": "#f2c21b", "text": "TAXI", "sub": "NIGHT CITY CAB", "ink": "#141414", "roof": "TAXI" }
+    },
+    {
+      "id": "ncmotors", "label": "Night City Motors", "group": "dealer", "job": null, "company": "Night City Motors (ncmotors dealer)",
+      "finish": "metallic", "primary": "#d9dde2", "secondary": "#22262b",
+      "art": { "kind": "swoosh", "from": "#00c2d1", "to": "#e0218a", "text": "NIGHT CITY MOTORS", "sub": "Drive it home today.", "ink": "#1c2026" }
+    },
+    {
+      "id": "courier", "label": "Food & Parcel Delivery", "group": "job", "job": "delivery", "company": "Courier (Light RP job 'delivery')",
+      "finish": "gloss", "primary": "#ef6c1a", "secondary": "#ffffff",
+      "art": { "kind": "service", "emblem": "parcel", "band": "#ffffff", "ink": "#2b2b2b", "accent": "#ef6c1a", "text": "DELIVERY", "sub": "FOOD & PARCEL", "roof": "DELIVERY" }
+    },
+    {
+      "id": "sanitation", "label": "City Services", "group": "job", "job": "sanitation", "company": "Sanitation (Light RP job)",
+      "finish": "matte", "primary": "#2f7d4a", "secondary": "#f2f2f2",
+      "art": { "kind": "service", "emblem": "chevrons", "band": "#f2f2f2", "ink": "#1d4d2e", "accent": "#f5c400", "text": "CITY SERVICES", "sub": "SANITATION", "roof": null }
+    },
+    {
+      "id": "scrapper", "label": "Salvage & Recycling", "group": "job", "job": "scrapper", "company": "Scrapper (Light RP job)",
+      "finish": "matte", "primary": "#5b5f3a", "secondary": "#c9b27c",
+      "art": { "kind": "service", "emblem": "recycle", "band": "#c9b27c", "ink": "#2c2a1e", "accent": "#2c2a1e", "text": "SALVAGE & RECYCLING", "sub": "SCRAPPER", "roof": null }
+    },
+    {
+      "id": "rooftop", "label": "Rooftop Maintenance", "group": "job", "job": "ac_cleaner", "company": "AC Cleaner (Light RP job)",
+      "finish": "gloss", "primary": "#3d8fd1", "secondary": "#ffffff",
+      "art": { "kind": "service", "emblem": "fan", "band": "#ffffff", "ink": "#1b3f63", "accent": "#3d8fd1", "text": "ROOFTOP MAINTENANCE", "sub": "AC CLEANER", "roof": null }
+    },
+    {
+      "id": "mechanic", "label": "Rust & Chrome Garage", "group": "job", "job": "mechanic", "company": "Rust & Chrome Garage (Light RP mechanic job)",
+      "finish": "gloss", "primary": "#2b2e33", "secondary": "#b8231f",
+      "art": { "kind": "garage", "flame": "#b8231f", "flame2": "#f08a24", "ink": "#e8e8e8", "text": "RUST & CHROME", "sub": "GARAGE  -  MECHANIC" }
+    },
+    {
+      "id": "medic", "label": "Street Medic", "group": "job", "job": "trauma", "company": "Street Medic (Light RP job 'trauma')",
+      "finish": "gloss", "primary": "#f4f4f2", "secondary": "#17a34a",
+      "art": { "kind": "medic", "check_a": "#17a34a", "check_b": "#f6e71b", "ink": "#c4121c", "text": "STREET MEDIC", "roof": "MEDIC" }
+    },
+    {
+      "id": "ncpd", "label": "NCPD Patrol", "group": "job", "job": "ncpd", "company": "NCPD (Light RP police job)",
+      "finish": "gloss", "primary": "#f2f3f5", "secondary": "#101418",
+      "art": { "kind": "patrol", "lower": "#101418", "stripe": "#1d5fd1", "ink": "#101418", "text": "NCPD", "sub": "PATROL", "roof": "NCPD" }
+    },
+    {
+      "id": "racing", "label": "Twin Stripe 77", "group": "style", "job": null, "company": null,
+      "finish": "gloss", "primary": "#1f4fbf", "secondary": "#f5f5f5",
+      "art": { "kind": "racing", "stripe": "#f5f5f5", "roundel": "#f5f5f5", "ink": "#111111", "number": "77" }
+    },
+    {
+      "id": "neon", "label": "Neon Slash", "group": "style", "job": null, "company": null,
+      "finish": "gloss", "primary": "#111216", "secondary": "#111216",
+      "art": { "kind": "slash", "a": "#ff2bd6", "b": "#25e2ff", "c": "#f7f700" }
+    },
+    {
+      "id": "urban", "label": "Urban Grid Camo", "group": "style", "job": null, "company": null,
+      "finish": "matte", "primary": "#8a8f94", "secondary": "#4a4f55",
+      "art": { "kind": "camo", "tones": ["#5d6268", "#3d4146", "#b2b6ba", "#24272a"], "seed": 77 }
+    }
+  ]
+}

@@ -1,0 +1,291 @@
+{
+  "schema": "open77.vehicle-kit/1",
+  "resource": "lightrp_vk_body",
+  "archiveName": "LightRPVehicleKitBody",
+  "description": "Light RP body kit: ten rear wings and roof spoilers, rear-window louvers, three front lips, two canard sets, three side skirts, two rear diffusers, two hood parts, five roof parts, a push bar and a tow strap. Original geometry by script; fit table in lightrp-bodykit-fit.json.",
+  "native": {
+    "autoHideDistance": 150,
+    "lodDistances": { "lip": [0], "skirt": [0], "roofrack": [0], "bullbar": [0], "louver": [0], "canard": [0],
+                      "diffuser": [0], "hood": [0] }
+  },
+  "palette": {
+    "carbon":        { "color": [0.05, 0.052, 0.058],  "metalness": 0.0, "roughness": 0.38 },
+    "gloss_black":   { "color": [0.012, 0.012, 0.014], "metalness": 0.0, "roughness": 0.12 },
+    "matte_black":   { "color": [0.022, 0.022, 0.024], "metalness": 0.0, "roughness": 0.8 },
+    "white":         { "color": [0.8, 0.8, 0.8],       "metalness": 0.0, "roughness": 0.4 },
+    "gloss_red":     { "color": [0.58, 0.012, 0.016],  "metalness": 0.0, "roughness": 0.2 },
+    "signal_yellow": { "color": [0.88, 0.5, 0.012],    "metalness": 0.0, "roughness": 0.28 },
+    "dark_metal":    { "color": [0.05, 0.05, 0.055],   "metalness": 0.6, "roughness": 0.4 },
+    "gunmetal":      { "color": [0.27, 0.28, 0.3],     "metalness": 1.0, "roughness": 0.34 },
+    "satin_alu":     { "color": [0.75, 0.76, 0.78],    "metalness": 1.0, "roughness": 0.32 },
+    "steel":         { "color": [0.72, 0.73, 0.75],    "metalness": 1.0, "roughness": 0.2 },
+    "lens":          { "color": [0.72, 0.73, 0.75],    "metalness": 1.0, "roughness": 0.06 },
+    "rubber":        { "color": [0.02, 0.02, 0.02],    "metalness": 0.0, "roughness": 0.85 },
+    "strap_red":     { "color": [0.45, 0.01, 0.012],   "metalness": 0.0, "roughness": 0.85 },
+    "strap_yellow":  { "color": [0.8, 0.45, 0.01],     "metalness": 0.0, "roughness": 0.85 }
+  },
+  "parts": [
+    {
+      "id": "wing_street", "kind": "spoiler", "label": "Street wing",
+      "params": { "style": "street", "span": 1.30, "chord": 0.26, "height": 0.20, "aoa": 7, "seed": 3 },
+      "finishes": {
+        "carbon": { "wing_main": "carbon", "wing_detail": "gloss_black" },
+        "white":  { "wing_main": "white",  "wing_detail": "gloss_black" },
+        "matte":  { "wing_main": "matte_black", "wing_detail": "gunmetal" }
+      }
+    },
+    {
+      "id": "wing_gt", "kind": "spoiler", "label": "GT swan-neck wing",
+      "params": { "style": "gt", "span": 1.55, "chord": 0.32, "height": 0.30, "aoa": 9 },
+      "finishes": {
+        "carbon": { "wing_main": "carbon", "wing_detail": "gloss_black" },
+        "white":  { "wing_main": "white",  "wing_detail": "gloss_black" },
+        "red":    { "wing_main": "gloss_red", "wing_detail": "gloss_black" }
+      }
+    },
+    {
+      "id": "wing_duck", "kind": "spoiler", "label": "Ducktail",
+      "params": { "style": "duck", "span": 1.30, "chord": 0.22, "height": 0.075, "crown": 0.03 },
+      "finishes": {
+        "carbon": { "wing_main": "carbon", "wing_detail": "gloss_black" },
+        "white":  { "wing_main": "white",  "wing_detail": "gloss_black" },
+        "matte":  { "wing_main": "matte_black", "wing_detail": "gloss_black" }
+      }
+    },
+    {
+      "id": "wing_rally", "kind": "spoiler", "label": "Tall rally wing",
+      "params": { "style": "rally", "span": 1.25, "chord": 0.24, "height": 0.42, "aoa": 6 },
+      "finishes": {
+        "carbon": { "wing_main": "carbon", "wing_detail": "gloss_black" },
+        "white":  { "wing_main": "white",  "wing_detail": "gloss_black" },
+        "yellow": { "wing_main": "signal_yellow", "wing_detail": "gloss_black" }
+      }
+    },
+    {
+      "id": "wing_lip", "kind": "spoiler", "label": "Trunk lip spoiler",
+      "params": { "style": "lip", "span": 1.24, "chord": 0.12, "height": 0.042, "crown": 0.03 },
+      "finishes": {
+        "carbon": { "wing_main": "carbon", "wing_detail": "carbon" },
+        "white":  { "wing_main": "white",  "wing_detail": "white" },
+        "matte":  { "wing_main": "matte_black", "wing_detail": "matte_black" }
+      }
+    },
+    {
+      "id": "wing_low", "kind": "spoiler", "label": "Low bridge wing",
+      "params": { "style": "low", "span": 1.34, "chord": 0.20, "height": 0.085, "aoa": 4 },
+      "finishes": {
+        "carbon": { "wing_main": "carbon", "wing_detail": "gloss_black" },
+        "white":  { "wing_main": "white",  "wing_detail": "gloss_black" },
+        "red":    { "wing_main": "gloss_red", "wing_detail": "gloss_black" }
+      }
+    },
+    {
+      "id": "wing_dual", "kind": "spoiler", "label": "Dual-element wing",
+      "params": { "style": "dual", "span": 1.48, "chord": 0.26, "height": 0.26, "aoa": 7 },
+      "finishes": {
+        "carbon": { "wing_main": "carbon", "wing_detail": "gloss_black" },
+        "matte":  { "wing_main": "matte_black", "wing_detail": "gunmetal" },
+        "red":    { "wing_main": "gloss_red", "wing_detail": "gloss_black" }
+      }
+    },
+    {
+      "id": "wing_drift", "kind": "spoiler", "label": "Time-attack wing",
+      "params": { "style": "drift", "span": 1.62, "chord": 0.30, "height": 0.40, "aoa": 8 },
+      "finishes": {
+        "carbon": { "wing_main": "carbon", "wing_detail": "gloss_black" },
+        "matte":  { "wing_main": "matte_black", "wing_detail": "gunmetal" },
+        "yellow": { "wing_main": "signal_yellow", "wing_detail": "gloss_black" }
+      }
+    },
+    {
+      "id": "wing_bat", "kind": "spoiler", "label": "Batwing",
+      "params": { "style": "bat", "span": 1.36, "chord": 0.24, "height": 0.20, "aoa": 6 },
+      "finishes": {
+        "carbon": { "wing_main": "carbon", "wing_detail": "gloss_black" },
+        "white":  { "wing_main": "white",  "wing_detail": "gloss_black" },
+        "red":    { "wing_main": "gloss_red", "wing_detail": "gloss_black" }
+      }
+    },
+    {
+      "id": "wing_roof", "kind": "spoiler", "label": "Roof spoiler",
+      "params": { "style": "roof", "span": 1.10, "chord": 0.26, "crown": 0.012 },
+      "finishes": {
+        "carbon": { "wing_main": "carbon", "wing_detail": "gloss_black" },
+        "white":  { "wing_main": "white",  "wing_detail": "gloss_black" },
+        "matte":  { "wing_main": "matte_black", "wing_detail": "gloss_black" }
+      }
+    },
+    {
+      "id": "louver_rear", "kind": "louver", "label": "Rear window louvers",
+      "params": {},
+      "finishes": {
+        "matte":  { "louver_main": "matte_black", "louver_detail": "gunmetal" },
+        "carbon": { "louver_main": "carbon", "louver_detail": "gloss_black" }
+      }
+    },
+    {
+      "id": "lip_splitter", "kind": "lip", "label": "Front splitter lip",
+      "params": { "width": 1.60, "overhang": 0.06, "depth": 0.14, "sweep": 0.12 },
+      "finishes": {
+        "carbon": { "lip_main": "carbon",      "lip_detail": "gloss_black" },
+        "black":  { "lip_main": "gloss_black", "lip_detail": "dark_metal" },
+        "red":    { "lip_main": "gloss_red",   "lip_detail": "gloss_black" }
+      }
+    },
+    {
+      "id": "lip_race", "kind": "lip", "label": "Race splitter (rods)",
+      "params": { "style": "race" },
+      "finishes": {
+        "carbon": { "lip_main": "carbon",      "lip_detail": "satin_alu" },
+        "black":  { "lip_main": "gloss_black", "lip_detail": "satin_alu" },
+        "red":    { "lip_main": "gloss_red",   "lip_detail": "gloss_black" }
+      }
+    },
+    {
+      "id": "lip_street", "kind": "lip", "label": "Three-piece street lip",
+      "params": { "style": "street" },
+      "finishes": {
+        "carbon": { "lip_main": "carbon",      "lip_detail": "gloss_black" },
+        "black":  { "lip_main": "gloss_black", "lip_detail": "gloss_black" },
+        "red":    { "lip_main": "gloss_red",   "lip_detail": "gloss_black" }
+      }
+    },
+    {
+      "id": "canard_dive", "kind": "canard", "label": "Dive planes (double)",
+      "params": { "style": "dive" },
+      "finishes": {
+        "carbon": { "canard_main": "carbon",      "canard_detail": "gloss_black" },
+        "black":  { "canard_main": "gloss_black", "canard_detail": "gloss_black" },
+        "red":    { "canard_main": "gloss_red",   "canard_detail": "gloss_black" }
+      }
+    },
+    {
+      "id": "canard_fin", "kind": "canard", "label": "Fenced canards",
+      "params": { "style": "fin" },
+      "finishes": {
+        "carbon": { "canard_main": "carbon",      "canard_detail": "gloss_black" },
+        "black":  { "canard_main": "gloss_black", "canard_detail": "gloss_black" },
+        "red":    { "canard_main": "gloss_red",   "canard_detail": "gloss_black" }
+      }
+    },
+    {
+      "id": "skirt_side", "kind": "skirt", "label": "Side skirts",
+      "params": { "length": 2.00, "half_span": 1.00 },
+      "finishes": {
+        "carbon": { "skirt_main": "carbon", "skirt_detail": "gloss_black" },
+        "white":  { "skirt_main": "white",  "skirt_detail": "gloss_black" },
+        "matte":  { "skirt_main": "matte_black", "skirt_detail": "gloss_black" }
+      }
+    },
+    {
+      "id": "skirt_blade", "kind": "skirt", "label": "Splitter skirts",
+      "params": { "style": "blade", "length": 2.00, "half_span": 1.00 },
+      "finishes": {
+        "carbon": { "skirt_main": "carbon",      "skirt_detail": "gloss_black" },
+        "black":  { "skirt_main": "gloss_black", "skirt_detail": "gloss_black" },
+        "red":    { "skirt_main": "gloss_red",   "skirt_detail": "gloss_black" }
+      }
+    },
+    {
+      "id": "skirt_rocker", "kind": "skirt", "label": "Vented rocker panels",
+      "params": { "style": "rocker", "length": 2.00, "half_span": 1.00 },
+      "finishes": {
+        "carbon": { "skirt_main": "carbon", "skirt_detail": "gloss_black" },
+        "white":  { "skirt_main": "white",  "skirt_detail": "gloss_black" },
+        "matte":  { "skirt_main": "matte_black", "skirt_detail": "gunmetal" }
+      }
+    },
+    {
+      "id": "diffuser_street", "kind": "diffuser", "label": "Street diffuser",
+      "params": { "style": "street" },
+      "finishes": {
+        "carbon": { "diff_main": "carbon",      "diff_detail": "gloss_black" },
+        "matte":  { "diff_main": "matte_black", "diff_detail": "gunmetal" }
+      }
+    },
+    {
+      "id": "diffuser_race", "kind": "diffuser", "label": "Race diffuser",
+      "params": { "style": "race" },
+      "finishes": {
+        "carbon": { "diff_main": "carbon",      "diff_detail": "gloss_black" },
+        "matte":  { "diff_main": "matte_black", "diff_detail": "gunmetal" },
+        "red":    { "diff_main": "carbon",      "diff_detail": "gloss_red" }
+      }
+    },
+    {
+      "id": "hood_scoop", "kind": "hood", "label": "Hood scoop",
+      "params": { "style": "scoop" },
+      "finishes": {
+        "carbon": { "hood_main": "carbon",      "hood_detail": "gloss_black" },
+        "matte":  { "hood_main": "matte_black", "hood_detail": "gloss_black" },
+        "white":  { "hood_main": "white",       "hood_detail": "gloss_black" }
+      }
+    },
+    {
+      "id": "hood_vents", "kind": "hood", "label": "Hood vents",
+      "params": { "style": "vents" },
+      "finishes": {
+        "carbon": { "hood_main": "carbon",      "hood_detail": "gloss_black" },
+        "matte":  { "hood_main": "matte_black", "hood_detail": "gunmetal" },
+        "white":  { "hood_main": "white",       "hood_detail": "gloss_black" }
+      }
+    },
+    {
+      "id": "roof_rack", "kind": "roofrack", "label": "Roof basket",
+      "params": { "width": 1.00, "length": 1.10 },
+      "finishes": {
+        "black": { "rack_main": "gloss_black", "rack_detail": "dark_metal" },
+        "alu":   { "rack_main": "satin_alu",   "rack_detail": "dark_metal" }
+      }
+    },
+    {
+      "id": "roof_bars", "kind": "roofrack", "label": "Aero crossbars",
+      "params": { "style": "bars" },
+      "finishes": {
+        "black": { "rack_main": "gloss_black", "rack_detail": "matte_black" },
+        "alu":   { "rack_main": "satin_alu",   "rack_detail": "matte_black" }
+      }
+    },
+    {
+      "id": "roof_tray", "kind": "roofrack", "label": "Expedition tray + light bar",
+      "params": { "style": "tray" },
+      "finishes": {
+        "black": { "rack_main": "matte_black", "rack_detail": "lens" },
+        "alu":   { "rack_main": "satin_alu",   "rack_detail": "lens" }
+      }
+    },
+    {
+      "id": "roof_lightbar", "kind": "roofrack", "label": "LED light bar",
+      "params": { "style": "lightbar" },
+      "finishes": {
+        "black": { "rack_main": "gloss_black", "rack_detail": "lens" },
+        "alu":   { "rack_main": "gunmetal",    "rack_detail": "lens" }
+      }
+    },
+    {
+      "id": "roof_scoop", "kind": "roofrack", "label": "Roof scoop",
+      "params": { "style": "scoop" },
+      "finishes": {
+        "carbon": { "rack_main": "carbon",      "rack_detail": "gloss_black" },
+        "matte":  { "rack_main": "matte_black", "rack_detail": "gloss_black" },
+        "white":  { "rack_main": "white",       "rack_detail": "gloss_black" }
+      }
+    },
+    {
+      "id": "bull_bar", "kind": "bullbar", "label": "Push bar",
+      "params": { "width": 0.95, "height": 0.62, "depth": 0.14 },
+      "finishes": {
+        "black": { "bar_main": "gloss_black", "bar_detail": "rubber" },
+        "steel": { "bar_main": "steel",       "bar_detail": "rubber" }
+      }
+    },
+    {
+      "id": "tow_strap", "kind": "bullbar", "label": "Tow strap",
+      "params": { "style": "strap" },
+      "finishes": {
+        "red":    { "bar_main": "strap_red",    "bar_detail": "gunmetal" },
+        "yellow": { "bar_main": "strap_yellow", "bar_detail": "gunmetal" }
+      }
+    }
+  ]
+}

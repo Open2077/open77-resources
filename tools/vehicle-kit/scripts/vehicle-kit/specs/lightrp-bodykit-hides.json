@@ -1,0 +1,1200 @@
+{
+ "schema": "open77.vehicle-kit.body-hides/1",
+ "generatedBy": "scripts/vehicle-kit/inventory/body_hides.py",
+ "rules": {
+  "spoiler": "^(wing_[a-c](_\\d+)?|wing_\\d+|trunk_spoiler(_\\d+)?|spoiler(_\\w+)?|deathrace_spoiler(_\\d+)?|.*__ext\\d+_spoiler_\\w+|.*_spoiler_(gt|rear|b)(_\\d+)?)$",
+  "roofrack": "^(roof_rack(_\\d+)?|v_common_suitcase_\\d+|junk_solar(_\\d+)?|body_rack(_\\d+)?|roof_basket\\w*|roof_cargo\\w*)$",
+  "lip": "^(bumper_lip_f(_\\d+)?|lip_f(_\\d+)?|front_lip\\w*|splitter(_\\d+)?)$",
+  "skirt": "^(jammer_skirts_\\d+|\\w*side_skirts?(_\\d+)?)$",
+  "hood": "^(\\w*_hood_scoop(_\\d+)?)$"
+ },
+ "note": "hide: the union over every entity appearance (a name an appearance lacks is skipped by the client); found: appearances carrying each name, player = the record's own appearance",
+ "cars": {
+  "maimai": {
+   "record": "Vehicle.v_standard2_makigai_maimai_player",
+   "appearances": 21,
+   "hide": {
+    "spoiler": [
+     "v_standard2_makigai_maimai__ext01_spoiler_gt_01",
+     "v_standard2_makigai_maimai__ext01_spoiler_gt_01_shadow"
+    ],
+    "roofrack": [
+     "junk_solar_01"
+    ]
+   },
+   "found": {
+    "spoiler": {
+     "v_standard2_makigai_maimai__ext01_spoiler_gt_01": {
+      "appearances": 1,
+      "player": false
+     },
+     "v_standard2_makigai_maimai__ext01_spoiler_gt_01_shadow": {
+      "appearances": 1,
+      "player": false
+     }
+    },
+    "roofrack": {
+     "junk_solar_01": {
+      "appearances": 7,
+      "player": false
+     }
+    }
+   }
+  },
+  "galena": {
+   "record": "Vehicle.v_standard2_thorton_galena_player",
+   "appearances": 34,
+   "hide": {
+    "spoiler": [
+     "trunk_spoiler",
+     "trunk_spoiler_shadow"
+    ],
+    "roofrack": [
+     "junk_solar"
+    ]
+   },
+   "found": {
+    "spoiler": {
+     "trunk_spoiler": {
+      "appearances": 5,
+      "player": true
+     },
+     "trunk_spoiler_shadow": {
+      "appearances": 5,
+      "player": true
+     }
+    },
+    "roofrack": {
+     "junk_solar": {
+      "appearances": 11,
+      "player": true
+     }
+    }
+   }
+  },
+  "hella": {
+   "record": "Vehicle.v_standard2_archer_hella_player",
+   "appearances": 41,
+   "hide": {
+    "roofrack": [
+     "junk_solar_01"
+    ]
+   },
+   "found": {
+    "roofrack": {
+     "junk_solar_01": {
+      "appearances": 13,
+      "player": false
+     }
+    }
+   },
+   "unread": [
+    "archer_hella__basic_poor_1_new",
+    "archer_hella__basic_player_damaged"
+   ]
+  },
+  "colby": {
+   "record": "Vehicle.v_standard2_thorton_colby_player",
+   "appearances": 27,
+   "hide": {
+    "roofrack": [
+     "junk_solar",
+     "roof_rack",
+     "v_common_suitcase_01"
+    ]
+   },
+   "found": {
+    "roofrack": {
+     "junk_solar": {
+      "appearances": 11,
+      "player": false
+     },
+     "roof_rack": {
+      "appearances": 7,
+      "player": true
+     },
+     "v_common_suitcase_01": {
+      "appearances": 7,
+      "player": true
+     }
+    }
+   }
+  },
+  "quartz": {
+   "record": "Vehicle.v_standard2_archer_quartz_player",
+   "appearances": 32,
+   "hide": {
+    "roofrack": [
+     "junk_solar"
+    ],
+    "lip": [
+     "bumper_lip_f_01"
+    ]
+   },
+   "found": {
+    "roofrack": {
+     "junk_solar": {
+      "appearances": 4,
+      "player": false
+     }
+    },
+    "lip": {
+     "bumper_lip_f_01": {
+      "appearances": 1,
+      "player": false
+     }
+    }
+   }
+  },
+  "hozuki": {
+   "record": "Vehicle.v_standard2_mizutani_hozuki_player",
+   "appearances": 44,
+   "hide": {
+    "spoiler": [
+     "wing_a",
+     "wing_a_shadow"
+    ],
+    "roofrack": [
+     "junk_solar"
+    ]
+   },
+   "found": {
+    "spoiler": {
+     "spoiler_player_01": {
+      "appearances": 1,
+      "player": true
+     },
+     "wing_a": {
+      "appearances": 43,
+      "player": true
+     },
+     "wing_a_shadow": {
+      "appearances": 43,
+      "player": true
+     }
+    },
+    "roofrack": {
+     "junk_solar": {
+      "appearances": 1,
+      "player": false
+     }
+    }
+   },
+   "kept": {
+    "spoiler_player_01": "the player trim's lip spoiler is moulded on the hatch (bound to body_01), under where a kit wing stands; left visible until seen in game"
+   }
+  },
+  "supron": {
+   "record": "Vehicle.v_standard25_mahir_supron_player",
+   "appearances": 29,
+   "hide": {
+    "roofrack": [
+     "junk_solar"
+    ]
+   },
+   "found": {
+    "roofrack": {
+     "junk_solar": {
+      "appearances": 11,
+      "player": true
+     }
+    }
+   }
+  },
+  "columbus": {
+   "record": "Vehicle.v_standard25_villefort_columbus_player",
+   "appearances": 27,
+   "hide": {
+    "skirt": [
+     "jammer_skirts_01"
+    ]
+   },
+   "found": {
+    "skirt": {
+     "jammer_skirts_01": {
+      "appearances": 1,
+      "player": false
+     }
+    }
+   }
+  },
+  "cortes": {
+   "record": "Vehicle.v_standard2_villefort_cortes_player",
+   "appearances": 28,
+   "hide": {},
+   "found": {}
+  },
+  "thrax": {
+   "record": "Vehicle.v_standard2_chevalier_thrax_player",
+   "appearances": 20,
+   "hide": {},
+   "found": {}
+  },
+  "bandit": {
+   "record": "Vehicle.v_standard2_archer_bandit_player",
+   "appearances": 3,
+   "hide": {},
+   "found": {}
+  },
+  "merrimac": {
+   "record": "Vehicle.v_standard25_thorton_merrimac_player",
+   "appearances": 2,
+   "hide": {},
+   "found": {}
+  },
+  "semimaru": {
+   "record": "Vehicle.v_sport1_yaiba_semimaru_player",
+   "appearances": 6,
+   "hide": {},
+   "found": {}
+  },
+  "caliburn": {
+   "record": "Vehicle.v_sport1_rayfield_caliburn_player",
+   "appearances": 12,
+   "hide": {
+    "spoiler": [
+     "wing_a_01",
+     "wing_a_01_shadow",
+     "wing_a_02",
+     "wing_a_02_shadow",
+     "wing_b_01",
+     "wing_b_01_shadow",
+     "wing_b_02",
+     "wing_b_02_shadow",
+     "wing_c_01",
+     "wing_c_01_shadow",
+     "wing_c_02",
+     "wing_c_02_shadow"
+    ]
+   },
+   "found": {
+    "spoiler": {
+     "wing_a_01": {
+      "appearances": 10,
+      "player": true
+     },
+     "wing_a_01_shadow": {
+      "appearances": 10,
+      "player": true
+     },
+     "wing_a_02": {
+      "appearances": 1,
+      "player": false
+     },
+     "wing_a_02_shadow": {
+      "appearances": 1,
+      "player": false
+     },
+     "wing_b_01": {
+      "appearances": 10,
+      "player": true
+     },
+     "wing_b_01_shadow": {
+      "appearances": 10,
+      "player": true
+     },
+     "wing_b_02": {
+      "appearances": 1,
+      "player": false
+     },
+     "wing_b_02_shadow": {
+      "appearances": 1,
+      "player": false
+     },
+     "wing_c_01": {
+      "appearances": 10,
+      "player": true
+     },
+     "wing_c_01_shadow": {
+      "appearances": 10,
+      "player": true
+     },
+     "wing_c_02": {
+      "appearances": 1,
+      "player": false
+     },
+     "wing_c_02_shadow": {
+      "appearances": 1,
+      "player": false
+     }
+    }
+   }
+  },
+  "turbo": {
+   "record": "Vehicle.v_sport1_quadra_turbo_player",
+   "appearances": 31,
+   "hide": {},
+   "found": {},
+   "unread": [
+    "quadra_turbo_basic_urban_02"
+   ]
+  },
+  "type66": {
+   "record": "Vehicle.v_sport2_quadra_type66_player",
+   "appearances": 27,
+   "hide": {
+    "spoiler": [
+     "deathrace_spoiler_01",
+     "deathrace_spoiler_01_shadow"
+    ]
+   },
+   "found": {
+    "spoiler": {
+     "deathrace_spoiler_01": {
+      "appearances": 1,
+      "player": false
+     },
+     "deathrace_spoiler_01_shadow": {
+      "appearances": 1,
+      "player": false
+     }
+    }
+   }
+  },
+  "outlaw": {
+   "record": "Vehicle.v_sport1_herrera_outlaw_player",
+   "appearances": 12,
+   "hide": {},
+   "found": {}
+  },
+  "turbo_r": {
+   "record": "Vehicle.v_sport1_quadra_turbo_r_player",
+   "appearances": 31,
+   "hide": {},
+   "found": {},
+   "unread": [
+    "quadra_turbo_basic_urban_02"
+   ]
+  },
+  "shion": {
+   "record": "Vehicle.v_sport2_mizutani_shion_player",
+   "appearances": 28,
+   "hide": {},
+   "found": {}
+  },
+  "riptide": {
+   "record": "Vehicle.v_sport1_herrera_riptide_player",
+   "appearances": 23,
+   "hide": {
+    "lip": [
+     "splitter_01"
+    ]
+   },
+   "found": {
+    "lip": {
+     "splitter_01": {
+      "appearances": 1,
+      "player": true
+     }
+    }
+   }
+  },
+  "sport_r7": {
+   "record": "Vehicle.v_sport1_quadra_sport_r7_player",
+   "appearances": 39,
+   "hide": {
+    "spoiler": [
+     "spoiler",
+     "spoiler_01",
+     "spoiler_03",
+     "spoiler_04",
+     "spoiler_04_shadow",
+     "spoiler_05",
+     "spoiler_05_shadow",
+     "spoiler_netrunner_stickers_01"
+    ]
+   },
+   "found": {
+    "spoiler": {
+     "spoiler": {
+      "appearances": 7,
+      "player": true
+     },
+     "spoiler_01": {
+      "appearances": 10,
+      "player": false
+     },
+     "spoiler_03": {
+      "appearances": 14,
+      "player": false
+     },
+     "spoiler_04": {
+      "appearances": 7,
+      "player": true
+     },
+     "spoiler_04_shadow": {
+      "appearances": 7,
+      "player": true
+     },
+     "spoiler_05": {
+      "appearances": 3,
+      "player": false
+     },
+     "spoiler_05_shadow": {
+      "appearances": 3,
+      "player": false
+     },
+     "spoiler_netrunner_stickers_01": {
+      "appearances": 7,
+      "player": true
+     }
+    }
+   },
+   "unread": [
+    "quadra_sport_r7_basic_default",
+    "quadra_sport_r7_basic_urban_03_1"
+   ]
+  },
+  "911turbo": {
+   "record": "Vehicle.v_sport2_porsche_911turbo_player",
+   "appearances": 3,
+   "hide": {},
+   "found": {}
+  },
+  "type66_02": {
+   "record": "Vehicle.v_sport2_quadra_type66_02_player",
+   "appearances": 27,
+   "hide": {
+    "spoiler": [
+     "deathrace_spoiler_01",
+     "deathrace_spoiler_01_shadow"
+    ]
+   },
+   "found": {
+    "spoiler": {
+     "deathrace_spoiler_01": {
+      "appearances": 1,
+      "player": false
+     },
+     "deathrace_spoiler_01_shadow": {
+      "appearances": 1,
+      "player": false
+     }
+    }
+   }
+  },
+  "type66_gt": {
+   "record": "Vehicle.v_sport2_quadra_type66_gt_player",
+   "appearances": 27,
+   "hide": {
+    "spoiler": [
+     "deathrace_spoiler_01",
+     "deathrace_spoiler_01_shadow"
+    ]
+   },
+   "found": {
+    "spoiler": {
+     "deathrace_spoiler_01": {
+      "appearances": 1,
+      "player": false
+     },
+     "deathrace_spoiler_01_shadow": {
+      "appearances": 1,
+      "player": false
+     }
+    }
+   }
+  },
+  "deleon": {
+   "record": "Vehicle.v_sport2_villefort_deleon_player",
+   "appearances": 40,
+   "hide": {},
+   "found": {}
+  },
+  "sport_r7_02": {
+   "record": "Vehicle.v_sport1_quadra_sport_r7_player_02",
+   "appearances": 39,
+   "hide": {
+    "spoiler": [
+     "spoiler",
+     "spoiler_01",
+     "spoiler_03",
+     "spoiler_04",
+     "spoiler_04_shadow",
+     "spoiler_05",
+     "spoiler_05_shadow",
+     "spoiler_netrunner_stickers_01"
+    ]
+   },
+   "found": {
+    "spoiler": {
+     "spoiler": {
+      "appearances": 7,
+      "player": false
+     },
+     "spoiler_01": {
+      "appearances": 10,
+      "player": false
+     },
+     "spoiler_03": {
+      "appearances": 14,
+      "player": false
+     },
+     "spoiler_04": {
+      "appearances": 7,
+      "player": false
+     },
+     "spoiler_04_shadow": {
+      "appearances": 7,
+      "player": false
+     },
+     "spoiler_05": {
+      "appearances": 3,
+      "player": false
+     },
+     "spoiler_05_shadow": {
+      "appearances": 3,
+      "player": false
+     },
+     "spoiler_netrunner_stickers_01": {
+      "appearances": 7,
+      "player": false
+     }
+    }
+   },
+   "unread": [
+    "quadra_sport_r7_basic_default",
+    "quadra_sport_r7_basic_urban_03_1"
+   ]
+  },
+  "type66_base": {
+   "record": "Vehicle.v_sport2_quadra_type66_base_player",
+   "appearances": 27,
+   "hide": {
+    "spoiler": [
+     "deathrace_spoiler_01",
+     "deathrace_spoiler_01_shadow"
+    ]
+   },
+   "found": {
+    "spoiler": {
+     "deathrace_spoiler_01": {
+      "appearances": 1,
+      "player": false
+     },
+     "deathrace_spoiler_01_shadow": {
+      "appearances": 1,
+      "player": false
+     }
+    }
+   }
+  },
+  "alvarado": {
+   "record": "Vehicle.v_sport2_villefort_alvarado_player",
+   "appearances": 26,
+   "hide": {},
+   "found": {}
+  },
+  "tanishi": {
+   "record": "Vehicle.v_standard3_makigai_tanishi_player",
+   "appearances": 2,
+   "hide": {},
+   "found": {}
+  },
+  "aerondight": {
+   "record": "Vehicle.v_sport1_rayfield_aerondight_player",
+   "appearances": 12,
+   "hide": {},
+   "found": {}
+  },
+  "type66_nomad": {
+   "record": "Vehicle.v_sport2_quadra_type66_nomad_player",
+   "appearances": 13,
+   "hide": {},
+   "found": {}
+  },
+  "supron_gt": {
+   "record": "Vehicle.v_standard25_mahir_supron_gt_player",
+   "appearances": 29,
+   "hide": {
+    "roofrack": [
+     "junk_solar"
+    ]
+   },
+   "found": {
+    "roofrack": {
+     "junk_solar": {
+      "appearances": 11,
+      "player": false
+     }
+    }
+   }
+  },
+  "colby_gt": {
+   "record": "Vehicle.v_standard2_thorton_colby_gt_player",
+   "appearances": 27,
+   "hide": {
+    "roofrack": [
+     "junk_solar",
+     "roof_rack",
+     "v_common_suitcase_01"
+    ]
+   },
+   "found": {
+    "roofrack": {
+     "junk_solar": {
+      "appearances": 11,
+      "player": false
+     },
+     "roof_rack": {
+      "appearances": 7,
+      "player": false
+     },
+     "v_common_suitcase_01": {
+      "appearances": 7,
+      "player": false
+     }
+    }
+   }
+  },
+  "mackinaw": {
+   "record": "Vehicle.v_standard3_thorton_mackinaw_player",
+   "appearances": 19,
+   "hide": {},
+   "found": {}
+  },
+  "legatus": {
+   "record": "Vehicle.v_utility4_chevalier_legatus_player",
+   "appearances": 4,
+   "hide": {},
+   "found": {}
+  },
+  "outlaw_heist": {
+   "record": "Vehicle.v_sport1_herrera_outlaw_heist_player",
+   "appearances": 3,
+   "hide": {},
+   "found": {}
+  },
+  "shion_nomad": {
+   "record": "Vehicle.v_sport2_mizutani_shion_nomad_player",
+   "appearances": 21,
+   "hide": {},
+   "found": {
+    "spoiler": {
+     "spoiler_01": {
+      "appearances": 13,
+      "player": true,
+      "otherMeshes": [
+       "v_standard2_archer_quartz_nomad__ext01_trunk_b_01.mesh"
+      ]
+     },
+     "spoiler_01_shadow": {
+      "appearances": 13,
+      "player": true,
+      "otherMeshes": [
+       "v_standard2_archer_quartz_nomad__ext01_trunk_b_01_shadow.mesh"
+      ]
+     }
+    }
+   },
+   "kept": {
+    "spoiler_01": "ambiguous name: some appearances put v_standard2_archer_quartz_nomad__ext01_trunk_b_01.mesh under it, not a spoiler part",
+    "spoiler_01_shadow": "ambiguous name: some appearances put v_standard2_archer_quartz_nomad__ext01_trunk_b_01_shadow.mesh under it, not a spoiler part"
+   }
+  },
+  "shion_targa": {
+   "record": "Vehicle.v_sport2_mizutani_shion_targa_player",
+   "appearances": 28,
+   "hide": {},
+   "found": {}
+  },
+  "galena_gt": {
+   "record": "Vehicle.v_standard2_thorton_galena_gt_player",
+   "appearances": 34,
+   "hide": {
+    "spoiler": [
+     "trunk_spoiler",
+     "trunk_spoiler_shadow"
+    ],
+    "roofrack": [
+     "junk_solar"
+    ]
+   },
+   "found": {
+    "spoiler": {
+     "trunk_spoiler": {
+      "appearances": 5,
+      "player": true
+     },
+     "trunk_spoiler_shadow": {
+      "appearances": 5,
+      "player": true
+     }
+    },
+    "roofrack": {
+     "junk_solar": {
+      "appearances": 11,
+      "player": false
+     }
+    }
+   }
+  },
+  "emperor": {
+   "record": "Vehicle.v_standard3_chevalier_emperor_player",
+   "appearances": 27,
+   "hide": {},
+   "found": {}
+  },
+  "type66_avenger": {
+   "record": "Vehicle.v_sport2_quadra_type66_avenger_player",
+   "appearances": 27,
+   "hide": {
+    "spoiler": [
+     "deathrace_spoiler_01",
+     "deathrace_spoiler_01_shadow"
+    ]
+   },
+   "found": {
+    "spoiler": {
+     "deathrace_spoiler_01": {
+      "appearances": 1,
+      "player": false
+     },
+     "deathrace_spoiler_01_shadow": {
+      "appearances": 1,
+      "player": false
+     }
+    }
+   }
+  },
+  "quartz_base": {
+   "record": "Vehicle.v_standard2_archer_quartz_base_player",
+   "appearances": 32,
+   "hide": {
+    "roofrack": [
+     "junk_solar"
+    ],
+    "lip": [
+     "bumper_lip_f_01"
+    ]
+   },
+   "found": {
+    "roofrack": {
+     "junk_solar": {
+      "appearances": 4,
+      "player": true
+     }
+    },
+    "lip": {
+     "bumper_lip_f_01": {
+      "appearances": 1,
+      "player": false
+     }
+    }
+   }
+  },
+  "hozuki_gt": {
+   "record": "Vehicle.v_standard2_mizutani_hozuki_gt_player",
+   "appearances": 44,
+   "hide": {
+    "spoiler": [
+     "wing_a",
+     "wing_a_shadow"
+    ],
+    "roofrack": [
+     "junk_solar"
+    ]
+   },
+   "found": {
+    "spoiler": {
+     "spoiler_player_01": {
+      "appearances": 1,
+      "player": false
+     },
+     "wing_a": {
+      "appearances": 43,
+      "player": true
+     },
+     "wing_a_shadow": {
+      "appearances": 43,
+      "player": true
+     }
+    },
+    "roofrack": {
+     "junk_solar": {
+      "appearances": 1,
+      "player": false
+     }
+    }
+   },
+   "kept": {
+    "spoiler_player_01": "the player trim's lip spoiler is moulded on the hatch (bound to body_01), under where a kit wing stands; left visible until seen in game"
+   }
+  },
+  "supron_kurtz": {
+   "record": "Vehicle.v_standard3_mahir_supron_kurtz_player",
+   "appearances": 6,
+   "hide": {},
+   "found": {}
+  },
+  "hellhound": {
+   "record": "Vehicle.v_standard3_militech_hellhound_player",
+   "appearances": 6,
+   "hide": {},
+   "found": {}
+  },
+  "type66_nomad_03": {
+   "record": "Vehicle.v_sport2_quadra_type66_nomad_player_03",
+   "appearances": 13,
+   "hide": {},
+   "found": {}
+  },
+  "deleon_sport": {
+   "record": "Vehicle.v_sport2_villefort_deleon_sport_player",
+   "appearances": 40,
+   "hide": {},
+   "found": {}
+  },
+  "quartz_nomad": {
+   "record": "Vehicle.v_standard2_archer_quartz_nomad_player",
+   "appearances": 24,
+   "hide": {},
+   "found": {}
+  },
+  "mackinaw_02": {
+   "record": "Vehicle.v_standard3_thorton_mackinaw_02_player",
+   "appearances": 5,
+   "hide": {},
+   "found": {}
+  },
+  "mackinaw_bmf": {
+   "record": "Vehicle.v_utility4_thorton_mackinaw_bmf_player",
+   "appearances": 2,
+   "hide": {},
+   "found": {}
+  },
+  "shion_nomad_02": {
+   "record": "Vehicle.v_sport2_mizutani_shion_nomad_02_player",
+   "appearances": 21,
+   "hide": {},
+   "found": {
+    "spoiler": {
+     "spoiler_01": {
+      "appearances": 13,
+      "player": false,
+      "otherMeshes": [
+       "v_standard2_archer_quartz_nomad__ext01_trunk_b_01.mesh"
+      ]
+     },
+     "spoiler_01_shadow": {
+      "appearances": 13,
+      "player": false,
+      "otherMeshes": [
+       "v_standard2_archer_quartz_nomad__ext01_trunk_b_01_shadow.mesh"
+      ]
+     }
+    }
+   },
+   "kept": {
+    "spoiler_01": "ambiguous name: some appearances put v_standard2_archer_quartz_nomad__ext01_trunk_b_01.mesh under it, not a spoiler part",
+    "spoiler_01_shadow": "ambiguous name: some appearances put v_standard2_archer_quartz_nomad__ext01_trunk_b_01_shadow.mesh under it, not a spoiler part"
+   }
+  },
+  "911turbo_cabrio": {
+   "record": "Vehicle.v_sport2_porsche_911turbo_cabrio_player",
+   "appearances": 2,
+   "hide": {},
+   "found": {}
+  },
+  "type66_nomad_ncu": {
+   "record": "Vehicle.v_sport2_quadra_type66_nomad_ncu_player",
+   "appearances": 27,
+   "hide": {
+    "spoiler": [
+     "deathrace_spoiler_01",
+     "deathrace_spoiler_01_shadow"
+    ]
+   },
+   "found": {
+    "spoiler": {
+     "deathrace_spoiler_01": {
+      "appearances": 1,
+      "player": true
+     },
+     "deathrace_spoiler_01_shadow": {
+      "appearances": 1,
+      "player": true
+     }
+    }
+   }
+  },
+  "colby_nomad": {
+   "record": "Vehicle.v_standard25_thorton_colby_nomad_player",
+   "appearances": 22,
+   "hide": {},
+   "found": {}
+  },
+  "galena_bobas": {
+   "record": "Vehicle.v_standard2_thorton_galena_bobas_player",
+   "appearances": 34,
+   "hide": {
+    "spoiler": [
+     "trunk_spoiler",
+     "trunk_spoiler_shadow"
+    ],
+    "roofrack": [
+     "junk_solar"
+    ]
+   },
+   "found": {
+    "spoiler": {
+     "trunk_spoiler": {
+      "appearances": 5,
+      "player": false
+     },
+     "trunk_spoiler_shadow": {
+      "appearances": 5,
+      "player": false
+     }
+    },
+    "roofrack": {
+     "junk_solar": {
+      "appearances": 11,
+      "player": false
+     }
+    }
+   }
+  },
+  "galena_nomad": {
+   "record": "Vehicle.v_standard2_thorton_galena_nomad_player",
+   "appearances": 20,
+   "hide": {
+    "spoiler": [
+     "spoiler_01",
+     "spoiler_01_shadow"
+    ]
+   },
+   "found": {
+    "spoiler": {
+     "spoiler_01": {
+      "appearances": 10,
+      "player": true
+     },
+     "spoiler_01_shadow": {
+      "appearances": 10,
+      "player": true
+     }
+    }
+   }
+  },
+  "mackinaw_ncu": {
+   "record": "Vehicle.v_standard3_thorton_mackinaw_ncu_player",
+   "appearances": 5,
+   "hide": {},
+   "found": {}
+  },
+  "colby_pickup": {
+   "record": "Vehicle.v_standard25_thorton_colby_pickup_player",
+   "appearances": 16,
+   "hide": {
+    "hood": [
+     "v_standard2_thorton_colby_kurtz_hood_scoop_01"
+    ]
+   },
+   "found": {
+    "hood": {
+     "v_standard2_thorton_colby_kurtz_hood_scoop_01": {
+      "appearances": 15,
+      "player": true
+     }
+    }
+   }
+  },
+  "caliburn_mordred": {
+   "record": "Vehicle.v_sport1_rayfield_caliburn_mordred_player",
+   "appearances": 12,
+   "hide": {
+    "spoiler": [
+     "wing_a_01",
+     "wing_a_01_shadow",
+     "wing_a_02",
+     "wing_a_02_shadow",
+     "wing_b_01",
+     "wing_b_01_shadow",
+     "wing_b_02",
+     "wing_b_02_shadow",
+     "wing_c_01",
+     "wing_c_01_shadow",
+     "wing_c_02",
+     "wing_c_02_shadow"
+    ]
+   },
+   "found": {
+    "spoiler": {
+     "wing_a_01": {
+      "appearances": 10,
+      "player": false
+     },
+     "wing_a_01_shadow": {
+      "appearances": 10,
+      "player": false
+     },
+     "wing_a_02": {
+      "appearances": 1,
+      "player": true
+     },
+     "wing_a_02_shadow": {
+      "appearances": 1,
+      "player": true
+     },
+     "wing_b_01": {
+      "appearances": 10,
+      "player": false
+     },
+     "wing_b_01_shadow": {
+      "appearances": 10,
+      "player": false
+     },
+     "wing_b_02": {
+      "appearances": 1,
+      "player": true
+     },
+     "wing_b_02_shadow": {
+      "appearances": 1,
+      "player": true
+     },
+     "wing_c_01": {
+      "appearances": 10,
+      "player": false
+     },
+     "wing_c_01_shadow": {
+      "appearances": 10,
+      "player": false
+     },
+     "wing_c_02": {
+      "appearances": 1,
+      "player": true
+     },
+     "wing_c_02_shadow": {
+      "appearances": 1,
+      "player": true
+     }
+    }
+   }
+  },
+  "alvarado_hearse": {
+   "record": "Vehicle.v_sport2_villefort_alvarado_hearse_player",
+   "appearances": 28,
+   "hide": {},
+   "found": {}
+  },
+  "quartz_nomad_02": {
+   "record": "Vehicle.v_standard2_archer_quartz_nomad_player_02",
+   "appearances": 24,
+   "hide": {},
+   "found": {}
+  },
+  "colby_pickup_02": {
+   "record": "Vehicle.v_standard25_thorton_colby_pickup_02_player",
+   "appearances": 16,
+   "hide": {
+    "hood": [
+     "v_standard2_thorton_colby_kurtz_hood_scoop_01"
+    ]
+   },
+   "found": {
+    "hood": {
+     "v_standard2_thorton_colby_kurtz_hood_scoop_01": {
+      "appearances": 15,
+      "player": true
+     }
+    }
+   }
+  },
+  "tanishi_mr_hands": {
+   "record": "Vehicle.v_standard3_makigai_tanishi_player_mr_hands",
+   "appearances": 42,
+   "hide": {},
+   "found": {}
+  },
+  "cortes_delamain": {
+   "record": "Vehicle.v_standard2_villefort_cortes_delamain_player",
+   "appearances": 6,
+   "hide": {},
+   "found": {}
+  },
+  "shion_nomad_missiles": {
+   "record": "Vehicle.v_sport2_mizutani_shion_nomad_player_missiles",
+   "appearances": 21,
+   "hide": {},
+   "found": {
+    "spoiler": {
+     "spoiler_01": {
+      "appearances": 13,
+      "player": true,
+      "otherMeshes": [
+       "v_standard2_archer_quartz_nomad__ext01_trunk_b_01.mesh"
+      ]
+     },
+     "spoiler_01_shadow": {
+      "appearances": 13,
+      "player": true,
+      "otherMeshes": [
+       "v_standard2_archer_quartz_nomad__ext01_trunk_b_01_shadow.mesh"
+      ]
+     }
+    }
+   },
+   "kept": {
+    "spoiler_01": "ambiguous name: some appearances put v_standard2_archer_quartz_nomad__ext01_trunk_b_01.mesh under it, not a spoiler part",
+    "spoiler_01_shadow": "ambiguous name: some appearances put v_standard2_archer_quartz_nomad__ext01_trunk_b_01_shadow.mesh under it, not a spoiler part"
+   }
+  },
+  "alvarado_valentinos": {
+   "record": "Vehicle.v_sport2_villefort_alvarado_valentinos_player",
+   "appearances": 4,
+   "hide": {},
+   "found": {}
+  },
+  "colby_pickup_kurtz": {
+   "record": "Vehicle.v_standard25_thorton_colby_pickup_kurtz_player",
+   "appearances": 9,
+   "hide": {
+    "hood": [
+     "v_standard2_thorton_colby_kurtz_hood_scoop_01",
+     "v_standard2_thorton_colby_kurtz_hood_scoop_01_shadow"
+    ]
+   },
+   "found": {
+    "hood": {
+     "v_standard2_thorton_colby_kurtz_hood_scoop_01": {
+      "appearances": 8,
+      "player": true
+     },
+     "v_standard2_thorton_colby_kurtz_hood_scoop_01_shadow": {
+      "appearances": 8,
+      "player": true
+     }
+    }
+   }
+  },
+  "colby_nomad_missiles": {
+   "record": "Vehicle.v_standard25_thorton_colby_nomad_player_missiles",
+   "appearances": 22,
+   "hide": {},
+   "found": {}
+  },
+  "galena_nomad_missiles": {
+   "record": "Vehicle.v_standard2_thorton_galena_nomad_player_missiles",
+   "appearances": 20,
+   "hide": {
+    "spoiler": [
+     "spoiler_01",
+     "spoiler_01_shadow"
+    ]
+   },
+   "found": {
+    "spoiler": {
+     "spoiler_01": {
+      "appearances": 10,
+      "player": true
+     },
+     "spoiler_01_shadow": {
+      "appearances": 10,
+      "player": true
+     }
+    }
+   }
+  }
+ }
+}
