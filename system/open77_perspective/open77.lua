@@ -1,5 +1,5 @@
 resource "open77_perspective"
-version "1.0.0"
+version "1.0.1"
 open77_version ">=0.0.1"
 auto_start true
 reload_policy "local"

@@ -28,7 +28,7 @@
   }
   function paintTarget() {
     privacy.remember(target);
-    $("serverName").textContent=safe(target?.name||target?.endpoint||"No server selected");
+    $("serverName").textContent=safe(target?.name||target?.endpoint||"Where to next?");
     $("endpoint").textContent=safe(target?.endpoint||"Choose your destination in the launcher.");
     $("master").textContent=target?.master ? safe(target.master).toUpperCase()+" / MASTER" : "LAUNCHER MANAGED";
     $("retry").disabled=!target?.endpoint||connecting||busy;
@@ -46,9 +46,15 @@
     const known=Number.isFinite(Number(total))&&Number(total)>0;
     const percent=known?Math.min(100,Math.max(0,Math.round((Number(done)||0)/Number(total)*100))):null;
     $("track").classList.toggle("busy",!known);
-    $("percent").textContent=known?percent+"%":"";
+    $("percent").textContent=known?percent+"%":"—";
     $("fill").style.width=known?percent+"%":"";
     if(known)$("track").setAttribute("aria-valuenow",String(percent));else $("track").removeAttribute("aria-valuenow");
+    $("track").setAttribute("aria-valuetext",$("phase").textContent+(known?": "+percent+"%":": in progress"));
+  }
+  function headline(first,second) {
+    if($("headline").textContent===first+second&&$("headline").lastElementChild?.tagName==="SPAN")return;
+    const accent=document.createElement("span");accent.textContent=second;
+    $("headline").replaceChildren(document.createTextNode(first),document.createElement("br"),accent);
   }
   function phase(name,detail) {
     if(terminal)return;
@@ -56,11 +62,12 @@
     const entry=phases[name]||[Math.max(checkpoint,1),"Preparing session"];
     checkpoint=Math.max(checkpoint,entry[0]);paintSteps();
     $("phase").textContent=entry[1];
-    $("headline").textContent=name==="creating_character"?"Make it your character.":"Connecting to your world.";
+    const character=name==="creating_character";
+    headline(character?"Make it":"Next stop.",character?"yours.":"Night City.");
     $("stateLabel").textContent="SESSION IN PROGRESS";
-    $("signal").textContent="CONNECTING";
-    $("message").textContent=name==="creating_character"?"Finish character creation to continue into Night City.":"Your connection, resources and character are being prepared.";
-    $("nextStep").textContent="You will enter the world when the server and game are ready.";
+    $("signal").textContent=checkpoint===4?"LOADING WORLD":checkpoint===3?"YOUR CHARACTER":checkpoint===2?"PREPARING":"CONNECTING";
+    $("message").textContent=character?"Finish character creation to begin your story.":"Your next story is just a connection away.";
+    $("nextStep").textContent="We'll bring you in as soon as your world is ready.";
     $("progress").hidden=false;$("cancel").hidden=false;
     // Cancelling a live engine load cannot cancel LoadSavedGame. Offer quit instead.
     $("cancel").disabled=name==="world"||name==="creating_character";
@@ -71,6 +78,7 @@
   function begin(value) {
     failure=null;terminal=false;busy=false;resourceDiagnostic=null;server={};
     target=value.target||target;attempt=value.attempt||attempt+1;started=Date.now();checkpoint=-1;
+    $("elapsed").textContent="ELAPSED 0s";
     $("diagnostics").hidden=true;$("details").hidden=true;$("report").hidden=true;
     $("toggleDetails").textContent="Show details";$("toggleDetails").setAttribute("aria-expanded","false");
     $("actionError").hidden=true;$("copy").textContent="Copy report";
@@ -109,7 +117,7 @@
   }
   function idle(reason) {
     terminal=true;connecting=false;busy=false;
-    $("headline").textContent=reason==="user_quit"?"You left the session.":"Connection cancelled.";
+    headline(reason==="user_quit"?"Session":"Connection",reason==="user_quit"?"ended.":"cancelled.");
     $("stateLabel").textContent="SESSION ENDED";$("signal").textContent="STANDBY";
     $("message").textContent="Return to the launcher to choose a server, or retry your last destination.";
     $("nextStep").textContent="Your server selection and downloads are managed in the launcher.";
@@ -143,7 +151,7 @@
   };
   Open77.on("shell:state",value=>{
     client=value?.client||client;target=value?.target||target;
-    $("build").textContent=client.protocolMajor!=null?"PROTOCOL "+client.protocolMajor+"."+client.protocolMinor:"";
+    $("build").textContent=client.version?safe(client.version):"";
     paintTarget();renderReport();
   });
   Open77.on("connection:begin",begin);
@@ -183,7 +191,7 @@
   Open77.on("loading:theme",value=>{
     // No server-controlled markup or external assets.
     if(value?.strap&&!terminal)$("footerStatus").textContent=safe(value.strap);
-    if(typeof value?.accent==="string"&&/^#[0-9a-f]{6}$/i.test(value.accent))document.body.style.setProperty("--o-cyan-500",value.accent);
+    if(typeof value?.accent==="string"&&/^#[0-9a-f]{6}$/i.test(value.accent))document.body.style.setProperty("--session-accent",value.accent);
   });
   setInterval(()=>{if(connecting&&started)$("elapsed").textContent="ELAPSED "+Math.floor((Date.now()-started)/1000)+"s";},1000);
   paintTarget();Open77.emit("shell:ready",{});Open77.ready();

@@ -40,8 +40,16 @@ exports("remove", function(playerId)
     return Open77.nameplates.remove(tostring(playerId))
 end)
 
+-- Every override this resource holds goes, the policy's included (same owner),
+-- so the policy is told to forget what it believes it applied: its signature
+-- cache would otherwise skip re-applying an unchanged override, and in a fight
+-- an enemy hidden by the policy would get his default plate back.
 exports("clear", function()
-    return Open77.nameplates.clear()
+    local ok, reason = Open77.nameplates.clear()
+    -- Clients before 2026-11-07 also switched the native drawer off here.
+    if nativeRender then Open77.nameplates.render(enabled) end
+    TriggerEvent("open77_nameplates:overridesCleared")
+    return ok, reason
 end)
 
 AddEventHandler("onClientResourceStart", function(name)

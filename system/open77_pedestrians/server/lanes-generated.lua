@@ -8,8 +8,8 @@
 Open77CrowdLaneCatalog = {
     schema = 1,
     gameVersion = 2310,
-    datasetId = "cp2077-2310-e5c51b9fec1253861f253e65",
-    catalogSha256 = "fdf2dc695cc3f68c9ddb597e1c8e45e87b4cc0faadb0c35cc31c64ab662cd6c4",
+    datasetId = "cp2077-2310-53126a35c7852fe3716103ff",
+    catalogSha256 = "582744bc8075edb58f39abacf5f1a78c8145d9b0206d7affea2e7da60f768277",
     laneCount = 18047,
     pointCount = 159759,
     pointX = {},

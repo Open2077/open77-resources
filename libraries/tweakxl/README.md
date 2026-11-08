@@ -12,7 +12,7 @@ Installs the TweakXL loader in your players' games, so your world resources can 
 In the resource whose assets need TweakXL, declare the dependency:
 
 ```lua
-dependency "tweakxl >=1.11.4"
+dependency "tweakxl >=1.12.0"
 ```
 
 Add `tweakxl` to `resources.load` next to that resource, keep
@@ -33,8 +33,13 @@ package needs a server restart and a fresh launcher boot of the game.
 
 ## Credit and licence
 
-`dist/TweakXL-1.11.4.zip` is the official TweakXL 1.11.4 release, untouched.
+`dist/TweakXL-1.12.0.zip` is the official TweakXL 1.12.0 release, untouched.
+Its SHA-256 is `a7c39b769e6c51d9f27412a101fb87e6a1fb8452f0e37ee0d1d1f3f44e656fa8`, the
+digest GitHub publishes for the `v1.12.0` release asset (2026-10-25). 1.12.0 is the version
+measured on the current game build; dependents written against 1.11.4 keep resolving.
 TweakXL is made by Pavel Siberx (psiberx) and is MIT-licensed upstream:
 https://github.com/psiberx/cp2077-tweak-xl. Its `LICENSE` and
 `THIRD_PARTY_LICENSES` files ship inside the zip, under `red4ext/plugins/TweakXL/`.
 Keep them when you redistribute the package.
+
+The client marker keeps `tweakxl` available to shared/client resource dependency resolution. It does not load the plugin at runtime. See [custom clothing](../../../../wiki/custom-clothing.md) for registering mod item records with persistence and wardrobe support.

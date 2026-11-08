@@ -1,0 +1,83 @@
+{
+  "schema": "open77.locomotion-package/1",
+  "id": "aetherfall",
+  "name": "Aetherfall casting",
+  "revision": "4567af5e17832ce18fbeb344d190c6c3c3e477ea8cc413fc229971addb036625",
+  "graph": "graph.locomotion.json",
+  "channelPrefix": "open77Locomotion",
+  "sampleSlots": 8,
+  "clips": [
+    {
+      "id": "bolt",
+      "selector": 0,
+      "animation": "open77__aetherfall_bolt",
+      "duration": 0.6666667
+    },
+    {
+      "id": "lance",
+      "selector": 1,
+      "animation": "open77__aetherfall_lance",
+      "duration": 1.1999999
+    },
+    {
+      "id": "nova",
+      "selector": 2,
+      "animation": "open77__aetherfall_nova",
+      "duration": 1.5
+    },
+    {
+      "id": "ward",
+      "selector": 3,
+      "animation": "open77__aetherfall_ward",
+      "duration": 2
+    },
+    {
+      "id": "cataclysm",
+      "selector": 4,
+      "animation": "open77__aetherfall_cataclysm",
+      "duration": 2.0666666
+    }
+  ],
+  "variants": [
+    {
+      "gender": "Male",
+      "mode": "native",
+      "entity": "open77\\locomotion\\aetherfall\\4567af5e1783\\ma\\native.ent",
+      "graph": "open77\\locomotion\\aetherfall\\4567af5e1783\\ma\\native.animgraph",
+      "addedNodes": 120,
+      "entitySha256": "161d81f476f5c739175679fd4b8a57ea59f575cdc64529477664c94bc0f05478",
+      "graphSha256": "8a9c7bed9709940fd0240b4db17b62ca4bd7b284f8dd05b188d7a838ec745d28"
+    },
+    {
+      "gender": "Female",
+      "mode": "native",
+      "entity": "open77\\locomotion\\aetherfall\\4567af5e1783\\wa\\native.ent",
+      "graph": "open77\\locomotion\\aetherfall\\4567af5e1783\\wa\\native.animgraph",
+      "addedNodes": 120,
+      "entitySha256": "0a10c7be810025638e9ec4a4e853b0de97c7c987eb5e14b32ef4366baed0cae9",
+      "graphSha256": "9cf7eaeccc798e97b9f9a5cc0ca505187765644ac52c86304f385fdf002df0bc"
+    },
+    {
+      "gender": "Male",
+      "mode": "mirror",
+      "entity": "open77\\locomotion\\aetherfall\\4567af5e1783\\ma\\mirror.ent",
+      "graph": "open77\\locomotion\\aetherfall\\4567af5e1783\\ma\\mirror.animgraph",
+      "addedNodes": 120,
+      "entitySha256": "3873c218a2b172362130f5c8bc2793d3a5c963652197c6156bf1783fd66a6f08",
+      "graphSha256": "f1178b728c34ea20d0a3cd679e26d8777231ed8ea2b2bd1ebba83c90ca6ac6be"
+    },
+    {
+      "gender": "Female",
+      "mode": "mirror",
+      "entity": "open77\\locomotion\\aetherfall\\4567af5e1783\\wa\\mirror.ent",
+      "graph": "open77\\locomotion\\aetherfall\\4567af5e1783\\wa\\mirror.animgraph",
+      "addedNodes": 120,
+      "entitySha256": "c81e60df260df8edf1cf7d5b98a54e3d1a05db84ecfb56881abc64ac7032f2e2",
+      "graphSha256": "374843092c5750e63583a286ebea65f90deb864b13f6fda8938abffe087bb5c8"
+    }
+  ],
+  "archive": "dist/Open77Locomotion_aetherfall_4567af5e1783.zip",
+  "archiveSha256": "862579774728d7d01d4023f0b23b1cea07593178db6870200a67b116aa44b00b",
+  "zipSha256": "31dc61d99c215fa3d888cabe209d544275fd2da8a55290ee86080d583e8ee583",
+  "sourceArchiveSha256": "60187740b0187f4c63e6dc8cd43e1e99d440bc85b047850ea0784bb054875493"
+}

@@ -1,5 +1,5 @@
 resource "open77_appearance"
-version "0.1.0"
+version "0.3.3"
 open77_version ">=0.0.1"
 auto_start true
 reload_policy "local"

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Aetherfall · The Astral Conclave</title><link rel="stylesheet" href="style.css"></head>
+<body data-active="false">
+<main id="hud">
+  <header class="brand"><span class="brand-mark">✧</span><div><h1>AETHERFALL</h1><p>THE ASTRAL CONCLAVE</p></div></header>
+  <section class="match" aria-label="Round status"><span id="round">ROUND I</span><b id="clock">—</b><span id="format">FIRST TO 3</span><div id="phase">GATHERING MAGES</div></section>
+  <aside class="roster" id="roster" aria-label="Mages in the arena"></aside>
+  <div class="reticle" aria-hidden="true"><i></i><i></i><i></i><i></i><span></span></div>
+  <div id="hitmarker" aria-hidden="true">✧</div>
+  <section class="announcement" id="announcement"><p id="announcement-eyebrow"></p><h2 id="announcement-title"></h2><p id="announcement-detail"></p></section>
+  <div id="notice" role="status" aria-live="polite"></div>
+  <div class="damage-vignette" id="damage-vignette" aria-hidden="true"></div>
+  <aside class="combat-feed" id="feed" aria-label="Combat events"></aside>
+  <div class="panel-shortcuts"><span><kbd id="menu-key">N</kbd> CONCLAVE</span><span><kbd id="book-key">H</kbd> SPELLBOOK</span><span><kbd id="standings-key">K</kbd> STANDINGS</span></div>
+  <section class="detail-panel" id="menu" hidden aria-label="The Conclave">
+    <div class="panel-heading"><div><p class="eyebrow" id="menu-eyebrow">TRAINING GROUNDS</p><h2>The Conclave</h2></div><p class="close-hint" id="menu-close-hint">N · CLOSE</p></div>
+    <p class="panel-intro" id="menu-intro">Practise your spells on the dummies. Join the duel queue; once enough mages are waiting, any of them may open the Conclave.</p>
+    <div class="menu-grid">
+      <div class="menu-queue"><p class="eyebrow">DUEL QUEUE</p><ol id="menu-queue"></ol><p class="menu-status" id="menu-status"></p></div>
+      <div class="menu-actions">
+        <button type="button" data-action="queue" id="menu-queue-join">JOIN THE QUEUE</button>
+        <button type="button" data-action="unqueue" id="menu-queue-leave">LEAVE THE QUEUE</button>
+        <button type="button" data-action="start" id="menu-start" class="primary">START THE DUEL</button>
+        <button type="button" data-action="reset_dummies" id="menu-reset">RAISE THE DUMMIES</button>
+        <button type="button" data-action="forfeit" id="menu-forfeit">LEAVE THE DUEL</button>
+        <button type="button" data-action="close" id="menu-close" class="quiet">CLOSE</button>
+      </div>
+    </div>
+    <p class="panel-note" id="menu-training"></p>
+  </section>
+  <section class="detail-panel" id="spellbook" hidden aria-label="Spellbook">
+    <div class="panel-heading"><div><p class="eyebrow">THE FIVE ARTS</p><h2>Your spellbook</h2></div><p class="close-hint" id="book-close">H · CLOSE</p></div>
+    <p class="panel-intro">Aim with your reticle. Anticipate movement, preserve aether, and time your protection.</p>
+    <div id="spellbook-list"></div>
+    <div class="panel-rules"><span><b>200</b> VITALITY</span><span><b>100</b> AETHER · +8 / SEC</span><span><b>3</b> ROUND WINS</span></div>
+    <p class="panel-note">Stay inside the illuminated seal. The last mage standing wins the round. Close this panel to cast; the duel continues.</p>
+  </section>
+  <section class="detail-panel" id="standings" hidden aria-label="Standings">
+    <div class="panel-heading"><div><p class="eyebrow">THE ASTRAL CONCLAVE</p><h2>Standings</h2></div><p class="close-hint" id="standings-close">K · CLOSE</p></div>
+    <p class="panel-intro">First to three round victories. Damage is recorded across the current match.</p>
+    <table class="standings-table"><thead><tr><th scope="col">MAGE</th><th scope="col">WINS</th><th scope="col">K / D</th><th scope="col">DAMAGE</th><th scope="col">STATUS</th></tr></thead><tbody id="standings-body"></tbody></table>
+    <p class="panel-note">Eliminated mages return next round. New arrivals enter at the next round's start.</p>
+  </section>
+  <footer class="loadout">
+    <div class="crest"><div class="crest-ring"><span>✦</span></div><div class="crest-level" id="wins">0 / 3</div></div>
+    <div class="player-panel"><p class="eyebrow">ASTRAL DUELIST</p><h2 id="player-name">The Unbound</h2><div class="stats"><span id="score">0 / 0</span><span>✧ <b id="damage">0</b></span></div><p class="hint">MOVE FREELY · MOUSE TO AIM</p></div>
+    <div class="abilities-panel"><div id="castbar"><i></i><span>WEAVING</span></div><div class="abilities" id="abilities"></div>
+      <div class="vitals"><div class="bar health"><i id="health-fill"></i><i id="shield-fill"></i><span id="health-label">200 / 200</span></div><div class="bar mana"><i id="mana-fill"></i><span id="mana-label">100 / 100</span></div></div>
+      <div class="ability-legend"><span>✦ SPELLS FOLLOW YOUR RETICLE</span><span id="connection">CONCLAVE LINKED</span></div>
+    </div>
+  </footer>
+  <aside class="minimap"><div class="map-label">THE CONCLAVE <span>◆</span></div><svg id="map" viewBox="-24 -24 48 48" aria-label="Arena map"><circle class="map-edge" r="19"/><circle class="map-ring" r="12"/><path class="map-cross" d="M-20 0H20M0-20V20"/><g id="map-players"></g></svg><p>STAY WITHIN THE SEAL</p></aside>
+  <div class="preview-label" hidden id="preview-label">HUD PREVIEW · SIMULATED DATA</div>
+</main>
+<script src="app.js"></script></body></html>

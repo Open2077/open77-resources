@@ -1,5 +1,5 @@
 resource "open77_nameplates"
-version "0.2.0"
+version "0.3.0"
 open77_version ">=0.0.1"
 auto_start true
 reload_policy "local"
@@ -8,11 +8,13 @@ reload_policy "local"
 --
 --   main.lua    lifecycle: turn the native drawer on, or fall back to the page.
 --               Owns nothing about WHO is labelled.
---   policy.lua  who gets a plate and what it says. Independent of main.lua --
---               it shares no state with it and touches only
---               `Open77.nameplates.set/remove`, never `clear()`, because
---               `clear` is `Api::Nameplates::Release` and would switch off the
---               native drawer main.lua just enabled.
+--   policy.lua  who gets a plate and what it says. Shares no state with
+--               main.lua and touches only `Open77.nameplates.set/remove`, never
+--               `clear()`: on clients before 2026-11-07 `clear` was
+--               `Api::Nameplates::Release` and switched off the native drawer
+--               main.lua had just enabled. The one link is the event
+--               `open77_nameplates:overridesCleared`, raised by main.lua's
+--               `clear` export, which empties policy.lua's signature cache.
 --
 -- `client/**/*.lua` would match NOTHING here (`**` requires an intermediate
 -- directory) and the client then refuses the WHOLE session resource set with

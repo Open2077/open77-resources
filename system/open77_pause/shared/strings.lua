@@ -132,7 +132,14 @@ PauseStrings = {
     -- Section headings inside a tab. One key per engine group a tab renders --
     -- the group PATH is not a heading: `/graphics/advanced` is a routing
     -- detail, and it is what the page used to print.
+    webAudio = {
+        volume = "WebUI volume",
+        scope = "Web pages & media",
+        hint = "0% mutes radios, videos and UI sounds.",
+        failed = "Could not save WebUI volume. Your previous volume was kept.",
+    },
     groups = {
+        webAudio = "WEBUI AUDIO",
         display = "DISPLAY",
         brightness = "BRIGHTNESS",
         upscaling = "UPSCALING & FRAME GENERATION",

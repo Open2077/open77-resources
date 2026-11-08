@@ -12,7 +12,8 @@ function F.key(identity)
     return "favorites.v1." .. user:lower()
 end
 function F.record(value, info)
-    if type(value) ~= "string" or #value > 192 or not value:match("^Items%.[%w_]+$") then return nil end
+    if type(value) ~= "string" or #value > 192 then return nil end
+    if not value:match("^Items%.[%w_]+$") and not (#value == 18 and value:match("^0x%x+$")) then return nil end
     local item = info(value)
     if type(item) ~= "table" or item.defaultSelectable ~= true or item.nonvisual == true or not slots[item.slot]
         or (not item.supportsMale and not item.supportsFemale) then return nil end

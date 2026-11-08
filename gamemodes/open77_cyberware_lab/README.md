@@ -415,3 +415,12 @@ Creator policy, preset costs, input and allowed zones live in
 `server/config.lua`; `server/dash.lua` uses the same public `Open77.dash` and
 cyberware APIs as other resources. Freeroam's automatic movement defaults are
 described above. See [Native Dash and Air Dash](https://open2077.net/docs/dash).
+
+### Cyberpunk 2.5 Gorilla styles
+
+The Gorilla Arms grade selector includes Aldecaldos, Barghest, Jinguji,
+Militech, Mox, Tsunami, Tyger Claws, Voodoo Boys, Wraiths and Kang Tao. These
+presets use training stats and a platform-owned `armStyle` key. They require
+a client exposing `Open77.cyberware.projectLocalStyled`; older clients reject
+the projection explicitly. Other implant families are not installed by these
+presets. Live acceptance of the new cosmetics is in progress.

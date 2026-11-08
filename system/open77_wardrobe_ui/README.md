@@ -82,7 +82,14 @@ maps before browser editing, preserving hide versus inherit through JSON.
 
 ## Catalogue coverage
 
-The audited 2.31 base-game and Phantom Liberty sources contain 1,991 clothing
+The current 2.5 catalogue contains 2,068 records: 77 added to the historical
+2.31 export, including 74 newly selectable entries. Both body families expose
+1,878 choices after nonvisual filtering. Stable hexadecimal IDs keep three
+wearable entries usable even while their canonical names are unresolved.
+The new records retain the same preview/save and observer projection pipeline.
+Native rendering acceptance is in progress.
+
+Historical baseline: The audited 2.31 base-game and Phantom Liberty sources contain 1,991 clothing
 records. Native and server catalogues preserve every record, identity, slot,
 family flag and selection flag. The native/server allowlist retains 1,983 records for compatibility. Of those,
 164 audited records are unavailable as player clothing: 64 `Items.EmptySlots*`

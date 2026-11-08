@@ -132,7 +132,16 @@ RegisterNetEvent("open77:cyberware:project", function(projection)
                 break
             end
             if not request then
-                request, reason = Open77.cyberware.projectLocal(arms ~= nil)
+                local style = arms and arms.grade and arms.grade.armStyle
+                if style and style ~= "" and style ~= "default" then
+                    if type(Open77.cyberware.projectLocalStyled) ~= "function" then
+                        reason = "arm_style_api_unavailable"
+                        break
+                    end
+                    request, reason = Open77.cyberware.projectLocalStyled(true, style)
+                else
+                    request, reason = Open77.cyberware.projectLocal(arms ~= nil)
+                end
                 capabilityRequest = request
                 -- The previous VM's native unequip lease may still be draining.
                 -- Retry within this ticket's bound; ownership must not be stolen.
@@ -188,8 +197,21 @@ RegisterNetEvent("open77:cyberware:project", function(projection)
         predictedArmsGrade = ready and arms and arms.grade or nil
         capabilityFamily = visual and visual.family or nil
         if ready then capabilityReason = nil else capabilityFailure(reason) end
+        -- captureArms shares the native body snapshot shape, including morphs.
+        -- The strict arm wire contract carries only garment keys; forwarding
+        -- even an empty morphs table makes the server discard an otherwise
+        -- successful native ACK and roll the installation back on timeout.
+        local wireVisual
+        if visual then
+            wireVisual = { family = visual.family, groups = {} }
+            for _, group in ipairs(visual.groups) do
+                wireVisual.groups[#wireVisual.groups + 1] = {
+                    part = group.part, name = group.name, keys = group.keys,
+                }
+            end
+        end
         TriggerServerEvent("open77:cyberware:ack", {
-            incarnation = projection.incarnation, ticket = projection.ticket, ready = ready, visual = visual,
+            incarnation = projection.incarnation, ticket = projection.ticket, ready = ready, visual = wireVisual,
         })
         if not ready then
             print("[cyberware] native projection failed: " .. tostring(reason or "timeout") .. " stage=" .. stage)

@@ -465,26 +465,41 @@ AddEventHandler("open77:appearance:confirmed", function()
     if type(confirmed) == "table" then settledSnapshot = confirmed end
     if edit == nil then
         if (applying or failed ~= nil) and record and record.snapshot and type(confirmed) == "table" then
-            -- Creation and the mirror expose different contextual entries. The
-            -- mirror can retire a neutral (zero) entry after applying it; it
-            -- also adds entries which were not in the creation catalogue.
+            -- Creation and the mirror expose different contextual entries. An
+            -- inactive creator option may be absent from the mirror's capture,
+            -- regardless of its stored value. Absence cannot prove a mismatch.
             -- Verify every observable stored selection before retaining the
             -- applied canonical record for publication after catalogue teardown.
-            local values, matched, valid = {}, 0, true
+            local values, matched, unavailable, mismatched = {}, 0, 0, 0
             for _, option in ipairs(confirmed.options or {}) do
                 values[tostring(option.part) .. ":" .. string.lower(tostring(option.name))] = option.value
             end
             for _, option in ipairs(record.snapshot.options or {}) do
                 local key = tostring(option.part) .. ":" .. string.lower(tostring(option.name))
                 local actual = values[key]
-                if actual == option.value then matched = matched + 1
-                elseif actual ~= nil or option.value ~= 0 then valid = false end
+                if actual == nil then unavailable = unavailable + 1
+                elseif actual == option.value then matched = matched + 1
+                else mismatched = mismatched + 1 end
             end
-            -- Match the native mirror's minimum catalogue overlap, while being
-            -- stricter about absent non-neutral values and all differing values.
-            if valid and matched * 4 >= #record.snapshot.options * 3 then
+            -- Keep the native mirror's minimum catalogue overlap and reject all
+            -- differing observable values; never accept an empty confirmation.
+            local valid = mismatched == 0 and matched > 0
+                and matched * 4 >= #record.snapshot.options * 3
+            print(("[open77_appearance] restore verification: matched=%d/%d unavailable=%d mismatched=%d valid=%s")
+                :format(matched, #record.snapshot.options, unavailable, mismatched, tostring(valid)))
+            if valid then
                 settledSnapshot = record.snapshot
                 failed = nil
+            elseif matched > 0 then
+                -- The mirror applied and read the player back, but some stored values did not come
+                -- back as stored (an entry this client lacks, a value the mirror rewrites...).
+                -- Latching the failure kept the player out of the world for good: never announced
+                -- in game, wardrobe and editor refused ("appearance still settling"; 18 players in
+                -- 6 h on LightRP Testing, 2026-11-07). Keep what the game shows (settledSnapshot is
+                -- the capture above), carry on, and let the player fix it in the wardrobe or the
+                -- editor: their next save rewrites the record. A failed capture still latches below.
+                failed = nil
+                notify("info", "Part of your saved appearance could not be restored exactly. Check it in the wardrobe or the appearance editor.")
             else
                 failed = record.revision
                 notify("error", "Restored appearance does not match its stored options.")

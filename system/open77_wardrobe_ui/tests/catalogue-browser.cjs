@@ -5,7 +5,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE || 'playwright');const fs
  await page.addInitScript(()=>{window.handlers={};window.Open77={ready:()=>{},on:(n,cb)=>handlers[n]=cb,emit:()=>{}};});
  await page.goto('file:///'+path.resolve('resources/system/open77_wardrobe_ui/web/index.html').replaceAll('\\','/'));
  const nonvisual=new Set([...fs.readFileSync('client/src/game/generated/EmptyClothing.inl','utf8').matchAll(/ULL, \/\/ (Items\.[^\r\n]+)/g)].map(m=>m[1]));
- const all=JSON.parse(fs.readFileSync('docs/generated/clothing-2.31.json','utf8')).items;
+ const all=JSON.parse(fs.readFileSync('docs/generated/clothing-2.5.json','utf8')).items;
  const slots={head:'Head',face:'Face',inner_chest:'InnerChest',outer_chest:'OuterChest',legs:'Legs',feet:'Feet',outfit:'Outfit'};
  for(const family of ['male','female']){
   const records=all.filter(r=>r.defaultSelectable && r['supports'+family[0].toUpperCase()+family.slice(1)]).map(r=>({record:r.record,slot:slots[r.slot],tweakDbId:r.tweakDbId,nonvisual:nonvisual.has(r.record)}));
@@ -29,7 +29,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE || 'playwright');const fs
    }
    handlers['wardrobe:closed']({});return {paged:[...seen].sort(),missing,searched};
   },{family,records});
-  assert.deepEqual(result.paged,records.filter(r=>!r.nonvisual).map(r=>r.record).sort(),family+' pagination must expose every record exactly');assert.deepEqual(result.missing,[],family+' full-record searches must reach every entry');assert.equal(result.searched,1804);console.log(family+': all 1804 exposed records reachable through pagination and search across 7 slots');
+  assert.deepEqual(result.paged,records.filter(r=>!r.nonvisual).map(r=>r.record).sort(),family+' pagination must expose every record exactly');assert.deepEqual(result.missing,[],family+' full-record searches must reach every entry');assert.equal(result.searched,1878);console.log(family+': all 1878 exposed records reachable through pagination and search across 7 slots');
  }
  assert.deepEqual(errors,[]);await browser.close();
 })().catch(e=>{console.error(e);process.exit(1);});

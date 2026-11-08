@@ -40,5 +40,18 @@ const fs=require('fs');const path=require('path');const assert=require('node:ass
  assert.equal(await page.locator('#overlay-banner').isVisible(),false);
  await page.locator('#save').click();const visiblePatch=await page.evaluate(()=>events.findLast(x=>x.n==='wardrobe:save').v);
  assert.equal(visiblePatch.wardrobe.active,false);assert.equal(visiblePatch.equipment.Outfit,false);
+ // A pack larger than the old native 2000-row cap stays searchable by its authored label.
+ await page.evaluate(()=>{
+   handlers['wardrobe:open']({available:true,characterKey:'custom-pack',revision:0,family:'female',equipment:{},wardrobe:{outfits:{}},orbitAvailable:true});
+   const rows=Array.from({length:3001},(_,i)=>({record:'Items.Modded_'+i,slot:'OuterChest',label:i===3000?'Velvet <b>midnight</b>':'Custom coat '+i}));
+   for(let offset=0;offset<rows.length;offset+=48) handlers['wardrobe:catalogue']({items:rows.slice(offset,offset+48),complete:offset+48>=rows.length});
+ });
+ await page.getByRole('button',{name:'JACKETS',exact:true}).click();
+ await page.locator('#search').fill('Velvet');
+ assert.equal(await page.locator('.choose').count(),1);
+ assert.equal(await page.locator('.choose strong').textContent(),'Velvet <b>midnight</b>');
+ assert.equal(await page.locator('.choose b').count(),0,'custom labels remain literal text');
+ await page.locator('.choose').click(); await page.waitForTimeout(30);
+ assert.equal((await page.evaluate(()=>events.findLast(x=>x.n==='wardrobe:preview').v)).equipment.OuterChest,'Items.Modded_3000');
  assert.deepEqual(errors,[]);console.log('Wardrobe browser: favorites, catalogue, previews, outfits, covered-shirt selection, commit patch, discard and layout passed.');await browser.close();
 })().catch(e=>{console.error(e);process.exit(1);});

@@ -2,7 +2,7 @@
 dofile("resources/system/open77_wardrobe_ui/client/favorites.lua")
 local F=WardrobeFavorites
 local function info(record)
-    if record=="Items.Unknown" then return nil end
+    if record=="Items.Unknown" or record=="0x0000000000000000" then return nil end
     return {record=record,slot=record=="Items.Underwear" and "UnderwearBottom" or "Head",
         defaultSelectable=record~="Items.Restricted",nonvisual=record=="Items.EmptySlotsMask",supportsMale=true,supportsFemale=false}
 end
@@ -43,3 +43,7 @@ assert(attempts==2 and merged["Items.First"] and merged["Items.OtherProcess"] an
 kvp.compareAndSet=function()return false end
 assert(select(2,F.update(kvp,a,"Items.Hat",true,info))=="storage_busy")
 print("Favorites CAS: concurrent same-identity edit preserved, conflict retries bounded")
+
+assert(F.record("0x00000018A4AFB82B",info)=="0x00000018A4AFB82B")
+assert(F.record("0x0000000000000000",info)==nil)
+assert(F.record("0x123",info)==nil)

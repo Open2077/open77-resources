@@ -541,26 +541,51 @@ end)
 -- session, replicated to everyone, and handed to joiners with every other body.
 local bodies = {}
 
-local function validBody(body)
-    if type(body) ~= "table" or type(body.groups) ~= "table" then return false end
-    if body.family ~= "male" and body.family ~= "female" then return false end
-    local count = #body.groups
-    if count == 0 or count > 64 then return false end
+local function validBodyGroups(groups, variants)
+    if type(groups) ~= "table" then return false end
+    local count = #groups
+    if (not variants and count == 0) or count > (variants and 8 or 64) then return false end
     local seen = {}
-    for index, group in pairs(body.groups) do
+    local groupEntries = 0
+    for index, group in pairs(groups) do
+        groupEntries = groupEntries + 1
         if not isInteger(index) or index < 1 or index > count or type(group) ~= "table" then return false end
         if group.part ~= "head" and group.part ~= "body" and group.part ~= "arms" then return false end
+        if variants and group.part ~= "arms" then return false end
         if not fixedHash(group.name, false) or type(group.keys) ~= "table" then return false end
         local id = group.part .. ":" .. string.lower(group.name)
         if seen[id] then return false end
         seen[id] = true
         local keys = #group.keys
-        if keys == 0 or keys > 64 then return false end
+        if keys > 64 then return false end
+        local morphs = group.morphs
+        if morphs ~= nil and type(morphs) ~= "table" then return false end
+        local morphCount = morphs and #morphs or 0
+        if morphCount > 64 or (keys == 0 and morphCount == 0) then return false end
+        if variants and (keys == 0 or keys > 8 or morphCount ~= 0) then return false end
+        local entries = 0
+        for morphIndex, morph in pairs(morphs or {}) do
+            entries = entries + 1
+            if not isInteger(morphIndex) or morphIndex < 1 or morphIndex > morphCount
+                or type(morph) ~= "table" or #morph ~= 2
+                or not fixedHash(morph[1], false) or not fixedHash(morph[2], false) then return false end
+        end
+        if entries ~= morphCount then return false end
+        local keyEntries = 0
         for keyIndex, key in pairs(group.keys) do
+            keyEntries = keyEntries + 1
             if not isInteger(keyIndex) or keyIndex < 1 or keyIndex > keys or type(key) ~= "table"
                 or not fixedHash(key[1], false) or not fixedHash(key[2], false) or #key ~= 2 then return false end
         end
+        if keyEntries ~= keys then return false end
     end
+    return groupEntries == count
+end
+
+local function validBody(body)
+    if type(body) ~= "table" or (body.family ~= "male" and body.family ~= "female") then return false end
+    if not validBodyGroups(body.groups, false) then return false end
+    if body.armVariants ~= nil and not validBodyGroups(body.armVariants, true) then return false end
     local encoded = json.encode(body)
     return type(encoded) == "string" and #encoded <= 49152
 end
@@ -581,6 +606,22 @@ end
 -- A player's body is in the world from its publication until the player leaves
 -- the world to reload it; while absent, observers hold no proxy of it.
 local absent = {}
+
+-- Report publication readiness without exposing customization or identity data.
+-- Useful when a native roster entry exists but its proxy cannot yet be created.
+RegisterCommand("appearance.status", function(player, _, raw)
+    player = tonumber(player)
+    if not player or player <= 0 then return end
+    local rows = {}
+    for _, peer in ipairs(Open77.players.inScope(player)) do
+        rows[#rows + 1] = ("player=%s body=%s absent=%s presentation=%s family=%s")
+            :format(tostring(peer), tostring(bodies[peer] ~= nil), tostring(absent[peer] == true),
+                tostring(Presentation.records[peer] ~= nil), tostring(sessionBodyFamily[peer] or "pending"))
+    end
+    local message = table.concat(rows, " ; ")
+    print("[open77_appearance] status viewer=" .. tostring(player) .. " " .. message)
+    commandResult(player, raw, true, message)
+end, false)
 
 RegisterNetEvent("open77:appearance:body", function(body, characterKey, revision, logical, sequence)
     local player = tonumber(source)
@@ -692,7 +733,9 @@ RegisterNetEvent("open77:appearance:bodyFamilyRejected", function(target)
         pendingBodyFamily[player] = nil
         if absent[player] and bodies[player] then
             absent[player] = nil
-            TriggerClientEvent("open77:appearance:body", -1, player, bodies[player])
+            -- Observers only, as every other body publication: a broadcast reached clients that do not
+            -- hold this player (other bucket, out of player scope) and made them a nameless record.
+            Presentation.sendToObservers("open77:appearance:body", player, bodies[player])
         end
     end
 end)

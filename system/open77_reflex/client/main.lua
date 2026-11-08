@@ -241,8 +241,10 @@ local function step(p)
     bindKey(p.config.inputKey)
     local s=body()
     if not s or s.engineId~=p.body then clear();return end
-    local state=Open77.reflex.state()
     if active then
+        -- Read only while a boost is held: it is the one branch that uses it,
+        -- and the read is a lock and a fifteen-field table per frame.
+        local state=Open77.reflex.state()
         -- The primitive released on its own -- deadline, death, vehicle,
         -- workspot, session change -- so the server hears about it once.
         if not state or state.active~=true or state.request~=active.request then

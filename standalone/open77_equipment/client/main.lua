@@ -150,6 +150,12 @@ print("equipment client ready")
 CreateThread(function()
     while true do
         Wait(1000)
+        -- Native policy is resource-owned and automatically released on stop.
+        -- Reassert after death/body/session resets, which clear native leases.
+        if playable() and type(Open77.players.allowEncumbrance) == "function" then
+            local native = type(Open77EquipmentConfig) == "table" and Open77EquipmentConfig.nativeEncumbrance == true
+            Open77.players.allowEncumbrance(native)
+        end
         local bootstrap = Open77.session.characterBootstrap()
         if type(bootstrap) == "table" and bootstrap.phase == "ready" and bootstrap.playerReset == "complete" then
             if record == nil then TriggerServerEvent("open77:presentation:request")

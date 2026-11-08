@@ -61,6 +61,12 @@ const assert = require('node:assert/strict');
     assert.equal(await page.locator('.keybind--capture').count(), 1, 'capture survives asynchronous refresh');
     await page.keyboard.press('a');
     assert.equal((await sets()).at(-1).v.value, 'A');
+    // the keypad's + and digits are keys of their own, not the main row's
+    for (const [press, name] of [['NumpadAdd', 'NUMPADPLUS'], ['NumpadSubtract', 'NUMPADMINUS'], ['Numpad7', 'NUMPAD7']]) {
+      await binding.click();
+      await page.keyboard.press(press);
+      assert.equal((await sets()).at(-1).v.value, name, press);
+    }
     await binding.click();
     const beforeCancel = (await sets()).length;
     await page.keyboard.press('Escape');

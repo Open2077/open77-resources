@@ -23,6 +23,15 @@ CyberwareLab = {
     },
 }
 
+-- Cyberpunk 2.5 Glamdoc variants. Same training stats; only the arm appearance changes.
+for _, style in ipairs({"aldecaldos", "barghest", "jinguji", "militech", "mox", "tsunami",
+    "tyger_claws", "voodoo_boys", "wraiths", "kang_tao"}) do
+    CyberwareLab.definition.grades[#CyberwareLab.definition.grades + 1] = {
+        id=style, normalDamage=15, chargedDamage=35, knockbackMeters=3.5,
+        cooldownMs=800, chargeMs=650, nonlethal=true, cosmetic=false, armStyle=style,
+    }
+end
+
 -- Optional Dash session grants; no implant replacement or automatic installation.
 CyberwareLab.dash = {
     inputKey="ctrl", presentation="native", allowedBuckets=nil,

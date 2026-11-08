@@ -1,0 +1,20 @@
+OPEN//77 connection-screen assets — retrieved 2026-10-14
+
+Source: the project's current website, https://open2077.net/
+Reference: the website and launcher screenshots supplied for this redesign.
+All assets are packaged locally. These URLs are provenance, never runtime dependencies.
+
+night-city.webp: https://open2077.net/home/videos/hero.webp
+grain.png: https://open2077.net/home/img/grain.png
+wordmark.svg: first data-logo-header SVG in the site's HTML. Its inherited
+currentColor and --active-color fills are made explicit (#ffffff / #fcee0a)
+so the same logo renders correctly as an independent offline image.
+
+DrukTextWide-MediumItalic.woff2:
+https://open2077.net/_next/static/immutable/media/DrukTextWide_MediumItalic_Trial-s.p.2nl0z_j3gimv_.woff2
+Nippo-Variable.woff2:
+https://open2077.net/_next/static/immutable/media/Nippo_Variable-s.p.1pddjyfoh4jki.woff2
+Satoshi-Variable.woff2:
+https://open2077.net/_next/static/immutable/media/Satoshi_Variable-s.p.1q7euddqujsio.woff2
+
+The existing lobby audio is retained unchanged; see the resource README and research record.

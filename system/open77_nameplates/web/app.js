@@ -30,7 +30,9 @@
       node.style.left = `${x * 100}%`;
       node.style.top = `${y * 100}%`;
       node.style.setProperty("--plate-color", safeColor(player.color));
-      node.style.setProperty("--plate-opacity", String(Math.max(.42, 1 - distance / 80)));
+      // `alpha` is the native appear / occlusion fade (absent on older clients).
+      const alpha = typeof player.alpha === "number" ? Math.max(0, Math.min(1, player.alpha)) : 1;
+      node.style.setProperty("--plate-opacity", String(Math.max(.42, 1 - distance / 80) * alpha));
       node.classList.toggle("nameplate--talking", player.talking === true);
       node.querySelector(".nameplate-name").textContent =
         String(player.label || "Player").slice(0, 96);

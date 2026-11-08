@@ -37,6 +37,14 @@ exports("isPlayerExitLocked", function(playerId)
     if playerId == nil then return Open77.vehicles.isPlayerExitLocked() end
     return Open77.vehicles.isPlayerExitLocked(tonumber(playerId))
 end)
+-- Phase 2 vehicle customization: the server-published `open77.visual` value
+-- and what the vehicle's record supports. Read-only; the server decides.
+if type(Open77.vehicles.getVisual) == "function" then
+    exports("getVisual", function(id) return Open77.vehicles.getVisual(tonumber(id)) end)
+    exports("customizationAvailable", function(id)
+        return Open77.vehicles.customizationAvailable(tonumber(id))
+    end)
+end
 
 -- Read-only live probe used to diagnose replication without exposing any
 -- client-side vehicle mutation. Invoke with:

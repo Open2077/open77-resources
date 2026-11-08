@@ -130,10 +130,10 @@ end
 --
 -- The scanner rations the cop a stale fix; the nameplate handed him a live one.
 -- `open77_nameplates` draws a plate over every attached remote player within
--- 35 m (`maximumDistance`, client/src/api/Nameplates.hpp) every frame, and its
--- draw path culls on depth and viewport only -- there is no occlusion test, so
--- the plate renders through walls. 35 m is inside the 45 m pressure band, which
--- means the leak was widest exactly where the chase is decided.
+-- 35 m (`maximumDistance`, client/src/api/Nameplates.hpp) every frame. Clients
+-- built before the line-of-sight test drew it through walls; current ones hide
+-- it behind cover, but a plate in view still marks the opponent from afar. 35 m
+-- is inside the 45 m pressure band, exactly where the chase is decided.
 --
 -- `setEnabled(false)` and not `set(opponentId, {visible=false})`, for a plain
 -- reason: this client is never told the opponent's player id. `matchState`

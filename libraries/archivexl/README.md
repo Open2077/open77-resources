@@ -5,14 +5,14 @@ Installs the ArchiveXL loader in your players' games, so your world resources ca
 - **Docs:** [Mods your server requires](https://open2077.net/docs/server-mods), [Mods: the complete guide](https://open2077.net/docs/mods)
 - **Starts:** on its own
 - **Needs:** nothing
-- **Runs on:** server
+- **Runs on:** server and an inert client dependency marker
 
 ## Use it
 
 In the resource whose assets need ArchiveXL, declare the dependency:
 
 ```lua
-dependency "archivexl >=1.27.1"
+dependency "archivexl >=1.28.6"
 ```
 
 Add `archivexl` to `resources.load` next to that resource, keep
@@ -27,13 +27,18 @@ badge your server as unsecured and players confirm the risk before joining. On a
 secured server, exclude it from a wildcard selection with `"!archivexl"`.
 
 The server script only prints a line at start; the loader itself runs in the
-player's game. To update it, replace the zip in `dist/` and bump the manifest
+player's game.
+The client marker publishes the loader's name/version in the runtime dependency
+graph, so client-bearing maps can depend on it. It does not load or attest the
+native plugin.
+
+To update it, replace the zip in `dist/` and bump the manifest
 `version` together, because dependents pin against the manifest version. A new
 package needs a server restart and a fresh launcher boot of the game.
 
 ## Credit and licence
 
-`dist/ArchiveXL-1.27.1.zip` is the official ArchiveXL 1.27.1 release, untouched.
+`dist/ArchiveXL-1.28.6.zip` is the official ArchiveXL 1.28.6 release, untouched.
 ArchiveXL is made by Pavel Siberx (psiberx) and is MIT-licensed upstream:
 https://github.com/psiberx/cp2077-archive-xl. Its `LICENSE` and
 `THIRD_PARTY_LICENSES` files ship inside the zip, under `red4ext/plugins/ArchiveXL/`.

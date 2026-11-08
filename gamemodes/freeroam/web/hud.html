@@ -34,25 +34,28 @@
       </div>
     </section>
 
-    <section class="weapon-hud hud-panel" id="weapon-hud" aria-label="Active weapon">
+    <div class="weapons-hud" id="weapons-hud" aria-label="Active weapons"></div>
+    <template id="weapon-template">
+    <section class="weapon-hud hud-panel" aria-label="Active weapon">
       <div class="hud-panel-head">
-        <span class="slot ds-data" id="weapon-slot">1</span>
+        <span class="slot ds-data" data-field="weapon-slot">1</span>
         <div class="weapon-identity">
-          <strong id="weapon-name">WEAPON</strong>
-          <span class="ds-label" id="weapon-type">LOADOUT</span>
+          <strong data-field="weapon-name">WEAPON</strong>
+          <span class="ds-label"><span class="weapon-hand" data-field="weapon-hand"></span><span data-field="weapon-type">LOADOUT</span></span>
         </div>
-        <span class="weapon-state ds-label" id="weapon-state">HOLSTERED</span>
+        <span class="weapon-state ds-label" data-field="weapon-state">HOLSTERED</span>
       </div>
-      <div class="weapon-ammo" id="weapon-ammo">
-        <div class="magazine-strip" id="magazine-strip" aria-hidden="true"></div>
+      <div class="weapon-ammo">
+        <div class="magazine-strip" data-field="magazine-strip" aria-hidden="true"></div>
         <div class="ammo-values">
-          <strong id="ammo-magazine">--</strong>
-          <span class="ds-data">/ <span id="ammo-reserve">--</span></span>
+          <strong data-field="ammo-magazine">--</strong>
+          <span class="ds-data">/ <span data-field="ammo-reserve">--</span></span>
         </div>
       </div>
-      <div class="weapon-melee ds-label" id="weapon-melee">MELEE · NO AMMO POOL</div>
-      <span class="reload-label ds-label" id="reload-label">RELOAD</span>
+      <div class="weapon-melee ds-label">MELEE · NO AMMO POOL</div>
+      <span class="reload-label ds-label">RELOAD</span>
     </section>
+    </template>
 
   </main>
 

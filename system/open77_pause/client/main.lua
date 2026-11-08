@@ -307,6 +307,54 @@ end)
 AddEventHandler("open77:map:opened", function() mapRequest = nil end)
 
 -- ---------------------------------------------------------------------------
+-- City map providers
+--
+-- CITY MAP opens the game's map unless a resource provides its own (a 3D map, a
+-- tablet...). The contract is four client events, so any resource can take part:
+--
+--   TriggerEvent("open77:mapProvider:register", { resource = GetCurrentResourceName(),
+--       label = "City map (3D)", priority = 100 })   -- at start, and on ...:query
+--   AddEventHandler("open77:mapProvider:show", function(request)
+--       if request.provider ~= GetCurrentResourceName() then return end
+--       openMyMap()
+--       TriggerEvent("open77:mapProvider:shown", { requestId = request.requestId })
+--   end)
+--   TriggerEvent("open77:mapProvider:withdraw", { resource = GetCurrentResourceName() })
+--
+-- The highest priority wins (the latest on a tie). A stopping resource is withdrawn.
+-- A provider that does not answer within 1.5 s gets the game's map instead.
+local mapProviders, mapProviderOrder, mapProviderRequests = {}, 0, 0
+local pendingProvider
+
+local function currentMapProvider()
+    local best
+    for _, p in pairs(mapProviders) do
+        if not best or p.priority > best.priority or (p.priority == best.priority and p.order > best.order) then best = p end
+    end
+    return best
+end
+
+AddEventHandler("open77:mapProvider:register", function(p)
+    if type(p) ~= "table" or type(p.resource) ~= "string" or p.resource == "" then return end
+    mapProviderOrder = mapProviderOrder + 1
+    mapProviders[p.resource] = {
+        resource = p.resource, priority = tonumber(p.priority) or 0, order = mapProviderOrder,
+        label = type(p.label) == "string" and p.label or p.resource,
+    }
+end)
+AddEventHandler("open77:mapProvider:withdraw", function(p)
+    local resource = type(p) == "table" and p.resource or p
+    if type(resource) == "string" then mapProviders[resource] = nil end
+end)
+AddEventHandler("open77:mapProvider:shown", function(p)
+    if pendingProvider and type(p) == "table" and p.requestId == pendingProvider then pendingProvider = nil end
+end)
+exports("mapProvider", function()
+    local p = currentMapProvider()
+    return p and { resource = p.resource, label = p.label, priority = p.priority } or nil
+end)
+
+-- ---------------------------------------------------------------------------
 -- Settings
 --
 -- Reading is a two-step because the script bridge is asynchronous and polls
@@ -336,11 +384,13 @@ local function normalizePushToTalkKey(value)
     if key:match("^MOUSE[1-5]$") then return key end
     local functionNumber = tonumber(key:match("^F(%d%d?)$"))
     if functionNumber and functionNumber >= 1 and functionNumber <= 12 then return key end
+    if key:match("^NUMPAD[0-9]$") then return key end
     local supported = {
         SPACE = true, ENTER = true, RETURN = true, TAB = true, SHIFT = true, CTRL = true,
         CONTROL = true, ALT = true, CAPSLOCK = true, BACKSPACE = true, INSERT = true,
         DELETE = true, HOME = true, END = true, PAGEUP = true,
         PAGEDOWN = true, UP = true, DOWN = true, LEFT = true, RIGHT = true,
+        NUMPADPLUS = true, NUMPADMINUS = true, NUMPADMULTIPLY = true, NUMPADDIVIDE = true, NUMPADDECIMAL = true,
     }
     if supported[key] then return key end
     return nil, "unsupported_push_to_talk_key"
@@ -517,7 +567,30 @@ local function setVoiceSetting(payload)
         voiceFeedback(false,
             fmt(S.voice.failed, { reason = tostring(reason or "unknown_error") }))
     end
+    return ok==true, reason
 end
+
+Open77VoiceSetup.install({
+    key=function() return voicePushToTalkKey end,
+    persist=persistVoicePreference,
+    devices=function()
+        local s=Open77.voice.status() or {}
+        enumeratedVoiceDevices("input",s.inputDevice)
+        enumeratedVoiceDevices("output",s.outputDevice)
+        return {input=voiceDevices.input,output=voiceDevices.output}
+    end,
+    set=function(name,value)
+        if name=="InputDevice" or name=="OutputDevice" then
+            local flow=name=="InputDevice" and "input" or "output"
+            enumeratedVoiceDevices(flow,value)
+            local found
+            for i,device in ipairs(voiceDevices[flow]) do if device.id==value then found=i-1; break end end
+            if found==nil then return false,"Device unavailable. Refresh the device list." end
+            value=found
+        end
+        return setVoiceSetting({name=name,value=value})
+    end,
+})
 
 local function resetVoiceRestore(endpoint)
     voiceRestore.endpoint = tostring(endpoint or "")
@@ -744,6 +817,19 @@ end
 -- nothing at all -- so zero is accepted too, but only after 600 ms. That is
 -- three bridge ticks: the command waits up to one tick to be taken and answers
 -- within the next, so two would be the floor and this leaves a tick of margin.
+-- Lines of another group can still be arriving when this request clears the
+-- buffer (the bridge delivers a listing over several ticks): a variable of the
+-- previous group would then sit under this one's heading, and writing it back
+-- with this group's path asserts the engine (c21c8951, UseXAudio under
+-- /graphics/raytracing). Every line now carries its group; keep this path's.
+local function ownGroup(values, path)
+    local kept = {}
+    for _, entry in ipairs(values) do
+        if entry.group == nil or entry.group == path then kept[#kept + 1] = entry end
+    end
+    return kept
+end
+
 local function readGroup(path)
     local ok, err = Open77.settings.request(path)
     if not ok then return nil, err end
@@ -751,14 +837,14 @@ local function readGroup(path)
     local previous = -1
     for attempt = 1, 18 do
         Wait(60)
-        local values = Open77.settings.values() or {}
+        local values = ownGroup(Open77.settings.values() or {}, path)
         local count = #values
         if count == previous and (count > 0 or attempt >= 10) then
             return values
         end
         previous = count
     end
-    return Open77.settings.values() or {}
+    return ownGroup(Open77.settings.values() or {}, path)
 end
 
 -- Folds each `meta` row into the variable it describes.
@@ -846,10 +932,17 @@ local function pushSettings(tab)
         end
 
         local sections = {}
+        if tab.id == "audio" and PauseWebAudio then
+            local section = PauseWebAudio.section()
+            if section then
+                sections[#sections + 1] = section
+                menu:send("settings:values", { tab = tab.id, sections = sections, done = false })
+            end
+        end
         local total = #tab.groups
         if total == 0 then
             if menu and generation == settingsGeneration then
-                menu:send("settings:values", { tab = tab.id, sections = {}, done = true })
+                menu:send("settings:values", { tab = tab.id, sections = sections, done = true })
             end
             return
         end
@@ -885,6 +978,12 @@ end
 AddEventHandler("onClientResourceStart", function(name)
     if name ~= GetCurrentResourceName() then return end
     startVoiceRestoreLoop()
+    if PauseWebAudio then
+        local restored, reason = PauseWebAudio.restore()
+        if not restored then print("Open77 pause: WebUI volume restore failed: " .. tostring(reason)) end
+    end
+    -- providers that started before this menu announce themselves again
+    TriggerEvent("open77:mapProvider:query")
 
     local errorMessage
     -- Create once, then suspend the closed menu after its transition. The host
@@ -959,6 +1058,15 @@ AddEventHandler("onClientResourceStart", function(name)
 
     menu:on("settings:set", function(payload)
         if not payload or not payload.name or not payload.group then return end
+        if payload.group == "webui_audio" then
+            local ok, reason = PauseWebAudio.set(payload)
+            if not ok then
+                print("Open77 pause: WebUI volume change failed: " .. tostring(reason))
+                pushSettings(tabByName("audio"))
+                menu:send("settings:feedback", { tab = "audio", ok = false, message = S.webAudio.failed })
+            end
+            return
+        end
         if payload.group == "voice" then
             setVoiceSetting(payload)
             return
@@ -1008,12 +1116,29 @@ AddEventHandler("onClientResourceStart", function(name)
         local action = payload and payload.action or ""
         if action == "map" then
             setOpen(false, true)
-            local ticket, reason = Open77.map.open()
-            if not ticket then
-                print("Open77 map: " .. tostring(reason))
-                setOpen(true, false, fmt(S.mapUnavailable, {reason=reason or "map_unavailable"}))
+            local function nativeMap()
+                local ticket, reason = Open77.map.open()
+                if not ticket then
+                    print("Open77 map: " .. tostring(reason))
+                    setOpen(true, false, fmt(S.mapUnavailable, {reason=reason or "map_unavailable"}))
+                else
+                    mapRequest = {id=ticket, generation=menuGeneration}
+                end
+            end
+            local provider = currentMapProvider()
+            if provider then
+                mapProviderRequests = mapProviderRequests + 1
+                local requestId = "map:" .. mapProviderRequests
+                pendingProvider = requestId
+                TriggerEvent("open77:mapProvider:show", {provider=provider.resource, requestId=requestId})
+                SetTimeout(1500, function()
+                    if pendingProvider ~= requestId then return end
+                    pendingProvider = nil
+                    print("Open77 map: " .. provider.resource .. " did not open its map; the game's map instead.")
+                    nativeMap()
+                end)
             else
-                mapRequest = {id=ticket, generation=menuGeneration}
+                nativeMap()
             end
         elseif action == "quit-session" then
             -- The native session lifecycle owns the rest: the phase leaves
@@ -1037,6 +1162,7 @@ end)
 -- Hands escape back to the game when this resource stops, so a reload or a
 -- crash never leaves the player without any menu at all.
 AddEventHandler("onClientResourceStop", function(name)
+    mapProviders[name] = nil
     if name ~= GetCurrentResourceName() then return end
     voiceRestoreRunning = false
     Open77.voice.setMicrophoneTest(false)

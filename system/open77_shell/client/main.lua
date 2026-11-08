@@ -3,14 +3,14 @@ local MASTERS = {
         id = "alpha",
         name = "Alpha",
         description = "Open77 public Alpha directory",
-        catalog = "https://master.open2077.net/api/v1/servers?page=1&pageSize=100&gameBuild=23100&protocolMajor=1",
+        catalog = "https://master.open2077.net/api/v1/servers?page=1&pageSize=100&gameBuild=25000&protocolMajor=1",
         localMaster = false
     },
     development = {
         id = "development",
         name = "Development",
         description = "Local development Master",
-        catalog = "http://127.0.0.1:8090/api/v1/servers?page=1&pageSize=100&gameBuild=23100&protocolMajor=1",
+        catalog = "http://127.0.0.1:8090/api/v1/servers?page=1&pageSize=100&gameBuild=25000&protocolMajor=1",
         localMaster = true
     }
 }
@@ -130,6 +130,13 @@ local loadingTransitionActive = false
 local loadingHandoffDone = false
 local hideRequestGeneration = 0
 local lastBootstrapPhase = ""
+-- The first-placement hold (see `beginPlacementHold` near the end of the file).
+-- Declared up here because the loading-progress, show and session-ended
+-- handlers above that function all have to know whether it is running.
+local placementHold = nil
+local placementGeneration = 0
+local appearanceOpen = false
+local appearanceChangedAt = nil
 
 -- The handful of terminal reasons a player can meet while the creator is open.
 -- Anything not listed falls back to the generic sentence; the raw token is never
@@ -695,6 +702,11 @@ end)
 -- page applies it only while the loading view is up and ignores it otherwise.
 AddEventHandler("open77:loading:progress", function(progress)
     local value = tonumber(progress) or 0
+    -- The world load is over once the first-placement hold runs. A native load
+    -- seen now is the server's spawn teleport streaming its destination, under
+    -- the same cover: restarting the bar at 0 would draw the second load this
+    -- hold exists to hide.
+    if placementHold then return end
     send("world:loading", { progress = value })
     -- Feed the same real fill to a mounted server loadscreen, and stop its own
     -- estimate the moment the engine's true value takes over.
@@ -745,7 +757,17 @@ AddEventHandler("open77:shell:show", function()
     -- Re-checked on a delay so a benign ordering between the world attaching and
     -- `open77:worldReady` arriving cannot be mistaken for a failure: a real
     -- handoff clears `loadingTransitionActive` well inside this window.
-    if loadingTransitionActive then
+    --
+    -- Not during the first-placement hold: that world DID load and its player
+    -- bootstrap completed, so "pristine_load_failed" would be a false diagnosis.
+    -- A remount there means the pre-game menu is back; the hold simply ends.
+    if placementHold then
+        placementHold = nil
+        placementGeneration = placementGeneration + 1
+        loadingHandoffDone = true
+        loadingTransitionActive = false
+        transitionLog("first-placement hold ended by a shell remount")
+    elseif loadingTransitionActive then
         SetTimeout(3000, function()
             abandonWorldHandoff("pristine_load_failed", "shell remounted with a load still in flight")
         end)
@@ -773,6 +795,8 @@ abandonWorldHandoff = function(reason, detail)
     if not loadingTransitionActive then return end
     if not shell then return end
     loadingTransitionActive = false
+    placementHold = nil
+    placementGeneration = placementGeneration + 1
     worldHandoffGeneration = worldHandoffGeneration + 1
     connecting = false
     loadingSince = nil
@@ -909,6 +933,16 @@ AddEventHandler("open77:shell:hide", function()
     if not shell then return end
     hideRequestGeneration = hideRequestGeneration + 1
     local generation = hideRequestGeneration
+    -- Leaving the pre-game menu emits a native hide before the world streams.
+    -- Keep the default cover up just like a server-provided loadscreen; only
+    -- the loading handoff below may dismiss an accepted pristine transition.
+    if loadingTransitionActive and not loadingHandoffDone then
+        transitionLog("native hide deferred until loading handoff generation=%d", generation)
+        shellVisible = true
+        shell:setFocus(false, false)
+        shell:show()
+        return
+    end
     local elapsed = loadingSince and (Open77.time.monotonic() - loadingSince)
         or MINIMUM_LOADING_SECONDS
     local remainingSeconds = MINIMUM_LOADING_SECONDS - elapsed
@@ -931,27 +965,22 @@ AddEventHandler("open77:shell:hide", function()
     hideShell("native_hide", generation)
 end)
 
--- Lifts the loading cover once the world is GENUINELY ready, and exactly once
--- per handoff. worldReady is not that moment (see the handler below): the cover
--- has to outlast the whole vanilla loading screen, which keeps rendering for the
--- entire stream. Whichever real-ready signal lands first calls this -- the
--- loading bar completing, or the pristine bootstrap completing -- and the
--- fallback timeout backstops both.
+-- Lifts the loading cover, exactly once per handoff.
 --
 -- A REDengine world stream can recreate the CEF render target after the first
 -- hide, leaving Chromium showing the last cover frame over a live world; the
 -- second, ungated hide repairs that. Both calls are idempotent and scoped to an
 -- accepted pristine transition, so an ordinary pre-game world attach cannot
 -- dismiss the connection screen.
-finishLoadingHandoff = function(reason)
-    if not loadingTransitionActive or loadingHandoffDone then return end
-    if not shell then return end
+local function releaseLoadingCover(reason)
+    if loadingHandoffDone or not shell then return end
     loadingHandoffDone = true
+    placementHold = nil
+    placementGeneration = placementGeneration + 1
     worldHandoffGeneration = worldHandoffGeneration + 1
     hideRequestGeneration = hideRequestGeneration + 1
     local generation = hideRequestGeneration
-    transitionLog("loading handoff complete reason=%s generation=%d",
-        tostring(reason), generation)
+    transitionLog("loading cover released reason=%s generation=%d", tostring(reason), generation)
     shell:setFocus(false, false)
     -- Land the bar full before it goes, so the load reads as completed rather
     -- than cut off wherever the estimate happened to be.
@@ -974,6 +1003,184 @@ finishLoadingHandoff = function(reason)
     end)
 end
 
+-- ── first placement ────────────────────────────────────────────────────────
+-- The world being loaded is not the player being where the server wants them.
+--
+-- The pristine save starts the player wherever that save was made -- the male
+-- template in the Badlands (2566, 113), the female one north of the city
+-- (-1384, 1271) -- and the server only learns it may act on the player after
+-- the client announces `open77:session:gameplayReady`, which open77_appearance
+-- sends once the stored appearance is back on the body. Nearly every shipped
+-- gamemode then moves the player through the life pipeline (kill + respawn;
+-- freeroam, pursuit, cordon, deathmatch, playerstate, Light RP), and a respawn
+-- kilometres away opens a native loading screen of its own.
+--
+-- The cover used to drop on the bootstrap edge alone. Measured on 2026-11-03
+-- (Light RP, four joins in one client log, all alike): cover released at
+-- bootstrap +0.3 s; the server announced the player incarnated and placed them
+-- at bootstrap +2.9 s; the placement was acked at bootstrap +4.4 s. For those
+-- four seconds the player stood in the Badlands, then a second loading screen
+-- streamed the real spawn. That is the bug this hold closes.
+--
+-- So after the bootstrap the cover stays up until one of:
+--   * the local player's first placement has landed -- a respawn/revive that
+--     went pending and came back `recovering`/`alive`, or a native loading
+--     cycle that started after the bootstrap (a far teleport) and ended --
+--     with nothing still in flight, for a short settle;
+--   * no placement started at all within the quiet window: a server that does
+--     not place on join (or places so late it is its own transition) waits a
+--     few seconds more, never indefinitely;
+--   * the cap, whatever is still pending: the cover must never strand anyone.
+-- The 150 s world watchdog and the 30 s world fallback are untouched; this
+-- hold starts only after the world handoff has genuinely completed.
+local PLACEMENT_QUIET_SECONDS = 8.0
+local PLACEMENT_AFTER_APPEARANCE_SECONDS = 4.0
+local PLACEMENT_SETTLE_SECONDS = 0.6
+local PLACEMENT_CAP_SECONDS = 25.0
+local PLACEMENT_IN_FLIGHT = { respawn_pending = true, revive_pending = true }
+
+local function localPlayerId()
+    local status = Open77.network.status and Open77.network.status() or nil
+    local id = status and tonumber(status.playerId) or 0
+    return id > 0 and tostring(math.floor(id)) or nil
+end
+
+-- The process-wide native loading cycle (`screen.read`). An older client
+-- without the observer reads as "not loading", which only removes the far
+-- teleport signal; the life-state signal does not depend on it.
+local function nativeLoading()
+    if not (Open77.screen and Open77.screen.loadingState) then return false, nil end
+    local ok, state = pcall(Open77.screen.loadingState)
+    if not ok or type(state) ~= "table" then return false, nil end
+    return state.active == true, state.id
+end
+
+-- One verdict per tick; nil keeps holding. Pure reads plus bookkeeping on the
+-- hold record, so the order of the signals cannot matter.
+local function evaluatePlacementHold(hold, now)
+    if now - hold.since >= PLACEMENT_CAP_SECONDS then return "placement_timeout" end
+    if hold.awaitingReset then return nil end
+    local loading, loadingId = nativeLoading()
+    if loading and loadingId ~= hold.initialLoadingId then hold.placementLoadingSeen = true end
+    local busy = loading or appearanceOpen or PLACEMENT_IN_FLIGHT[hold.phase] == true
+    if busy then
+        hold.lastBusyAt = now
+        return nil
+    end
+    -- A far teleport by `Open77.players.teleport` has no life transition, only
+    -- its loading cycle: once that cycle is over, it has landed.
+    if hold.placementLoadingSeen and not hold.landedAt then hold.landedAt = now end
+    local quietSince = math.max(hold.landedAt or hold.since, hold.lastBusyAt or hold.since)
+    if hold.landedAt then
+        if now - quietSince >= PLACEMENT_SETTLE_SECONDS then return "first_placement" end
+        return nil
+    end
+    if hold.started then return nil end -- went pending, not back yet: wait (cap applies)
+    local deadline = math.max(
+        hold.since + PLACEMENT_QUIET_SECONDS,
+        (appearanceChangedAt or hold.since) + PLACEMENT_AFTER_APPEARANCE_SECONDS,
+        quietSince + PLACEMENT_SETTLE_SECONDS)
+    if now >= deadline then return "no_placement" end
+    return nil
+end
+
+local function beginPlacementHold(reason)
+    placementGeneration = placementGeneration + 1
+    local generation = placementGeneration
+    -- A mirror left open by an earlier session must not hold this one: the
+    -- restore that matters starts after this bootstrap.
+    appearanceOpen = false
+    local _, loadingId = nativeLoading()
+    placementHold = {
+        generation = generation,
+        since = Open77.time.monotonic(),
+        playerId = localPlayerId(),
+        initialLoadingId = loadingId,
+        phase = nil,
+        started = false,
+        landedAt = nil,
+        lastBusyAt = nil,
+        placementLoadingSeen = false,
+        awaitingReset = false
+    }
+    transitionLog("first-placement hold begin after=%s player=%s quiet=%.1fs cap=%.1fs",
+        tostring(reason), tostring(placementHold.playerId),
+        PLACEMENT_QUIET_SECONDS, PLACEMENT_CAP_SECONDS)
+    -- Still loading, as far as the player can tell: a moving bar, not a frozen
+    -- full one, and no second bar restarting from zero.
+    send("connection:update", { phase = "world", detail = "Entering the server" })
+    CreateThread(function()
+        while placementHold and placementHold.generation == generation do
+            local verdict = evaluatePlacementHold(placementHold, Open77.time.monotonic())
+            if verdict then
+                releaseLoadingCover(verdict)
+                return
+            end
+            Wait(100)
+        end
+    end)
+end
+
+-- Called by whichever real-ready signal lands first: the loading bar
+-- completing, the pristine bootstrap completing, or the world fallback. The
+-- first two end the WORLD load and start the first-placement hold; the
+-- fallback means the bootstrap never completed and keeps its old meaning (lift
+-- the cover now rather than strand the player behind it).
+finishLoadingHandoff = function(reason)
+    if not loadingTransitionActive or loadingHandoffDone or placementHold then return end
+    if not shell then return end
+    worldHandoffGeneration = worldHandoffGeneration + 1
+    -- Unchanged on purpose: the test harnesses and the open77-testing skill
+    -- read this line (with reason=player_bootstrap_complete) as "joined".
+    transitionLog("loading handoff complete reason=%s generation=%d",
+        tostring(reason), hideRequestGeneration)
+    shell:setFocus(false, false)
+    if reason == "fallback_timeout" then
+        releaseLoadingCover(reason)
+        return
+    end
+    beginPlacementHold(reason)
+end
+
+-- Only the local player's own transitions matter here; every other player's
+-- life events reach this host too.
+AddEventHandler("open77:playerLifeStateChanged", function(player, phase, revision)
+    local hold = placementHold
+    if not hold then return end
+    hold.playerId = hold.playerId or localPlayerId()
+    if hold.playerId == nil or tostring(player) ~= hold.playerId then return end
+    phase = tostring(phase or "")
+    hold.phase = phase
+    if PLACEMENT_IN_FLIGHT[phase] then
+        -- A second placement before the cover lifted (arrival, then a guided
+        -- move): wait for that one too.
+        hold.landedAt = nil
+        if not hold.started then
+            hold.started = true
+            transitionLog("first placement started phase=%s revision=%s", phase, tostring(revision))
+        end
+    elseif hold.started and not hold.landedAt and (phase == "recovering" or phase == "alive") then
+        hold.landedAt = Open77.time.monotonic()
+        transitionLog("first placement landed phase=%s revision=%s", phase, tostring(revision))
+    end
+end)
+
+-- The stored appearance is restored through the native mirror after the
+-- bootstrap, and gameplay readiness -- the server's licence to place the
+-- player -- is only announced once it is done. Holding while it runs keeps the
+-- quiet window from expiring under a slow restore, and keeps the body swap
+-- itself under the cover.
+AddEventHandler("open77:appearance:opened", function()
+    appearanceOpen = true
+    appearanceChangedAt = Open77.time.monotonic()
+end)
+for _, closing in ipairs({ "confirmed", "cancelled", "restore_failed" }) do
+    AddEventHandler("open77:appearance:" .. closing, function()
+        appearanceOpen = false
+        appearanceChangedAt = Open77.time.monotonic()
+    end)
+end
+
 -- worldReady is the RuntimeScene attach -- ~0.1s into the load, while the vanilla
 -- loading screen still has the whole stream to render (measured 2026-08-29:
 -- worldReady at +0.1s, gameplay puppet at +10s). Lifting the cover here exposed
@@ -983,6 +1190,21 @@ end
 AddEventHandler("open77:worldReady", function()
     if not loadingTransitionActive then
         transitionLog("worldReady observed without an active pristine transition")
+        return
+    end
+    if placementHold then
+        -- The world reattached under the hold (a body-family reload): its
+        -- bootstrap and its loading cycle are not a placement. Start over.
+        local _, loadingId = nativeLoading()
+        placementHold.since = Open77.time.monotonic()
+        placementHold.initialLoadingId = loadingId
+        placementHold.phase = nil
+        placementHold.started = false
+        placementHold.landedAt = nil
+        placementHold.lastBusyAt = nil
+        placementHold.placementLoadingSeen = false
+        placementHold.awaitingReset = true
+        transitionLog("worldReady under the first-placement hold: waiting for the new bootstrap")
         return
     end
     transitionLog("worldReady: streaming started, holding cover for the real handoff")
@@ -1003,6 +1225,16 @@ end)
 -- backstops the loading-bar signal on any build where the bar never reads full.
 AddEventHandler("open77:playerReset:complete", function()
     if not loadingTransitionActive then return end
+    local hold = placementHold
+    if hold and hold.awaitingReset then
+        -- The reattached world's own loading cycle is not a placement either.
+        local _, loadingId = nativeLoading()
+        hold.awaitingReset = false
+        hold.since = Open77.time.monotonic()
+        hold.initialLoadingId = loadingId
+        transitionLog("first-placement hold restarted after the new bootstrap")
+        return
+    end
     finishLoadingHandoff("player_bootstrap_complete")
 end)
 
@@ -1014,6 +1246,8 @@ AddEventHandler("open77:session:ended", function(reason)
     resourcePhase = "idle"
     resourceError = ""
     loadingTransitionActive = false
+    placementHold = nil
+    placementGeneration = placementGeneration + 1
     unmountServerLoadScreen()
     worldHandoffGeneration = worldHandoffGeneration + 1
     hideRequestGeneration = hideRequestGeneration + 1

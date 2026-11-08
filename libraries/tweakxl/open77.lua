@@ -5,7 +5,7 @@
 -- untouched, and is game-root-relative (red4ext/plugins/..., r6/config/...).
 --
 -- A loader is a shared dependency, not world content: any resource whose assets
--- need it declares `dependency "tweakxl >=1.11.4"` and this package rides along as
+-- need it declares `dependency "tweakxl >=1.12.0"` and this package rides along as
 -- the required mod "tweakxl-assets". RED4ext plugins initialise before the depot
 -- mounts archives, so there is no ordering to manage between loader and world.
 --
@@ -14,9 +14,11 @@
 -- confirm the risk before joining. Bump the version here and swap the zip in
 -- dist/ together -- the manifest version is what dependents pin against.
 resource "tweakxl"
-version "1.11.4"
+version "1.12.0"
 auto_start true
 
-preload_mod "dist/TweakXL-1.11.4.zip"
+preload_mod "dist/TweakXL-1.12.0.zip"
 
 server_script "server/main.lua"
+
+client_script "client/marker.lua"

@@ -64,7 +64,7 @@ local DECLARATION = {
     enemyVitals = {
         value = "engaged", type = "enum", choices = { "off", "engaged" },
         apply = "live", label = "Enemy vitals", group = "Nameplates", order = 5,
-        description = "engaged: an enemy you have just damaged shows a bare health/shield readout over their body. off: nothing at all for enemies. There is deliberately no 'anyone in view' option -- the plate has no occlusion test, so a health bar on an unhit enemy is the same through-wall position leak the name was.",
+        description = "engaged: an enemy you have just damaged shows a bare health/shield readout over their body; like every plate it is hidden while a wall, a floor or a closed door is in the way. off: nothing at all for enemies.",
     },
     enemyVitalsSeconds = {
         value = 2.5, type = "number", min = 0.5, max = 10.0, step = 0.5, unit = "s",

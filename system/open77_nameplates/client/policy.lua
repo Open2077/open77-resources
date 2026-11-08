@@ -5,11 +5,19 @@
 --
 -- `client/main.lua` beside this one turns the native drawer on and then leaves
 -- it alone, and the native drawer labels EVERY attached remote player within
--- `maximumDistance` (35 m by default, client/src/api/Nameplates.hpp). Its
--- culling is depth and viewport only -- `Api::Nameplates::Snapshot` tests the
--- camera plane, the distance and the NDC box, and NOTHING ELSE. There is no
--- occlusion test anywhere in the path, so the plate is drawn through walls,
--- floors and buildings.
+-- `maximumDistance` (35 m by default, client/src/api/Nameplates.hpp). Until
+-- 2026-11-07 its culling was depth and viewport only -- `Api::Nameplates::
+-- Snapshot` tested the camera plane, the distance and the NDC box, and NOTHING
+-- ELSE, so the plate was drawn through walls, floors and buildings.
+--
+-- The native pass now tests a line of sight to every player (Static + Dynamic +
+-- Terrain -- walls, floors, doors, ground -- with hysteresis) and hides a plate whose body the camera cannot see. That
+-- removes the wallhack for every server, but not the reason for this file: a
+-- bright name over a figure 35 m away in the open is still a spotting aid the
+-- eye alone would not have, which is what a battle royale is decided on. So the
+-- policy below still decides WHO is labelled; the drawer decides only whether
+-- the labelled body is in view. Squadmates are the deliberate exception and ask
+-- for `throughWalls = true`: finding your own squad behind a wall is the point.
 --
 -- In a free-for-all, and worse in a battle royale, that is not a label. It is a
 -- position broadcast with the geometry taken out, and it is widest exactly
@@ -88,9 +96,6 @@
 
 local RESOURCE = "open77_nameplates"
 
--- The native default, so "no override" and "an override that looks like the
--- default" are visibly the same thing.
-local OPEN_COLOR = "#EAFBFF"
 -- Squad cyan, amber for a body worth walking to, red for someone bleeding.
 local FRIEND_COLOR = "#5AD1FF"
 local DOWNED_COLOR = "#FFB020"
@@ -203,8 +208,9 @@ end
 local function signatureOf(options)
     if options == nil then return "-" end
     return table.concat({
-        options.label, options.color, tostring(options.maxDistance),
+        options.label, tostring(options.color), tostring(options.accent), tostring(options.maxDistance),
         options.visible and "1" or "0", options.showDistance and "1" or "0",
+        options.throughWalls and "1" or "0",
     }, "\1")
 end
 
@@ -232,10 +238,12 @@ end
 
 --- Drop every override this resource holds, one at a time.
 ---
---- NOT `Open77.nameplates.clear()`. That is `Api::Nameplates::Release`, which
---- also calls `StopStream` and `Render(owner, false)` for the same owner -- and
---- the owner is this very resource, so clearing the overrides would switch the
---- native drawer OFF and leave the world with no plates at all.
+--- NOT `Open77.nameplates.clear()`. Until 2026-11-07 that was
+--- `Api::Nameplates::Release`, which also called `StopStream` and
+--- `Render(owner, false)` for the same owner -- and the owner is this very
+--- resource, so clearing the overrides switched the native drawer OFF and left
+--- the world with no plates at all. Newer clients clear the overrides only, but
+--- this resource still runs on the older ones.
 local function restore()
     for playerId in pairs(applied) do
         pcall(Open77.nameplates.remove, playerId)
@@ -293,8 +301,10 @@ local function resolveSelf(states)
     end
 end
 
+-- No colour: an empty colour is the server's theme (`Open77.nameplates.style`),
+-- and a hidden plate has nothing to colour anyway.
 local HIDDEN = {
-    label = "", color = OPEN_COLOR, maxDistance = 250,
+    label = "", maxDistance = 250,
     visible = false, showDistance = false,
 }
 
@@ -307,8 +317,11 @@ local function friendlyOverride(playerId, entry, states)
     if entry.downed == true then
         return {
             label = safeName(entry.name) .. "  DOWN",
-            color = DOWNED_COLOR, maxDistance = config.friendlyDistance,
+            color = DOWNED_COLOR, accent = DOWNED_COLOR, maxDistance = config.friendlyDistance,
             visible = true, showDistance = true,
+            -- A body worth walking to is worth seeing through the wall it is
+            -- behind; it is your own squad, not a spotted enemy.
+            throughWalls = true,
         }
     end
     -- A squadmate who is dead and past their revive window is not somewhere you
@@ -320,8 +333,9 @@ local function friendlyOverride(playerId, entry, states)
         if text ~= nil then label = label .. "  " .. text end
     end
     return {
-        label = label, color = FRIEND_COLOR, maxDistance = config.friendlyDistance,
+        label = label, color = FRIEND_COLOR, accent = FRIEND_COLOR, maxDistance = config.friendlyDistance,
         visible = true, showDistance = true,
+        throughWalls = true,
     }
 end
 
@@ -336,7 +350,9 @@ local function enemyOverride(playerId, states, nowSeconds)
         -- the readout, which is why an enemy plate does not look like a
         -- nameplate with extra text on it. The distance line is off for the
         -- same reason: a metre count is a range-finder.
-        label = text, color = ENEMY_COLOR,
+        -- Occluded like any plate: once he breaks line of sight, the readout
+        -- goes with him rather than tracking him through the wall.
+        label = text, color = ENEMY_COLOR, accent = ENEMY_COLOR,
         -- The distance gate is the NATIVE one. `Api::Nameplates::Snapshot`
         -- culls on `maximumDistance` before projecting, so setting it here is
         -- both the gate and its enforcement -- and it is why this file never
@@ -644,6 +660,15 @@ AddEventHandler("open77:worldReady", function()
     friends, engagedUntil, lastRevision = {}, {}, {}
     primed, selfId = false, 0
     announce()
+end)
+
+-- The `clear` export (client/main.lua) dropped every override this resource
+-- holds, ours with them. What `applied` remembers is gone: forget it, so the
+-- next pass sets them again instead of finding every signature unchanged --
+-- and run that pass now in a fight, where the gap would show hidden enemies.
+AddEventHandler("open77_nameplates:overridesCleared", function()
+    applied = {}
+    if running and competitive and inFight then pcall(pass) end
 end)
 
 AddEventHandler("onClientResourceStop", function(name)

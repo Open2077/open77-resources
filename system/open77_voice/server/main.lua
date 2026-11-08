@@ -38,7 +38,9 @@ local function normalizePushToTalkKey(value)
         BACKSPACE = true, INSERT = true, DELETE = true, HOME = true, END = true,
         PAGEUP = true, PAGEDOWN = true, UP = true, DOWN = true,
         LEFT = true, RIGHT = true,
+        NUMPADPLUS = true, NUMPADMINUS = true, NUMPADMULTIPLY = true, NUMPADDIVIDE = true, NUMPADDECIMAL = true,
     }
+    if key:match("^NUMPAD[0-9]$") then return key end
     if supported[key] then return key end
     return nil, "unsupported_push_to_talk_key"
 end

@@ -134,17 +134,23 @@ RegisterNetEvent("open77:presentation:uiState", function(value)
             else keyError=readError or decodeError end
         end
         send("wardrobe:favorites",{items=WardrobeFavorites.list(favorites or {}),available=favoriteKey ~= nil,error=keyError})
-        local records, catalogError = Open77.equipment.records({family=value.family, restricted=false, limit=2000})
-        if not records then status("Clothing catalogue unavailable: " .. tostring(catalogError));return end
-        local chunk = {}
-        for _, item in ipairs(records) do
+        local chunk, offset = {}, 0
+        while true do
             if token ~= generation or not opened or not page then return end
-            chunk[#chunk+1]={record=item.record,slot=item.slot,tweakDbId=item.tweakDbId,nonvisual=item.nonvisual == true}
-            if #chunk==64 then
-                send("wardrobe:catalogue",{items=chunk})
-                chunk={}
-                Wait(0)
+            local records, catalogError = Open77.equipment.records({family=value.family, restricted=false, limit=256, offset=offset})
+            if not records then status("Clothing catalogue unavailable: " .. tostring(catalogError));return end
+            for _, item in ipairs(records) do
+                if token ~= generation or not opened or not page then return end
+                chunk[#chunk+1]={record=item.record,slot=item.slot,tweakDbId=item.tweakDbId,nonvisual=item.nonvisual == true,label=item.label}
+                if #chunk==48 then
+                    send("wardrobe:catalogue",{items=chunk})
+                    chunk={}
+                    Wait(0)
+                end
             end
+            if #records < 256 then break end
+            offset = offset + #records
+            Wait(0)
         end
         if token == generation and opened and page then
             send("wardrobe:catalogue",{items=chunk,complete=true})

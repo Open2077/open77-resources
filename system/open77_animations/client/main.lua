@@ -23,6 +23,20 @@ local controller = RpAnimationController.new({
     end,
 }, RpAnimationCatalog, nonce)
 
+local idles = IdleAnimationController.new({
+    now = function() return Open77.time.monotonic() * 1000 end,
+    apply = native._idleApply, clear = native._idleClear, status = native._idleStatus,
+    send = function(name, ...) return TriggerServerEvent('open77:animations:' .. name, ...) end,
+    emit = TriggerEvent,
+    ownerAlive = function(owner)
+        return owner and Open77.resource.generation(owner.name) == owner.generation and
+            GetResourceState(owner.name) == 'running'
+    end,
+}, nonce)
+RegisterNetEvent('open77:animations:idleState', idles.receiveState)
+RegisterNetEvent('open77:animations:idleSnapshot', idles.receiveSnapshot)
+RegisterNetEvent('open77:animations:idleResult', idles.receiveResult)
+
 -- Native transport rejects non-server sources for this reserved namespace;
 -- local TriggerEvent cannot manufacture any of these authoritative messages.
 RegisterNetEvent('open77:animations:state', controller.receiveState)
@@ -55,6 +69,23 @@ local function awaitRequest(id, err)
     end
     return nil, 'resource_stopped'
 end
+
+local function awaitIdle(id, err)
+    if not id then return nil, err end
+    local deadline = Open77.time.monotonic() + 12
+    while running and Open77.time.monotonic() < deadline do
+        local result = idles.result(id)
+        if result then
+            if result.ok then return result.value or true end
+            return nil, result.error
+        end
+        Wait(25)
+    end
+    return nil, running and 'request_timeout' or 'resource_stopped'
+end
+exports('setIdle', function(value) return awaitIdle(idles.request(owner(), value)) end)
+exports('resetIdle', function() return awaitIdle(idles.reset(owner())) end)
+exports('getIdle', idles.get)
 
 exports('list', function(query) return controller.list(query, true) end)
 exports('get', controller.get)
@@ -91,12 +122,12 @@ exports('sequence', function(steps, value)
 end)
 
 AddEventHandler('onClientResourceStop', function(name)
-    if name == resource then running = false; controller.shutdown() end
+    if name == resource then running = false; controller.shutdown(); idles.shutdown() end
 end)
 CreateThread(function()
     while running do
         local current = native._context()
-        if current then controller.tick(current) end
+        if current then controller.tick(current); idles.tick(current) end
         Wait(100)
     end
 end)
