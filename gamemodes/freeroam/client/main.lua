@@ -25,6 +25,7 @@ local hudView = {
     health = { value = 0, maximum = 100 },
     stamina = { value = 0, maximum = 100 },
     weapon = { equipped = false },
+    weapons = {},
     vehicle = { active = false },
 }
 
@@ -179,7 +180,7 @@ local function requestWeaponSnapshot()
     lastWeaponRequestAt = at
     local ok, requestId = pcall(Open77.weapons.snapshot)
     if ok and requestId ~= nil then
-        weaponRequests[tostring(requestId)] = { at = at, sawActive = false }
+        weaponRequests[tostring(requestId)] = { at = at, hands = {}, ammo = {} }
     end
     for id, pending in pairs(weaponRequests) do
         if at - pending.at > 5000 then weaponRequests[id] = nil end
@@ -187,24 +188,33 @@ local function requestWeaponSnapshot()
 end
 
 AddEventHandler("open77:weapons:state", function(requestId, slot, record, tweakDbId,
-        active, drawn, _locked, _ammoRecord, _ammoTweakDbId, _ammoTotal, ammoReserve,
-        magazine, capacity)
+        active, drawn, _locked, _ammoRecord, ammoTweakDbId, ammoTotal, ammoReserve,
+        magazine, capacity, reloading)
     local pending = weaponRequests[tostring(requestId)]
     if pending == nil or not truthy(active) then return end
-    pending.sawActive = true
+    local slotNumber = tonumber(slot)
+    if not slotNumber or slotNumber % 1 ~= 0 or slotNumber < 1 or slotNumber > 6 then return end
+    local hand = slotNumber <= 3 and "right" or "left"
     local recordName = tostring(record or "")
     local configured = weaponCatalog[recordName]
     local mag = math.floor(number(magazine, -1))
     local cap = math.floor(number(capacity, -1))
     local reserve = math.floor(number(ammoReserve, -1))
-    hudView.weapon = {
+    pending.ammo[hand] = {
+        id = tostring(ammoTweakDbId or ""):lower(),
+        total = math.floor(number(ammoTotal, -1)),
+    }
+    pending.hands[hand] = {
         equipped = recordName ~= "" or tostring(tweakDbId or "") ~= "",
         drawn = truthy(drawn),
-        slot = math.max(1, math.floor(number(slot, 1))),
+        hand = hand,
+        reloading = truthy(reloading),
+        slot = slotNumber,
         record = recordName,
         label = configured and configured.label or recordLabel(recordName, "WEAPON"),
         category = configured and configured.category or "WEAPON",
         ammoKnown = mag >= 0 and cap >= 0,
+        reserveKnown = reserve >= 0,
         magazine = math.max(0, mag),
         capacity = math.max(0, cap),
         reserve = math.max(0, reserve),
@@ -215,8 +225,32 @@ AddEventHandler("open77:weapons:completed", function(requestId, operation, accep
     local id = tostring(requestId)
     local pending = weaponRequests[id]
     if pending == nil then return end
-    if tostring(operation) == "snapshot" and truthy(accepted) and not pending.sawActive then
-        hudView.weapon = { equipped = false }
+    if tostring(operation) == "snapshot" and truthy(accepted) then
+        -- Publish the complete pair together. A left-hand row must not overwrite
+        -- the right-hand row, and an incomplete snapshot must not flicker the HUD.
+        local right, left = pending.hands.right, pending.hands.left
+        local rightAmmo, leftAmmo = pending.ammo.right, pending.ammo.left
+        if right and left and right.drawn and left.drawn
+                and rightAmmo.id ~= "" and rightAmmo.id ~= "0"
+                and rightAmmo.id == leftAmmo.id then
+            -- Native inventory quantity includes BOTH loaded magazines. Derive
+            -- spare rounds from the atomic pair, rather than adding two reserves
+            -- or counting the other hand's loaded rounds as spare ammunition.
+            local known = right.ammoKnown and left.ammoKnown
+                and rightAmmo.total >= 0 and rightAmmo.total == leftAmmo.total
+            right.reserveKnown, left.reserveKnown = known, known
+            if known then
+                local spare = math.max(0, rightAmmo.total - right.magazine - left.magazine)
+                right.reserve, left.reserve = spare, spare
+            end
+        end
+        local weapons = {}
+        for _, hand in ipairs({ "right", "left" }) do
+            local row = pending.hands[hand]
+            if row and row.equipped then weapons[#weapons + 1] = row end
+        end
+        hudView.weapons = weapons
+        hudView.weapon = weapons[1] or { equipped = false }
     end
     weaponRequests[id] = nil
 end)

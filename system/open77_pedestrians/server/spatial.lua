@@ -17,6 +17,50 @@ local function addPlayer(sets, bucket, player)
     local cell = set.cells[key]
     if not cell then cell = {}; set.cells[key] = cell end
     cell[#cell + 1] = player
+    set.near = nil
+end
+
+-- The players of `set` a point of cell (cx, cy) can have within `radius`: those within it of the
+-- cell's square, in the order the window walk reads them (cells by gx, then gy, ascending; a cell's
+-- players in list order), so a query over them finds what the walk found, first match and ties
+-- included. A pass queries the same few hundred cells thousands of times: each list is built once
+-- per set, for the radius rounded up to 8 m (the query still tests its own radius), and the second
+-- result is what building it cost.
+local RADIUS_STEP = 8
+local function candidates(set, cx, cy, radius)
+    local near = set.near
+    if not near then near = {}; set.near = near end
+    local class = math.ceil(radius / RADIUS_STEP)
+    local key = cellKey(cx, cy) * 1024 + class
+    local found = near[key]
+    if found then return found, 0 end
+    found = {}
+    local reach = class * RADIUS_STEP
+    local reach2, span = reach * reach, math.ceil(reach / CELL)
+    local left, bottom = cx * CELL, cy * CELL
+    local cells, n, cost = set.cells, 0, 0
+    for gx = cx - span, cx + span do
+        local row = (gx + 32768) * 65536 + 32768
+        for gy = cy - span, cy + span do
+            local list = cells[row + gy]
+            cost = cost + 1
+            if list then
+                for i = 1, #list do
+                    local player = list[i]
+                    local px, py = player.x, player.y
+                    local ex = px < left and left - px or math.max(0, px - left - CELL)
+                    local ey = py < bottom and bottom - py or math.max(0, py - bottom - CELL)
+                    if ex * ex + ey * ey <= reach2 then
+                        n = n + 1
+                        found[n] = player
+                    end
+                end
+                cost = cost + #list
+            end
+        end
+    end
+    near[key] = found
+    return found, cost
 end
 
 -- The distance from (x, y, z) to the nearest player of `set` within `radius`, or math.huge. With
@@ -25,56 +69,62 @@ end
 -- `stop` returns the first one found instead of the nearest, `out` collects every one. The second
 -- result is the work done (cells and players examined), which the tick charges against its slice,
 -- the third the nearest player found.
--- A set with fewer players than the window has cells is read whole; otherwise only cells that
--- reach within `radius` are.
-local function query(set, x, y, z, radius, vertical, stop, out)
+-- A set with fewer players than the window has cells is read whole; otherwise only the players
+-- of its `candidates` for the point's cell are, listed for `reach` (default `radius`): a caller whose
+-- radius shrinks query by query names the largest, so one list serves them all.
+local function query(set, x, y, z, radius, vertical, stop, out, reach)
     if not set then return math.huge, 1 end
     local players, r2, best, who = set.list, radius * radius, math.huge, nil
-    local span = math.ceil(radius / CELL)
-    local cells, cx, cy, examined = nil, 0, 0, 2
+    reach = reach and reach > radius and reach or radius
+    local span = math.ceil(reach / CELL)
+    local examined = 2
     if #players > (2 * span + 1) * (2 * span + 1) then
-        cells, cx, cy = set.cells, cellOf(x), cellOf(y)
-    else
-        span = 0
+        local built
+        players, built = candidates(set, cellOf(x), cellOf(y), reach)
+        examined = examined + built
     end
-    for gx = cx - span, cx + span do
-        local row, ex = (gx + 32768) * 65536 + 32768, 0
-        if cells then
-            local left = gx * CELL
-            ex = x < left and left - x or math.max(0, x - left - CELL)
+    for i = 1, #players do
+        local player = players[i]
+        local dx, dy, dz = player.x - x, player.y - y, player.z - z
+        local d2 = dx * dx + dy * dy
+        if not vertical then
+            d2 = d2 + dz * dz
+        elseif dz > vertical or dz < -vertical then
+            d2 = math.huge
         end
-        for gy = cy - span, cy + span do
-            examined = examined + 1
-            local list = players
-            if cells then
-                list = cells[row + gy]
-                if list then
-                    local bottom = gy * CELL
-                    local ey = y < bottom and bottom - y or math.max(0, y - bottom - CELL)
-                    if ex * ex + ey * ey > r2 then list = nil end
-                end
-            end
-            if list then
-                for i = 1, #list do
-                    local player = list[i]
-                    local dx, dy, dz = player.x - x, player.y - y, player.z - z
-                    local d2 = dx * dx + dy * dy
-                    if not vertical then
-                        d2 = d2 + dz * dz
-                    elseif dz > vertical or dz < -vertical then
-                        d2 = math.huge
-                    end
-                    if d2 <= r2 then
-                        if out then out[#out + 1] = player end
-                        if d2 < best then best, who = d2, player end
-                        if stop then return math.sqrt(best), examined + i, who end
-                    end
-                end
-                examined = examined + #list
-            end
+        if d2 <= r2 then
+            if out then out[#out + 1] = player end
+            if d2 < best then best, who = d2, player end
+            if stop then return math.sqrt(best), examined + i, who end
         end
     end
-    return math.sqrt(best), examined, who
+    return math.sqrt(best), examined + #players, who
+end
+
+-- A pass's slicing: `charge(amount)` adds the work done and hands the rest of the pass to the next
+-- server tick once this resume has run config.sliceMs on `api.clock` (a clock that moves within a
+-- resume; read every CLOCK_EVERY units) or done config.scanWorkPerSlice units, the bound that keeps
+-- a resume inside the instruction quota (and the only one without a clock). `budget` ({ work,
+-- slices }) is the pass's, shared by the passes of one server tick.
+local CLOCK_EVERY = 1000
+local function slicer(budget, config, api)
+    local clock, slice, limit = api.clock, (config.sliceMs or 0) / 1000, config.scanWorkPerSlice
+    if clock and not budget.since then budget.since, budget.checkAt = clock(), CLOCK_EVERY end
+    return function(amount)
+        local work = budget.work + amount
+        budget.work = work
+        if not api.yield then return end
+        local over = work >= limit
+        if not over and clock and work >= (budget.checkAt or 0) then
+            budget.checkAt = work + CLOCK_EVERY
+            over = clock() - budget.since >= slice
+        end
+        if over then
+            api.yield()
+            budget.work, budget.slices, budget.checkAt = 0, budget.slices + 1, CLOCK_EVERY
+            if clock then budget.since = clock() end
+        end
+    end
 end
 
 -- Keeps `list` the `keep` best candidates, nearest first, ties broken by key.
@@ -193,6 +243,7 @@ local function clipsFor(cache, clipBodies, profile, body, clips)
 end
 
 Open77PedestrianSpatial = {
-    CELL = CELL, cellOf = cellOf, cellKey = cellKey, addPlayer = addPlayer, query = query,
+    CELL = CELL, cellOf = cellOf, cellKey = cellKey, addPlayer = addPlayer, query = query, candidates = candidates,
+    slicer = slicer,
     offer = offer, countGroups = countGroups, clipsFor = clipsFor,
 }

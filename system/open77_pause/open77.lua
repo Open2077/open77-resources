@@ -9,6 +9,7 @@ reload_policy "local"
 -- prepended to the client list by the resource host, so the order is not a
 -- convention here, it is the load order.
 shared_script "shared/strings.lua"
+client_script "client/voice_setup.lua"
 client_script "client/main.lua"
 files { "assets/**" }
 -- Temporary CEF presentation while the native INK menu is investigated.
@@ -18,6 +19,6 @@ web_files { "web/**" }
 -- network.client is read-only here in practice: the pause menu polls the
 -- session snapshot for its info card and calls disconnect() for Quit Session.
 permissions {
-    "webui.system", "network.client", "network.events",
+    "webui.system", "network.client", "network.events", "local.events",
     "voice.client", "input.actions", "map.read", "map.control"
 }

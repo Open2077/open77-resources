@@ -20,3 +20,4 @@ auto_start true
 preload_mod "dist/ArchiveXL-1.27.1.zip"
 
 server_script "server/main.lua"
+client_script "client/marker.lua"

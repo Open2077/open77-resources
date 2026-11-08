@@ -1,0 +1,152 @@
+{
+  "schema": "open77.prop-package/1",
+  "resource": "open77_aetherfall_assets",
+  "revision": "2f42aa9b6c88501277a7ffa580e0585a239fc2acfa3c9772e909adcfea769b7a",
+  "models": {
+    "floor": {
+      "mesh": "open77\\assets\\open77_aetherfall_assets\\2f42aa9b6c88\\floor.mesh",
+      "visualEntity": "open77\\assets\\open77_aetherfall_assets\\2f42aa9b6c88\\floor_visual.ent",
+      "physicalEntity": "open77\\assets\\open77_aetherfall_assets\\2f42aa9b6c88\\floor_physical.ent"
+    },
+    "arch": {
+      "mesh": "open77\\assets\\open77_aetherfall_assets\\2f42aa9b6c88\\arch.mesh",
+      "visualEntity": "open77\\assets\\open77_aetherfall_assets\\2f42aa9b6c88\\arch_visual.ent"
+    },
+    "lamp": {
+      "mesh": "open77\\assets\\open77_aetherfall_assets\\2f42aa9b6c88\\lamp.mesh",
+      "visualEntity": "open77\\assets\\open77_aetherfall_assets\\2f42aa9b6c88\\lamp_visual.ent"
+    },
+    "wand": {
+      "mesh": "open77\\assets\\open77_aetherfall_assets\\2f42aa9b6c88\\wand.mesh",
+      "visualEntity": "open77\\assets\\open77_aetherfall_assets\\2f42aa9b6c88\\wand_visual.ent"
+    },
+    "sigil": {
+      "mesh": "open77\\assets\\open77_aetherfall_assets\\2f42aa9b6c88\\sigil.mesh",
+      "visualEntity": "open77\\assets\\open77_aetherfall_assets\\2f42aa9b6c88\\sigil_visual.ent"
+    },
+    "ward": {
+      "mesh": "open77\\assets\\open77_aetherfall_assets\\2f42aa9b6c88\\ward.mesh",
+      "visualEntity": "open77\\assets\\open77_aetherfall_assets\\2f42aa9b6c88\\ward_visual.ent"
+    }
+  },
+  "nativeValidated": true,
+  "runtimeValidated": false,
+  "assets": [
+    {
+      "bytes": 13726,
+      "path": "open77/assets/open77_aetherfall_assets/2f42aa9b6c88/arch_visual.ent",
+      "sha256": "3a9de8b9ff9d5846cf0bd29a6019a0a0c4cd37d7559a7897b6a8d859a080b163"
+    },
+    {
+      "bytes": 48985,
+      "path": "open77/assets/open77_aetherfall_assets/2f42aa9b6c88/arch.mesh",
+      "sha256": "26ef0aafdfd99b735244a047faaaeffd0158bfc6c3850edf99d0a95ab91c31ce"
+    },
+    {
+      "bytes": 13932,
+      "path": "open77/assets/open77_aetherfall_assets/2f42aa9b6c88/floor_physical.ent",
+      "sha256": "3053126a3174b44371c1d26a6f98b064f1e57f2055fb4362e3c0e4674cdcb95e"
+    },
+    {
+      "bytes": 13726,
+      "path": "open77/assets/open77_aetherfall_assets/2f42aa9b6c88/floor_visual.ent",
+      "sha256": "39c28da9076969696701910e6e7542965f103d2d2dcad51c5961ff32bab97702"
+    },
+    {
+      "bytes": 317993,
+      "path": "open77/assets/open77_aetherfall_assets/2f42aa9b6c88/floor.mesh",
+      "sha256": "331532f93e61d72eb020380d1a36fb8d3891372a07624981a085f242a48709c1"
+    },
+    {
+      "bytes": 13725,
+      "path": "open77/assets/open77_aetherfall_assets/2f42aa9b6c88/lamp_visual.ent",
+      "sha256": "28f1205bb3db3b84c8ac8a8b674234c35bd3c765708d04cf1224d83f9eea441c"
+    },
+    {
+      "bytes": 21425,
+      "path": "open77/assets/open77_aetherfall_assets/2f42aa9b6c88/lamp.mesh",
+      "sha256": "344e70351e8c5d406c74b2b0e0d2892e2b55fd88d4ccb6f673cb776a9e61b520"
+    },
+    {
+      "bytes": 13726,
+      "path": "open77/assets/open77_aetherfall_assets/2f42aa9b6c88/sigil_visual.ent",
+      "sha256": "cb431931dac59dc32b57c8acc2f11b14e78e67f6379793cf7a3e400f53fcf1a8"
+    },
+    {
+      "bytes": 22120,
+      "path": "open77/assets/open77_aetherfall_assets/2f42aa9b6c88/sigil.mesh",
+      "sha256": "afad64bcb3e2cd5a72e607e6de9bdbb0a7b2b010cd9436652e2466c7820d587c"
+    },
+    {
+      "bytes": 13724,
+      "path": "open77/assets/open77_aetherfall_assets/2f42aa9b6c88/wand_visual.ent",
+      "sha256": "af2ddd442cf7eb64a1b5b55fb1f06e78301ccb73f34b4edc9cc605f214c0452a"
+    },
+    {
+      "bytes": 32029,
+      "path": "open77/assets/open77_aetherfall_assets/2f42aa9b6c88/wand.mesh",
+      "sha256": "0d07a556f95fe293f6dd06b056fc766940283ac62bc60e7036522ac56248968f"
+    },
+    {
+      "bytes": 13724,
+      "path": "open77/assets/open77_aetherfall_assets/2f42aa9b6c88/ward_visual.ent",
+      "sha256": "614b7d91f5542e18764c474ed824d18d99331edbbf5d797c60fca8576b9a8b79"
+    },
+    {
+      "bytes": 336084,
+      "path": "open77/assets/open77_aetherfall_assets/2f42aa9b6c88/ward.mesh",
+      "sha256": "068194e6e7d630c9878092d55d9662eb66091321bcc9d9a71060f14496d00fda"
+    },
+    {
+      "bytes": 969,
+      "path": "open77/assets/open77_aetherfall_assets/2f42aa9b6c88/materials/aether.mi",
+      "sha256": "e948c17eee8c4aa9f2c73decbbe37f3d1ba0b8f85ad16c3fc6e0c62833937703"
+    },
+    {
+      "bytes": 731,
+      "path": "open77/assets/open77_aetherfall_assets/2f42aa9b6c88/materials/bronze.mi",
+      "sha256": "98dd5056e670f9e8b0a6dfa16c9c5e79636de01e8b45d5c43a676ff42ced2c67"
+    },
+    {
+      "bytes": 731,
+      "path": "open77/assets/open77_aetherfall_assets/2f42aa9b6c88/materials/gold.mi",
+      "sha256": "52fa84c5d01bad8c476b2b641138ca5970b840d9e9c0eb2db8bd63c66faf672f"
+    },
+    {
+      "bytes": 731,
+      "path": "open77/assets/open77_aetherfall_assets/2f42aa9b6c88/materials/obsidian.mi",
+      "sha256": "5056d6979cfb7cc8ae0276d803f2fce002199b40338f05c3cd513a10466b7ac2"
+    },
+    {
+      "bytes": 969,
+      "path": "open77/assets/open77_aetherfall_assets/2f42aa9b6c88/materials/prism.mi",
+      "sha256": "a2136bf690da1e3c1af3aa1159dda1c5cf22966c0553a6063c56ce09e7ca77b7"
+    },
+    {
+      "bytes": 731,
+      "path": "open77/assets/open77_aetherfall_assets/2f42aa9b6c88/materials/stone_dark.mi",
+      "sha256": "028a90939d52090ec2f30e27745f87f26fa6d7103e449f952d788f228a037c31"
+    },
+    {
+      "bytes": 731,
+      "path": "open77/assets/open77_aetherfall_assets/2f42aa9b6c88/materials/stone_light.mi",
+      "sha256": "fef7a5a727d9a9f482e742d25d25b2e7e4acac834d4e1a9bc7d7f76528968443"
+    },
+    {
+      "bytes": 731,
+      "path": "open77/assets/open77_aetherfall_assets/2f42aa9b6c88/materials/stone.mi",
+      "sha256": "bd7c2955381450375a98ab4df895ae9c5f2b629e5f5cb842af8501c5c1884cbc"
+    },
+    {
+      "bytes": 969,
+      "path": "open77/assets/open77_aetherfall_assets/2f42aa9b6c88/materials/violet.mi",
+      "sha256": "d07111535dc34fc24f8ee70f50e1c72ac112d0262ca0eaf40ab0a31dfa64d8b0"
+    },
+    {
+      "bytes": 731,
+      "path": "open77/assets/open77_aetherfall_assets/2f42aa9b6c88/materials/wood.mi",
+      "sha256": "667834bc9338188faa4cdef19b202c6fa1b0f2e4ef6d4f99cc3c4c105212faec"
+    }
+  ],
+  "archiveSha256": "7286ad9c4eb0c4b5f2d87ad3bcca505b5823692db281304d5970775be0f9eabb"
+}

@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="race/theme.css">
   <link rel="stylesheet" href="pvp/theme.css">
   <link rel="stylesheet" href="animations/theme.css">
+  <link rel="stylesheet" href="animations/idle.css">
 </head>
 <body>
 <div id="freeroam-menu" class="freeroam-menu">
@@ -54,6 +55,15 @@
           <span class="anim-total"><strong id="anim-total">—</strong> clips</span>
           <button type="button" class="anim-icon-button" id="anim-close" aria-label="Close animations">✕</button>
         </header>
+        <nav class="idle-tabs" aria-label="Animation mode"><button id="idle-tab-emotes" type="button" aria-pressed="true">Emotes</button><button id="idle-tab-poses" type="button" aria-pressed="false">Idle poses <span>FREE CHOICE</span></button></nav>
+        <div id="idle-panel" hidden>
+          <div class="idle-intro"><span class="anim-eyebrow">YOUR CHARACTER · YOUR STANCE</span><h3>A pose to come back to.</h3><p>Choose any animation bank and clip. Your pose resumes when you stand still, unarmed and on foot. Press <kbd>F7</kbd> to see yourself.</p></div>
+          <div class="idle-browser">
+            <section class="idle-banks"><label for="idle-search">01 / FIND A BANK</label><input id="idle-search" type="search" placeholder="Search banks: relaxed, stand, female…" maxlength="128"><div id="idle-bank-list"></div><div class="idle-pagination"><button id="idle-bank-prev" type="button">←</button><span id="idle-bank-count"></span><button id="idle-bank-next" type="button">→</button></div></section>
+            <section class="idle-clips"><label for="idle-bank">02 / CHOOSE YOUR CLIP</label><div class="idle-path"><input id="idle-bank" type="text" placeholder="Or paste any depot path ending in .anims" maxlength="512" spellcheck="false"><button id="idle-load" type="button">Load</button></div><input id="idle-clip-search" type="search" placeholder="Filter this bank’s clips…" maxlength="128"><div id="idle-clip-list"><p>Pick a bank to read its animations from the game.</p></div><div class="idle-pagination"><button id="idle-clip-prev" type="button">←</button><span id="idle-clip-count"></span><button id="idle-clip-next" type="button">→</button></div></section>
+          </div>
+          <footer class="idle-footer"><label for="idle-clip">Clip name <input id="idle-clip" type="text" maxlength="192" spellcheck="false" placeholder="Select a clip above or enter its exact name"></label><div class="idle-controls"><label>Blend (ms) <input id="idle-blend" type="number" min="0" max="5000" step="1" value="250" required></label><label>Resume after (ms) <input id="idle-delay" type="number" min="0" max="10000" step="1" value="700" required></label><button id="idle-reset" type="button">Reset to default</button><button id="idle-apply" type="button">Use this idle ↗</button></div><p id="idle-status" role="status" aria-live="polite">Default idle · No custom pose selected</p><p class="idle-note">The bank list is a search aid. Custom banks work too, when installed on every client. Choose an animation that fits your character’s rig; props and scene partners are not spawned.</p></footer>
+        </div>
         <div class="anim-library">
           <nav class="anim-filters" id="anim-filters" aria-label="Animation categories"></nav>
           <div class="anim-content">
@@ -482,5 +492,7 @@
   <script src="pvp/app.js"></script>
   <script src="animations/catalog.js"></script>
   <script src="animations/app.js"></script>
+  <script src="animations/banks.js"></script>
+  <script src="animations/idle.js"></script>
 </body>
 </html>

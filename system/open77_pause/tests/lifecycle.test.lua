@@ -19,8 +19,11 @@ function page:setFocus(keyboard, cursor)
 end
 function AddEventHandler(name, callback) handlers[name] = callback end
 function GetCurrentResourceName() return "open77_pause" end
-function TriggerEvent() end
+local published = {}
+function TriggerEvent(name, payload) published[#published + 1] = {name = name, payload = payload} end
 function CreateThread() end -- periodic voice/state polling is outside this fixture
+local exported = {}
+function exports(name, fn) exported[name] = fn end -- voice service contract: voice setup tests
 function SetTimeout(_, callback) timers[#timers + 1] = callback end
 local function expireTimers()
     local pending = timers; timers = {}
@@ -38,6 +41,7 @@ Open77 = {
     map = {open = function() return nil, "unavailable" end},
 }
 dofile(root .. "/shared/strings.lua")
+dofile(root .. "/client/voice_setup.lua")
 dofile(root .. "/client/main.lua")
 handlers.onClientResourceStart("open77_pause")
 pageEvents["pause:ready"]()
@@ -75,6 +79,34 @@ assert(not visible and not focused, "world transitions close immediately")
 openMenu()
 pageEvents["pause:action"]({action = "map"})
 assert(visible and focused, "a refused native map restores the menu")
+-- a resource's own city map replaces the game's
+assert(published[1].name == "open77:mapProvider:query", "providers are asked to announce themselves")
+local nativeOpened = 0
+Open77.map.open = function() nativeOpened = nativeOpened + 1; return "ticket-" .. nativeOpened end
+handlers["open77:mapProvider:register"]({resource = "low_map", priority = 1})
+handlers["open77:mapProvider:register"]({resource = "op77_map3d", label = "City map (3D)", priority = 100})
+assert(exported.mapProvider().resource == "op77_map3d")
+openMenu()
+pageEvents["pause:action"]({action = "map"})
+local show = published[#published]
+assert(show.name == "open77:mapProvider:show" and show.payload.provider == "op77_map3d" and nativeOpened == 0, "CITY MAP asks the provider")
+assert(not focused, "the menu steps aside for the provider's map")
+handlers["open77:mapProvider:shown"]({requestId = show.payload.requestId})
+expireTimers()
+assert(nativeOpened == 0, "an answering provider keeps the game's map closed")
+-- a provider that does not answer: the game's map after the delay
+openMenu()
+pageEvents["pause:action"]({action = "map"})
+expireTimers()
+assert(nativeOpened == 1, "a silent provider falls back to the game's map")
+-- a stopped provider is withdrawn; the next one takes over, then none
+handlers.onClientResourceStop("op77_map3d")
+assert(exported.mapProvider().resource == "low_map")
+handlers["open77:mapProvider:withdraw"]({resource = "low_map"})
+assert(exported.mapProvider() == nil)
+openMenu()
+pageEvents["pause:action"]({action = "map"})
+assert(nativeOpened == 2, "no provider: the game's map")
 pageEvents["webui:host-lost"]()
 assert(not visible and not focused and not ready)
 pageEvents["pause:ready"]()
@@ -86,4 +118,4 @@ focusAllowed = true
 openMenu()
 handlers.onClientResourceStop("open77_pause")
 assert(not ready)
-print("Pause lifecycle: suspend/reveal, close/reopen races, focus failure, world/map and host recovery passed")
+print("Pause lifecycle: suspend/reveal, close/reopen races, focus failure, world/map, map providers and host recovery passed")

@@ -505,7 +505,6 @@ local function playerAnchor(playerId, position)
 end
 
 local function activePlayers()
-    observationPositions()
     local rows = {}
     for playerId, position in pairs(Open77.players.positions() or {}) do
         local row = playerAnchor(tonumber(playerId), position)
@@ -571,12 +570,30 @@ local SCAN_WORK_COMPARISON = 2
 local SCAN_WORK_CANDIDATE = 4
 local SCAN_WORK_FLEET_READ = 12
 local scanWork = 0
+-- With a clock that moves within a resume (Open77.time.precise), the scan also hands over once this
+-- resume has run SCAN_SLICE_SECONDS, read every SCAN_CLOCK_EVERY units: single ticks of this resource
+-- reached 35-55 ms of a 33 ms budget on the live server (2026-10-30, 78 players).
+local SCAN_SLICE_SECONDS = 0.002
+local SCAN_CLOCK_EVERY = 256
+local preciseClock = type(Open77.time.precise) == "function" and Open77.time.precise or nil
+local scanSince, scanCheckAt = 0, SCAN_CLOCK_EVERY
+
+-- A resume of the spawn thread starts here: the time allowance counts from now.
+local function scanResumed()
+    scanWork, scanCheckAt = 0, SCAN_CLOCK_EVERY
+    if preciseClock then scanSince = preciseClock() end
+end
 
 local function scanSpend(units)
     scanWork = scanWork + units
-    if scanWork >= SCAN_WORK_PER_RESUME then
-        scanWork = 0
+    local over = scanWork >= SCAN_WORK_PER_RESUME
+    if not over and preciseClock and scanWork >= scanCheckAt then
+        scanCheckAt = scanWork + SCAN_CLOCK_EVERY
+        over = preciseClock() - scanSince >= SCAN_SLICE_SECONDS
+    end
+    if over then
         Wait(0)
+        scanResumed()
     end
 end
 
@@ -635,17 +652,54 @@ local function fleetPosition(vehicleId, entry, vehicle)
     return entry.lastPosition
 end
 
+-- The registry's poses of the own cars in one read (Open77.vehicles.positions: six numbers per
+-- vehicle, id, x, y, z, yaw, bucket) when the server has it: a car -> its offset in the flat array.
+-- A `vehicles.get` row is ~50 fields and six sub-tables, and a spawn attempt read every car two to
+-- four times. Without it (an older server) the callers read each car.
+local function registryPoses()
+    local read = Open77.vehicles.positions
+    if type(read) ~= "function" then return nil end
+    local flat, count = read()
+    if type(flat) ~= "table" then return nil end
+    count = math.tointeger(count) or #flat // 6
+    local poses = {}
+    for at = 0, (count - 1) * 6, 6 do
+        local id = flat[at + 1]
+        if cars[id] then poses[id] = at end
+    end
+    return poses, flat
+end
+
+-- fleetPosition over a registry read: x, y, z (the copy when the registry's pose is not finite or
+-- it does not know the car), the registry's yaw and whether it knew the car.
+local function fleetPoint(vehicleId, entry, poses, flat)
+    if poses then
+        local at = poses[vehicleId]
+        if at then
+            local x, y, z = flat[at + 2], flat[at + 3], flat[at + 4]
+            if finite(x) and finite(y) and finite(z) then return x, y, z, flat[at + 5], true end
+            local last = entry.lastPosition
+            return last.x, last.y, last.z, flat[at + 5], true
+        end
+        local last = entry.lastPosition
+        return last.x, last.y, last.z, nil, false
+    end
+    local vehicle = Open77.vehicles.get(vehicleId)
+    local position = fleetPosition(vehicleId, entry, vehicle)
+    return position.x, position.y, position.z, vehicle and vehicle.yaw, vehicle ~= nil
+end
+
 -- Read canonical poses once per pass, not once per candidate. Collect IDs before
 -- yielding: the retirement monitor can remove entries while the scan is parked.
-local function fleetSnapshot()
+local function fleetSnapshot(poses, flat)
     local ids = {}
     for vehicleId in pairs(cars) do ids[#ids + 1] = vehicleId end
     local buckets = {}
     for index = 1, #ids do
-        scanSpend(SCAN_WORK_FLEET_READ)
+        scanSpend(poses and SCAN_WORK_COMPARISON or SCAN_WORK_FLEET_READ)
         local entry = cars[ids[index]]
         if entry then
-            local position = fleetPosition(ids[index], entry)
+            local x, y, z = fleetPoint(ids[index], entry, poses, flat)
             local group = buckets[entry.bucket]
             if not group then
                 group = { count = 0, x = {}, y = {}, z = {} }
@@ -653,8 +707,7 @@ local function fleetSnapshot()
             end
             local count = group.count + 1
             group.count = count
-            group.x[count], group.y[count], group.z[count] =
-                position.x, position.y, position.z
+            group.x[count], group.y[count], group.z[count] = x, y, z
         end
     end
     return buckets
@@ -677,12 +730,13 @@ end
 local function fleetAllowsAt(x, y, z, bucket)
     local ids = {}
     for vehicleId in pairs(cars) do ids[#ids + 1] = vehicleId end
+    local poses, flat = registryPoses()
     for index = 1, #ids do
-        scanSpend(SCAN_WORK_FLEET_READ)
+        scanSpend(poses and SCAN_WORK_COMPARISON or SCAN_WORK_FLEET_READ)
         local entry = cars[ids[index]]
         if entry and entry.bucket == bucket then
-            local position = fleetPosition(ids[index], entry)
-            if fleetBlocks(x, y, z, position.x, position.y, position.z) then return false end
+            local px, py, pz = fleetPoint(ids[index], entry, poses, flat)
+            if fleetBlocks(x, y, z, px, py, pz) then return false end
         end
     end
     return true
@@ -705,36 +759,55 @@ local SPAN_MATCH_METRES = 9
 local SPAN_MATCH_HEIGHT = 3
 local SPAN_MATCH_COSINE = math.cos(math.rad(45))
 
+-- The catalogue cell (cellX, cellY), or false: its "x:y" key is built once per cell, not on every
+-- lookup (a spawn attempt looked up every car's cells and every area's).
+local spanCellAt = {}
+local function spanCell(cellX, cellY)
+    local key = (cellX + 32768) * 65536 + cellY + 32768
+    local cell = spanCellAt[key]
+    if cell == nil then
+        cell = SPANS.cells[("%d:%d"):format(cellX, cellY)] or false
+        spanCellAt[key] = cell
+    end
+    return cell
+end
+
 local function forEachSpanCell(x, y, reach, visit)
     local grid = SPANS.gridSize
     for cellX = math.floor((x - reach) / grid), math.floor((x + reach) / grid) do
         for cellY = math.floor((y - reach) / grid), math.floor((y + reach) / grid) do
-            local cell = SPANS.cells[("%d:%d"):format(cellX, cellY)]
+            local cell = spanCell(cellX, cellY)
             if cell then visit(cell) end
         end
     end
 end
 
--- The span a car is driving on: the nearest sample within half the sample
+-- The span a car at (x, y, z) is driving on: the nearest sample within half the sample
 -- spacing plus lane wobble, on its road level, facing its way. Heading is what
 -- keeps the opposite lane of a two-way road from being counted.
-local function carSpan(position, yaw)
+local function carSpan(x, y, z, yaw)
     if not finite(yaw) then return nil end
     local forwardX, forwardY = -math.sin(math.rad(yaw)), math.cos(math.rad(yaw))
     local best, bestSquared = nil, SPAN_MATCH_METRES * SPAN_MATCH_METRES
-    forEachSpanCell(position.x, position.y, SPAN_MATCH_METRES, function(cell)
-        for _, sample in ipairs(cell) do
-            scanSpend(SCAN_WORK_COMPARISON)
-            local dx, dy = sample[4] - position.x, sample[5] - position.y
-            local squared = dx * dx + dy * dy
-            if squared < bestSquared and math.abs(sample[6] - position.z) <= SPAN_MATCH_HEIGHT then
-                local yawRadians = math.rad(sample[7])
-                if forwardX * -math.sin(yawRadians) + forwardY * math.cos(yawRadians) >= SPAN_MATCH_COSINE then
-                    best, bestSquared = sample[8], squared
+    local grid = SPANS.gridSize
+    for cellX = math.floor((x - SPAN_MATCH_METRES) / grid), math.floor((x + SPAN_MATCH_METRES) / grid) do
+        for cellY = math.floor((y - SPAN_MATCH_METRES) / grid), math.floor((y + SPAN_MATCH_METRES) / grid) do
+            local cell = spanCell(cellX, cellY)
+            if cell then
+                scanSpend(SCAN_WORK_COMPARISON * #cell)
+                for _, sample in ipairs(cell) do
+                    local dx, dy = sample[4] - x, sample[5] - y
+                    local squared = dx * dx + dy * dy
+                    if squared < bestSquared and math.abs(sample[6] - z) <= SPAN_MATCH_HEIGHT then
+                        local yawRadians = math.rad(sample[7])
+                        if forwardX * -math.sin(yawRadians) + forwardY * math.cos(yawRadians) >= SPAN_MATCH_COSINE then
+                            best, bestSquared = sample[8], squared
+                        end
+                    end
                 end
             end
         end
-    end)
+    end
     return best
 end
 
@@ -793,21 +866,23 @@ local function rankedSiftDown(heap, index, size)
 end
 
 local function selectSpawn(players, refused)
-    local fleet = fleetSnapshot()
+    local poses, flat = registryPoses()
+    local fleet = fleetSnapshot(poses, flat)
     local ids = {}
     for vehicleId in pairs(cars) do ids[#ids + 1] = vehicleId end
-    -- Per bucket: each own car matched to a span, with where it is.
+    -- Per bucket: each own car matched to a span, with where it is. A car the registry does not
+    -- know is not matched.
     local matched = {}
     for index = 1, #ids do
-        scanSpend(SCAN_WORK_FLEET_READ)
+        scanSpend(poses and SCAN_WORK_COMPARISON or SCAN_WORK_FLEET_READ)
         local entry = cars[ids[index]]
-        local vehicle = entry and Open77.vehicles.get(ids[index])
-        local position = vehicle and fleetPosition(ids[index], entry, vehicle)
-        local span = position and carSpan(position, vehicle.yaw)
+        local x, y, z, yaw, known
+        if entry then x, y, z, yaw, known = fleetPoint(ids[index], entry, poses, flat) end
+        local span = known and carSpan(x, y, z, yaw)
         if span then
             local held = matched[entry.bucket] or {}
             matched[entry.bucket] = held
-            held[#held + 1] = { span = span, x = position.x, y = position.y }
+            held[#held + 1] = { span = span, x = x, y = y }
         end
     end
 
@@ -820,10 +895,13 @@ local function selectSpawn(players, refused)
         local radiusSquared = area.radius * area.radius
         local group = fleet[player.bucket]
         local present = 0
-        for index = 1, group and group.count or 0 do
-            scanSpend(SCAN_WORK_COMPARISON)
-            local dx, dy = group.x[index] - area.x, group.y[index] - area.y
-            if dx * dx + dy * dy <= radiusSquared then present = present + 1 end
+        if group then
+            scanSpend(SCAN_WORK_COMPARISON * group.count)
+            local xs, ys, ax, ay = group.x, group.y, area.x, area.y
+            for index = 1, group.count do
+                local dx, dy = xs[index] - ax, ys[index] - ay
+                if dx * dx + dy * dy <= radiusSquared then present = present + 1 end
+            end
         end
         if present < CONFIG.maxCarsPerArea then
             local inside = {}
@@ -1507,6 +1585,8 @@ local function spawnOne(players)
                 cache = false,
                 fromZ = anchor.z + 1.5,
             })
+            -- The probe suspended: the time allowance counts from this resume.
+            if preciseClock then scanSince = preciseClock() end
             -- An obsolete reply must neither place a car nor quarantine its anchor.
             local stale
             player, stale = attemptStillValid(selection, passGeneration)
@@ -1720,19 +1800,34 @@ local function spawnOne(players)
     return true
 end
 
+-- What the budget can be at most: `currentBudget` over every player with a position, ready and
+-- living or not. A fleet at this bound has nothing to spawn, and reading it costs the roster's
+-- positions and the two capacities instead of three reads per player, every spawn tick.
+local function budgetBound(capacity)
+    local available = 0
+    for playerId in pairs(Open77.players.positions() or {}) do
+        available = available + math.max(0,
+            capacity.perSimulatorLimit - (capacity.owners[tostring(tonumber(playerId) or playerId)] or 0))
+    end
+    return math.min(CONFIG.carsGlobal, populationCounts() + math.min(available, remainingNpcCapacity()))
+end
+
 CreateThread(function()
     while not stopping do
         -- A reset is deleting the fleet this thread would replenish, and it
         -- yields between chunks: creation stays blocked for its whole duration
         -- rather than racing the deletion.
         if not resetting and CONFIG.enabled then
-            local players = activePlayers()
-            local budget = currentBudget(players)
-            local active = populationCounts()
-            if active < budget then
-                -- The cadence wait also starts a fresh scan allowance.
-                scanWork = 0
-                spawnOne(players)
+            local capacity = Open77.vehicles.ai.capacity()
+            if populationCounts() < budgetBound(capacity) then
+                local players = activePlayers()
+                local budget = currentBudget(players, capacity)
+                local active = populationCounts()
+                if active < budget then
+                    -- The cadence wait also starts a fresh scan allowance.
+                    scanResumed()
+                    spawnOne(players)
+                end
             end
         end
         Wait(CONFIG.spawnEveryMs)
@@ -1742,14 +1837,41 @@ end)
 -- Snapshot identities, not verdicts. Each small chunk re-reads the canonical
 -- state; no retirement decision survives a yield, reset or settings generation.
 local MONITOR_WORK_PER_RESUME = 8
+-- With a clock that moves within a resume (Open77.time.precise), a chunk is what fits in
+-- MONITOR_SLICE_SECONDS, whole multiples of MONITOR_WORK_PER_RESUME cars and at most
+-- MONITOR_MOST_PER_RESUME: a chunk of eight read the observers again (one player read each) 38
+-- times a second for 300 cars.
+local MONITOR_SLICE_SECONDS = 0.002
+local MONITOR_MOST_PER_RESUME = 64
+local function monitorChunkEnds(walk, index)
+    if index == 1 then
+        walk.from = 1
+        walk.since = preciseClock and preciseClock() or 0
+        return false
+    end
+    local done = index - walk.from
+    if done % MONITOR_WORK_PER_RESUME ~= 0 then return false end
+    if preciseClock and done < MONITOR_MOST_PER_RESUME
+        and preciseClock() - walk.since < MONITOR_SLICE_SECONDS then
+        return false
+    end
+    return true
+end
+local function monitorChunkStarts(walk, index)
+    walk.from = index
+    walk.since = preciseClock and preciseClock() or 0
+end
+
 local function monitorFleet(now)
     local passGeneration = generation
     local ids = {}
     for id, entry in pairs(cars) do ids[#ids + 1] = { id = id, entry = entry } end
     local positions = observationPositions()
+    local walk = {}
     for index, item in ipairs(ids) do
-        if index > 1 and (index - 1) % MONITOR_WORK_PER_RESUME == 0 then
+        if monitorChunkEnds(walk, index) then
             Wait(0)
+            monitorChunkStarts(walk, index)
             positions = observationPositions()
         end
         if stopping or resetting or passGeneration ~= generation then return end
@@ -1935,9 +2057,11 @@ local function sweepCorpses(now)
     local ids = {}
     for id, corpse in pairs(corpses) do ids[#ids + 1] = { id = id, corpse = corpse } end
     local positions = observationPositions()
+    local walk = {}
     for index, item in ipairs(ids) do
-        if index > 1 and (index - 1) % MONITOR_WORK_PER_RESUME == 0 then
+        if monitorChunkEnds(walk, index) then
             Wait(0)
+            monitorChunkStarts(walk, index)
             positions = observationPositions()
         end
         if stopping or resetting or passGeneration ~= generation then return end

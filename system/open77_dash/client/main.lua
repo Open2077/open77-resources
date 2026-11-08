@@ -255,7 +255,11 @@ local phases={started=true,completed=true,cancelled=true,rejected=true}
 local function step(p)
     local s=body()
     if not s or s.engineId~=p.body then ack(p,false);clear();return end
-    local value=native("activity")
+    -- Read only while something below consumes it. Idle (nothing pending,
+    -- running, binding or being corrected) nothing reads `value` before the
+    -- press branch reads it afresh after `request`, so the read was a lock, a
+    -- copy and four Lua tables per frame for nothing.
+    local value=(pending or active or binding or correction) and native("activity") or nil
     if binding and now()>=binding.deadline then
         resync("permit_timeout")
         return

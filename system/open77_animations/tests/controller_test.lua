@@ -226,6 +226,47 @@ test('remote native failure retries on a new incarnation, not every tick', funct
     assert(#f.calls == 3 and f.calls[3][2] == '18446744073709551601')
 end)
 
+test('a remote body not attached yet is retried, quietly, until it presents', function()
+    local f = fixture()
+    local attempts = 0
+    f.api = RpAnimationController.new({
+        now = function() return f.now end,
+        play = function(...)
+            attempts = attempts + 1
+            f.calls[#f.calls + 1] = { 'play', ... }
+            if attempts < 3 then return false, 'entity_not_attached' end
+            return true
+        end,
+        stop = function(entity) f.calls[#f.calls + 1] = { 'stop', entity }; return true end,
+        status = function() return f.status end,
+        send = function(...) f.sent[#f.sent + 1] = { ... }; return true end,
+        emit = function(...) f.events[#f.events + 1] = { ... } end,
+        ownerAlive = function() return f.alive end,
+    }, catalogue, 'test')
+    f.api.tick(f.context); f.events = {}
+    f.api.receiveState(f:state(1)); f:tick()
+    assert(attempts == 1)
+    f:tick(); f:tick(); f:tick(); assert(attempts == 1, 'no retry inside the window')
+    for _ = 1, 3 do f:tick() end
+    assert(attempts == 2)
+    for _ = 1, 6 do f:tick() end
+    assert(attempts == 3, 'presented once the body attached')
+    for _ = 1, 6 do f:tick() end
+    assert(attempts == 3, 'and not replayed')
+    for _, event in ipairs(f.events) do assert(event[1] ~= 'onAnimationPlaybackFailed') end
+end)
+
+test('a remote failure under a loading screen is retried slowly, not every tick', function()
+    local f = fixture(); f.api.receiveState(f:state(1)); f:tick()
+    assert(#f.calls == 1)
+    f.status = 'playback_timeout'; f:tick()
+    for _ = 1, 20 do f:tick() end
+    assert(#f.calls == 2, 'stopped, no retry before the window')
+    f.status = 'ok'
+    for _ = 1, 40 do f:tick() end
+    assert(#f.calls == 3 and f.calls[3][1] == 'play', 'presented again after the window')
+end)
+
 test('stop acknowledgement and stale stop replies end retries', function()
     for _, err in ipairs({ 'success', 'stale_playback' }) do
         local f = fixture(); f.api.receiveState(f:state(1, 'local', 7)); f:tick(); f.api.cancel()

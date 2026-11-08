@@ -1,0 +1,67 @@
+{
+  "schema": "open77.locomotion/1",
+  "id": "avexit",
+  "name": "AV door: exit, enter and seats (q305, sq012, q000)",
+  "entry": "native",
+  "parameters": [],
+  "clips": [
+    {
+      "id": "enter",
+      "name": "enter",
+      "duration": 2.6,
+      "animation": "open77__avexit_enter",
+      "cycles": 1,
+      "phaseOffset": 0
+    },
+    {
+      "id": "step",
+      "name": "step",
+      "duration": 4.3,
+      "animation": "open77__avexit_step",
+      "cycles": 1,
+      "phaseOffset": 0
+    },
+    {
+      "id": "sit",
+      "name": "sit",
+      "duration": 5.6,
+      "animation": "open77__avexit_sit",
+      "cycles": 1,
+      "phaseOffset": 0
+    },
+    {
+      "id": "step_m",
+      "name": "step_m",
+      "duration": 4.3,
+      "animation": "open77__avexit_step_m",
+      "cycles": 1,
+      "phaseOffset": 0
+    },
+    {
+      "id": "couch",
+      "name": "couch",
+      "duration": 4.4,
+      "animation": "open77__avexit_couch",
+      "cycles": 1,
+      "phaseOffset": 0
+    }
+  ],
+  "states": [
+    {
+      "id": "native",
+      "name": "Native movement",
+      "x": 0,
+      "y": 0,
+      "loop": true,
+      "speed": 1,
+      "motion": {
+        "type": "native",
+        "clip": "",
+        "parameter": "speed",
+        "parameterY": "directionY",
+        "points": []
+      }
+    }
+  ],
+  "transitions": []
+}

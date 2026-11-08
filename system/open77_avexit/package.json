@@ -1,0 +1,82 @@
+{
+  "schema": "open77.locomotion-package/1",
+  "id": "avexit",
+  "name": "AV door: exit, enter and seats (q305, sq012, q000)",
+  "revision": "3ff5278f87ee0fca66b7d6d019b934a7d2b701686c411f460dd069bcc99a2b06",
+  "graph": "graph.locomotion.json",
+  "channelPrefix": "open77Locomotion",
+  "sampleSlots": 8,
+  "clips": [
+    {
+      "id": "enter",
+      "selector": 0,
+      "animation": "open77__avexit_enter",
+      "duration": 2.6
+    },
+    {
+      "id": "step",
+      "selector": 1,
+      "animation": "open77__avexit_step",
+      "duration": 4.3
+    },
+    {
+      "id": "sit",
+      "selector": 2,
+      "animation": "open77__avexit_sit",
+      "duration": 5.6
+    },
+    {
+      "id": "step_m",
+      "selector": 3,
+      "animation": "open77__avexit_step_m",
+      "duration": 4.3
+    },
+    {
+      "id": "couch",
+      "selector": 4,
+      "animation": "open77__avexit_couch",
+      "duration": 4.4
+    }
+  ],
+  "variants": [
+    {
+      "gender": "Male",
+      "mode": "native",
+      "entity": "open77\\locomotion\\avexit\\3ff5278f87ee\\ma\\native.ent",
+      "graph": "open77\\locomotion\\avexit\\3ff5278f87ee\\ma\\native.animgraph",
+      "addedNodes": 120,
+      "entitySha256": "90286b7464d2d3243045ee43f8d3d9a81ad1a4154b44600631ee1ac41af75ba7",
+      "graphSha256": "d154609a4f391f0f997d29c28e50a3d8ce9414f414a6dd6de79c7a282277f1dd"
+    },
+    {
+      "gender": "Female",
+      "mode": "native",
+      "entity": "open77\\locomotion\\avexit\\3ff5278f87ee\\wa\\native.ent",
+      "graph": "open77\\locomotion\\avexit\\3ff5278f87ee\\wa\\native.animgraph",
+      "addedNodes": 120,
+      "entitySha256": "4afbd0e639d2ee83d6c92f237f0132eeb57098e2f44371a6699bd0a8ce9e2179",
+      "graphSha256": "10df9dec2abde4353e0ebbaddd162ed7b0be38ca0304bc5637a3e6a0504f95a6"
+    },
+    {
+      "gender": "Male",
+      "mode": "mirror",
+      "entity": "open77\\locomotion\\avexit\\3ff5278f87ee\\ma\\mirror.ent",
+      "graph": "open77\\locomotion\\avexit\\3ff5278f87ee\\ma\\mirror.animgraph",
+      "addedNodes": 120,
+      "entitySha256": "494e47f7710e8bc410c3f70220772b60a52ea3decdea47af08cdf3b7a564f843",
+      "graphSha256": "7dabacb721d54977b0be649abedee0ef4e822f5fb95df52b2512356d38f268dc"
+    },
+    {
+      "gender": "Female",
+      "mode": "mirror",
+      "entity": "open77\\locomotion\\avexit\\3ff5278f87ee\\wa\\mirror.ent",
+      "graph": "open77\\locomotion\\avexit\\3ff5278f87ee\\wa\\mirror.animgraph",
+      "addedNodes": 120,
+      "entitySha256": "d49a972b911c2c0719d84529862ac3af76c4a6544a21b47d134df75166256601",
+      "graphSha256": "c749644d77de0981bfad7339d388121fc8bd97f2a1cc0d3f012bcaf6b98ef34a"
+    }
+  ],
+  "archive": "dist/Open77Locomotion_avexit_3ff5278f87ee.zip",
+  "archiveSha256": "e9f62fe5d5a676c18341da97f39091656759e451d1c5369d9763b75cacd26a98",
+  "zipSha256": "3831bc5eeebc3dd0563513b971c55e728721abe142972e93f4f0ffc995225a5d"
+}

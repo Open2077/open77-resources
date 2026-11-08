@@ -165,6 +165,7 @@ FreeroamConfig = {
             { key = "overture",  label = "Overture",         category = "Handguns", record = "Items.Preset_Overture_Default" },
             { key = "quasar",    label = "DR-12 Quasar",     category = "Handguns", record = "Items.Preset_Quasar_Default" },
             { key = "malorian",  label = "Malorian 3516",    category = "Handguns", record = "Items.Preset_Silverhand_3516" },
+            { key = "king_burya",label = "King's Burya",      category = "Handguns", record = "Items.Preset_Burya_King" },
             { key = "saratoga",  label = "M221 Saratoga",    category = "SMG",      record = "Items.Preset_Saratoga_Default" },
             { key = "fenrir",    label = "Fenrir",           category = "SMG",      record = "Items.Preset_Saratoga_Maelstrom" },
             { key = "ajax",      label = "M251s Ajax",       category = "Rifles",   record = "Items.Preset_Ajax_Default" },
@@ -231,6 +232,47 @@ FreeroamConfig = {
         locationSprite = "fast_travel",
         showSpawns = true,
         spawnSprite = "objective",
+    },
+
+    -- The 3D city map (op77_map3d), when the server runs it: freeroam's blue
+    -- theme instead of the map's default black and yellow, and the blips above
+    -- (same blips.enabled / blips.showSpawns switches) on the map and minimap.
+    -- The map is optional: without it nothing here runs. Every colour is a token
+    -- of web/design-system.css (the freeroam HUD), named beside it.
+    map3d = {
+        enabled = true,
+        title = "NIGHT CITY",
+        subtitle = "FREEROAM",
+        theme = {
+            background = "#0b0e14",               -- --o-ink-900 (--surface-app)
+            terrain = "#12161f",                  -- --o-ink-700
+            terrainGrid = "#22d8e2",              -- --o-cyan-500
+            water = "#05070b",                    -- --o-black (--surface-inset)
+            waterLine = "#3d7f85",                -- --o-teal-muted
+            road = "#2a313e",                     -- --o-ink-400
+            roadEdge = "#22d8e2",                 -- --o-cyan-500
+            metro = "#0b7f87",                    -- --o-cyan-700
+            building = "#3a4250",                 -- --o-ink-300
+            buildingTop = "#5a6472",              -- --o-ink-200
+            buildingEdge = "#22d8e2",             -- --o-cyan-500
+            landmark = "#4ee6ee",                 -- --o-cyan-400
+            accent = "#22d8e2",                   -- --o-cyan-500 (--text-accent)
+            accentSoft = "rgba(34, 216, 226, 0.35)", -- --glow-accent-soft
+            text = "#e6eaec",                     -- --text-primary
+            textDim = "#8a94a2",                  -- --text-secondary
+            panel = "rgba(11, 14, 20, 0.82)",     -- --surface-hud
+            danger = "#ff3b4e",                   -- --o-red-500
+        },
+        -- The legend (replaces the map's own list).
+        categories = {
+            { id = "destination", label = "Destinations", icon = "flag", color = "#22d8e2" },
+            { id = "spawn", label = "Spawn points", icon = "star", color = "#2be58b" },
+            { id = "player", label = "Players", icon = "user", color = "#4ee6ee" },
+            { id = "default", label = "Other", icon = "pin" },
+        },
+        -- Category of each mirrored blip (its icon and colour come from the row).
+        locationCategory = "destination",
+        spawnCategory = "spawn",
     },
 }
 

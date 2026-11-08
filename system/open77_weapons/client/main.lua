@@ -18,6 +18,7 @@ end
 local Weapons = {}
 
 exports("slots", function() return invoke("slots") end)
+exports("setDualWieldAllowed", function(enabled) return invoke("setDualWieldAllowed", enabled) end)
 exports("assign", function(record, slot, options)
     return invoke("assign", record, slot, options)
 end)
@@ -53,11 +54,14 @@ local pending = {}
 -- request whose completion is interesting to somebody other than the caller.
 -- ---------------------------------------------------------------------------
 
-local SLOTS = { 1, 2, 3 }
+local SLOTS = { 1, 2, 3, 4, 5, 6 }
+-- Native removal of a primary weapon promotes its secondary into that slot.
+-- Empty all secondaries first so clear cannot leave a promoted pistol behind.
+local CLEAR_SLOTS = { 4, 5, 6, 1, 2, 3 }
 
--- One `clear` in flight, aggregating three native removals.
+-- One `clear` in flight, aggregating all six native removals.
 --
--- Three removals rather than a snapshot-then-remove pass on purpose: an empty
+-- Direct removals rather than a snapshot-then-remove pass: an empty
 -- slot answers `weapon_slot_empty`, which is not a failure of "remove every
 -- weapon" and is treated as success below. Asking first would cost an extra
 -- REDengine round trip to learn something the removals report anyway.
@@ -65,7 +69,7 @@ local clearing = nil
 
 -- The last loadout pushed to the server, by slot, and the drawn id it implied.
 -- Used to keep the push idempotent and to notice an out-of-band change.
-local reported = { records = { "", "", "" }, ids = { 0, 0, 0 }, sent = false }
+local reported = { records = { "", "", "", "", "", "" }, ids = { 0, 0, 0, 0, 0, 0 }, sent = false }
 
 local function pushLoadout(states)
     local rows = {}
@@ -89,10 +93,10 @@ local function pushLoadout(states)
             }
         end
     end
-    for index = 1, 3 do reported.records[index], reported.ids[index] = "", 0 end
+    for index = 1, #SLOTS do reported.records[index], reported.ids[index] = "", 0 end
     for index = 1, #rows do
         local row = rows[index]
-        if row.slot >= 1 and row.slot <= 3 then
+        if row.slot >= 1 and row.slot <= #SLOTS then
             reported.records[row.slot] = row.record
             reported.ids[row.slot] = tonumber(row.tweakDbId) or 0
         end
@@ -192,8 +196,8 @@ end
 function Weapons.clear(requestId)
     if clearing ~= nil then return nil, "clear_in_progress" end
     local batch = { requestId = requestId, remaining = 0, slots = {}, failures = 0 }
-    for index = 1, #SLOTS do
-        local slot = SLOTS[index]
+    for index = 1, #CLEAR_SLOTS do
+        local slot = CLEAR_SLOTS[index]
         local nativeId, reason = invoke("remove", slot)
         if nativeId == nil then
             batch.slots[#batch.slots + 1] =
@@ -243,7 +247,9 @@ RegisterNetEvent("open77:weapons:request", function(requestId, operation, payloa
     if not validRemoteRequestId(requestId) or type(operation) ~= "string" then return end
 
     local nativeId, reason
-    if operation == "assign" and type(payload) == "table" then
+    if operation == "setDualWieldAllowed" then
+        nativeId, reason = invoke("setDualWieldAllowed", payload)
+    elseif operation == "assign" and type(payload) == "table" then
         nativeId, reason = invoke("assign", payload.record, payload.slot, options)
     elseif operation == "setActive" then
         nativeId, reason = invoke("setActive", payload, options)
@@ -256,7 +262,7 @@ RegisterNetEvent("open77:weapons:request", function(requestId, operation, payloa
     elseif operation == "snapshot" then
         nativeId, reason = invoke("snapshot")
     elseif operation == "clear" then
-        -- Aggregated locally: `clear` is three native removals answered once.
+        -- Aggregated locally: `clear` is six native removals answered once.
         -- It owns the server reply, so nothing is registered in `pending` here.
         nativeId, reason = Weapons.clear(requestId)
         if nativeId ~= nil then return end
@@ -393,7 +399,7 @@ end
 
 AddEventHandler("open77:weapons:state", function(
     nativeId, slot, record, tweakDbId, active, drawn, locked,
-    ammoRecord, ammoTweakDbId, ammoTotal, ammoReserve, magazine, capacity)
+    ammoRecord, ammoTweakDbId, ammoTotal, ammoReserve, magazine, capacity, reloading)
     local request = pending[tostring(nativeId)]
     if request == nil or request.operation ~= "snapshot" then return end
     request.states[#request.states + 1] = {
@@ -405,6 +411,7 @@ AddEventHandler("open77:weapons:state", function(
         active = active == "true",
         drawn = drawn == "true",
         locked = locked == "true",
+        reloading = reloading == "true",
         ammo = ammoState(
             ammoRecord, ammoTweakDbId, ammoTotal, ammoReserve, magazine, capacity),
     }

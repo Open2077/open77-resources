@@ -11,14 +11,7 @@
     armor: byId("armor-value"),
     staminaFill: byId("stamina-fill"),
     staminaPercent: byId("stamina-percent"),
-    weapon: byId("weapon-hud"),
-    weaponSlot: byId("weapon-slot"),
-    weaponName: byId("weapon-name"),
-    weaponType: byId("weapon-type"),
-    weaponState: byId("weapon-state"),
-    magazineStrip: byId("magazine-strip"),
-    ammoMagazine: byId("ammo-magazine"),
-    ammoReserve: byId("ammo-reserve"),
+    weapons: byId("weapons-hud"),
     vehicleGear: byId("vehicle-gear"),
     vehicleSpeed: byId("vehicle-speed"),
     vehicleSpeedometer: byId("vehicle-speedometer"),
@@ -36,19 +29,58 @@
     return max > 0 ? clamp(Number(value) / max, 0, 1) : 0;
   };
 
-  let segmentCount = 0;
-  function renderSegments(ammo, capacity) {
+  // Two persistent cards: updates only change their text and segment classes.
+  // Never rebuild the HUD for each 200 ms equipment snapshot.
+  const weaponCards = [0, 1].map(() => {
+    const node = byId("weapon-template").content.firstElementChild.cloneNode(true);
+    node.hidden = true;
+    refs.weapons.append(node);
+    const fields = Object.fromEntries(Array.from(node.querySelectorAll("[data-field]"))
+      .map(element => [element.dataset.field, element]));
+    return { node, fields, segmentCount: 0 };
+  });
+
+  function renderSegments(card, ammo, capacity) {
+    const strip = card.fields["magazine-strip"];
     const cap = Math.max(1, whole(capacity));
     const count = Math.min(40, cap);
-    if (count !== segmentCount) {
-      refs.magazineStrip.replaceChildren();
+    if (count !== card.segmentCount) {
+      strip.replaceChildren();
       for (let index = 0; index < count; index += 1)
-        refs.magazineStrip.append(document.createElement("span"));
-      segmentCount = count;
+        strip.append(document.createElement("span"));
+      card.segmentCount = count;
     }
     const live = Math.round(clamp(ammo, 0, cap) * count / cap);
-    Array.from(refs.magazineStrip.children).forEach((segment, index) =>
+    Array.from(strip.children).forEach((segment, index) =>
       segment.classList.toggle("live", index < live));
+  }
+
+  function renderWeapon(card, weapon) {
+    card.node.hidden = !weapon;
+    if (!weapon) return;
+    const fields = card.fields;
+    const ammoKnown = weapon.ammoKnown === true && Number(weapon.capacity) >= 0;
+    const melee = /melee|katana|knife|blade|blunt|machete|bat|hammer/i.test(String(weapon.category || ""));
+    const magazine = whole(weapon.magazine);
+    const capacity = whole(weapon.capacity);
+    const lowAmmo = ammoKnown && capacity > 0 && magazine <= Math.ceil(capacity * 0.25);
+    const hand = weapon.hand === "left" || Number(weapon.slot) > 3 ? "LEFT" : "RIGHT";
+    card.node.dataset.hand = hand.toLowerCase();
+    card.node.setAttribute("aria-label", `${hand.toLowerCase()} hand weapon`);
+    card.node.classList.toggle("melee", melee);
+    card.node.classList.toggle("low-ammo", lowAmmo);
+    card.node.classList.toggle("reloading", weapon.reloading === true);
+    fields["weapon-slot"].textContent = String(whole(weapon.slot) || 1);
+    fields["weapon-name"].textContent = String(weapon.label || weapon.record || "WEAPON");
+    fields["weapon-hand"].textContent = `${hand} HAND`;
+    fields["weapon-type"].textContent = String(weapon.category || (melee ? "MELEE" : "RANGED"));
+    fields["weapon-state"].textContent = weapon.reloading === true ? "RELOADING"
+      : weapon.drawn === true ? "DRAWN" : "HOLSTERED";
+    fields["ammo-magazine"].textContent = ammoKnown ? String(magazine) : "--";
+    fields["ammo-reserve"].textContent = ammoKnown && weapon.reserveKnown !== false
+      ? String(whole(weapon.reserve)) : "--";
+    fields["magazine-strip"].hidden = !ammoKnown;
+    if (ammoKnown) renderSegments(card, magazine, capacity);
   }
 
   function render(payload) {
@@ -69,27 +101,12 @@
     refs.staminaPercent.textContent = String(Math.round(staminaRatio * 100));
     refs.vitals.classList.toggle("critical", hpRatio <= 0.25);
 
-    const weapon = payload.weapon && typeof payload.weapon === "object" ? payload.weapon : {};
-    const equipped = weapon.equipped === true;
-    const ammoKnown = weapon.ammoKnown === true && Number(weapon.capacity) >= 0;
-    // A pending firearm snapshot is unknown, not proof of a melee weapon.
-    const melee = equipped && /melee|katana|knife|blade|blunt|machete|bat|hammer/i.test(String(weapon.category || ''));
-    const magazine = whole(weapon.magazine);
-    const capacity = Math.max(0, whole(weapon.capacity));
-    const reserve = whole(weapon.reserve);
-    const lowAmmo = ammoKnown && capacity > 0 && magazine <= Math.ceil(capacity * 0.25);
-
-    body.dataset.weapon = String(equipped);
-    refs.weapon.classList.toggle("melee", melee);
-    refs.weapon.classList.toggle("low-ammo", lowAmmo);
-    refs.weaponSlot.textContent = String(whole(weapon.slot) || 1);
-    refs.weaponName.textContent = String(weapon.label || weapon.record || "WEAPON");
-    refs.weaponType.textContent = String(weapon.category || (melee ? "MELEE" : "RANGED"));
-    refs.weaponState.textContent = weapon.drawn === true ? "DRAWN" : "HOLSTERED";
-    refs.ammoMagazine.textContent = ammoKnown ? String(magazine) : "--";
-    refs.ammoReserve.textContent = ammoKnown ? String(reserve) : "--";
-    refs.magazineStrip.hidden = !ammoKnown;
-    if (ammoKnown) renderSegments(magazine, capacity);
+    // Preserve the old one-weapon payload for older resources and previews.
+    const weapons = (Array.isArray(payload.weapons) ? payload.weapons : [payload.weapon])
+      .filter(weapon => weapon && weapon.equipped === true).slice(0, 2);
+    body.dataset.weapon = String(weapons.length > 0);
+    refs.weapons.classList.toggle("dual", weapons.length === 2);
+    weaponCards.forEach((card, index) => renderWeapon(card, weapons[index]));
 
     const vehicle = payload.vehicle && typeof payload.vehicle === "object" ? payload.vehicle : {};
     const inVehicle = vehicle.active === true;

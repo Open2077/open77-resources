@@ -19,11 +19,19 @@
 --   panicking in the traffic running from a threat; it calms fleeTimeoutMs after the panic,
 --   dead      a corpse that leaves on the timers.
 -- A native body can get stuck: a walker in the traffic that has not moved stuckM in stuckS leaves.
+--
+-- Density and composition are the vanilla crowd's (crowdsets-generated.lua, from the game's crowd creation
+-- registry): every crowd fragment of a lane says how many walkers the game keeps on it in each period of the day
+-- (Morning, Day, Evening, Night) and which civilians, with their weights. Around each player the walkers number
+-- what the fragments within densityRadiusM want for the hour of its bucket (times crowdDensity, capped by
+-- crowdMaxNearPlayer); a new one appears on a fragment drawn by that want and is one of the fragment's civilians
+-- for the hour: the homeless of a Watson alley, the suits of Corpo Plaza, fewer people at night. Without the
+-- generated sets (an older catalogue) any fragment and any civilian of the city will do.
 Open77CrowdScheduler = {}
 Open77CrowdScheduler.__index = Open77CrowdScheduler
 
 local S = Open77PedestrianSpatial
-local CELL, cellOf, cellKey, addPlayer, query = S.CELL, S.cellOf, S.cellKey, S.addPlayer, S.query
+local CELL, cellOf, cellKey, addPlayer, query, countGroups = S.CELL, S.cellOf, S.cellKey, S.addPlayer, S.query, S.countGroups
 local sqrt, abs, min, max = math.sqrt, math.abs, math.min, math.max
 
 local PANICKABLE = { walking = true, seated = true }
@@ -43,6 +51,46 @@ local NEAR_SPOT_M = 12
 
 local function uniform(api, low, high) return low + (high - low) * api.random(0, SCALE) / SCALE end
 
+-- The walkers of a bucket by 64 m cell are kept from pass to pass (tens of thousands of walkers must not cost a
+-- table per cell per pass): a cell list holds `n` walkers of pass `pass`; a list of an older pass is empty.
+local function cellSize(cells, cell) return (cell and cell.pass == cells.pass) and cell.n or 0 end
+local function cellAdd(cells, key, walker)
+    local cell = cells[key]
+    if not cell then cell = { n = 0, pass = cells.pass }; cells[key] = cell end
+    if cell.pass ~= cells.pass then
+        for i = 1, cell.n do cell[i] = nil end
+        cell.n, cell.pass = 0, cells.pass
+    end
+    cell.n = cell.n + 1
+    cell[cell.n] = walker
+end
+
+-- Periods of the crowd sets: Morning, Day, Evening and Night start at these game minutes unless the catalogue
+-- says otherwise (06:00, 10:00, 18:00, 22:00, the community periods' own starts).
+local PERIOD_STARTS = { 360, 600, 1080, 1320 }
+
+-- The period (1..4) a game minute falls in: the last that has started, Night before the first.
+local function periodOf(starts, minute)
+    local period = #starts
+    for p = 1, #starts do
+        if minute >= starts[p] then period = p end
+    end
+    return period
+end
+Open77CrowdScheduler.periodOf = periodOf
+
+-- A record drawn from a flat { record, weight, ... } draw.
+local function drawRecord(api, draw)
+    local total = 0
+    for i = 2, #draw, 2 do total = total + draw[i] end
+    local pick = total * api.random(0, SCALE) / SCALE
+    for i = 2, #draw, 2 do
+        pick = pick - draw[i]
+        if pick <= 0 then return draw[i - 1] end
+    end
+    return draw[#draw - 1]
+end
+
 -- One token of a `[crowd]` log line (key=value pairs): the platform's free-text reasons carry no whitespace into it.
 local function token(value)
     value = tostring(value)
@@ -60,6 +108,16 @@ function Open77CrowdScheduler.new(lanes, spots, config, api)
         spawnLanes = {}, spotCells = {}, clips = {}, bodyClips = {},
         walkers = {}, spotOccupant = {}, spotCooldown = {}, failures = {},
         spawns = 0, cursor = 0, indexed = false,
+        -- The crowd fragments, when the catalogue has their sets: lane, range, set, midpoint and four
+        -- walkers-per-period values each (fragRate[(f - 1) * 4 + period]), listed per 64 m cell by midpoint.
+        fragCount = 0, fragLane = {}, fragRange = {}, fragSet = {}, fragX = {}, fragY = {}, fragZ = {},
+        fragRate = {}, fragCells = {},
+        periodStarts = lanes.periodStarts or PERIOD_STARTS,
+        -- Per player id: its density want, where and for which period it was worked out.
+        targets = {}, overflowRetired = 0,
+        -- Players holding a drawn weapon (setArmed): the drawn slot by id; since when one is missing from the list.
+        armed = {}, armedGone = {}, motion = {},
+        overflowCursor = 0,
     }, Open77CrowdScheduler)
 end
 
@@ -78,6 +136,14 @@ function Open77CrowdScheduler:index()
     end
     local allowed, classes, laneFirst, laneSize = config.laneClasses, lanes.laneClass, lanes.laneFirst, lanes.laneSize
     local px, py = self.pointX, self.pointY
+    local spawnSets, spawnRates = lanes.laneSpawnSet, lanes.laneSpawnRate
+    -- Sets written for another lane catalogue (a lanes run without the registry left an old file) would point at
+    -- the wrong lanes and civilians: they are ignored, and the crowd falls back to any fragment and civilian.
+    if lanes.crowdSetsFor and lanes.crowdSetsFor ~= lanes.catalogSha256 then
+        api.log("pedestrians: crowdsets-generated.lua was built for lane catalogue %s, not %s; the vanilla density is off",
+            tostring(lanes.crowdSetsFor), tostring(lanes.catalogSha256))
+        spawnSets, spawnRates = nil, nil
+    end
     -- A lane is listed once per cell any of its vertices falls in: `stamp` is the last lane that
     -- listed itself in a cell.
     local stamp = {}
@@ -94,6 +160,24 @@ function Open77CrowdScheduler:index()
                 end
             end
             step(laneSize[lane] + 2)
+            local sets, rates, ranges = spawnSets and spawnSets[lane], spawnRates and spawnRates[lane], self.laneSpawn[lane]
+            if sets and rates then
+                for k = 1, #ranges // 2 do
+                    if (sets[k] or 0) > 0 then
+                        local f = self.fragCount + 1
+                        self.fragCount = f
+                        local x, y, z = self:pointAt(lane, (ranges[2 * k - 1] + ranges[2 * k]) / 2)
+                        self.fragLane[f], self.fragRange[f], self.fragSet[f] = lane, k, sets[k]
+                        self.fragX[f], self.fragY[f], self.fragZ[f] = x, y, z
+                        for p = 1, 4 do self.fragRate[(f - 1) * 4 + p] = rates[(k - 1) * 4 + p] or 0 end
+                        local key = cellKey(cellOf(x), cellOf(y))
+                        local list = self.fragCells[key]
+                        if not list then list = {}; self.fragCells[key] = list end
+                        list[#list + 1] = f
+                        step(laneSize[lane] + 6)
+                    end
+                end
+            end
         else
             step(1)
         end
@@ -119,13 +203,17 @@ function Open77CrowdScheduler:index()
     self.indexed = true
 end
 
--- Frees the spot a walker reserved or sits at; it rests `coolS` (spotCooldownS) before the next.
+-- Frees the spot a walker reserved or sits at. With `coolS` (a corpse lying there) the spot is refused for
+-- that long; otherwise the next walker the game sends there may take it at once. A rest after every stay
+-- refused visits the host's game had already started: its body sat or leaned, then stood up and walked
+-- off when the server found the spot resting (203 of 259 refused visits on German Unstable, 2026-10-31).
+-- The walker that leaves is the one kept from coming straight back, by its own visitsAt (leaveSpot).
 function Open77CrowdScheduler:release(walker, coolS)
     local spot = walker.spot
     if not spot then return end
     walker.spot = nil
     if self.spotOccupant[spot] == walker.npc then self.spotOccupant[spot] = nil end
-    self.spotCooldown[spot] = self.api.now() + (coolS or self.config.crowd.spotCooldownS)
+    if coolS then self.spotCooldown[spot] = self.api.now() + coolS end
 end
 
 function Open77CrowdScheduler:drop(walker, remove)
@@ -355,13 +443,16 @@ function Open77CrowdScheduler:sit(walker)
     self:leaveSpot(walker, "workspot_refused")
 end
 
--- Off the spot: its NPC gets its tasks back, then it joins the traffic on the anchor, where it stands.
+-- Off the spot: its NPC gets its tasks back, then it joins the traffic on the anchor, where it stands, with
+-- visits refused for visitRetryS so the game does not sit it straight back down where it just was.
 function Open77CrowdScheduler:leaveSpot(walker, why)
     local spots, spot = self.spots, walker.spot
     walker.x, walker.y, walker.z = spots.spotX[spot], spots.spotY[spot], spots.spotZ[spot]
     self:release(walker)
     self.api.setAiMode(walker.npc, "tasks")
-    self:walk(walker, nil, why or "stay_over")
+    if self:walk(walker, false, why or "stay_over") then
+        walker.visitsAt = self.api.now() + self.config.crowd.visitRetryS
+    end
 end
 
 -- Whether a walker in the traffic has stayed within stuckM of one place (where it joined, or where
@@ -390,13 +481,7 @@ function Open77CrowdScheduler:tick(budget)
     -- The pass is sliced as the seated one is (scheduler.lua), against the same budget.
     budget = budget or { work = 0, slices = 0 }
     local startSlices = budget.slices
-    local function charge(amount)
-        budget.work = budget.work + amount
-        if budget.work >= config.scanWorkPerSlice and api.yield then
-            api.yield()
-            budget.work, budget.slices = 0, budget.slices + 1
-        end
-    end
+    local charge = S.slicer(budget, config, api)
     -- `players` holds everyone a client streams NPCs for (the dead and dying included): retirement
     -- counts them. Only the living (`alive`) bring walkers in.
     local players, alive, byId, order = {}, {}, {}, {}
@@ -411,24 +496,110 @@ function Open77CrowdScheduler:tick(budget)
         end
     end
     self.playersById = byId
+    for id in pairs(self.targets) do
+        if not byId[id] then self.targets[id] = nil end
+    end
+    -- A player missing from the list (loading, a bucket change) keeps its drawn weapon for a minute: no new
+    -- event follows until it draws or holsters again.
+    -- Each living player's direction of travel over the last second (nil standing still): spawnDense keeps new
+    -- walkers out of the way ahead of it.
+    for _, player in ipairs(order) do
+        local m = self.motion[player.id]
+        if not m then
+            m = { x = player.x, y = player.y, t = now }
+            self.motion[player.id] = m
+        elseif now - m.t >= 1 then
+            local dx, dy = player.x - m.x, player.y - m.y
+            local d = sqrt(dx * dx + dy * dy)
+            if d >= 1 then m.dx, m.dy = dx / d, dy / d else m.dx, m.dy = nil, nil end
+            m.x, m.y, m.t = player.x, player.y, now
+        end
+    end
+    for id in pairs(self.motion) do
+        if not byId[id] then self.motion[id] = nil end
+    end
+    for id in pairs(self.armed) do
+        if byId[id] then
+            self.armedGone[id] = nil
+        elseif not self.armedGone[id] then
+            self.armedGone[id] = now
+        elseif now - self.armedGone[id] > 60 then
+            self.armed[id], self.armedGone[id] = nil, nil
+        end
+    end
     charge(#order * 4)
 
-    -- The platform's rows of this resource's NPCs: where each walker is now.
-    local rows, snapshot = {}, api.npcs()
-    for i = 1, #snapshot do rows[tostring(snapshot[i].id)] = snapshot[i] end
+    -- The platform's rows of this resource's NPCs: where each walker is now. Keyed by the numeric id (a walker's
+    -- `nid`): tens of thousands of NPCs must not cost a string each per pass. The table is kept between passes.
+    local rows, snapshot = self.rowsById, api.npcs()
+    if not rows then rows = {}; self.rowsById = rows end
+    local pass = (self.rowsPass or 0) + 1
+    self.rowsPass = pass
+    for i = 1, #snapshot do
+        local row = snapshot[i]
+        local nid = tonumber(row.id)
+        if nid then rows[nid] = row; row.seenPass = pass end
+    end
     charge(#snapshot * 3)
+    if pass % 120 == 0 then
+        for nid, row in pairs(rows) do
+            if row.seenPass ~= pass then rows[nid] = nil end
+        end
+    end
+
+    -- Zone clusters (crowd.clusterLinkM): living players chained within that distance share one crowd and one
+    -- budget, so fifty players in one market get a crowd sized for the market, not fifty crowds. A cluster's target is
+    -- what the game keeps on the fragments around any of its players (each counted once) times crowdDensity, capped
+    -- by crowdMaxNearPlayer plus clusterPerPlayer for every extra player (square root: crowds grow slower than
+    -- players), and the clusters share crowdMaxActive in proportion to their targets when the server is full.
+    local clusterOf, clusters = nil, nil
+    if self.fragCount > 0 then
+        local work
+        _, work, clusterOf = countGroups(alive, c.clusterLinkM)
+        charge(work)
+        clusters = {}
+        for _, player in ipairs(order) do
+            local key = clusterOf[player]
+            local cluster = clusters[key]
+            if not cluster then
+                cluster = { members = {}, near = 0, load = 0, stamp = 0, nearStamp = 0, key = key }
+                clusters[key] = cluster
+            end
+            cluster.members[#cluster.members + 1] = player
+        end
+    end
+
+    -- The period of the day in each bucket with players (the game clock is per bucket).
+    local periods = {}
+    if self.fragCount > 0 then
+        for bucket in pairs(alive) do
+            local seconds = api.secondsOfDay and api.secondsOfDay(bucket) or nil
+            periods[bucket] = periodOf(self.periodStarts,
+                math.floor(((seconds or config.fallbackSecondsOfDay or 43200) % 86400) / 60))
+        end
+    end
+    self.periods = periods
 
     local streamed = c.streamingRadiusM
-    local load, watchers, cells, active = {}, {}, {}, 0
+    local load, watchers, active = {}, {}, 0
+    local cells = self.walkerCells
+    if not cells then cells = {}; self.walkerCells = cells end
+    for _, bucketCells in pairs(cells) do bucketCells.pass = pass end
+    -- `near`: walkers within densityRadiusM of each living player (what its density want is measured against);
+    -- `far` (an array kept between passes, valid up to nfar): walking walkers past spawnMaxM of every living
+    -- player that some living player streams, the first to go when the hour or a move leaves too many around.
+    local near, far, nfar, serial = {}, self.farList, 0, 0
+    if not far then far = {}; self.farList = far end
+    local density2, ring2 = c.densityRadiusM and c.densityRadiusM * c.densityRadiusM or 0, c.spawnMaxM * c.spawnMaxM
     -- Event handlers run while the pass waits between slices and may drop walkers.
     local ids = {}
     for id in pairs(self.walkers) do ids[#ids + 1] = id end
     for _, id in ipairs(ids) do
         local walker = self.walkers[id]
         if walker then
-            local row = rows[id]
+            local row = rows[walker.nid]
             local cost = 8
-            if not row then
+            if not row or row.seenPass ~= pass then
                 -- Gone from the platform without a report (removed by a stop or a reload).
                 self:drop(walker, false)
             else
@@ -452,6 +623,11 @@ function Open77CrowdScheduler:tick(budget)
                 elseif set then
                     local nearest, examined = query(set, x, y, z, c.retireRadiusM, nil, true)
                     retire, cost = nearest == math.huge, cost + examined
+                    -- An exclusion zone (server/exclusions.lua): a walker that walked or fled in leaves.
+                    if not retire and self.api.excluded and self.api.excluded(x, y, z) then
+                        retire = true
+                        self.excludedRetired = (self.excludedRetired or 0) + 1
+                    end
                 end
                 if retire then
                     self:drop(walker, true)
@@ -470,18 +646,34 @@ function Open77CrowdScheduler:tick(budget)
                     if self.walkers[id] == walker then
                         active = active + 1
                         local bucketCells = cells[walker.bucket]
-                        if not bucketCells then bucketCells = {}; cells[walker.bucket] = bucketCells end
-                        local key = cellKey(cellOf(x), cellOf(y))
-                        local cell = bucketCells[key]
-                        if not cell then cell = {}; bucketCells[key] = cell end
-                        cell[#cell + 1] = walker
+                        if not bucketCells then bucketCells = { pass = pass }; cells[walker.bucket] = bucketCells end
+                        cellAdd(bucketCells, cellKey(cellOf(x), cellOf(y)), walker)
                         local _, examined = query(alive[walker.bucket], x, y, z, streamed, nil, false, watchers)
-                        cost = cost + examined + 2 * #watchers
-                        for i = #watchers, 1, -1 do
+                        cost = cost + examined + 4 * #watchers
+                        local closest = math.huge
+                        serial = serial + 1
+                        for i = 1, #watchers do
                             local player = watchers[i]
                             load[player] = (load[player] or 0) + 1
-                            watchers[i] = nil
+                            local dx, dy = player.x - x, player.y - y
+                            local d2 = dx * dx + dy * dy
+                            if d2 <= density2 then near[player] = (near[player] or 0) + 1 end
+                            if d2 < closest then closest = d2 end
+                            -- Each walker counts once for each cluster streaming it, and once more for each it
+                            -- stands near.
+                            local cluster = clusters and clusters[clusterOf[player]]
+                            if cluster then
+                                if cluster.stamp ~= serial then cluster.stamp = serial; cluster.load = cluster.load + 1 end
+                                if d2 <= density2 and cluster.nearStamp ~= serial then
+                                    cluster.nearStamp = serial; cluster.near = cluster.near + 1
+                                end
+                            end
                         end
+                        if self.fragCount > 0 and walker.state == "walking" and closest > ring2 and #watchers > 0 then
+                            nfar = nfar + 1
+                            far[nfar] = walker
+                        end
+                        for i = #watchers, 1, -1 do watchers[i] = nil end
                     end
                 end
             end
@@ -491,33 +683,231 @@ function Open77CrowdScheduler:tick(budget)
 
     -- `pedestrians.crowd off` may have landed while the pass waited between slices.
     if not self.enabled then return end
+    local state = { now = now, alive = alive, load = load, near = near, cells = cells, charge = charge,
+        active = active, periods = periods, clusters = clusters, clusterOf = clusterOf }
+    if clusters then self:clusterTargets(state) end
+    for i = nfar + 1, #far do far[i] = nil end
+    self:overflow(state, far, nfar)
+    self:brandish(order, cells, charge)
     -- Round robin over the living players by id, from the one after the last served: one spawn per
     -- player in turn, spawnsPerTick in all, so nobody is served twice before the others.
-    local state = { now = now, alive = alive, load = load, cells = cells, charge = charge, active = active }
     local count, created = #order, 0
     if count > 0 then
         table.sort(order, function(a, b) return a.id < b.id end)
         local from = 1
         while from <= count and order[from].id <= self.cursor do from = from + 1 end
         if from > count then from = 1 end
-        for step = 0, count - 1 do
+        -- Around again while spawns are left: a lone player gets up to spawnsPerPlayerTick a tick,
+        -- not one, and never more (a client entering the world fills in over seconds).
+        local perPlayer = c.spawnsPerPlayerTick or c.spawnsPerTick
+        local fresh = {}
+        for step = 0, math.max(count, c.spawnsPerTick) - 1 do
             if created >= c.spawnsPerTick or state.active >= config.crowdMaxActive then break end
             local player = order[(from - 1 + step) % count + 1]
-            self.cursor = player.id
-            if self:spawnFor(state, player) then created = created + 1 end
+            if (fresh[player.id] or 0) < perPlayer then
+                self.cursor = player.id
+                if self:spawnFor(state, player) then
+                    created = created + 1
+                    fresh[player.id] = (fresh[player.id] or 0) + 1
+                end
+            end
         end
     end
     self.lastSlices = budget.slices - startSlices
+end
+
+-- A cluster's target (state.clusters, built by tick): the union of what its players' fragments want (each fragment once,
+-- cached per cluster shape for densityRefreshS), times crowdDensity, capped by crowdMaxNearPlayer + clusterPerPlayer *
+-- sqrt(players - 1) and crowdMaxCluster; when the clusters' targets add up past crowdMaxActive, each gets its share in
+-- proportion to its target.
+function Open77CrowdScheduler:clusterTargets(state)
+    local config, c = self.config, self.config.crowd
+    local total = 0
+    for _, cluster in pairs(state.clusters) do
+        local members = cluster.members
+        local period = state.periods[members[1].bucket] or 2
+        local want = self:clusterWant(cluster, period, state.now, state.charge)
+        local cap = config.crowdMaxNearPlayer + c.clusterPerPlayer * math.sqrt(#members - 1)
+        cluster.want = want
+        cluster.target = math.min(want, math.floor(math.min(cap, config.crowdMaxCluster) + 0.5))
+        total = total + cluster.target
+    end
+    if total > config.crowdMaxActive and total > 0 then
+        local share = config.crowdMaxActive / total
+        for _, cluster in pairs(state.clusters) do cluster.target = math.floor(cluster.target * share) end
+    end
+    self.lastClusters = state.clusters
+end
+
+-- What the fragments within densityRadiusM of any player of `cluster` want in `period`, each fragment counted once,
+-- times crowdDensity. Kept per cluster shape (its players' ids and 64 m cells) for densityRefreshS.
+function Open77CrowdScheduler:clusterWant(cluster, period, now, charge)
+    local c, config = self.config.crowd, self.config
+    local members = cluster.members
+    if #members == 1 then
+        local want, work = self:targetFor(members[1], period, now)
+        charge(work)
+        return want
+    end
+    local parts = {}
+    for i = 1, #members do
+        local p = members[i]
+        parts[i] = p.id .. ":" .. cellOf(p.x) .. ":" .. cellOf(p.y)
+    end
+    table.sort(parts)
+    local shape = period .. "|" .. table.concat(parts, ";")
+    local cache = self.clusterCache
+    if not cache then cache = {}; self.clusterCache = cache end
+    local cached = cache[shape]
+    if cached and now - cached.at < c.densityRefreshS then return cached.want end
+    local stamp = (self.fragStampSerial or 0) + 1
+    self.fragStampSerial = stamp
+    local stamps = self.fragStamp
+    if not stamps then stamps = {}; self.fragStamp = stamps end
+    local radius = c.densityRadiusM
+    local r2, span = radius * radius, math.ceil(radius / CELL)
+    local fx, fy, fz, rate = self.fragX, self.fragY, self.fragZ, self.fragRate
+    local sum, cost = 0, 0
+    for i = 1, #members do
+        local player = members[i]
+        local cx, cy = cellOf(player.x), cellOf(player.y)
+        for gx = cx - span, cx + span do
+            for gy = cy - span, cy + span do
+                local cell = self.fragCells[cellKey(gx, gy)]
+                cost = cost + 1 + (cell and #cell or 0)
+                for j = 1, cell and #cell or 0 do
+                    local f = cell[j]
+                    if stamps[f] ~= stamp then
+                        local dx, dy = fx[f] - player.x, fy[f] - player.y
+                        if dx * dx + dy * dy <= r2 and abs(fz[f] - player.z) <= c.verticalRangeM then
+                            stamps[f] = stamp
+                            sum = sum + rate[(f - 1) * 4 + period]
+                        end
+                    end
+                end
+            end
+        end
+    end
+    charge(cost)
+    local want = math.floor(sum * config.crowdDensity + 0.5)
+    -- Shapes change as players move: the cache is dropped whole when it grows, a shape costs one entry a refresh.
+    self.clusterCacheSize = (self.clusterCacheSize or 0) + 1
+    if self.clusterCacheSize > 512 then cache = {}; self.clusterCache = cache; self.clusterCacheSize = 1 end
+    cache[shape] = { want = want, at = now }
+    return want
+end
+
+-- How many walkers `player` wants around it in `period`: what the game keeps on the crowd fragments within
+-- densityRadiusM of it, times crowdDensity, rounded; worked out again once the player has moved densityRefreshM,
+-- the period changed or densityRefreshS went by. The second result is the work done.
+function Open77CrowdScheduler:targetFor(player, period, now)
+    local c, config = self.config.crowd, self.config
+    local cached = self.targets[player.id]
+    if cached and cached.period == period and now - cached.at < c.densityRefreshS
+            and abs(cached.x - player.x) < c.densityRefreshM and abs(cached.y - player.y) < c.densityRefreshM then
+        return cached.want, 1
+    end
+    local radius = c.densityRadiusM
+    local r2, span = radius * radius, math.ceil(radius / CELL)
+    local cx, cy = cellOf(player.x), cellOf(player.y)
+    local fx, fy, fz, rate = self.fragX, self.fragY, self.fragZ, self.fragRate
+    local sum, cost = 0, 0
+    for gx = cx - span, cx + span do
+        for gy = cy - span, cy + span do
+            local cell = self.fragCells[cellKey(gx, gy)]
+            cost = cost + 1
+            for i = 1, cell and #cell or 0 do
+                local f = cell[i]
+                local dx, dy = fx[f] - player.x, fy[f] - player.y
+                if dx * dx + dy * dy <= r2 and abs(fz[f] - player.z) <= c.verticalRangeM then
+                    sum = sum + rate[(f - 1) * 4 + period]
+                end
+            end
+            cost = cost + (cell and #cell or 0)
+        end
+    end
+    local want = math.floor(sum * config.crowdDensity + 0.5)
+    if not cached then cached = {}; self.targets[player.id] = cached end
+    cached.x, cached.y, cached.period, cached.at, cached.want = player.x, player.y, period, now, want
+    return want, cost
+end
+
+-- Too many walkers around: the hour moved to a quieter period, or players walked from a market into a back
+-- street. A walker past spawnMaxM of every living player goes (out of the ring walkers appear in, so nobody
+-- watches it vanish close by) while every living player streaming it holds more than overflowFactor times its
+-- want plus overflowSlack; at most overflowRetiresPerTick a tick, the rest on the next ones.
+function Open77CrowdScheduler:overflow(state, far, count)
+    local c, api = self.config.crowd, self.api
+    if count == 0 or (c.overflowRetiresPerTick or 0) <= 0 then return end
+    -- At most 32 walkers a tick, from where the last pass stopped: the first ones of the list may all be a dense
+    -- area's that never overflow, and the others' turn must come.
+    local watchers, retired, examined = {}, 0, 0
+    local start = self.overflowCursor % count
+    for step = 1, count do
+        if retired >= c.overflowRetiresPerTick or examined >= 32 then break end
+        local i = (start + step - 1) % count + 1
+        self.overflowCursor = i
+        local walker = far[i]
+        if self.walkers[walker.npc] == walker and walker.state == "walking" then
+            examined = examined + 1
+            local set = state.alive[walker.bucket]
+            local period = state.periods[walker.bucket] or 2
+            local _, cost = query(set, walker.x, walker.y, walker.z, c.streamingRadiusM, nil, false, watchers)
+            local over = #watchers > 0
+            local clusters, clusterOf = state.clusters, state.clusterOf
+            for j = 1, #watchers do
+                local player = watchers[j]
+                local cluster = clusters and clusters[clusterOf[player]]
+                if cluster then
+                    -- The cluster streaming it holds more than its target: its budget, not each player's.
+                    if cluster.load <= cluster.target * c.overflowFactor + c.overflowSlack then over = false end
+                else
+                    local want, work = self:targetFor(player, period, state.now)
+                    cost = cost + work
+                    if (state.load[player] or 0) <= want * c.overflowFactor + c.overflowSlack then over = false end
+                end
+            end
+            if over then
+                local seen = {}
+                for j = 1, #watchers do
+                    local player = watchers[j]
+                    state.load[player] = state.load[player] - 1
+                    local cluster = clusters and clusters[clusterOf[player]]
+                    if cluster and not seen[cluster] then seen[cluster] = true; cluster.load = cluster.load - 1 end
+                end
+                retired = retired + 1
+                self.overflowRetired = self.overflowRetired + 1
+                self:logTask(walker, "remove", "overflow")
+                self:drop(walker, true)
+                state.active = state.active - 1
+            end
+            for j = #watchers, 1, -1 do watchers[j] = nil end
+            state.charge(cost + 4)
+        end
+    end
 end
 
 -- One spawn attempt for `player`: up to candidateTries lanes picked at random from the lanes with
 -- crowd fragments in the cells around it. A candidate point stands spawnMinM..spawnMaxM from the
 -- player (and within verticalRangeM of it in height), farther than spawnMinM from every living
 -- player and separationM from every walker. The first valid one gets a walker. Whether the platform
--- was asked to create one.
+-- was asked to create one. With the vanilla crowd sets the fragment is drawn by what it wants for the hour
+-- (spawnDense) instead.
 function Open77CrowdScheduler:spawnFor(state, player)
     local api, config, lanes = self.api, self.config, self.lanes
     local c, charge = config.crowd, state.charge
+    -- With the vanilla sets the cap counts the walkers within densityRadiusM (spawnDense); the streamed ones, which
+    -- include those walking off past it until overflow recycles them, are only held under half as many again.
+    if self.fragCount > 0 then
+        -- In a zone cluster the cluster's budget is the cap, however many players share it.
+        local cluster = state.clusters and state.clusters[state.clusterOf[player]]
+        if cluster then
+            if cluster.load >= cluster.target * 1.5 + 2 then return false end
+        elseif (state.load[player] or 0) >= config.crowdMaxNearPlayer * 1.5 then
+            return false
+        end
+        return self:spawnDense(state, player)
+    end
     if (state.load[player] or 0) >= config.crowdMaxNearPlayer then return false end
     local span = math.ceil(c.spawnMaxM / CELL)
     local cx, cy = cellOf(player.x), cellOf(player.y)
@@ -546,7 +936,7 @@ function Open77CrowdScheduler:spawnFor(state, player)
         local dx, dy = x - player.x, y - player.y
         local d2 = dx * dx + dy * dy
         cost = lanes.laneSize[lane] + 6
-        if d2 >= min2 and d2 <= max2 and abs(z - player.z) <= c.verticalRangeM then
+        if d2 >= min2 and d2 <= max2 and abs(z - player.z) <= c.verticalRangeM and not (api.excluded and api.excluded(x, y, z)) then
             local nearest, examined = query(state.alive[player.bucket], x, y, z, c.spawnMinM, nil, true)
             cost = cost + examined
             if nearest == math.huge and self:separated(state.cells[player.bucket], x, y) then
@@ -560,6 +950,133 @@ function Open77CrowdScheduler:spawnFor(state, player)
     return false
 end
 
+-- The vanilla spawn: below its want for the hour (targetFor), the player gets a walker on a crowd fragment of
+-- the cells around it, drawn by what the fragment wants in that period (a busy sidewalk more often than a quiet
+-- one, a fragment that wants nobody at this hour never), at a random arc of it; the point must pass the checks
+-- spawnFor names. The walker is one of the fragment's civilians for the hour, by the game's weights.
+function Open77CrowdScheduler:spawnDense(state, player)
+    local api, config, lanes = self.api, self.config, self.lanes
+    local c, charge = config.crowd, state.charge
+    local period = state.periods[player.bucket] or 2
+    local want, work = self:targetFor(player, period, state.now)
+    charge(work)
+    -- In a cluster: under the cluster's target, the walker goes to a player still short of its own want (an edge
+    -- of the group the crowd has not reached yet). Alone: the player's want, capped by crowdMaxNearPlayer.
+    local cluster = state.clusters and state.clusters[state.clusterOf[player]]
+    if cluster then
+        if cluster.near >= cluster.target or (state.near[player] or 0) >= want then return false end
+    elseif (state.near[player] or 0) >= math.min(want, self.config.crowdMaxNearPlayer) then
+        return false
+    end
+    local heading = self.motion[player.id]
+    local dirX, dirY = heading and heading.dx, heading and heading.dy
+    local ahead2 = (c.aheadM or 0) * (c.aheadM or 0)
+    local span = math.ceil(c.spawnMaxM / CELL)
+    local cx, cy = cellOf(player.x), cellOf(player.y)
+    local window, n, total, cost = self.window, 0, 0, 0
+    if not window then window = {}; self.window = window end
+    local rate, fz = self.fragRate, self.fragZ
+    for gx = cx - span, cx + span do
+        for gy = cy - span, cy + span do
+            local cell = self.fragCells[cellKey(gx, gy)]
+            cost = cost + 1
+            for i = 1, cell and #cell or 0 do
+                local f = cell[i]
+                local r = rate[(f - 1) * 4 + period]
+                if r > 0 and abs(fz[f] - player.z) <= c.verticalRangeM + 20 then
+                    n = n + 1
+                    window[n] = f
+                    total = total + r
+                end
+            end
+            cost = cost + (cell and #cell or 0)
+        end
+    end
+    charge(cost)
+    if n == 0 or total <= 0 then return false end
+    local min2, max2 = c.spawnMinM * c.spawnMinM, c.spawnMaxM * c.spawnMaxM
+    for _ = 1, c.candidateTries do
+        local pick, f = total * api.random(0, SCALE) / SCALE, window[n]
+        for i = 1, n do
+            pick = pick - rate[(window[i] - 1) * 4 + period]
+            if pick <= 0 then f = window[i]; break end
+        end
+        local lane, k = self.fragLane[f], self.fragRange[f]
+        local ranges = self.laneSpawn[lane]
+        local arc = uniform(api, ranges[2 * k - 1], ranges[2 * k])
+        local x, y, z, heading, nx, ny = self:pointAt(lane, arc)
+        local offset = uniform(api, -0.35, 0.35) * lanes.laneWidth[lane]
+        x, y = x + nx * offset, y + ny * offset
+        local dx, dy = x - player.x, y - player.y
+        local d2 = dx * dx + dy * dy
+        cost = n + lanes.laneSize[lane] + 6
+        -- In front of a walking player and close: it would appear in view.
+        local inView = dirX and d2 < ahead2 and (dx * dirX + dy * dirY) > c.aheadCos * sqrt(d2)
+        if not inView and d2 >= min2 and d2 <= max2 and abs(z - player.z) <= c.verticalRangeM
+            and not (api.excluded and api.excluded(x, y, z)) then
+            local nearest, examined = query(state.alive[player.bucket], x, y, z, c.spawnMinM, nil, true)
+            cost = cost + examined
+            if nearest == math.huge and self:separated(state.cells[player.bucket], x, y) then
+                local draw = lanes.crowdDraws[lanes.crowdSets[self.fragSet[f]][period]]
+                local record = draw and #draw >= 2 and drawRecord(api, draw) or nil
+                if record then
+                    self:create(state, player, lane, x, y, z, heading, record)
+                    state.near[player] = (state.near[player] or 0) + 1
+                    if cluster then cluster.near, cluster.load = cluster.near + 1, cluster.load + 1 end
+                    charge(cost + 20)
+                    return true
+                end
+            end
+        end
+        charge(cost)
+    end
+    return false
+end
+
+-- A living player holding a drawn weapon scares the walkers within brandishRadiusM of it (3 m in height): they run
+-- from it in the game's traffic, as a panic. `cells` are the pass's walkers by bucket and 64 m cell.
+function Open77CrowdScheduler:brandish(order, cells, charge)
+    local config = self.config
+    if not config.panic or not config.brandishPanic or next(self.armed) == nil then return end
+    local radius = config.crowd.brandishRadiusM
+    local r2 = radius * radius
+    for _, player in ipairs(order) do
+        if self.armed[player.id] then
+            local bucketCells, cost = cells[player.bucket], 1
+            if bucketCells then
+                for gx = cellOf(player.x - radius), cellOf(player.x + radius) do
+                    for gy = cellOf(player.y - radius), cellOf(player.y + radius) do
+                        local cell = bucketCells[cellKey(gx, gy)]
+                        local size = cellSize(bucketCells, cell)
+                        for i = 1, size do
+                            local walker = cell[i]
+                            local dx, dy, dz = walker.x - player.x, walker.y - player.y, walker.z - player.z
+                            if walker.state == "walking" and self.walkers[walker.npc] == walker and
+                                    dx * dx + dy * dy <= r2 and abs(dz) <= 3 then
+                                self:panic(walker.npc, "player:" .. player.id, player, "brandish")
+                            end
+                        end
+                        cost = cost + 1 + size
+                    end
+                end
+            end
+            charge(cost)
+        end
+    end
+end
+
+-- onPlayerWeaponChanged, raised once per changed slot: `slot` is drawn (`drawn`) or not. The player is armed while
+-- the slot last seen drawn stays so; an event about another slot (a pickup into slot 2 while slot 1 is drawn, the
+-- whole loadout republished on connect) changes nothing.
+function Open77CrowdScheduler:setArmed(playerId, slot, drawn)
+    if not playerId then return end
+    if drawn then
+        self.armed[playerId] = slot or true
+    elseif self.armed[playerId] == (slot or true) then
+        self.armed[playerId] = nil
+    end
+end
+
 -- Whether no walker of `cells` (a bucket's walkers by 64 m cell) is within separationM of (x, y).
 function Open77CrowdScheduler:separated(cells, x, y)
     if not cells then return true end
@@ -568,7 +1085,7 @@ function Open77CrowdScheduler:separated(cells, x, y)
     for gx = cellOf(x - gap), cellOf(x + gap) do
         for gy = cellOf(y - gap), cellOf(y + gap) do
             local cell = cells[cellKey(gx, gy)]
-            for i = 1, cell and #cell or 0 do
+            for i = 1, cellSize(cells, cell) do
                 local dx, dy = cell[i].x - x, cell[i].y - y
                 if dx * dx + dy * dy < gap2 then return false end
             end
@@ -577,11 +1094,12 @@ function Open77CrowdScheduler:separated(cells, x, y)
     return true
 end
 
-function Open77CrowdScheduler:create(state, player, lane, x, y, z, heading)
+-- `record` is the walker's record index; any civilian of the catalogue when it is nil.
+function Open77CrowdScheduler:create(state, player, lane, x, y, z, heading, record)
     local api, config, lanes = self.api, self.config, self.lanes
     local c, now = config.crowd, state.now
     self.spawns = self.spawns + 1
-    local r = api.random(1, #lanes.records)
+    local r = record or api.random(1, #lanes.records)
     local pool = lanes.appearancePools[r]
     -- On tasks with native AI: the platform elects a host for it (balanced: the nearby client with the
     -- fewest NPCs to host) and every other client replays the host's motion.
@@ -601,16 +1119,13 @@ function Open77CrowdScheduler:create(state, player, lane, x, y, z, heading)
         self.failures[reason] = (self.failures[reason] or 0) + 1
         return
     end
-    local walker = { npc = tostring(npc), bucket = player.bucket, state = "walking", lane = lane,
+    local walker = { npc = tostring(npc), nid = tonumber(npc), bucket = player.bucket, state = "walking", lane = lane,
         x = x, y = y, z = z, record = r, body = lanes.recordBody[r] or 0 }
     self.walkers[walker.npc] = walker
     state.active = state.active + 1
     local bucketCells = state.cells[player.bucket]
-    if not bucketCells then bucketCells = {}; state.cells[player.bucket] = bucketCells end
-    local key = cellKey(cellOf(x), cellOf(y))
-    local cell = bucketCells[key]
-    if not cell then cell = {}; bucketCells[key] = cell end
-    cell[#cell + 1] = walker
+    if not bucketCells then bucketCells = { pass = self.rowsPass }; state.cells[player.bucket] = bucketCells end
+    cellAdd(bucketCells, cellKey(cellOf(x), cellOf(y)), walker)
     local watchers = {}
     local _, examined = query(state.alive[player.bucket], x, y, z, c.streamingRadiusM, nil, false, watchers)
     for i = 1, #watchers do state.load[watchers[i]] = (state.load[watchers[i]] or 0) + 1 end
@@ -624,7 +1139,7 @@ end
 -- traffic takes no command, and a traffic task that replaces its own in this call keeps the body in
 -- the traffic. The threat is the shooter's position when known, else `origin` (where the hit or the
 -- death was). It calms fleeTimeoutMs later. One already panicking keeps its flight.
-function Open77CrowdScheduler:panic(npcId, source, origin)
+function Open77CrowdScheduler:panic(npcId, source, origin, why)
     local walker = self.walkers[npcId]
     if not walker or not PANICKABLE[walker.state] then return end
     local api, config = self.api, self.config
@@ -643,19 +1158,21 @@ function Open77CrowdScheduler:panic(npcId, source, origin)
     walker.state, walker.visitsAt = "panicking", nil
     walker.calmAt = api.now() + config.fleeTimeoutMs / 1000
     walker.task = task and tostring(task) or nil
-    self:logTask(walker, "panic", source and "damaged" or "neighbour",
+    self:logTask(walker, "panic", why or (source and "damaged" or "neighbour"),
         " was=" .. was .. (shooter and (" shooter=" .. shooter) or ""))
     if not walker.task then self:abort(walker, "panic") end
 end
 
--- Every other walker of the bucket within panicRadiusM of `origin` panics (`exceptNpc` is the
--- victim). Hits and deaths reach it through `api.panicNear`, which also scares the seated ones.
-function Open77CrowdScheduler:panicNeighbours(bucket, origin, exceptNpc)
-    local radius2 = self.config.panicRadiusM * self.config.panicRadiusM
+-- Every other walker of the bucket within `radius` (default panicRadiusM) of `origin` panics (`exceptNpc` is
+-- the victim). Hits and deaths reach it through `api.panicNear`, which also scares the seated ones; gunfire
+-- names its shooter (`source`, `player:<id>`), whom the walkers run from.
+function Open77CrowdScheduler:panicNeighbours(bucket, origin, exceptNpc, radius, source)
+    radius = radius or self.config.panicRadiusM
+    local radius2 = radius * radius
     for npcId, walker in pairs(self.walkers) do
         if npcId ~= exceptNpc and walker.bucket == bucket and PANICKABLE[walker.state] then
             local dx, dy, dz = walker.x - origin.x, walker.y - origin.y, walker.z - origin.z
-            if dx * dx + dy * dy + dz * dz <= radius2 then self:panic(npcId, nil, origin) end
+            if dx * dx + dy * dy + dz * dz <= radius2 then self:panic(npcId, source, origin, source and "gunfire" or nil) end
         end
     end
 end
@@ -768,14 +1285,26 @@ function Open77CrowdScheduler:status()
     for _, expires in pairs(self.spotCooldown) do
         if expires > now then cooldowns = cooldowns + 1 end
     end
+    -- Density: the fragments with vanilla sets, the period of each bucket and, per player, its want and how
+    -- many walkers stand within densityRadiusM of it (the last pass's count).
+    local wants = {}
+    for id, target in pairs(self.targets) do wants[id] = target.want end
     return { enabled = self.enabled, lanes = self.lanes.laneCount, points = self.lanes.pointCount,
         spots = #self.spots.spotX, slices = self.lastSlices or 0, active = active, cooldowns = cooldowns,
-        failures = self.failures }
+        failures = self.failures, fragments = self.fragCount, periods = self.periods or {}, wants = wants,
+        density = self.config.crowdDensity, overflowRetired = self.overflowRetired }
 end
 
 function Open77CrowdScheduler:reset()
     for _, walker in pairs(self.walkers) do self:drop(walker, true) end
-    self.spotCooldown, self.failures, self.cursor = {}, {}, 0
+    self.spotCooldown, self.failures, self.cursor, self.targets = {}, {}, 0, {}
+end
+
+-- `pedestrians.density <factor>`: the share of the game's own crowd that walks (0..4); wants are worked out
+-- again at once.
+function Open77CrowdScheduler:setDensity(factor)
+    self.config.crowdDensity = factor
+    self.targets = {}
 end
 
 function Open77CrowdScheduler:setEnabled(flag)

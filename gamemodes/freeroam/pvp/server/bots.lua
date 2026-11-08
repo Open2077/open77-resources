@@ -4216,27 +4216,34 @@ RegisterNetEvent("deathmatch:npcCrossfire", function(payload)
     end
     window.amount = (window.amount or 0.0) + amount
 
-    local applied = safe(Open77.npcs.applyDamage, victim.npcId, amount,
+    local before = safe(Open77.npcs.get, victim.npcId)
+    if type(before) ~= "table" or tonumber(before.health) == nil then
+        return logDecision(playerId, "crossfire_victim_unavailable", tostring(victim.npcId))
+    end
+    local applied = safe(Open77.npcs.applyCrossfireDamage, victim.npcId, attacker.npcId, amount,
         "bot:" .. tostring(attacker.participantId), "firearm")
     if applied ~= true then
         return logDecision(playerId, "crossfire_apply_refused", tostring(applied))
     end
     crossfireApplied = crossfireApplied + 1
 
-    -- The victim remembers who shot it. Without this a bot finished through the
-    -- tick's HEALTH BACKSTOP -- rather than through the branch below -- credits
-    -- `nil`, and the kill lands as an environment death that nobody scored.
-    -- `onNpcDied` reads the same field.
-    victim.lastAttacker = attacker.participantId
-    -- BOTH ends are fighting, and both must be left to the engine.
+    local after = safe(Open77.npcs.get, victim.npcId)
+    if type(after) ~= "table" or tonumber(after.health) == nil then
+        return logDecision(playerId, "crossfire_victim_unavailable", tostring(victim.npcId))
+    end
+    local dealt = math.max(0.0, tonumber(before.health) - tonumber(after.health))
+    victim.health = tonumber(after.health)
     victim.lastCombatAtMs = at
     attacker.lastCombatAtMs = at
-    victim.health = math.max(0.0, (victim.health or victim.maxHealth) - amount)
-    hostCall("creditDamage", victim.instanceId, attacker.participantId,
-        victim.participantId, amount,
-        { headshot = false, cause = "firearm", victimIsBot = true })
-    if victim.health <= 0.0 then
-        declareDeath(victim, attacker.participantId, "firearm", false)
+    if dealt > 0.0 then
+        -- Remember the attacker for the health backstop and onNpcDied.
+        victim.lastAttacker = attacker.participantId
+        hostCall("creditDamage", victim.instanceId, attacker.participantId,
+            victim.participantId, dealt,
+            { headshot = false, cause = "firearm", victimIsBot = true })
+        if victim.health <= 0.0 then
+            declareDeath(victim, attacker.participantId, "firearm", false)
+        end
     end
 end)
 

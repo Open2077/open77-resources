@@ -2,6 +2,18 @@
 -- supplies trusted network events and native presentation; this module owns no rig.
 RpAnimationController = {}
 
+-- A remote body that is not in the world yet (streaming in, a late join receiving the
+-- snapshot before the puppet attaches): not a failure of the action, retried shortly.
+-- Any other native failure of a REMOTE body (a device that could not mount while this
+-- client was still loading: `playback_timeout`) is retried too, slower: the action is
+-- still running on the server and a held step never changes its signature. Live
+-- 2026-10-30: a client rejoining while another player lay on a ripperdoc chair got
+-- `entity_not_attached`, then `playback_timeout` under its loading screen, and before
+-- this never presented the seated body.
+local TRANSIENT = { entity_not_attached = true, entity_unavailable = true }
+local TRANSIENT_RETRY_MS = 500
+local REMOTE_RETRY_MS = 5000
+
 local function integer(n, low, high)
     return type(n) == 'number' and n == math.floor(n) and n >= low and n <= high
 end
@@ -399,7 +411,8 @@ function RpAnimationController.new(io, catalogue, nonce)
                 (anchor and (':%g:%g:%g:%g'):format(anchor.x, anchor.y, anchor.z, anchor.yaw) or '')
             local failure = blocked[player]
             if failure and not failure.permanent and
-                (entity ~= failure.entity or signature ~= failure.signature) then
+                (entity ~= failure.entity or signature ~= failure.signature or
+                 (failure.retryAt and io.now() >= failure.retryAt)) then
                 blocked[player], failure = nil, nil
             end
             if s.active and entity ~= nil and (not failure or failure.id ~= s.playbackId) then
@@ -410,9 +423,13 @@ function RpAnimationController.new(io, catalogue, nonce)
                     local ok, err = io.play(entity, step.profile, step.clip, restart, anchor)
                     if ok then
                         rendered[player] = { entity = entity, signature = signature, profile = step.profile, clip = step.clip }
+                    elseif player ~= current.playerId and TRANSIENT[err] then
+                        blocked[player] = { id = s.playbackId, entity = entity, signature = signature,
+                            permanent = false, retryAt = io.now() + TRANSIENT_RETRY_MS }; stopBody(player)
                     else
                         blocked[player] = { id = s.playbackId, entity = entity, signature = signature,
-                            permanent = player == current.playerId }; stopBody(player)
+                            permanent = player == current.playerId,
+                            retryAt = player ~= current.playerId and io.now() + REMOTE_RETRY_MS or nil }; stopBody(player)
                         if player == current.playerId then sendStop(s.playbackId) end
                         io.emit('onAnimationPlaybackFailed', player, s.playbackId, err)
                     end
@@ -420,7 +437,9 @@ function RpAnimationController.new(io, catalogue, nonce)
                     local status = io.status(entity)
                     if status ~= 'ok' and status ~= 'device_pending' then
                         blocked[player] = { id = s.playbackId, entity = entity, signature = signature,
-                            permanent = player == current.playerId }; stopBody(player)
+                            permanent = player == current.playerId,
+                            retryAt = player ~= current.playerId and io.now() +
+                                (TRANSIENT[status] and TRANSIENT_RETRY_MS or REMOTE_RETRY_MS) or nil }; stopBody(player)
                         if player == current.playerId then sendStop(s.playbackId) end
                         io.emit('onAnimationPlaybackFailed', player, s.playbackId, status)
                     end

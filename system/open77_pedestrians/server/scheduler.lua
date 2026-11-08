@@ -6,13 +6,15 @@ Open77PedestrianScheduler.__index = Open77PedestrianScheduler
 local E_RECORD, E_POOL, E_BODY, E_PERIODS = 1, 2, 3, 4
 local P_START, P_QUANTITY, P_SPOTS = 1, 2, 4
 
-local function activePeriod(entry, minute)
+-- The active period of entry `e` at `minute`, as an index into the flat period columns built by `index`.
+local function activePeriod(self, e, minute)
+    local first, starts = self.entryPeriodFirst[e], self.periodStart
     local selected, chosen
-    for _, period in ipairs(entry[E_PERIODS]) do
-        local start = period[P_START]
+    for p = first, first + self.entryPeriodCount[e] - 1 do
+        local start = starts[p]
         if not selected or (start <= minute and (chosen > minute or start > chosen)) or
                 (chosen > minute and start > chosen) then
-            selected, chosen = period, start
+            selected, chosen = p, start
         end
     end
     return selected
@@ -20,8 +22,8 @@ end
 
 -- The player grid and the queries over it are shared with the walking crowd (spatial.lua).
 local S = Open77PedestrianSpatial
-local CELL, cellOf, cellKey, addPlayer, query, offer, countGroups =
-    S.CELL, S.cellOf, S.cellKey, S.addPlayer, S.query, S.offer, S.countGroups
+local CELL, cellOf, cellKey, addPlayer, query, offer, countGroups, playersNear =
+    S.CELL, S.cellOf, S.cellKey, S.addPlayer, S.query, S.offer, S.countGroups, S.candidates
 
 -- Cheap: the spot and entry indices are built by `index`, in slices, on the scheduler's own thread.
 -- The spot columns are the catalogue's own tables, read in place.
@@ -29,9 +31,10 @@ function Open77PedestrianScheduler.new(catalog, config, api)
     return setmetatable({
         catalog = catalog, config = config, api = api, enabled = config.enabled,
         spotX = catalog.spotX, spotY = catalog.spotY, spotZ = catalog.spotZ, spotYaw = catalog.spotYaw,
-        spotProfile = catalog.spotProfile, entries = catalog.entries,
-        spotEnabled = {}, entriesBySpot = {}, grid = {}, clips = {}, bodyClips = {},
-        occupants = {}, byNpc = {}, cooldown = {}, failures = {}, spawns = 0,
+        spotProfile = catalog.spotProfile, entries = catalog.entries, entryTotal = #(catalog.entries or {}),
+        spotEnabled = {}, grid = {}, clips = {}, bodyClips = {},
+        occupants = {}, byNpc = {}, cooldown = {}, failures = {}, spawns = 0, spotPlace = {}, cellZ = {},
+        inRangeAt = {}, reservedAt = {}, scanStamp = 0,
         disabledSpots = 0, panicChoices = {}, entryCount = {}, indexed = false, contended = false,
     }, Open77PedestrianScheduler)
 end
@@ -68,26 +71,91 @@ function Open77PedestrianScheduler:index()
             api.log("pedestrians: panic profile %s has no clips", profile)
         end
     end
-    local xs, ys = self.spotX, self.spotY
+    -- Per cell, its spots and the height they span (the scan passes whole cells a player covers).
+    local xs, ys, zs = self.spotX, self.spotY, self.spotZ
     for index = 1, #xs do
         self.spotEnabled[index] = enabled[profiles[index]] == true
         local key = cellKey(cellOf(xs[index]), cellOf(ys[index]))
         local cell = self.grid[key]
-        if not cell then cell = {}; self.grid[key] = cell end
+        if not cell then cell = {}; self.grid[key] = cell; self.cellZ[key] = { zs[index], zs[index] } end
         cell[#cell + 1] = index
+        local span = self.cellZ[key]
+        if zs[index] < span[1] then span[1] = zs[index] end
+        if zs[index] > span[2] then span[2] = zs[index] end
         step()
     end
-    for index, entry in ipairs(self.entries) do
+    -- The entries as flat columns: an entry's record, pool, body and its periods (first, count); a period's start,
+    -- quantity and spots (first, count into periodSpots); a spot's distinct entries (first, count into spotEntries).
+    -- The catalogue's rows are tables of tables, 67 k of them, that every major collection would walk again: once
+    -- copied, main.lua lets them go.
+    local eRecord, ePool, eBody, ePFirst, ePCount = {}, {}, {}, {}, {}
+    local pStart, pQuantity, pSFirst, pSCount, pSpots = {}, {}, {}, {}, {}
+    local perSpot, last = {}, {}
+    local np, ns = 0, 0
+    for e, entry in ipairs(self.entries) do
+        eRecord[e], ePool[e], eBody[e], ePFirst[e] = entry[E_RECORD], entry[E_POOL], entry[E_BODY], np + 1
         for _, period in ipairs(entry[E_PERIODS]) do
-            for _, spotIndex in ipairs(period[P_SPOTS]) do
-                local entries = self.entriesBySpot[spotIndex] or {}
-                entries[index] = true
-                self.entriesBySpot[spotIndex] = entries
+            np = np + 1
+            local spots = period[P_SPOTS]
+            pStart[np], pQuantity[np], pSFirst[np], pSCount[np] = period[P_START], period[P_QUANTITY], ns + 1, #spots
+            for i = 1, #spots do
+                local spotIndex = spots[i]
+                ns = ns + 1
+                pSpots[ns] = spotIndex
+                if last[spotIndex] ~= e then last[spotIndex], perSpot[spotIndex] = e, (perSpot[spotIndex] or 0) + 1 end
+                step()
+            end
+        end
+        ePCount[e] = np - ePFirst[e] + 1
+    end
+    local seFirst, seCount, seList, fill = {}, {}, {}, 0
+    for spotIndex = 1, #xs do
+        local n = perSpot[spotIndex]
+        if n then seFirst[spotIndex], seCount[spotIndex], fill = fill + 1, 0, fill + n end
+        step()
+    end
+    last = {}
+    for e = 1, #eRecord do
+        for p = ePFirst[e], ePFirst[e] + ePCount[e] - 1 do
+            for k = pSFirst[p], pSFirst[p] + pSCount[p] - 1 do
+                local spotIndex = pSpots[k]
+                if last[spotIndex] ~= e then
+                    last[spotIndex] = e
+                    seList[seFirst[spotIndex] + seCount[spotIndex]] = e
+                    seCount[spotIndex] = seCount[spotIndex] + 1
+                end
                 step()
             end
         end
     end
+    self.entryRecord, self.entryPool, self.entryBody = eRecord, ePool, eBody
+    self.entryPeriodFirst, self.entryPeriodCount, self.entryTotal = ePFirst, ePCount, #eRecord
+    self.periodStart, self.periodQuantity, self.periodSpotFirst, self.periodSpotCount, self.periodSpots =
+        pStart, pQuantity, pSFirst, pSCount, pSpots
+    self.spotEntryFirst, self.spotEntryCount, self.spotEntries = seFirst, seCount, seList
+    self.entries = nil
     self.indexed = true
+end
+
+-- The key of a spot (or an entry) in a bucket, "bucket:index": the scan asks for thousands a pass, and
+-- each new string was garbage the collector swept again. They are kept per bucket, and forgotten
+-- all together past KEYS_KEPT.
+local KEYS_KEPT = 120000
+function Open77PedestrianScheduler:keyOf(bucket, index)
+    local byBucket = self.keys
+    if not byBucket or self.keyCount > KEYS_KEPT then
+        byBucket = {}
+        self.keys, self.keyCount = byBucket, 0
+    end
+    local keys = byBucket[bucket]
+    if not keys then keys = {}; byBucket[bucket] = keys end
+    local key = keys[index]
+    if not key then
+        key = bucket .. ":" .. index
+        keys[index] = key
+        self.keyCount = self.keyCount + 1
+    end
+    return key
 end
 
 -- The clips of a profile an NPC of `body` (its entry's body bits) plays; see Open77PedestrianSpatial.clipsFor.
@@ -242,6 +310,13 @@ function Open77PedestrianScheduler:tick(budget)
     end
     local api, config = self.api, self.config
     local now = api.now()
+    -- The scan forgets the expired cooldowns of the spots it reaches; the others once a minute.
+    if not self.cooldownSweptAt or now - self.cooldownSweptAt >= 60 then
+        for key, expires in pairs(self.cooldown) do
+            if expires <= now then self.cooldown[key] = nil end
+        end
+        self.cooldownSweptAt = now
+    end
     -- Hits read the shooter from here: rebuilding every player row per reported shot cost a pass over
     -- all players for each bullet of a firefight.
     -- `players` holds everyone a client streams NPCs for (the dead and dying included): load and
@@ -265,13 +340,7 @@ function Open77PedestrianScheduler:tick(budget)
     -- and the scan near a dense market crowded with players is many times that quota.
     budget = budget or { work = 0, slices = 0 }
     local startSlices = budget.slices
-    local function charge(amount)
-        budget.work = budget.work + amount
-        if budget.work >= config.scanWorkPerSlice and api.yield then
-            api.yield()
-            budget.work, budget.slices = 0, budget.slices + 1
-        end
-    end
+    local charge = S.slicer(budget, config, api)
     local vertical, streamed = config.verticalRangeM, config.streamingRadiusM
     local xs, ys, zs = self.spotX, self.spotY, self.spotZ
     -- The global cap is shared between groups of players, but only once a group is refused for it:
@@ -288,11 +357,20 @@ function Open77PedestrianScheduler:tick(budget)
     -- stacked two bodies in one seat. A spot waits while a pedestrian holds one that close.
     local clearance = config.spotClearanceM
     local taken = {}
-    local function placeOf(v) return math.floor(v / clearance) + 131072 end
+    -- A spot's place never moves: its key is worked out the first time it is asked for.
+    local placeOfSpot = self.spotPlace
+    local function place(spot)
+        local key = placeOfSpot[spot]
+        if not key then
+            key = (math.floor(xs[spot] / clearance) + 131072) * 262144 + math.floor(ys[spot] / clearance) + 131072
+            placeOfSpot[spot] = key
+        end
+        return key
+    end
     local function take(bucket, spot)
         local places = taken[bucket]
         if not places then places = {}; taken[bucket] = places end
-        local key = placeOf(xs[spot]) * 262144 + placeOf(ys[spot])
+        local key = place(spot)
         local list = places[key]
         if not list then list = {}; places[key] = list end
         list[#list + 1] = spot
@@ -301,10 +379,10 @@ function Open77PedestrianScheduler:tick(budget)
         local places = taken[bucket]
         if not places then return true end
         local x, y, z = xs[spot], ys[spot], zs[spot]
-        local px, py = placeOf(x), placeOf(y)
-        for cx = px - 1, px + 1 do
-            for cy = py - 1, py + 1 do
-                local list = places[cx * 262144 + cy]
+        local key = place(spot)
+        for row = key - 262144, key + 262144, 262144 do
+            for cell = row - 1, row + 1 do
+                local list = places[cell]
                 if list then
                     for i = 1, #list do
                         local other = list[i]
@@ -344,8 +422,8 @@ function Open77PedestrianScheduler:tick(budget)
                 retire, cost = nearest == math.huge, cost + examined
                 -- An entry has one period per start minute and the catalogue never changes: the spot
                 -- belongs to the period that seated this pedestrian for as long as it is the active one.
-                local period = activePeriod(self.entries[occupant.entry], minutes[occupant.bucket])
-                if period[P_START] ~= occupant.periodStart then retire = true end
+                local period = activePeriod(self, occupant.entry, minutes[occupant.bucket])
+                if self.periodStart[period] ~= occupant.periodStart then retire = true end
             elseif set then
                 -- A panicked, cowering, returning or dead pedestrian stays until every player
                 -- is past the range that streams it out, so nobody watches it vanish.
@@ -405,7 +483,10 @@ function Open77PedestrianScheduler:tick(budget)
     -- can spawn (below). The spots another group brings in stay out of the list, or the nearest
     -- `keep` of them would keep a starved group's spots out of it.
     local crowded = self.contended or active >= config.maxActive
-    local candidates, reserved, keep = {}, {}, config.spawnsPerTick * 4
+    local candidates, keep = {}, math.max(config.spawnsPerTick, math.min(config.spawnsPerTick * 4, 32))
+    -- Per bucket scanned, the spots in reach and those reserved this pass, marked with a number of
+    -- the scan instead of collected in fresh sets: thousands of entries a pass were garbage.
+    local inRangeAt, reservedAt = self.inRangeAt, self.reservedAt
     local activate = config.activateRadiusM
     -- Enough 64 m cells around a player's own to cover the whole spawn radius.
     local span = math.ceil(activate / CELL)
@@ -431,46 +512,106 @@ function Open77PedestrianScheduler:tick(budget)
                     for gy = cy - span, cy + span do cells[cellKey(gx, gy)] = true end
                 end
             end
-            local inRange, nearby = {}, {}
-            for cellId in pairs(cells) do
-                local spots = self.grid[cellId]
+            local nearby = {}
+            local stamp = self.scanStamp + 1
+            self.scanStamp = stamp
+            local grid, spotEnabled, cooldowns, occupants = self.grid, self.spotEnabled, self.cooldown, self.occupants
+            -- At most seatedCellsPerPass cells of the window are scanned a pass, the next ones on the next pass: with
+            -- hundreds of players spread over the city the whole window is tens of thousands of spots, and spawning
+            -- only takes a few of them a pass anyway. A small window is scanned whole every pass.
+            local order = {}
+            for cellId in pairs(cells) do order[#order + 1] = cellId end
+            local limit = config.seatedCellsPerPass or #order
+            if #order > limit then
+                table.sort(order)
+                local cursors = self.cellCursor
+                if not cursors then cursors = {}; self.cellCursor = cursors end
+                local from = (cursors[bucket] or 0) % #order
+                local window = {}
+                for i = 1, limit do window[i] = order[(from + i - 1) % #order + 1] end
+                cursors[bucket] = from + limit
+                order = window
+            end
+            charge(#order)
+            for _, cellId in ipairs(order) do
+                local spots = grid[cellId]
+                -- The window around every player cell is mostly out of reach: a cell no living player
+                -- can activate from is passed whole (most of the spots this scan used to measure).
+                local near, built = nil, 0
+                if spots then
+                    near, built = playersNear(set, cellId // 65536 - 32768, cellId % 65536 - 32768, activate)
+                end
+                if not spots or #near == 0 then
+                    charge(1 + built)
+                    spots = nil
+                end
+                -- A living player within reach of the cell's four corners and of the height its spots
+                -- span has every spot of it in reach: none of them is measured.
+                local covered, cost = false, built
+                if spots then
+                    local left, bottom = (cellId // 65536 - 32768) * CELL, (cellId % 65536 - 32768) * CELL
+                    local heights, reach2 = self.cellZ[cellId], activate * activate
+                    for i = 1, #near do
+                        local player = near[i]
+                        local fx = math.max(math.abs(player.x - left), math.abs(player.x - left - CELL))
+                        local fy = math.max(math.abs(player.y - bottom), math.abs(player.y - bottom - CELL))
+                        if fx * fx + fy * fy <= reach2 and player.z - heights[1] <= vertical and
+                            heights[2] - player.z <= vertical then
+                            covered = true
+                            break
+                        end
+                    end
+                    cost = cost + #near
+                end
                 for i = 1, spots and #spots or 0 do
                     local spotIndex = spots[i]
-                    local cost = 2
-                    if self.spotEnabled[spotIndex] then
-                        local key = bucket .. ":" .. spotIndex
-                        local cooldown = self.cooldown[key]
-                        -- An expired cooldown is forgotten here: the table would grow to one entry
-                        -- per spot ever panicked, failed or shot at.
-                        if cooldown and cooldown <= now then self.cooldown[key], cooldown = nil, nil end
-                        if not self.occupants[key] and not cooldown then
-                            local nearest, examined = query(set, xs[spotIndex], ys[spotIndex], zs[spotIndex],
+                    cost = cost + 2
+                    -- In reach first: a spot out of it needs no key.
+                    if spotEnabled[spotIndex] then
+                        local nearest, examined = 0, 0
+                        if not covered then
+                            nearest, examined = query(set, xs[spotIndex], ys[spotIndex], zs[spotIndex],
                                 activate, vertical, true)
-                            cost = cost + examined
-                            if nearest < math.huge then
-                                inRange[spotIndex] = true
-                                local entries = self.entriesBySpot[spotIndex]
-                                if entries then
-                                    for index in pairs(entries) do nearby[index] = true end
+                        end
+                        cost = cost + examined
+                        if nearest < math.huge then
+                            local key = self:keyOf(bucket, spotIndex)
+                            local cooldown = cooldowns[key]
+                            -- An expired cooldown is forgotten here (and by the sweep below): the table
+                            -- would grow to one entry per spot ever panicked, failed or shot at.
+                            if cooldown and cooldown <= now then cooldowns[key], cooldown = nil, nil end
+                            if not occupants[key] and not cooldown then
+                                inRangeAt[spotIndex] = stamp
+                                local first = self.spotEntryFirst[spotIndex]
+                                if first then
+                                    local list = self.spotEntries
+                                    for k = first, first + self.spotEntryCount[spotIndex] - 1 do nearby[list[k]] = true end
                                 end
                             end
                         end
                     end
-                    charge(cost)
+                    -- Charged in runs: one call per spot was a fifth of the scan.
+                    if cost >= 256 then
+                        charge(cost)
+                        cost = 0
+                    end
                 end
+                if spots then charge(cost) end
             end
             for entryIndex in pairs(nearby) do
-                local period = activePeriod(self.entries[entryIndex], minutes[bucket])
-                local want = math.min(period[P_QUANTITY], #period[P_SPOTS])
-                local have = self.entryCount[bucket .. ":" .. entryIndex] or 0
+                local period = activePeriod(self, entryIndex, minutes[bucket])
+                local spotFirst, spotCount, periodSpots = self.periodSpotFirst[period], self.periodSpotCount[period], self.periodSpots
+                local want = math.min(self.periodQuantity[period], spotCount)
+                local have = self.entryCount[self:keyOf(bucket, entryIndex)] or 0
                 local cost = 3
                 -- The catalogue lists a non-sequence period's spots in its fill order already
                 -- (build_spot_catalog.py `fill_order`).
-                for _, spotIndex in ipairs(period[P_SPOTS]) do
+                for k = spotFirst, spotFirst + spotCount - 1 do
+                    local spotIndex = periodSpots[k]
                     if have >= want then break end
                     cost = cost + 1
-                    local key = inRange[spotIndex] and bucket .. ":" .. spotIndex
-                    if key and not reserved[key] then
+                    local key = inRangeAt[spotIndex] == stamp and self:keyOf(bucket, spotIndex)
+                    if key and reservedAt[spotIndex] ~= stamp then
                         local x, y, z = xs[spotIndex], ys[spotIndex], zs[spotIndex]
                         local blocked, examined = query(full, x, y, z, streamed, nil, true)
                         cost = cost + examined
@@ -480,15 +621,17 @@ function Open77PedestrianScheduler:tick(budget)
                             local worst = #candidates >= keep and candidates[keep]
                             local nearest, who
                             nearest, examined, who = query(set, x, y, z,
-                                worst and math.min(activate, worst.distance) or activate, vertical, false)
+                                worst and math.min(activate, worst.distance) or activate, vertical, false, nil, activate)
                             cost = cost + examined + 12
                             local held = crowded and nearest < math.huge and
                                 (groupLoad[groupOf[who]] or 0) >= share
                             -- A spot held that way takes neither the place nor its entry's slot.
                             if not held then
-                                reserved[key] = true
+                                reservedAt[spotIndex] = stamp
                                 take(bucket, spotIndex)
                                 if nearest < math.huge then
+                                    -- The insertion walks the kept list: its length is the work.
+                                    cost = cost + #candidates // 4
                                     offer(candidates, { bucket = bucket, spot = spotIndex, entry = entryIndex,
                                         period = period, distance = nearest, key = key }, keep)
                                 end
@@ -509,16 +652,22 @@ function Open77PedestrianScheduler:tick(budget)
     -- `pedestrians.enable off` may have landed while the pass waited between slices.
     if not self.enabled then return end
     local created, starved = 0, false
+    -- New bodies this pass per player streaming them: at most spawnsPerPlayerTick each, so a
+    -- client entering the world builds its neighbourhood over seconds, not in one burst.
+    local fresh, perPlayer = {}, config.spawnsPerPlayerTick or config.spawnsPerTick
     for _, candidate in ipairs(candidates) do
         if created >= config.spawnsPerTick then break end
         local spot = candidate.spot
         -- A player may have sat down there while the pass waited between slices.
         if self:seatHeld(candidate.bucket, spot) then goto continue end
+        -- A spawn: its Lua side, a few dozen instructions (the platform call runs natively).
+        charge(60)
         local x, y, z, yaw = xs[spot], ys[spot], zs[spot], self.spotYaw[spot]
         local streaming = {}
         query(players[candidate.bucket], x, y, z, streamed, nil, false, streaming)
         for _, player in ipairs(streaming) do
             if (load[player] or 0) >= maxNear then goto continue end
+            if (fresh[player] or 0) >= perPlayer then goto continue end
         end
         -- Each group that streams it, once; `room` when one of them is under its share of the cap.
         local watching, room = {}, false
@@ -539,13 +688,12 @@ function Open77PedestrianScheduler:tick(budget)
         if self.contended and not room then goto continue end
         for _, player in ipairs(streaming) do load[player] = (load[player] or 0) + 1 end
         for group in pairs(watching) do groupLoad[group] = (groupLoad[group] or 0) + 1 end
-        local entry = self.entries[candidate.entry]
-        local pool = self.catalog.appearancePools[entry[E_POOL]]
+        local pool = self.catalog.appearancePools[self.entryPool[candidate.entry]]
         local profile = self.spotProfile[spot]
-        local clips = self:clipsFor(profile, entry[E_BODY])
+        local clips = self:clipsFor(profile, self.entryBody[candidate.entry])
         self.spawns = self.spawns + 1
         local npc, reason = api.create({
-            record = self.catalog.records[entry[E_RECORD]],
+            record = self.catalog.records[self.entryRecord[candidate.entry]],
             appearance = pool[(self.spawns - 1) % #pool + 1],
             position = { x = x, y = y, z = z }, yaw = yaw,
             bucket = candidate.bucket, aiMode = "frozen",
@@ -564,13 +712,14 @@ function Open77PedestrianScheduler:tick(budget)
             })
             if task then
                 local occupant = { npc = tostring(npc), task = tostring(task),
-                    entry = candidate.entry, periodStart = candidate.period[P_START],
+                    entry = candidate.entry, periodStart = self.periodStart[candidate.period],
                     state = "seated", bucket = candidate.bucket, spot = candidate.spot, clip = clip }
                 self.occupants[candidate.key] = occupant
                 self.byNpc[occupant.npc] = candidate.key
                 self:count(occupant, 1)
                 created = created + 1
                 active = active + 1
+                for _, player in ipairs(streaming) do fresh[player] = (fresh[player] or 0) + 1 end
             else
                 api.remove(npc)
             end
@@ -680,13 +829,15 @@ end
 
 -- Every other pedestrian of the bucket within panicRadiusM of `origin` flees (`exceptNpc` is the
 -- victim). Hits and deaths reach it through `api.panicNear`, which also scares the walking crowd.
-function Open77PedestrianScheduler:panicNeighbours(bucket, origin, exceptNpc)
-    local radius2 = self.config.panicRadiusM * self.config.panicRadiusM
+-- `radius` (default panicRadiusM) and `source` (a `player:<id>` they flee from, gunfire) are optional.
+function Open77PedestrianScheduler:panicNeighbours(bucket, origin, exceptNpc, radius, source)
+    radius = radius or self.config.panicRadiusM
+    local radius2 = radius * radius
     for key, occupant in pairs(self.occupants) do
         if occupant.npc ~= exceptNpc and occupant.bucket == bucket and PANICKABLE[occupant.state] then
             local x, y, z = self:whereabouts(occupant)
             local dx, dy, dz = x - origin.x, y - origin.y, z - origin.z
-            if dx * dx + dy * dy + dz * dz <= radius2 then self:panic(key, nil, origin) end
+            if dx * dx + dy * dy + dz * dz <= radius2 then self:panic(key, source, origin) end
         end
     end
 end
@@ -772,7 +923,7 @@ function Open77PedestrianScheduler:status()
     for _, expires in pairs(self.cooldown) do
         if expires > now then cooldowns = cooldowns + 1 end
     end
-    return { enabled = self.enabled, spots = #self.spotX, entries = #self.entries,
+    return { enabled = self.enabled, spots = #self.spotX, entries = self.entryTotal,
         profiles = #self.catalog.profiles, disabledSpots = self.disabledSpots,
         active = active, cooldowns = cooldowns, failures = self.failures, slices = self.lastSlices or 0,
         groups = self.groups or 0, share = self.share or 0 }

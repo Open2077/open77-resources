@@ -20,3 +20,5 @@ auto_start true
 preload_mod "dist/TweakXL-1.11.4.zip"
 
 server_script "server/main.lua"
+
+client_script "client/marker.lua"

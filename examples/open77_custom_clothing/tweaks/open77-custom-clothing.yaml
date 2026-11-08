@@ -1,0 +1,6 @@
+# New TweakDB identities, reusing installed base-game visuals for a minimal demo.
+# A real mod can define its own entityName/appearanceName and ship .archive/.xl.
+Items.Open77_Demo_Coat_Male:
+  $base: Items.Coat_01_basic_01
+Items.Open77_Demo_Coat_Female:
+  $base: Items.Coat_02_basic_01

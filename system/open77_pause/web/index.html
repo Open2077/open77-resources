@@ -879,6 +879,12 @@
     // Match the native logical-key registry, not the US physical KeyQ/KeyA
     // labels. In particular CEF can omit `code` for the AZERTY number row.
     var key = String(event.key || '');
+    // The numeric keypad first: its characters (+ - * / . and digits) would name the
+    // main row's keys. keyCode survives CEF's synthetic events where `code` does not.
+    var pad = { 106: 'NUMPADMULTIPLY', 107: 'NUMPADPLUS', 109: 'NUMPADMINUS', 110: 'NUMPADDECIMAL', 111: 'NUMPADDIVIDE' };
+    if (event.keyCode >= 96 && event.keyCode <= 105) { return 'NUMPAD' + (event.keyCode - 96); }
+    if (pad[event.keyCode]) { return pad[event.keyCode]; }
+    if (/^Numpad[0-9]$/.test(String(event.code || ''))) { return 'NUMPAD' + String(event.code).slice(6); }
     if (/^[A-Za-z0-9]$/.test(key)) { return key.toUpperCase(); }
     if (key.length === 1 && '&é"\'(-è_çà)=+[]{};:,./\\`~!?@#$%^*<>|ù²'.indexOf(key) !== -1) {
       return key;

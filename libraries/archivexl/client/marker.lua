@@ -1,0 +1,3 @@
+-- Native-package dependency marker. This publishes ArchiveXL to the client
+-- resource graph; the RED4ext plugin is installed and loaded before the game.
+-- A Lua marker does not itself load or attest an executable plugin.

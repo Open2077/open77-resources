@@ -36,6 +36,12 @@
     return Object.keys(p.equipment).length>0 || Object.keys(p.wardrobe.outfits).length>0 || Object.keys(p.wardrobe.names).length>0 || Object.hasOwn(p.wardrobe,"active");
   }
   function title(record) {
+    const auditedNames = {
+      "0x00000018a4afb82b": "Prison jumpsuit",
+      "0x0000001dda1627f5": "Helmet 13 - Style 02",
+      "0x0000001f57afac40": "Helmet 13 - Style 03"
+    };
+    if (auditedNames[String(record).toLowerCase()]) return auditedNames[String(record).toLowerCase()];
     return String(record || "").replace(/^Items\./,"").replace(/([a-z])([A-Z])/g,"$1 $2").replace(/_/g," ").replace(/\bbasic\b/gi,"Classic");
   }
   const api={slots,labels,clone,equal,normalize,patch,dirty,title};

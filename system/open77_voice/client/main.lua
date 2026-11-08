@@ -15,11 +15,13 @@ local function normalizePushToTalkKey(value)
     if key:match("^MOUSE[1-5]$") then return key end
     local functionNumber = tonumber(key:match("^F(%d%d?)$"))
     if functionNumber and functionNumber >= 1 and functionNumber <= 12 then return key end
+    if key:match("^NUMPAD[0-9]$") then return key end
     local supported = {
         SPACE = true, ENTER = true, RETURN = true, TAB = true, SHIFT = true, CTRL = true,
         CONTROL = true, ALT = true, CAPSLOCK = true, BACKSPACE = true, INSERT = true,
         DELETE = true, HOME = true, END = true, PAGEUP = true,
         PAGEDOWN = true, UP = true, DOWN = true, LEFT = true, RIGHT = true,
+        NUMPADPLUS = true, NUMPADMINUS = true, NUMPADMULTIPLY = true, NUMPADDIVIDE = true, NUMPADDECIMAL = true,
     }
     if supported[key] then return key end
     return nil, "unsupported_push_to_talk_key"

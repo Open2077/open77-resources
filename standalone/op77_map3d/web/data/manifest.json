@@ -1,0 +1,294 @@
+{
+  "format": "op77_map3d/1",
+  "generated": "2026-10-29T08:09:06Z",
+  "source": "Cyberpunk 2077 2.x + Phantom Liberty: base\\entities\\cameras\\3dmap, base\\worlds\\03_night_city\\sectors\\_generated\\traffic",
+  "coordinates": "game metres, X east, Y north, Z up; three.js scene = (x, z, -y)",
+  "world": {
+    "file": "world.glb",
+    "layers": {
+      "terrain": {
+        "triangles": 96366,
+        "vertices": 48486
+      },
+      "water": {
+        "triangles": 128,
+        "vertices": 95
+      },
+      "roads": {
+        "triangles": 56656,
+        "vertices": 52432
+      },
+      "roadBorders": {
+        "triangles": 93504,
+        "vertices": 88980
+      },
+      "metro": {
+        "triangles": 12825,
+        "vertices": 16133
+      },
+      "cliffs": {
+        "triangles": 44721,
+        "vertices": 29491
+      },
+      "landmarks": {
+        "triangles": 52220,
+        "vertices": 30087
+      }
+    }
+  },
+  "buildings": {
+    "file": "buildings.bin",
+    "stride": 16,
+    "count": 255532,
+    "districts": [
+      {
+        "name": "city_center",
+        "offset": 0,
+        "count": 41291,
+        "min": [
+          -2887.246,
+          -40.658,
+          -756.263
+        ],
+        "span": [
+          2087.434,
+          683.551,
+          1180.304
+        ],
+        "maxSize": 168.29
+      },
+      {
+        "name": "santo_domingo",
+        "offset": 41291,
+        "count": 38006,
+        "min": [
+          -1344.897,
+          -37.596,
+          241.067
+        ],
+        "span": [
+          2884.216,
+          369.944,
+          3249.038
+        ],
+        "maxSize": 139.3421
+      },
+      {
+        "name": "heywood",
+        "offset": 79297,
+        "count": 41683,
+        "min": [
+          -2657.083,
+          -38.4,
+          -369.349
+        ],
+        "span": [
+          2217.297,
+          412.582,
+          1790.313
+        ],
+        "maxSize": 197.2368
+      },
+      {
+        "name": "westbrook",
+        "offset": 120980,
+        "count": 38544,
+        "min": [
+          -1176.156,
+          -18.421,
+          -2153.728
+        ],
+        "span": [
+          2234.067,
+          526.315,
+          2711.573
+        ],
+        "maxSize": 197.0
+      },
+      {
+        "name": "watson",
+        "offset": 159524,
+        "count": 42062,
+        "min": [
+          -3233.842,
+          -24.703,
+          -3906.475
+        ],
+        "span": [
+          3243.015,
+          499.971,
+          3291.209
+        ],
+        "maxSize": 237.175
+      },
+      {
+        "name": "pacifica",
+        "offset": 201586,
+        "count": 23334,
+        "min": [
+          -6430.837,
+          -51.954,
+          -4885.945
+        ],
+        "span": [
+          12266.712,
+          316.261,
+          11829.25
+        ],
+        "maxSize": 305.6
+      },
+      {
+        "name": "ep1_dogtown",
+        "offset": 224920,
+        "count": 21882,
+        "min": [
+          -2650.0,
+          -0.75,
+          1803.581
+        ],
+        "span": [
+          1624.481,
+          494.326,
+          1323.027
+        ],
+        "maxSize": 198.0207
+      },
+      {
+        "name": "ep1_spaceport",
+        "offset": 246802,
+        "count": 8730,
+        "min": [
+          -5368.587,
+          -41.459,
+          -1218.701
+        ],
+        "span": [
+          2388.042,
+          337.957,
+          1783.806
+        ],
+        "maxSize": 115.2982
+      }
+    ],
+    "record": "u16 pos[3] (min + v/65535*span), i8 quat[4] (/127, scene frame), u16 size[3] (v/65535*maxSize: scene x, y, z full extents)"
+  },
+  "roads": {
+    "file": "roads.bin",
+    "lanes": 15906,
+    "points": 120157,
+    "links": 21312,
+    "arrays": {
+      "points": {
+        "offset": 0,
+        "length": 360471,
+        "type": "<f4"
+      },
+      "laneMain": {
+        "offset": 1441884,
+        "length": 15906,
+        "type": "|u1"
+      },
+      "laneOffset": {
+        "offset": 1457792,
+        "length": 15906,
+        "type": "<u4"
+      },
+      "laneCount": {
+        "offset": 1521416,
+        "length": 15906,
+        "type": "<u2"
+      },
+      "laneFlags": {
+        "offset": 1553228,
+        "length": 15906,
+        "type": "<u2"
+      },
+      "laneSpeed": {
+        "offset": 1585040,
+        "length": 15906,
+        "type": "|u1"
+      },
+      "laneLength": {
+        "offset": 1600948,
+        "length": 15906,
+        "type": "<f4"
+      },
+      "outStart": {
+        "offset": 1664572,
+        "length": 15907,
+        "type": "<u4"
+      },
+      "outLanes": {
+        "offset": 1728200,
+        "length": 21312,
+        "type": "<u4"
+      }
+    },
+    "flags": {
+      "road": 16,
+      "gpsOnly": 512,
+      "trafficDisabled": 128,
+      "highway": 16384
+    },
+    "speed": "m/s (lane maxSpeed)",
+    "points.coordinates": "game x, y, z"
+  },
+  "districts": {
+    "city_center": {
+      "center": [
+        -1641.4,
+        253.5,
+        150.6
+      ]
+    },
+    "santo_domingo": {
+      "center": [
+        -126.4,
+        -1369.1,
+        54.1
+      ]
+    },
+    "heywood": {
+      "center": [
+        -1554.7,
+        -597.4,
+        90.3
+      ]
+    },
+    "westbrook": {
+      "center": [
+        -411.9,
+        760.0,
+        116.0
+      ]
+    },
+    "watson": {
+      "center": [
+        -1533.4,
+        2057.6,
+        61.0
+      ]
+    },
+    "pacifica": {
+      "center": [
+        -1669.5,
+        -2749.0,
+        63.9
+      ]
+    },
+    "ep1_dogtown": {
+      "center": [
+        -1957.9,
+        -2548.2,
+        142.7
+      ]
+    },
+    "ep1_spaceport": {
+      "center": [
+        -4334.7,
+        203.3,
+        35.2
+      ]
+    }
+  }
+}

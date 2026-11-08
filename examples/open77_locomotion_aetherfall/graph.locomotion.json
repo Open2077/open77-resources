@@ -1,0 +1,67 @@
+{
+  "schema": "open77.locomotion/1",
+  "id": "aetherfall",
+  "name": "Aetherfall casting",
+  "entry": "native",
+  "parameters": [],
+  "clips": [
+    {
+      "id": "bolt",
+      "name": "bolt",
+      "duration": 0.6666667,
+      "animation": "open77__aetherfall_bolt",
+      "cycles": 1,
+      "phaseOffset": 0
+    },
+    {
+      "id": "lance",
+      "name": "lance",
+      "duration": 1.1999999,
+      "animation": "open77__aetherfall_lance",
+      "cycles": 1,
+      "phaseOffset": 0
+    },
+    {
+      "id": "nova",
+      "name": "nova",
+      "duration": 1.5,
+      "animation": "open77__aetherfall_nova",
+      "cycles": 1,
+      "phaseOffset": 0
+    },
+    {
+      "id": "ward",
+      "name": "ward",
+      "duration": 2,
+      "animation": "open77__aetherfall_ward",
+      "cycles": 1,
+      "phaseOffset": 0
+    },
+    {
+      "id": "cataclysm",
+      "name": "cataclysm",
+      "duration": 2.0666666,
+      "animation": "open77__aetherfall_cataclysm",
+      "cycles": 1,
+      "phaseOffset": 0
+    }
+  ],
+  "states": [
+    {
+      "id": "native",
+      "name": "Native movement",
+      "x": 0,
+      "y": 0,
+      "loop": true,
+      "speed": 1,
+      "motion": {
+        "type": "native",
+        "clip": "",
+        "parameter": "speed",
+        "parameterY": "directionY",
+        "points": []
+      }
+    }
+  ],
+  "transitions": []
+}

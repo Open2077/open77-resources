@@ -1,0 +1,3 @@
+-- Keep the required loader in the client resource dependency graph.
+-- The native plugin and its scripts are installed by preload_mod before launch;
+-- Lua does not load or initialize TweakXL.

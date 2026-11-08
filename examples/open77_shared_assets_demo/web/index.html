@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Shared assets</title>
+<link rel="stylesheet" href="open77://open77_shared_assets_lib/assets/theme.css"></head>
+<body><main class="card"><div class="eyebrow">OPEN77 / SHARED ASSETS</div>
+<h1 id="consumer">Inventory</h1><p>Two independent pages. One asset library.</p>
+<div class="item"><img id="item" alt="Water bottle"><div><strong id="name">Loading item…</strong><p id="price"></p></div></div>
+<code>open77://open77_shared_assets_lib/assets/item.svg</code>
+<p id="status" class="status">Loading image, stylesheet, module and JSON…</p></main>
+<script type="module">
+const status = document.querySelector('#status');
+Open77.on('assets:consumer', ({ name, x }) => {
+  document.querySelector('#consumer').textContent = name;
+  document.querySelector('.card').style.left = x + 'px';
+});
+Open77.ready();
+try {
+  if (getComputedStyle(document.querySelector('.card')).position !== 'absolute') throw Error('shared stylesheet did not load');
+  const { asset } = await import('open77://open77_shared_assets_lib/assets/widgets.mjs');
+  const response = await fetch(asset('catalog.json'));
+  if (!response.ok) throw Error('catalog: ' + response.status);
+  const item = await response.json();
+  const image = document.querySelector('#item'); image.crossOrigin = 'anonymous';
+  await new Promise((resolve, reject) => { image.onload = resolve; image.onerror = reject; image.src = asset('item.svg'); });
+  if (image.naturalWidth !== 64) throw Error('image decode failed');
+  document.querySelector('#name').textContent = item.name;
+  document.querySelector('#price').textContent = item.price + ' eddies';
+  status.textContent = 'PASS · image, CSS, JavaScript module and JSON'; status.classList.add('pass');
+  Open77.emit('assets:result', { ok: true, width: image.naturalWidth, library: item.library });
+} catch (error) {
+  status.textContent = String(error); status.classList.add('fail');
+  Open77.emit('assets:result', { ok: false, error: String(error) });
+}
+</script></body></html>

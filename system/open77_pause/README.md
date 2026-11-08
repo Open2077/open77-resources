@@ -13,6 +13,8 @@ Keep it running: while it runs, Escape opens this menu instead of the vanilla pa
 
 - **Settings** has Video, Graphics, Audio, Voice, Controls, Key bindings and Gameplay tabs. Labels and options come from the game itself, already translated, and a "Full game settings" button opens the vanilla settings screen (the world pauses while it is open).
 - **Key bindings** lists every key mapping any resource declared with `RegisterKeyMapping`, so your own keys appear there.
+- **Audio → WebUI volume** controls all browser audio, including radios, videos, Web Audio and embedded players. The 0–100% preference is saved locally; 0% mutes it. Game audio and player voice keep their existing controls.
+- **City Map** opens the game's map, or the map of a resource registered as a map provider (`open77:mapProvider:*` events, see `wiki/map-providers.md`).
 - **Quit Session** and **Quit Game** ask for confirmation first.
 
 You do not edit this resource to brand it. From your own client resource, give the menu your accent color and a logo shown beside the Open77 logo:

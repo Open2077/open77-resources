@@ -195,8 +195,17 @@ body[data-ready="true"] .combat-hud {
   pointer-events: none;
 }
 
-.weapon-hud { display: none; border-left: 2px solid var(--o-cyan-500); }
-body[data-weapon="true"]:not([data-in-vehicle="true"]) .weapon-hud { display: flex; }
+.weapons-hud { display: none; gap: 10px; flex-direction: column; }
+body[data-weapon="true"]:not([data-in-vehicle="true"]) .weapons-hud { display: flex; }
+.weapon-hud { border-left: 2px solid var(--o-cyan-500); }
+.weapon-hud[hidden] { display: none; }
+.weapon-hand { display: none; color: var(--o-cyan-500); }
+.weapons-hud.dual .weapon-hand { display: inline; }
+.weapons-hud.dual .weapon-hand::after { content: " · "; color: var(--text-muted); }
+.weapons-hud.dual .weapon-hud { gap: 7px; padding-top: 10px; padding-bottom: 10px; }
+.weapons-hud.dual .ammo-values strong { font-size: 32px; }
+.weapons-hud.dual .magazine-strip { height: 20px; }
+.weapon-hud.reloading .weapon-state { color: var(--o-yellow-500, #f5dc47); border-color: currentColor; }
 .weapon-hud.low-ammo { border-left-color: var(--o-red-500); }
 
 .hud-panel-head {
@@ -310,7 +319,7 @@ body[data-weapon="true"]:not([data-in-vehicle="true"]) .weapon-hud { display: fl
   color: #1a0409;
   font-weight: var(--fw-bold);
 }
-.low-ammo:not(.melee) .reload-label { display: block; }
+.low-ammo:not(.melee):not(.reloading) .reload-label { display: block; }
 
 .vehicle-hud {
   --dial-size: 112px;

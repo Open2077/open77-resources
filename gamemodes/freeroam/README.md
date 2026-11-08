@@ -72,6 +72,7 @@ and running timer. **F3** also returns a living racer to that checkpoint.
 | `server/main.lua` | Commands, validated menu actions, weapon requests, respawn policy, vehicle ownership, and teleport transactions. |
 | `server/combat.lua` | PvP policy: friendly fire, spawn safe zones, multipliers, and the kill-feed broadcast. |
 | `client/main.lua` | Client readiness, map blips, the `/freeroam` menu, the custom HUD, and scoreboard. |
+| `client/map3d.lua` | Optional `op77_map3d` integration: the blue theme and the destination/spawn blips on the 3D map. |
 | `client/animations.lua` | RP catalogue and playback controls through the public asynchronous animation API. |
 | `client/killfeed.lua` | Combat feedback HUD: kill feed, authoritative hitmarker, damage flash. |
 | `web/` | HTML/CSS/JS menu, custom gameplay HUD, scoreboard, and kill-feed surfaces rendered by the Open77 WebUI. |
@@ -292,9 +293,29 @@ All game-mode settings live in `shared/config.lua` under `FreeroamConfig`:
   `weapons.maximumReserve` bounds player-entered reserve values.
 - `player.allowRestore`, `player.allowGodMode`, and `player.armorOnRestore` control the Player tab.
 - `blips` controls destination and spawn markers.
+- `map3d` themes the optional 3D city map (see below): `enabled`, `title`, `subtitle`, `theme`
+  (colours taken from `web/design-system.css`), `categories` (its legend) and the categories of
+  the mirrored blips.
 
 Bundled coordinates are examples validated against Cyberpunk 2077 2.31. Server operators should
 replace them with locations appropriate for their game mode.
+
+## 3D city map (optional)
+
+Freeroam works with the standalone `op77_map3d` resource (3D city map, minimap and GPS) when the
+server runs it; it is not a dependency. To add it:
+
+1. Copy the `op77_map3d` folder into the server's `resources/` (next to the others, for instance
+   `resources/standalone/op77_map3d`). It is self-contained: page and map data (about 11 MB)
+   download to players with it.
+2. Add `"op77_map3d"` to `resources.load` (the repository's `server/server.jsonc` already lists
+   it, and a missing folder simply matches nothing) and restart the server.
+
+`client/map3d.lua` then sends `FreeroamConfig.map3d` (freeroam's cyan-on-ink palette, legend and
+title) with `exports.op77_map3d:setConfig` once per run of the map, and the destinations and
+spawn points as keyed blips (`location:<name>`, `spawn:<name>`), again on `op77_map3d:ready` so
+a restarted map gets them back. While the map runs it replaces the game's map and HUD minimap.
+`FreeroamMap3DLuaTests` covers the theme and blip mirroring.
 
 ## WebUI smoke test
 

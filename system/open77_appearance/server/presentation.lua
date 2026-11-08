@@ -18,6 +18,11 @@ local lastRequest = {}
 local lastUiRequest = {}
 local cyberwareBound = {}
 local restoreOwner
+local temporaryOutfits = {}
+local function temporaryOutfit(player)
+    local value = temporaryOutfits[player]
+    if value and Open77.resource.generation(value.owner) == value.generation then return value end
+end
 
 local function bindCyberware(player, character)
     -- The optional support resource must be running. Its presence does not
@@ -46,12 +51,18 @@ local function outfitIndex(value)
     return type(value) == "number" and value % 1 == 0 and value >= 0 and value < 7
 end
 
--- The same audited 2.31 catalogue as the native API. Normalize names and hash
--- spellings to one identity before comparison, validation and persistence.
+-- Registered resource metadata extends the built-in catalogue. Only the server
+-- admits records; client-provided metadata never changes this authority.
 local function item(slot, value, family)
     if not slots[slot] then return nil end
     if value == false or value == nil then return false end
     if type(value) ~= "string" then return nil end
+    local custom = Open77.clothing and Open77.clothing.info(value)
+    if custom then
+        if custom.slot ~= slot or not custom.selectable then return nil end
+        if family == "male" and not custom.supportsMale or family ~= "male" and not custom.supportsFemale then return nil end
+        return custom.record
+    end
     local entry = PresentationCatalog[value] or PresentationCatalog[string.lower(value)]
     if not entry or entry.slot ~= slot then return nil end
     local mask = family == "male" and 1 or 2
@@ -124,6 +135,7 @@ function P.enqueue(player, action)
 end
 
 function P.select(player, character)
+    temporaryOutfits[player] = nil
     if cyberwareBound[player] then
         Open77.cyberware.unbind(player)
         cyberwareBound[player] = nil
@@ -158,8 +170,9 @@ local function load(player, user, character, epoch)
         if row then
             local eq = json.decode(row.equipment_json)
             local wardrobe = json.decode(row.wardrobe_json)
-            -- Preserve incompatible-family items in storage: their compatible
-            -- visuals are chosen below, a temporary body swap never deletes them.
+            -- Preserve incompatible-family and unavailable mod records in storage.
+            -- Only visible() projects registered, compatible records; network
+            -- writes still pass the strict item()/slotSet() admission checks.
             if type(eq) ~= "table" or type(wardrobe) ~= "table" or type(wardrobe.outfits) ~= "table" then
                 error("invalid_stored_presentation")
             end
@@ -167,7 +180,9 @@ local function load(player, user, character, epoch)
                 if type(values) ~= "table" then error("invalid_stored_slots") end
                 for slot, value in pairs(values) do
                     if not slots[slot] or (overlay and slot:match("^Underwear"))
-                        or (item(slot, value, "male") == nil and item(slot, value, "female") == nil) then
+                        or not (value == false or type(value) == "string" and #value > 0 and #value <= 160
+                            and not value:find("[%z\1-\31\127]") and utf8.len(value)
+                            and (value:find(".", 1, true) or value:match("^0[xX]%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x$"))) then
                         error("invalid_stored_item")
                     end
                 end
@@ -223,6 +238,16 @@ local function visible(player, record)
         end
         result.wardrobe.outfits[tostring(index)] = shown
     end
+    local temporary = temporaryOutfit(player)
+    if temporary then
+        for slot, value in pairs(temporary.slots) do
+            result.equipment[slot] = item(slot, value, P.families[player]) or false
+        end
+        -- Switch off transmog before equipment attaches, retaining every saved
+        -- outfit in the durable record. Observers receive the same projection.
+        result.equipment.Wardrobe = false
+        result.wardrobe.active = false
+    end
     return result
 end
 
@@ -237,6 +262,70 @@ restoreOwner = function(player)
     TriggerClientEvent("open77:equipment:self", player, shown.equipment)
     TriggerClientEvent("open77:wardrobe:self", player, shown.wardrobe)
 end
+
+-- A temporarily missing provider hides its projection without deleting the
+-- durable choice. Restoring/reloading the provider reprojects that same record.
+AddEventHandler("onClothingCatalogChanged", function()
+    for player, record in pairs(P.records) do
+        restoreOwner(player)
+        broadcast(player, record)
+    end
+end)
+
+-- Server-only, generation-owned costumes. These never enter the SQL record or
+-- replace saved transmog outfits. A second activity must wait for the owner.
+exports("setTemporaryOutfit", function(player, values)
+    local owner, generation = GetInvokingResource(), GetInvokingResourceGeneration()
+    if type(owner) ~= "string" or not generation or generation <= 0
+        or Open77.resource.generation(owner) ~= generation then return false, "invalid_owner" end
+    if type(player) ~= "number" or player % 1 ~= 0 or player <= 0 then return false, "invalid_player" end
+    if not P.records[player] then return false, "presentation_not_ready" end
+    local clean = slotSet(values, P.families[player], true)
+    if not clean or next(clean) == nil then return false, "invalid_outfit_items" end
+    local current = temporaryOutfit(player)
+    if current and (current.owner ~= owner or current.generation ~= generation) then
+        return false, "owned_by_other_resource"
+    end
+    temporaryOutfits[player] = { owner=owner, generation=generation, slots=clean }
+    restoreOwner(player)
+    broadcast(player, P.records[player])
+    return true
+end)
+
+exports("clearTemporaryOutfit", function(player)
+    if type(player) ~= "number" or player % 1 ~= 0 or player <= 0 then return false, "invalid_player" end
+    local current = temporaryOutfits[player]
+    if not current then return true end
+    if current.owner ~= GetInvokingResource() or current.generation ~= GetInvokingResourceGeneration() then
+        return false, "not_owner"
+    end
+    temporaryOutfits[player] = nil
+    if P.records[player] then restoreOwner(player); broadcast(player, P.records[player]) end
+    return true
+end)
+
+local function retireTemporaryOutfits()
+    for player, value in pairs(temporaryOutfits) do
+        if Open77.resource.generation(value.owner) ~= value.generation then
+            temporaryOutfits[player] = nil
+            if P.records[player] then restoreOwner(player); broadcast(player, P.records[player]) end
+        end
+    end
+end
+-- Reconcile against current generations, never a queued lifecycle event's age.
+AddEventHandler("open77:resource:started", retireTemporaryOutfits)
+AddEventHandler("open77:resource:stopped", retireTemporaryOutfits)
+CreateThread(function()
+    while true do Wait(500); retireTemporaryOutfits() end
+end)
+AddEventHandler("onResourceStop", function(name)
+    if name ~= GetCurrentResourceName() then return end
+    local owned = temporaryOutfits
+    temporaryOutfits = {}
+    for player in pairs(owned) do
+        if P.records[player] then restoreOwner(player); broadcast(player, P.records[player]) end
+    end
+end)
 
 -- Observer-only replay from the committed session cache. A routing transition
 -- must not reload SQL, overwrite the owner's preview, or invent an empty look
@@ -313,6 +402,7 @@ RegisterCommand("wardrobe", function(player)
 end, false)
 
 local function patchRecord(player, record, patch)
+    if temporaryOutfit(player) then return nil, "temporary_outfit_active" end
     if type(patch) ~= "table" then return nil, "invalid_patch" end
     for key in pairs(patch) do
         if key ~= "expectedRevision" and key ~= "characterKey" and key ~= "equipment" and key ~= "wardrobe" then
@@ -409,6 +499,7 @@ end)
 RegisterNetEvent("open77:equipment:slot", function(slot, value)
     local player = tonumber(source)
     if not player or not P.records[player] then return end
+    if temporaryOutfit(player) then restoreOwner(player); return end
     local resolved = item(slot, value, P.families[player])
     if resolved == nil then
         TriggerClientEvent("open77:equipment:self", player, visible(player, P.records[player]).equipment)
@@ -417,6 +508,7 @@ RegisterNetEvent("open77:equipment:slot", function(slot, value)
     P.enqueue(player, function(user, character, epoch)
         local record = load(player, user, character, epoch)
         if not record then return end
+        if temporaryOutfit(player) then restoreOwner(player); return end
         if record.equipment[slot] ~= resolved then
             record = copy(record)
             record.equipment[slot] = resolved
@@ -429,9 +521,11 @@ end)
 RegisterNetEvent("open77:wardrobe:active", function(active)
     local player = tonumber(source)
     if not player or not P.records[player] or (active ~= nil and not outfitIndex(active)) then return end
+    if temporaryOutfit(player) then restoreOwner(player); return end
     P.enqueue(player, function(user, character, epoch)
         local record = load(player, user, character, epoch)
         if not record then return end
+        if temporaryOutfit(player) then restoreOwner(player); return end
         record = copy(record)
         record.wardrobe.active = active
         if save(player, user, character, epoch, record) then broadcast(player, record) end
@@ -441,6 +535,7 @@ end)
 RegisterNetEvent("open77:wardrobe:outfit", function(index, values)
     local player = tonumber(source)
     if not player or not P.records[player] or not outfitIndex(index) then return end
+    if temporaryOutfit(player) then restoreOwner(player); return end
     local clean = slotSet(values, P.families[player], true)
     if not clean then
         TriggerClientEvent("open77:wardrobe:self", player, visible(player, P.records[player]).wardrobe)
@@ -449,6 +544,7 @@ RegisterNetEvent("open77:wardrobe:outfit", function(index, values)
     P.enqueue(player, function(user, character, epoch)
         local record = load(player, user, character, epoch)
         if not record then return end
+        if temporaryOutfit(player) then restoreOwner(player); return end
         record = copy(record)
         -- JSON object keys are strings after a database round trip.
         record.wardrobe.outfits[tostring(index)] = clean

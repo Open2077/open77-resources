@@ -105,7 +105,29 @@ RegisterNetEvent("cordon:npcHurtMe", function(npcId, damage)
     damagePlayer(player, attacker, participant, damage)
 end)
 
+-- Where an opted-in camp's hits come from. A platform with Open77.npcs.victimHits judges each
+-- hit from the VICTIM's own client (the host's shots at a remote player's proxy almost never
+-- connect) and raises onNpcPlayerHit here; an older platform leaves it to the lease owner's
+-- relay below. Never both: the owner's own hits would count twice.
+local PLATFORM_VICTIM_HITS = type(Open77.npcs) == "table" and Open77.npcs.victimHits == true
+
+AddEventHandler("onNpcPlayerHit", function(npcId, victimId, damage)
+    if not PLATFORM_VICTIM_HITS then return end
+    local id = finite(victimId)
+    if not id or id <= 0 or id % 1 ~= 0 then return end
+    local player, position = livePlayer(id)
+    if not player then return end
+    local attacker, participant, camp = npc(npcId)
+    if not attacker or not camp or not authoritativePlayerHits(attacker) then return end
+    local gotLife, life = pcall(Open77.players.getLifeState, id)
+    if not gotLife or not life or life.bucket ~= attacker.bucket or
+        (life.phase ~= "alive" and life.phase ~= "recovering") then return end
+    if not near(position, attacker, 120) then return end
+    damagePlayer(player, attacker, participant, damage)
+end)
+
 RegisterNetEvent("cordon:npcPlayerHit", function(victimId, npcId, epoch, damage)
+    if PLATFORM_VICTIM_HITS then return end
     local id = finite(victimId)
     if not id or id <= 0 or id % 1 ~= 0 then return end
     local player, position = livePlayer(id)
@@ -144,7 +166,7 @@ RegisterNetEvent("cordon:npcCrossfire", function(victimId, attackerId, damage)
     amount = math.min(amount, 34)
     if not bounded("npc:" .. tostring(victimId), "cross:" .. tostring(attackerId) .. ":" .. tostring(victimId), amount, 90, 90) then return end
     if attackerParticipant then K.bots.noteHit(victimId, attackerParticipant) end
-    Open77.npcs.applyDamage(victim.id, amount, tostring(attacker.id), "firearm")
+    Open77.npcs.applyCrossfireDamage(victim.id, attacker.id, amount, tostring(attacker.id), "firearm")
 end)
 
 AddEventHandler("cordon:phase", function()

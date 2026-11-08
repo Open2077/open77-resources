@@ -4,6 +4,7 @@ Optional resources that work on any server: icons, free camera, equipment, wardr
 
 | Resource | What it does | Docs |
 |---|---|---|
+| [`op77_map3d`](op77_map3d/) | A standalone Open77 resource that replaces the game's map and minimap with a fully customizable 3D map of Night City, built from the game's own 3D map assets: |  |
 | [`open77_freecam`](open77_freecam/) | Gives your admins a local free camera: `/freecam` or F9 detaches the view and lets them fly it around while their character stays where it is. | [Scripted cameras](https://open2077.net/docs/cameras) |
 | [`open77_icons`](open77_icons/) | Gives your client resources 2,112 Lucide icons to show as native map and minimap blips, through a small set of exports. | [Custom SVG blips](https://open2077.net/docs/custom-blip-icons) |
 | [`open77_equipment`](open77_equipment/) | Keeps every player's worn clothing in sync: what you equip in the game goes to the server, the server's record for your character comes back, and other players see the same clothes on your body. | [Official resource exports](https://open2077.net/docs/resource-exports), [Complete server Lua API](https://open2077.net/docs/server-api) |

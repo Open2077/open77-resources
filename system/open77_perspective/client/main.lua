@@ -98,11 +98,29 @@ local function persist(key, value)
     end
 end
 
---- Asks for the stored preference. Safe to call repeatedly: the arbiter treats
---- a repeat of the request it already holds as a no-op.
-local function applyPreference()
+local preferenceApplied = false
+
+-- F7 and other callers also write the arbiter's request. Once our initial
+-- restore is done, that request is newer than our KVP cache. Read the request,
+-- never the effective view: scenes and server policy can temporarily force FPP.
+local function refreshPreference()
+    if not preferenceApplied or not available()
+        or type(Open77.perspective.state) ~= "function" then return end
+    local state = Open77.perspective.state()
+    local requested = state and state.requestExpressed and normalise(state.requested)
+    if requested and requested ~= preferred then
+        preferred = requested
+        persist(KVP_MODE, preferred)
+    end
+end
+
+local function applyPreference(explicit)
     if not available() then return false, "perspective_unavailable_on_this_host" end
-    return Open77.perspective.set(preferred)
+    if not explicit then refreshPreference() end
+    local ok, reason = Open77.perspective.set(preferred)
+    -- A policy refusal still records the request in the arbiter.
+    preferenceApplied = preferenceLoaded
+    return ok, reason
 end
 
 local function setMode(mode)
@@ -115,11 +133,12 @@ local function setMode(mode)
     -- erase what the player asked for, or moving to a server that allows third
     -- person would drop them into first.
     persist(KVP_MODE, preferred)
-    return applyPreference()
+    return applyPreference(true)
 end
 
 local function toggle()
     loadPreferences()
+    refreshPreference()
     local target = preferred == "tps" and "fpp" or "tps"
     return setMode(target)
 end

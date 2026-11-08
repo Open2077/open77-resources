@@ -177,7 +177,7 @@
   $('back').addEventListener('click', () => body.querySelector('.tab[data-tab=vehicles]').click());
   $('stop').addEventListener('click', () => emit('stop')); $('play').addEventListener('click', play);
   document.addEventListener('keydown', event => {
-    if (!body.classList.contains('open') || !body.classList.contains('animation-mode')) return;
+    if (!body.classList.contains('open') || !body.classList.contains('animation-mode') || !document.getElementById('idle-panel').hidden) return;
     if (event.key==='/' && !['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)) { event.preventDefault(); $('search').focus(); }
   });
   Open77.on('animations:open', open);

@@ -1,11 +1,12 @@
 resource "freeroam"
-version "0.7.4"
+version "0.7.6"
 open77_version ">=0.0.1"
 auto_start true
 reload_policy "local"
 
 dependency "open77_weapons >=0.1.0"
 dependencies {
+    "open77_vehicle_siren >=1.0.0",
     "open77_cyberware_lab >=0.1.0",
     "open77_contextmenu >=1.1.0",
     "open77_props >=0.1.0",
@@ -47,8 +48,10 @@ server_script "server/combat.lua"
 server_script "server/context.lua"
 server_script "server/playtest.lua"
 client_script "client/main.lua"
+client_script "client/map3d.lua"
 client_script "client/context.lua"
 client_script "client/animations.lua"
+client_script "client/idles.lua"
 client_script "client/camera.lua"
 client_script "client/killfeed.lua"
 client_script "client/prediction.lua"
