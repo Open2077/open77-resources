@@ -78,7 +78,10 @@ local function close(reason)
     epoch=epoch+1
     local wasOpen=active
     active,busy,selection,visibleActions=false,false,nil,{}
-    if page then page:setFocus(false,false);send("context:close");page:hide() end
+    focused,lostForeground=false,0
+    if page then pcall(function()page:setFocus(false,false) end) send("context:close") page:hide() end
+    local ok, err = Open77.players.freezeRotation(false)
+    if not ok then print("[contextmenu] Failed to unfreeze rotation:", err) end
     if Open77.players and Open77.players.resetControls then Open77.players.resetControls() end
     if wasOpen then TriggerEvent("open77:contextmenu:closed",reason or "closed") end
 end
